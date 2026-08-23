@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { DateFormatter, getLocalTimeZone, type DateValue } from '@internationalized/date';
+	import { definedProps } from '$lib/utils/props';
 	import CalendarMonthSelect from './calendar-month-select.svelte';
 	import CalendarYearSelect from './calendar-year-select.svelte';
 	import type Calendar from './calendar.svelte';
@@ -42,8 +43,7 @@
 
 {#snippet MonthSelect()}
 	<CalendarMonthSelect
-		{...months === undefined ? {} : { months }}
-		{...monthFormat === undefined ? {} : { monthFormat }}
+		{...definedProps({ months, monthFormat })}
 		value={month.month}
 		onchange={(e) => {
 			if (!placeholder) return;
@@ -55,11 +55,7 @@
 {/snippet}
 
 {#snippet YearSelect()}
-	<CalendarYearSelect
-		{...years === undefined ? {} : { years }}
-		{...yearFormat === undefined ? {} : { yearFormat }}
-		value={month.year}
-	/>
+	<CalendarYearSelect {...definedProps({ years, yearFormat })} value={month.year} />
 {/snippet}
 
 {#if captionLayout === 'dropdown'}

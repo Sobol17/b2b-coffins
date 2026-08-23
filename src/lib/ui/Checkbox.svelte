@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { Checkbox as BaseCheckbox } from '$lib/ui/base/checkbox/index.js';
+	import { definedProps } from '$lib/utils/props';
 	import { Label } from '$lib/ui/base/label/index.js';
 
 	let {
@@ -21,6 +22,6 @@
 </script>
 
 <div data-slot="checkbox-field" class="flex items-center gap-2">
-	<BaseCheckbox id={fieldId} {disabled} bind:checked {...name === undefined ? {} : { name }} />
+	<BaseCheckbox id={fieldId} {disabled} bind:checked {...definedProps({ name })} />
 	<Label for={fieldId}>{label}</Label>
 </div>

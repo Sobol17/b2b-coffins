@@ -1,5 +1,6 @@
 <script lang="ts">
 	import * as BaseRadioGroup from '$lib/ui/base/radio-group/index.js';
+	import { definedProps } from '$lib/utils/props';
 	import { Label } from '$lib/ui/base/label/index.js';
 	import Field from './Field.svelte';
 	import type { SelectOption } from './options';
@@ -37,7 +38,7 @@
 			bind:value
 			{disabled}
 			class="flex flex-col gap-2"
-			{...name === undefined ? {} : { name }}
+			{...definedProps({ name })}
 		>
 			{#each options as option (option.value)}
 				<div class="flex items-center gap-2">

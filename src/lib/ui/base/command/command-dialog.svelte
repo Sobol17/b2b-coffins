@@ -1,5 +1,6 @@
 <script lang="ts">
 	import * as Dialog from '$lib/ui/base/dialog/index.js';
+	import { definedProps } from '$lib/utils/props';
 	import { cn, type WithoutChildrenOrChild } from '$lib/utils/cn.js';
 	import Command from './command.svelte';
 	import type { Command as CommandPrimitive, Dialog as DialogPrimitive } from 'bits-ui';
@@ -35,7 +36,7 @@
 	<Dialog.Content
 		class={cn('top-1/3 translate-y-0 overflow-hidden rounded-xl! p-0', className)}
 		{showCloseButton}
-		{...portalProps === undefined ? {} : { portalProps }}
+		{...definedProps({ portalProps })}
 	>
 		<Command {...restProps} bind:value bind:ref {children} />
 	</Dialog.Content>

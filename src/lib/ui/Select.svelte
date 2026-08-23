@@ -1,5 +1,6 @@
 <script lang="ts">
 	import * as BaseSelect from '$lib/ui/base/select/index.js';
+	import { definedProps } from '$lib/utils/props';
 	import Field from './Field.svelte';
 	import type { SelectOption } from './options';
 
@@ -34,13 +35,7 @@
 
 <Field id={fieldId} {label} {hint} {error} {required}>
 	{#snippet control()}
-		<BaseSelect.Root
-			type="single"
-			bind:value
-			{disabled}
-			{required}
-			{...name === undefined ? {} : { name }}
-		>
+		<BaseSelect.Root type="single" bind:value {disabled} {required} {...definedProps({ name })}>
 			<BaseSelect.Trigger id={fieldId} class="w-full" aria-invalid={error ? 'true' : undefined}>
 				{selected?.label ?? placeholder}
 			</BaseSelect.Trigger>
