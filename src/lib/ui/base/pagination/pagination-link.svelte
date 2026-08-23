@@ -34,9 +34,17 @@
 	)}
 	{...restProps}
 >
-	{#if children}
-		{@render children?.()}
-	{:else}
-		{@render Fallback()}
-	{/if}
+	<!--
+	The primitive hardcodes an English aria-label and wins the merge, so the button is rendered
+	here: the interface is Russian and a screen reader must not read "Page 2".
+	-->
+	{#snippet child({ props })}
+		<button {...props} type="button" aria-label="Страница {page.value}">
+			{#if children}
+				{@render children()}
+			{:else}
+				{@render Fallback()}
+			{/if}
+		</button>
+	{/snippet}
 </PaginationPrimitive.Page>

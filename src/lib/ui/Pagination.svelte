@@ -23,7 +23,7 @@
 		{#snippet children({ pages, currentPage })}
 			<BasePagination.Content data-testid="pagination">
 				<BasePagination.Item>
-					<BasePagination.PrevButton />
+					<BasePagination.PrevButton aria-label="Предыдущая страница" />
 				</BasePagination.Item>
 				{#each pages as page (page.key)}
 					{#if page.type === 'ellipsis'}
@@ -39,7 +39,7 @@
 					{/if}
 				{/each}
 				<BasePagination.Item>
-					<BasePagination.NextButton />
+					<BasePagination.NextButton aria-label="Следующая страница" />
 				</BasePagination.Item>
 			</BasePagination.Content>
 		{/snippet}

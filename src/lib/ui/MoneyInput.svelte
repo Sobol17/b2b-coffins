@@ -4,8 +4,9 @@
 	import { formatMinor, parseRublesToMinor } from '$lib/utils/format';
 
 	/*
-	 * The form shows rubles, the binding stays in whole kopecks (tech.md 13.1). While the field has
-	 * focus the raw text wins, so a half-typed amount is not reformatted under the cursor.
+	 * The form shows rubles, the binding stays in whole kopecks (tech.md 13.1). While the field is
+	 * being edited the raw text wins, so a half-typed amount is not reformatted under the cursor.
+	 * Parsing tolerates the grouping spaces, so the formatted value can be edited in place.
 	 */
 	let {
 		label,
@@ -56,7 +57,6 @@
 			class="tabular-nums"
 			value={text}
 			oninput={onInput}
-			onfocus={() => (draft = formatMinor(valueMinor).replace(/\s/g, ''))}
 			onblur={() => (draft = null)}
 			aria-invalid={(error ?? parseError) ? 'true' : undefined}
 		/>
