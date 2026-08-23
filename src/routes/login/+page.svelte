@@ -2,6 +2,7 @@
 	import { enhance } from '$app/forms';
 	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
+	import { Button, Card, ErrorState, Input } from '$lib/ui';
 	import type { ActionData, PageData } from './$types';
 
 	let { data, form }: { data: PageData; form: ActionData } = $props();
@@ -21,42 +22,36 @@
 	<h1 class="text-2xl font-semibold">Вход в систему</h1>
 
 	{#if notice}
-		<p class="rounded-[--radius-card] bg-surface-muted p-3 text-sm">{notice}</p>
+		<Card.Root><Card.Content class="text-sm">{notice}</Card.Content></Card.Root>
 	{/if}
 
 	<form method="POST" use:enhance class="flex flex-col gap-4">
 		<input type="hidden" name="redirectTo" value={data.redirectTo} />
 
-		<label class="flex flex-col gap-1">
-			<span class="text-sm text-fg-muted">Электронная почта</span>
-			<input
-				name="email"
-				type="email"
-				autocomplete="username"
-				required
-				value={form?.email ?? ''}
-				class="rounded-[--radius-card] border border-border px-3 py-2"
-			/>
-		</label>
+		<Input
+			name="email"
+			type="email"
+			label="Электронная почта"
+			autocomplete="username"
+			required
+			value={form?.email ?? ''}
+		/>
 
-		<label class="flex flex-col gap-1">
-			<span class="text-sm text-fg-muted">Пароль</span>
-			<input
-				name="password"
-				type="password"
-				autocomplete="current-password"
-				required
-				class="rounded-[--radius-card] border border-border px-3 py-2"
-			/>
-		</label>
+		<Input
+			name="password"
+			type="password"
+			label="Пароль"
+			autocomplete="current-password"
+			required
+		/>
 
 		{#if form?.formError}
-			<p data-testid="form-error" class="text-sm text-danger">{form.formError}</p>
+			<div data-testid="form-error">
+				<ErrorState title={form.formError} />
+			</div>
 		{/if}
 
-		<button type="submit" class="rounded-[--radius-card] bg-brand px-4 py-2 text-white">
-			Войти
-		</button>
+		<Button type="submit">Войти</Button>
 	</form>
 
 	<a href={resolve('/password/reset')} class="text-sm text-fg-muted underline">Забыли пароль?</a>

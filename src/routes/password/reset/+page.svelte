@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import { resolve } from '$app/paths';
+	import { Button, Card, ErrorState, Input } from '$lib/ui';
 	import type { ActionData, PageData } from './$types';
 
 	let { data, form }: { data: PageData; form: ActionData } = $props();
@@ -15,60 +16,42 @@
 		<form method="POST" action="?/apply" use:enhance class="flex flex-col gap-4">
 			<input type="hidden" name="token" value={data.token} />
 
-			<label class="flex flex-col gap-1">
-				<span class="text-sm text-fg-muted">Новый пароль</span>
-				<input
-					name="newPassword"
-					type="password"
-					autocomplete="new-password"
-					required
-					class="rounded-[--radius-card] border border-border px-3 py-2"
-				/>
-			</label>
-
-			<label class="flex flex-col gap-1">
-				<span class="text-sm text-fg-muted">Повторите пароль</span>
-				<input
-					name="repeatPassword"
-					type="password"
-					autocomplete="new-password"
-					required
-					class="rounded-[--radius-card] border border-border px-3 py-2"
-				/>
-			</label>
+			<Input
+				name="newPassword"
+				type="password"
+				label="Новый пароль"
+				autocomplete="new-password"
+				required
+			/>
+			<Input
+				name="repeatPassword"
+				type="password"
+				label="Повторите пароль"
+				autocomplete="new-password"
+				required
+			/>
 
 			{#if form?.formError}
-				<p data-testid="form-error" class="text-sm text-danger">{form.formError}</p>
+				<div data-testid="form-error"><ErrorState title={form.formError} /></div>
 			{/if}
 
-			<button type="submit" class="rounded-[--radius-card] bg-brand px-4 py-2 text-white">
-				Сохранить пароль
-			</button>
+			<Button type="submit">Сохранить пароль</Button>
 		</form>
 	{:else if form?.sent}
-		<p data-testid="reset-sent" class="rounded-[--radius-card] bg-surface-muted p-3 text-sm">
-			Если такой адрес зарегистрирован, письмо со ссылкой уже отправлено.
-		</p>
+		<Card.Root>
+			<Card.Content data-testid="reset-sent" class="text-sm">
+				Если такой адрес зарегистрирован, письмо со ссылкой уже отправлено.
+			</Card.Content>
+		</Card.Root>
 	{:else}
 		<form method="POST" action="?/request" use:enhance class="flex flex-col gap-4">
-			<label class="flex flex-col gap-1">
-				<span class="text-sm text-fg-muted">Электронная почта</span>
-				<input
-					name="email"
-					type="email"
-					autocomplete="username"
-					required
-					class="rounded-[--radius-card] border border-border px-3 py-2"
-				/>
-			</label>
+			<Input name="email" type="email" label="Электронная почта" autocomplete="username" required />
 
 			{#if form?.formError}
-				<p data-testid="form-error" class="text-sm text-danger">{form.formError}</p>
+				<div data-testid="form-error"><ErrorState title={form.formError} /></div>
 			{/if}
 
-			<button type="submit" class="rounded-[--radius-card] bg-brand px-4 py-2 text-white">
-				Отправить ссылку
-			</button>
+			<Button type="submit">Отправить ссылку</Button>
 		</form>
 	{/if}
 

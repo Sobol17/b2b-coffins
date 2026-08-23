@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
+	import { Button, Card, ErrorState, Input } from '$lib/ui';
 	import type { ActionData, PageData } from './$types';
 
 	let { data, form }: { data: PageData; form: ActionData } = $props();
@@ -17,34 +18,31 @@
 	<h1 class="text-2xl font-semibold">Смена пароля</h1>
 
 	{#if data.mustChange}
-		<p data-testid="must-change" class="rounded-[--radius-card] bg-surface-muted p-3 text-sm">
-			Пароль выдан временно. Задайте свой, чтобы продолжить работу.
-		</p>
+		<Card.Root>
+			<Card.Content data-testid="must-change" class="text-sm">
+				Пароль выдан временно. Задайте свой, чтобы продолжить работу.
+			</Card.Content>
+		</Card.Root>
 	{/if}
 
 	<form method="POST" use:enhance class="flex flex-col gap-4">
 		{#each fields as field (field.name)}
-			<label class="flex flex-col gap-1">
-				<span class="text-sm text-fg-muted">{field.label}</span>
-				<input
-					name={field.name}
-					type="password"
-					autocomplete={field.autocomplete}
-					required
-					class="rounded-[--radius-card] border border-border px-3 py-2"
-				/>
-				{#if form?.errors?.[field.name]}
-					<span class="text-sm text-danger">{form.errors[field.name]?.join(', ')}</span>
-				{/if}
-			</label>
+			<Input
+				name={field.name}
+				type="password"
+				label={field.label}
+				autocomplete={field.autocomplete}
+				required
+				error={form?.errors?.[field.name]?.join(', ')}
+			/>
 		{/each}
 
 		{#if form?.formError}
-			<p data-testid="form-error" class="text-sm text-danger">{form.formError}</p>
+			<div data-testid="form-error">
+				<ErrorState title={form.formError} />
+			</div>
 		{/if}
 
-		<button type="submit" class="rounded-[--radius-card] bg-brand px-4 py-2 text-white">
-			Сохранить
-		</button>
+		<Button type="submit">Сохранить</Button>
 	</form>
 </main>
