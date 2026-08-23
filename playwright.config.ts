@@ -3,6 +3,9 @@ import { defineConfig, devices } from '@playwright/test';
 // E2E runs against the production bundle: every slice DoD is demonstrated on a real build.
 export default defineConfig({
 	testDir: 'tests/e2e',
+	globalSetup: './tests/e2e/global-setup.ts',
+	// One SQLite file backs the suite, so tests share state and must not race each other.
+	workers: 1,
 	testMatch: '**/*.e2e.ts',
 	forbidOnly: !!process.env.CI,
 	retries: process.env.CI ? 1 : 0,
