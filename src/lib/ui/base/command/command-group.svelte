@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { Command as CommandPrimitive, useId } from 'bits-ui';
+	import { definedProps } from '$lib/utils/props';
 	import { cn } from '$lib/utils/cn.js';
 
 	let {
@@ -29,5 +30,5 @@
 			{heading}
 		</CommandPrimitive.GroupHeading>
 	{/if}
-	<CommandPrimitive.GroupItems {...children === undefined ? {} : { children }} />
+	<CommandPrimitive.GroupItems {...definedProps({ children })} />
 </CommandPrimitive.Group>

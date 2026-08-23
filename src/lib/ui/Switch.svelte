@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { Switch as BaseSwitch } from '$lib/ui/base/switch/index.js';
+	import { definedProps } from '$lib/utils/props';
 	import { Label } from '$lib/ui/base/label/index.js';
 
 	let {
@@ -21,6 +22,6 @@
 </script>
 
 <div data-slot="switch-field" class="flex items-center gap-2">
-	<BaseSwitch id={fieldId} {disabled} bind:checked {...name === undefined ? {} : { name }} />
+	<BaseSwitch id={fieldId} {disabled} bind:checked {...definedProps({ name })} />
 	<Label for={fieldId}>{label}</Label>
 </div>

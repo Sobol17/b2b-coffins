@@ -1,8 +1,9 @@
 <script lang="ts">
-	import * as Command from '$lib/ui/base/command/index.js';
 	import * as Popover from '$lib/ui/base/popover/index.js';
 	import Button from '$lib/ui/base/button/button.svelte';
 	import Field from './Field.svelte';
+	import PanelFallback from './PanelFallback.svelte';
+	import { LazyComponent } from './lazy.svelte';
 	import type { SelectOption } from './options';
 
 	let {
@@ -37,6 +38,12 @@
 
 	let open = $state(false);
 
+	const panel = new LazyComponent(() => import('./ComboboxPanel.svelte'));
+
+	$effect(() => {
+		if (open) panel.request();
+	});
+
 	function choose(next: string): void {
 		value = next;
 		open = false;
@@ -59,19 +66,12 @@
 				{/snippet}
 			</Popover.Trigger>
 			<Popover.Content class="w-(--bits-popover-anchor-width) p-0">
-				<Command.Root>
-					{#if searchable}
-						<Command.Input placeholder="Поиск" />
-					{/if}
-					<Command.List>
-						<Command.Empty>Ничего не найдено</Command.Empty>
-						{#each options as option (option.value)}
-							<Command.Item value={option.label} onSelect={() => choose(option.value)}>
-								{option.label}
-							</Command.Item>
-						{/each}
-					</Command.List>
-				</Command.Root>
+				{#if panel.component}
+					{@const Panel = panel.component}
+					<Panel {options} {searchable} onChoose={choose} />
+				{:else}
+					<PanelFallback failed={panel.failed} />
+				{/if}
 			</Popover.Content>
 		</Popover.Root>
 		<input type="hidden" {name} {value} />

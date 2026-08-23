@@ -1,12 +1,12 @@
 <script lang="ts">
-	import { CalendarDate, parseDate } from '@internationalized/date';
-	import { Calendar } from '$lib/ui/base/calendar/index.js';
 	import * as Popover from '$lib/ui/base/popover/index.js';
 	import Button from '$lib/ui/base/button/button.svelte';
 	import Field from './Field.svelte';
+	import PanelFallback from './PanelFallback.svelte';
+	import { LazyComponent } from './lazy.svelte';
 	import { formatDate } from '$lib/utils/format';
 
-	// The binding stays an ISO date string: CalendarDate is an implementation detail of the popover.
+	// The binding stays an ISO date string: CalendarDate is an implementation detail of the panel.
 	let {
 		label,
 		hint,
@@ -34,19 +34,11 @@
 
 	let open = $state(false);
 
-	function toCalendarDate(iso: string): CalendarDate | undefined {
-		if (iso === '') return undefined;
-		try {
-			const parsed = parseDate(iso);
-			return new CalendarDate(parsed.year, parsed.month, parsed.day);
-		} catch {
-			return undefined;
-		}
-	}
+	const panel = new LazyComponent(() => import('./DatePickerPanel.svelte'));
 
-	// Cast at the call site below: the calendar value is a discriminated union that does not
-	// survive destructuring, the same reason the generated component casts its own value.
-	const selected = $derived(toCalendarDate(value));
+	$effect(() => {
+		if (open) panel.request();
+	});
 </script>
 
 <Field id={fieldId} {label} {hint} {error} {required}>
@@ -65,15 +57,18 @@
 				{/snippet}
 			</Popover.Trigger>
 			<Popover.Content class="w-auto p-0">
-				<Calendar
-					type="single"
-					locale="ru-RU"
-					value={selected as never}
-					onValueChange={(next) => {
-						value = next === undefined ? '' : next.toString();
-						open = false;
-					}}
-				/>
+				{#if panel.component}
+					{@const Panel = panel.component}
+					<Panel
+						{value}
+						onPick={(iso) => {
+							value = iso;
+							open = false;
+						}}
+					/>
+				{:else}
+					<PanelFallback failed={panel.failed} />
+				{/if}
 			</Popover.Content>
 		</Popover.Root>
 		<input type="hidden" {name} {value} />

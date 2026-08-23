@@ -1,6 +1,11 @@
 /**
  * The kit of tech.md 9. A slice imports primitives from here and nowhere else: the shadcn parts in
  * `base/` are an implementation detail, not the contract.
+ *
+ * This barrel is only cheap because `src/lib/ui/package.json` marks the folder side-effect free.
+ * Without that marker rollup keeps every re-export alive, and a page that wants one button pays for
+ * the calendar, the command palette and the table. No module in this folder may gain a top-level
+ * side effect: a `<style>` block or a runtime registration would be dropped from the bundle.
  */
 export { default as Button, buttonVariants } from './base/button/button.svelte';
 export type { ButtonProps, ButtonSize, ButtonVariant } from './base/button/button.svelte';
