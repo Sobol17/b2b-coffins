@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { ResolvedPathname } from '$app/types';
 	import type { Snippet } from 'svelte';
+	import Button from './base/button/button.svelte';
 
 	let {
 		title,
@@ -18,12 +19,14 @@
 </script>
 
 <div class="flex min-h-screen flex-col">
-	<header class="flex flex-wrap items-center gap-4 border-b border-border px-6 py-3">
+	<header
+		class="flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-border bg-surface-raised px-4 py-3 sm:px-6"
+	>
 		<strong class="text-lg">{title}</strong>
 
-		<nav class="flex flex-1 flex-wrap gap-3 text-sm">
+		<nav class="flex flex-1 flex-wrap gap-1 text-sm">
 			{#each links as link (link.href)}
-				<a href={link.href} class="text-fg-muted underline">{link.label}</a>
+				<Button variant="ghost" size="sm" href={link.href}>{link.label}</Button>
 			{/each}
 		</nav>
 
@@ -31,9 +34,9 @@
 		<span data-testid="actor-roles" class="text-sm text-fg-muted">{roles.join(', ')}</span>
 
 		<form method="POST" action="/logout">
-			<button type="submit" class="text-sm underline">Выйти</button>
+			<Button type="submit" variant="secondary" size="sm">Выйти</Button>
 		</form>
 	</header>
 
-	<main class="flex-1 p-6">{@render children()}</main>
+	<main class="flex-1 p-4 sm:p-6">{@render children()}</main>
 </div>

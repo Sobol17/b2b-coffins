@@ -1,27 +1,88 @@
 @import 'tailwindcss';
+@import 'tw-animate-css';
 
 /*
- * Design tokens. Slices read these through Tailwind utilities, never hard-coded hex.
- * Palette and radii are filled in properly in K4 together with the shadcn-svelte primitives.
+ * Design tokens (tech.md 9). Every colour, radius, shadow and spacing step in the app comes from
+ * here. A slice that hard-codes a colour in a component gets rolled back.
+ *
+ * The block has two halves. The first is the project palette in semantic names the slices read.
+ * The second aliases the names the shadcn primitives were generated against, so those components
+ * follow the palette without being rewritten.
  */
 @theme {
-	--color-surface: oklch(100% 0 0);
-	--color-surface-muted: oklch(97% 0.005 260);
-	--color-border: oklch(90% 0.008 260);
-	--color-fg: oklch(25% 0.02 260);
-	--color-fg-muted: oklch(52% 0.015 260);
-	--color-brand: oklch(45% 0.09 250);
-	--color-danger: oklch(55% 0.19 27);
-	--color-warning: oklch(72% 0.16 75);
-	--color-success: oklch(58% 0.14 150);
+	/* Surfaces and text */
+	--color-surface: oklch(99% 0.003 90);
+	--color-surface-raised: oklch(100% 0 0);
+	--color-surface-muted: oklch(96.5% 0.006 90);
+	--color-border: oklch(90% 0.008 90);
+	--color-border-strong: oklch(82% 0.01 90);
+	--color-fg: oklch(25% 0.015 90);
+	--color-fg-muted: oklch(52% 0.012 90);
 
+	/* Brand and intent */
+	--color-brand: oklch(45% 0.09 250);
+	--color-brand-hover: oklch(40% 0.09 250);
+	--color-brand-fg: oklch(99% 0.005 250);
+	--color-danger: oklch(55% 0.19 27);
+	--color-danger-fg: oklch(99% 0.005 27);
+	--color-warning: oklch(58% 0.13 75);
+	--color-success: oklch(52% 0.13 150);
+
+	/* Status tones. StatusBadge and Stepper read them through lib/ui/status.ts, never inline. */
+	--color-tone-neutral: oklch(45% 0.01 90);
+	--color-tone-neutral-soft: oklch(94% 0.006 90);
+	--color-tone-info: oklch(48% 0.12 250);
+	--color-tone-info-soft: oklch(95% 0.03 250);
+	--color-tone-progress: oklch(50% 0.13 60);
+	--color-tone-progress-soft: oklch(95% 0.04 60);
+	--color-tone-ready: oklch(48% 0.1 195);
+	--color-tone-ready-soft: oklch(95% 0.03 195);
+	--color-tone-warning: oklch(50% 0.12 75);
+	--color-tone-warning-soft: oklch(95% 0.05 75);
+	--color-tone-success: oklch(46% 0.13 150);
+	--color-tone-success-soft: oklch(94% 0.04 150);
+	--color-tone-danger: oklch(50% 0.18 27);
+	--color-tone-danger-soft: oklch(95% 0.03 27);
+
+	/* Radii */
+	--radius: 0.625rem;
 	--radius-card: 0.75rem;
+
+	/* Shadows */
+	--shadow-card: 0 1px 2px oklch(25% 0.015 90 / 0.06), 0 1px 3px oklch(25% 0.015 90 / 0.04);
+	--shadow-overlay: 0 10px 30px oklch(25% 0.015 90 / 0.14);
 
 	/* Minimum touch target for the shop floor and driver screens (tech.md 16, a11y). */
 	--spacing-touch: 2.75rem;
+
+	/* Names the generated shadcn primitives were written against. */
+	--color-background: var(--color-surface);
+	--color-foreground: var(--color-fg);
+	--color-card: var(--color-surface-raised);
+	--color-card-foreground: var(--color-fg);
+	--color-popover: var(--color-surface-raised);
+	--color-popover-foreground: var(--color-fg);
+	--color-primary: var(--color-brand);
+	--color-primary-foreground: var(--color-brand-fg);
+	--color-secondary: var(--color-surface-muted);
+	--color-secondary-foreground: var(--color-fg);
+	--color-muted: var(--color-surface-muted);
+	--color-muted-foreground: var(--color-fg-muted);
+	--color-accent: var(--color-surface-muted);
+	--color-accent-foreground: var(--color-fg);
+	--color-destructive: var(--color-danger);
+	--color-destructive-foreground: var(--color-danger-fg);
+	--color-input: var(--color-border);
+	--color-ring: var(--color-brand);
 }
 
 html {
 	background-color: var(--color-surface);
 	color: var(--color-fg);
+}
+
+/* The shop floor and driver screens are used with gloves on: never shrink a tap target. */
+[data-touch-target] {
+	min-height: var(--spacing-touch);
+	min-width: var(--spacing-touch);
 }
