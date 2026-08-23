@@ -1,0 +1,27 @@
+@import 'tailwindcss';
+
+/*
+ * Design tokens. Slices read these through Tailwind utilities, never hard-coded hex.
+ * Palette and radii are filled in properly in K4 together with the shadcn-svelte primitives.
+ */
+@theme {
+	--color-surface: oklch(100% 0 0);
+	--color-surface-muted: oklch(97% 0.005 260);
+	--color-border: oklch(90% 0.008 260);
+	--color-fg: oklch(25% 0.02 260);
+	--color-fg-muted: oklch(52% 0.015 260);
+	--color-brand: oklch(45% 0.09 250);
+	--color-danger: oklch(55% 0.19 27);
+	--color-warning: oklch(72% 0.16 75);
+	--color-success: oklch(58% 0.14 150);
+
+	--radius-card: 0.75rem;
+
+	/* Minimum touch target for the shop floor and driver screens (tech.md 16, a11y). */
+	--spacing-touch: 2.75rem;
+}
+
+html {
+	background-color: var(--color-surface);
+	color: var(--color-fg);
+}
