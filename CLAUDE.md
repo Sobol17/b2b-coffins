@@ -128,6 +128,7 @@ pnpm db:generate        # миграция из схемы
 pnpm db:migrate         # применить миграции
 pnpm seed               # сид фикстур
 pnpm admin <command>    # CLI: user:create, counterparty:create, price:import, request:transition
+pnpm ui:add <component> # компонент shadcn: генератор, затем format и check
 pnpm build && node build # локальный прогон продовой сборки
 ```
 
