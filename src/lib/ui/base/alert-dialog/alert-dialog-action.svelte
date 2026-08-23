@@ -10,8 +10,8 @@
 	let {
 		ref = $bindable(null),
 		class: className,
-		variant = 'default',
-		size = 'default',
+		variant = 'primary',
+		size = 'md',
 		...restProps
 	}: AlertDialogPrimitive.ActionProps & {
 		variant?: ButtonVariant;
