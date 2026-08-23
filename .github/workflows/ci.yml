@@ -1,0 +1,58 @@
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  gate:
+    runs-on: ubuntu-latest
+    env:
+      NODE_ENV: test
+      SESSION_SECRET: ci-session-secret-value-at-least-32-chars
+      DATABASE_PATH: ./data/ci.db
+      FILES_DIR: ./data/files
+      ORIGIN: http://localhost:4173
+      LOG_LEVEL: warn
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - run: pnpm lint
+
+      - run: pnpm check
+
+      - run: pnpm test:unit
+
+      - name: Install Playwright browsers
+        run: pnpm exec playwright install --with-deps chromium
+
+      - run: pnpm test:e2e
+
+      - run: pnpm build
+
+      - name: Smoke the production bundle
+        run: |
+          node build &
+          server_pid=$!
+          for _ in $(seq 1 30); do
+            if curl -fsS "http://localhost:$PORT/api/health"; then ok=1; break; fi
+            sleep 1
+          done
+          kill "$server_pid"
+          test "$ok" = "1"
+        env:
+          PORT: 3000
