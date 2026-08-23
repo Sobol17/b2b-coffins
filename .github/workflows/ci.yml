@@ -37,6 +37,12 @@ jobs:
 
       - run: pnpm test:unit
 
+      - name: Migrate and seed a clean database
+        run: |
+          rm -rf ./data
+          pnpm db:migrate
+          pnpm seed
+
       - name: Install Playwright browsers
         run: pnpm exec playwright install --with-deps chromium
 
