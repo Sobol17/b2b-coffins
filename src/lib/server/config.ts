@@ -18,7 +18,7 @@ const envSchema = z.object({
 	VAPID_SUBJECT: z.string().default('mailto:'),
 	MAIL_DRIVER: z.enum(['fake', 'smtp']).default('fake'),
 	PUSH_DRIVER: z.enum(['fake', 'webpush']).default('fake'),
-	LOG_LEVEL: z.enum(['trace', 'debug', 'info', 'warn', 'error', 'fatal']).default('info')
+	LOG_LEVEL: z.enum(['trace', 'debug', 'info', 'warn', 'error', 'fatal', 'silent']).default('info')
 });
 
 export type AppConfig = Readonly<z.infer<typeof envSchema>>;

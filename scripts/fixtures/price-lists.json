@@ -1,0 +1,23 @@
+[
+	{
+		"code": "base",
+		"title": "Базовый прайс",
+		"isBase": true,
+		"items": []
+	},
+	{
+		"code": "partner",
+		"title": "Партнёрский прайс",
+		"isBase": false,
+		"comment": "Sparse overrides: variants left out fall back to the base price list.",
+		"items": [
+			{ "variantSku": "MDL-201-180-PIN", "priceMinor": 830000 },
+			{ "variantSku": "MDL-201-190-PIN", "priceMinor": 875000 },
+			{ "variantSku": "MDL-201-200-PIN", "priceMinor": 920000 },
+			{ "variantSku": "MDL-202-180-BIR", "priceMinor": 895000 },
+			{ "variantSku": "MDL-202-190-BIR", "priceMinor": 940000 },
+			{ "variantSku": "MDL-301-190-OAK", "priceMinor": 2310000 },
+			{ "variantSku": "MDL-301-200-OAK", "priceMinor": 2430000 }
+		]
+	}
+]

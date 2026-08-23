@@ -1,0 +1,5 @@
+[
+	{ "key": "request", "prefix": "З-", "period": "year" },
+	{ "key": "invoice", "prefix": "СЧ-", "period": "year" },
+	{ "key": "spec", "prefix": "СП-", "period": "year" }
+]

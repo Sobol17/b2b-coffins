@@ -1,0 +1,9 @@
+[
+	{ "code": "owner", "title": "Руководитель" },
+	{ "code": "manager", "title": "Менеджер" },
+	{ "code": "carpenter", "title": "Столяр" },
+	{ "code": "painter", "title": "Маляр" },
+	{ "code": "driver", "title": "Водитель" },
+	{ "code": "cp_admin", "title": "Администратор контрагента" },
+	{ "code": "cp_employee", "title": "Сотрудник контрагента" }
+]

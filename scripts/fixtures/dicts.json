@@ -1,0 +1,77 @@
+[
+	{ "dict": "material", "code": "pine", "title": "Сосна", "sortOrder": 10 },
+	{ "dict": "material", "code": "oak", "title": "Дуб", "sortOrder": 20 },
+	{ "dict": "material", "code": "birch", "title": "Берёза", "sortOrder": 30 },
+	{ "dict": "material", "code": "ash", "title": "Ясень", "sortOrder": 40 },
+	{ "dict": "material", "code": "chipboard", "title": "ЛДСП", "sortOrder": 50 },
+
+	{ "dict": "finish", "code": "matte", "title": "Матовая", "sortOrder": 10 },
+	{ "dict": "finish", "code": "gloss", "title": "Глянцевая", "sortOrder": 20 },
+
+	{ "dict": "fabric", "code": "satin", "title": "Атлас", "sortOrder": 10 },
+	{ "dict": "fabric", "code": "velvet", "title": "Бархат", "sortOrder": 20 },
+	{ "dict": "fabric", "code": "plush", "title": "Плюш", "sortOrder": 30 },
+
+	{ "dict": "hardware", "code": "standard", "title": "Стандартная фурнитура", "sortOrder": 10 },
+	{ "dict": "hardware", "code": "premium", "title": "Премиум фурнитура", "sortOrder": 20 },
+
+	{ "dict": "unit", "code": "pcs", "title": "шт", "sortOrder": 10 },
+	{ "dict": "unit", "code": "m", "title": "м", "sortOrder": 20 },
+	{ "dict": "unit", "code": "m2", "title": "м2", "sortOrder": 30 },
+	{ "dict": "unit", "code": "l", "title": "л", "sortOrder": 40 },
+	{ "dict": "unit", "code": "kg", "title": "кг", "sortOrder": 50 },
+
+	{ "dict": "work_type", "code": "sawing", "title": "Раскрой", "sortOrder": 10 },
+	{ "dict": "work_type", "code": "assembly", "title": "Сборка корпуса", "sortOrder": 20 },
+	{ "dict": "work_type", "code": "sanding", "title": "Шлифовка", "sortOrder": 30 },
+	{ "dict": "work_type", "code": "lacquering", "title": "Лакировка", "sortOrder": 40 },
+	{ "dict": "work_type", "code": "upholstery", "title": "Обивка", "sortOrder": 50 },
+	{ "dict": "work_type", "code": "packing", "title": "Упаковка", "sortOrder": 60 },
+
+	{
+		"dict": "refusal_reason",
+		"code": "address_wrong",
+		"title": "Адрес указан неверно",
+		"sortOrder": 10
+	},
+	{
+		"dict": "refusal_reason",
+		"code": "recipient_absent",
+		"title": "Получателя нет на месте",
+		"sortOrder": 20
+	},
+	{
+		"dict": "refusal_reason",
+		"code": "not_accepted",
+		"title": "Контрагент не принял",
+		"sortOrder": 30
+	},
+	{
+		"dict": "refusal_reason",
+		"code": "out_of_assortment",
+		"title": "Позиции нет в ассортименте",
+		"sortOrder": 40
+	},
+
+	{
+		"dict": "stock_move_reason",
+		"code": "initial_load",
+		"title": "Ввод начальных остатков",
+		"sortOrder": 10
+	},
+	{
+		"dict": "stock_move_reason",
+		"code": "correction",
+		"title": "Корректировка учёта",
+		"sortOrder": 20
+	},
+	{
+		"dict": "stock_move_reason",
+		"code": "delivery_refusal",
+		"title": "Отказ при доставке",
+		"sortOrder": 30
+	},
+
+	{ "dict": "transport", "code": "gazelle", "title": "Газель", "sortOrder": 10 },
+	{ "dict": "transport", "code": "van", "title": "Фургон", "sortOrder": 20 }
+]

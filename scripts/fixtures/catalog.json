@@ -1,0 +1,398 @@
+{
+	"categories": [
+		{ "code": "economy", "title": "Эконом", "sortOrder": 10 },
+		{ "code": "standard", "title": "Стандарт", "sortOrder": 20 },
+		{ "code": "premium", "title": "Премиум", "sortOrder": 30 }
+	],
+	"options": [
+		{ "code": "finish_matte", "kind": "finish", "title": "Матовая отделка", "priceDeltaMinor": 0 },
+		{
+			"code": "finish_gloss",
+			"kind": "finish",
+			"title": "Глянцевая отделка",
+			"priceDeltaMinor": 120000
+		},
+		{
+			"code": "lacquer_walnut",
+			"kind": "lacquer",
+			"title": "Лак «Орех»",
+			"priceDeltaMinor": 45000
+		},
+		{
+			"code": "lacquer_mahogany",
+			"kind": "lacquer",
+			"title": "Лак «Красное дерево»",
+			"priceDeltaMinor": 60000
+		},
+		{
+			"code": "uph_satin",
+			"kind": "upholstery",
+			"title": "Обивка атлас",
+			"priceDeltaMinor": 80000
+		},
+		{
+			"code": "uph_velvet",
+			"kind": "upholstery",
+			"title": "Обивка бархат",
+			"priceDeltaMinor": 150000
+		},
+		{
+			"code": "hw_standard",
+			"kind": "hardware",
+			"title": "Фурнитура стандарт",
+			"priceDeltaMinor": 0
+		},
+		{
+			"code": "hw_premium",
+			"kind": "hardware",
+			"title": "Фурнитура премиум",
+			"priceDeltaMinor": 210000
+		},
+		{
+			"code": "kit_basic",
+			"kind": "kit",
+			"title": "Комплект: покрывало и подушка",
+			"priceDeltaMinor": 95000
+		}
+	],
+	"products": [
+		{
+			"sku": "MDL-101",
+			"title": "Модель «Лада»",
+			"category": "economy",
+			"sortOrder": 10,
+			"description": "Прямой корпус, ЛДСП, обивка атлас.",
+			"variants": [
+				{
+					"sku": "MDL-101-180-CHB",
+					"sizeCode": "180",
+					"material": "chipboard",
+					"lengthMm": 1800,
+					"widthMm": 600,
+					"heightMm": 350,
+					"weightG": 24000,
+					"basePriceMinor": 480000,
+					"costPriceMinor": 310000
+				},
+				{
+					"sku": "MDL-101-190-CHB",
+					"sizeCode": "190",
+					"material": "chipboard",
+					"lengthMm": 1900,
+					"widthMm": 620,
+					"heightMm": 350,
+					"weightG": 26000,
+					"basePriceMinor": 510000,
+					"costPriceMinor": 330000
+				}
+			],
+			"options": ["finish_matte", "uph_satin", "hw_standard"]
+		},
+		{
+			"sku": "MDL-102",
+			"title": "Модель «Нева»",
+			"category": "economy",
+			"sortOrder": 20,
+			"description": "Прямой корпус, сосна, матовая отделка.",
+			"variants": [
+				{
+					"sku": "MDL-102-180-PIN",
+					"sizeCode": "180",
+					"material": "pine",
+					"lengthMm": 1800,
+					"widthMm": 600,
+					"heightMm": 360,
+					"weightG": 27000,
+					"basePriceMinor": 620000,
+					"costPriceMinor": 395000
+				},
+				{
+					"sku": "MDL-102-190-PIN",
+					"sizeCode": "190",
+					"material": "pine",
+					"lengthMm": 1900,
+					"widthMm": 620,
+					"heightMm": 360,
+					"weightG": 29000,
+					"basePriceMinor": 660000,
+					"costPriceMinor": 420000
+				}
+			],
+			"options": [
+				"finish_matte",
+				"finish_gloss",
+				"lacquer_walnut",
+				"uph_satin",
+				"hw_standard",
+				"kit_basic"
+			]
+		},
+		{
+			"sku": "MDL-103",
+			"title": "Модель «Ока»",
+			"category": "economy",
+			"sortOrder": 30,
+			"description": "Прямой корпус, берёза, обивка атлас.",
+			"variants": [
+				{
+					"sku": "MDL-103-180-BIR",
+					"sizeCode": "180",
+					"material": "birch",
+					"lengthMm": 1800,
+					"widthMm": 610,
+					"heightMm": 360,
+					"weightG": 28000,
+					"basePriceMinor": 690000,
+					"costPriceMinor": 440000
+				}
+			],
+			"options": ["finish_matte", "lacquer_walnut", "uph_satin", "hw_standard"]
+		},
+		{
+			"sku": "MDL-201",
+			"title": "Модель «Волга»",
+			"category": "standard",
+			"sortOrder": 10,
+			"description": "Полуовальный корпус, сосна, лак «Орех».",
+			"variants": [
+				{
+					"sku": "MDL-201-180-PIN",
+					"sizeCode": "180",
+					"material": "pine",
+					"lengthMm": 1800,
+					"widthMm": 640,
+					"heightMm": 380,
+					"weightG": 31000,
+					"basePriceMinor": 890000,
+					"costPriceMinor": 560000
+				},
+				{
+					"sku": "MDL-201-190-PIN",
+					"sizeCode": "190",
+					"material": "pine",
+					"lengthMm": 1900,
+					"widthMm": 660,
+					"heightMm": 380,
+					"weightG": 33000,
+					"basePriceMinor": 940000,
+					"costPriceMinor": 590000
+				},
+				{
+					"sku": "MDL-201-200-PIN",
+					"sizeCode": "200",
+					"material": "pine",
+					"lengthMm": 2000,
+					"widthMm": 680,
+					"heightMm": 380,
+					"weightG": 35000,
+					"basePriceMinor": 990000,
+					"costPriceMinor": 620000
+				}
+			],
+			"options": [
+				"finish_matte",
+				"finish_gloss",
+				"lacquer_walnut",
+				"lacquer_mahogany",
+				"uph_satin",
+				"uph_velvet",
+				"hw_standard",
+				"hw_premium",
+				"kit_basic"
+			]
+		},
+		{
+			"sku": "MDL-202",
+			"title": "Модель «Кама»",
+			"category": "standard",
+			"sortOrder": 20,
+			"description": "Полуовальный корпус, берёза, обивка бархат.",
+			"variants": [
+				{
+					"sku": "MDL-202-180-BIR",
+					"sizeCode": "180",
+					"material": "birch",
+					"lengthMm": 1800,
+					"widthMm": 640,
+					"heightMm": 380,
+					"weightG": 32000,
+					"basePriceMinor": 960000,
+					"costPriceMinor": 610000
+				},
+				{
+					"sku": "MDL-202-190-BIR",
+					"sizeCode": "190",
+					"material": "birch",
+					"lengthMm": 1900,
+					"widthMm": 660,
+					"heightMm": 380,
+					"weightG": 34000,
+					"basePriceMinor": 1010000,
+					"costPriceMinor": 640000
+				}
+			],
+			"options": [
+				"finish_matte",
+				"finish_gloss",
+				"lacquer_walnut",
+				"uph_satin",
+				"uph_velvet",
+				"hw_standard",
+				"hw_premium",
+				"kit_basic"
+			]
+		},
+		{
+			"sku": "MDL-203",
+			"title": "Модель «Дон»",
+			"category": "standard",
+			"sortOrder": 30,
+			"description": "Шестигранный корпус, сосна, фурнитура премиум.",
+			"variants": [
+				{
+					"sku": "MDL-203-190-PIN",
+					"sizeCode": "190",
+					"material": "pine",
+					"lengthMm": 1900,
+					"widthMm": 670,
+					"heightMm": 390,
+					"weightG": 34000,
+					"basePriceMinor": 1120000,
+					"costPriceMinor": 700000
+				}
+			],
+			"options": [
+				"finish_gloss",
+				"lacquer_walnut",
+				"lacquer_mahogany",
+				"uph_velvet",
+				"hw_premium",
+				"kit_basic"
+			]
+		},
+		{
+			"sku": "MDL-204",
+			"title": "Модель «Урал»",
+			"category": "standard",
+			"sortOrder": 40,
+			"description": "Шестигранный корпус, ясень, лак «Красное дерево».",
+			"variants": [
+				{
+					"sku": "MDL-204-190-ASH",
+					"sizeCode": "190",
+					"material": "ash",
+					"lengthMm": 1900,
+					"widthMm": 670,
+					"heightMm": 390,
+					"weightG": 36000,
+					"basePriceMinor": 1340000,
+					"costPriceMinor": 840000
+				},
+				{
+					"sku": "MDL-204-200-ASH",
+					"sizeCode": "200",
+					"material": "ash",
+					"lengthMm": 2000,
+					"widthMm": 690,
+					"heightMm": 390,
+					"weightG": 38000,
+					"basePriceMinor": 1410000,
+					"costPriceMinor": 880000
+				}
+			],
+			"options": ["finish_gloss", "lacquer_mahogany", "uph_velvet", "hw_premium", "kit_basic"]
+		},
+		{
+			"sku": "MDL-301",
+			"title": "Модель «Император»",
+			"category": "premium",
+			"sortOrder": 10,
+			"description": "Массив дуба, глянец, бархат, фурнитура премиум.",
+			"variants": [
+				{
+					"sku": "MDL-301-190-OAK",
+					"sizeCode": "190",
+					"material": "oak",
+					"lengthMm": 1900,
+					"widthMm": 700,
+					"heightMm": 400,
+					"weightG": 44000,
+					"basePriceMinor": 2480000,
+					"costPriceMinor": 1520000
+				},
+				{
+					"sku": "MDL-301-200-OAK",
+					"sizeCode": "200",
+					"material": "oak",
+					"lengthMm": 2000,
+					"widthMm": 720,
+					"heightMm": 400,
+					"weightG": 47000,
+					"basePriceMinor": 2610000,
+					"costPriceMinor": 1600000
+				}
+			],
+			"options": ["finish_gloss", "lacquer_mahogany", "uph_velvet", "hw_premium", "kit_basic"]
+		},
+		{
+			"sku": "MDL-302",
+			"title": "Модель «Сенатор»",
+			"category": "premium",
+			"sortOrder": 20,
+			"description": "Массив дуба, резьба, обивка бархат.",
+			"variants": [
+				{
+					"sku": "MDL-302-190-OAK",
+					"sizeCode": "190",
+					"material": "oak",
+					"lengthMm": 1900,
+					"widthMm": 710,
+					"heightMm": 410,
+					"weightG": 46000,
+					"basePriceMinor": 2890000,
+					"costPriceMinor": 1780000
+				}
+			],
+			"options": ["finish_gloss", "lacquer_mahogany", "uph_velvet", "hw_premium", "kit_basic"]
+		},
+		{
+			"sku": "MDL-303",
+			"title": "Модель «Канцлер»",
+			"category": "premium",
+			"sortOrder": 30,
+			"description": "Массив ясеня, глянец, комплект в подарок.",
+			"variants": [
+				{
+					"sku": "MDL-303-190-ASH",
+					"sizeCode": "190",
+					"material": "ash",
+					"lengthMm": 1900,
+					"widthMm": 700,
+					"heightMm": 400,
+					"weightG": 42000,
+					"basePriceMinor": 2240000,
+					"costPriceMinor": 1380000
+				},
+				{
+					"sku": "MDL-303-200-ASH",
+					"sizeCode": "200",
+					"material": "ash",
+					"lengthMm": 2000,
+					"widthMm": 720,
+					"heightMm": 400,
+					"weightG": 45000,
+					"basePriceMinor": 2360000,
+					"costPriceMinor": 1450000
+				}
+			],
+			"options": [
+				"finish_gloss",
+				"lacquer_walnut",
+				"lacquer_mahogany",
+				"uph_velvet",
+				"hw_premium",
+				"kit_basic"
+			]
+		}
+	]
+}

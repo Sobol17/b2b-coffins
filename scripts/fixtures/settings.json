@@ -1,0 +1,22 @@
+{
+	"org.requisites": {
+		"name": "ООО «Столярная мастерская»",
+		"inn": "7701234567",
+		"kpp": "770101001",
+		"address": "г. Москва, ул. Промышленная, д. 4, стр. 2",
+		"phone": "+7 495 000-00-00",
+		"account": "40702810000000000001",
+		"bank": "ПАО Банк",
+		"bik": "044525000"
+	},
+	"org.timezone": "Europe/Moscow",
+	"charity.rate_bp": 100,
+	"charity.fund": {
+		"title": "Фонд помощи хосписам",
+		"url": "https://example.org/fund"
+	},
+	"counterparty.staff_limit_default": 10,
+	"payroll.week_closing_day": 1,
+	"notifications.enabled": true,
+	"crm.ip_allowlist": []
+}

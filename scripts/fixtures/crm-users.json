@@ -1,0 +1,37 @@
+[
+	{
+		"email": "owner@workshop.example",
+		"fullName": "Игорь Соболев",
+		"role": "owner",
+		"password": "Crm!Owner1",
+		"staffPosition": "Руководитель"
+	},
+	{
+		"email": "manager@workshop.example",
+		"fullName": "Марина Круглова",
+		"role": "manager",
+		"password": "Crm!Manager1",
+		"staffPosition": "Менеджер"
+	},
+	{
+		"email": "carpenter@workshop.example",
+		"fullName": "Николай Ершов",
+		"role": "carpenter",
+		"password": "Crm!Carp1",
+		"staffPosition": "Столяр"
+	},
+	{
+		"email": "painter@workshop.example",
+		"fullName": "Виктор Панин",
+		"role": "painter",
+		"password": "Crm!Paint1",
+		"staffPosition": "Маляр"
+	},
+	{
+		"email": "driver@workshop.example",
+		"fullName": "Сергей Гаврилов",
+		"role": "driver",
+		"password": "Crm!Driver1",
+		"staffPosition": "Водитель"
+	}
+]

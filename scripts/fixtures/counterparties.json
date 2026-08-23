@@ -1,0 +1,77 @@
+[
+	{
+		"name": "Ритуал-Сервис",
+		"legalName": "ООО «Ритуал-Сервис»",
+		"inn": "7702345678",
+		"kpp": "770201001",
+		"address": "г. Москва, ул. Полевая, д. 12",
+		"phone": "+7 495 111-11-11",
+		"email": "office@ritual-service.example",
+		"priceList": "partner",
+		"discountPercent": 5,
+		"settlementScheme": "weekly",
+		"staffLimit": 10,
+		"addresses": [
+			{
+				"title": "Основной склад",
+				"address": "г. Москва, ул. Полевая, д. 12, склад 1",
+				"contactName": "Пётр Ильин",
+				"contactPhone": "+7 916 111-11-11",
+				"isDefault": true
+			},
+			{
+				"title": "Филиал Химки",
+				"address": "г. Химки, ул. Заводская, д. 3",
+				"contactName": "Ольга Гущина",
+				"contactPhone": "+7 916 222-22-22",
+				"isDefault": false
+			}
+		],
+		"users": [
+			{
+				"email": "admin@ritual-service.example",
+				"fullName": "Пётр Ильин",
+				"phone": "+7 916 111-11-11",
+				"role": "cp_admin",
+				"password": "Portal!Admin1"
+			},
+			{
+				"email": "employee@ritual-service.example",
+				"fullName": "Ольга Гущина",
+				"phone": "+7 916 222-22-22",
+				"role": "cp_employee",
+				"password": "Portal!Empl1"
+			}
+		]
+	},
+	{
+		"name": "Память",
+		"legalName": "ИП Соколов А. В.",
+		"inn": "500100200300",
+		"address": "г. Балашиха, ш. Энтузиастов, д. 45",
+		"phone": "+7 495 222-22-22",
+		"email": "office@pamyat.example",
+		"priceList": "base",
+		"discountPercent": 0,
+		"settlementScheme": "on_fact",
+		"staffLimit": 5,
+		"addresses": [
+			{
+				"title": "Приёмная",
+				"address": "г. Балашиха, ш. Энтузиастов, д. 45",
+				"contactName": "Андрей Соколов",
+				"contactPhone": "+7 916 333-33-33",
+				"isDefault": true
+			}
+		],
+		"users": [
+			{
+				"email": "admin@pamyat.example",
+				"fullName": "Андрей Соколов",
+				"phone": "+7 916 333-33-33",
+				"role": "cp_admin",
+				"password": "Portal!Admin2"
+			}
+		]
+	}
+]

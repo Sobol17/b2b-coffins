@@ -1,0 +1,58 @@
+[
+	{
+		"kind": "component",
+		"code": "CMP-BOARD-PINE",
+		"title": "Доска сосновая 25 мм",
+		"unit": "m2",
+		"minThreshold": 40
+	},
+	{
+		"kind": "component",
+		"code": "CMP-BOARD-OAK",
+		"title": "Доска дубовая 30 мм",
+		"unit": "m2",
+		"minThreshold": 15
+	},
+	{
+		"kind": "component",
+		"code": "CMP-CHIPBOARD",
+		"title": "ЛДСП 16 мм",
+		"unit": "m2",
+		"minThreshold": 60
+	},
+	{
+		"kind": "component",
+		"code": "CMP-LACQUER",
+		"title": "Лак мебельный",
+		"unit": "l",
+		"minThreshold": 20
+	},
+	{
+		"kind": "component",
+		"code": "CMP-FABRIC-SATIN",
+		"title": "Ткань атлас",
+		"unit": "m",
+		"minThreshold": 50
+	},
+	{
+		"kind": "component",
+		"code": "CMP-FABRIC-VELVET",
+		"title": "Ткань бархат",
+		"unit": "m",
+		"minThreshold": 25
+	},
+	{
+		"kind": "component",
+		"code": "CMP-HANDLE-STD",
+		"title": "Ручка стандарт",
+		"unit": "pcs",
+		"minThreshold": 100
+	},
+	{
+		"kind": "component",
+		"code": "CMP-HANDLE-PRM",
+		"title": "Ручка премиум",
+		"unit": "pcs",
+		"minThreshold": 40
+	}
+]

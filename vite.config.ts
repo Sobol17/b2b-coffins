@@ -3,6 +3,13 @@ import { defineConfig } from 'vitest/config';
 import adapter from '@sveltejs/adapter-node';
 import { sveltekit } from '@sveltejs/kit/vite';
 
+// config.ts refuses to boot without these, and unit tests exercise the real server modules.
+const UNIT_TEST_ENV = {
+	NODE_ENV: 'test',
+	SESSION_SECRET: 'unit-test-session-secret-at-least-32-chars',
+	LOG_LEVEL: 'silent'
+};
+
 export default defineConfig({
 	plugins: [
 		tailwindcss(),
@@ -42,7 +49,8 @@ export default defineConfig({
 				test: {
 					name: 'unit',
 					environment: 'node',
-					include: ['tests/unit/**/*.{test,spec}.ts']
+					include: ['tests/unit/**/*.{test,spec}.ts'],
+					env: UNIT_TEST_ENV
 				}
 			},
 			{
