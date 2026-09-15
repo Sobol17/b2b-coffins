@@ -1,6 +1,10 @@
 <script lang="ts">
 	import { resolve } from '$app/paths';
-	import { Button, Card } from '$lib/ui';
+	import { Button, Card, PriceCell } from '$lib/ui';
+	import { formatDate } from '$lib/utils/format';
+	import type { PageProps } from './$types';
+
+	let { data }: PageProps = $props();
 </script>
 
 <svelte:head><title>Портал контрагента</title></svelte:head>
@@ -18,6 +22,34 @@
 				<Button href={resolve('/portal/catalog')} class="self-start">Открыть каталог</Button>
 			</Card.Content>
 		</Card.Root>
+
+		<Card.Root>
+			<Card.Content class="flex flex-col gap-3">
+				<h2 class="text-2xl">Повторить заявку</h2>
+				{#if data.lastRequest}
+					<p data-testid="last-request" class="text-fg-muted">
+						Заявка {data.lastRequest.number}{#if data.lastRequest.submittedAt}
+							от {formatDate(data.lastRequest.submittedAt, data.timezone)}{/if}: позиций
+						{data.lastRequest.itemCount}, изделий {data.lastRequest
+							.unitCount}{#if data.lastRequest.totalMinor !== undefined},
+							<PriceCell valueMinor={data.lastRequest.totalMinor} /> ₽{/if}.
+					</p>
+					<!-- A plain post: the action answers with a redirect to the cart, a full navigation is what we want. -->
+					<form method="POST" action="/portal/cart?/repeat" class="self-start">
+						<input type="hidden" name="requestId" value={data.lastRequest.id} />
+						<Button type="submit" variant="secondary" data-testid="repeat-request">
+							Повторить в заявку
+						</Button>
+					</form>
+				{:else}
+					<p class="text-fg-muted">
+						Отправленных заявок пока нет. Первую отправленную заявку можно будет повторить в один
+						клик.
+					</p>
+				{/if}
+			</Card.Content>
+		</Card.Root>
+
 		<Card.Root>
 			<Card.Content class="flex flex-col gap-3">
 				<h2 class="text-2xl">Мой аккаунт</h2>

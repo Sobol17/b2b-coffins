@@ -1,23 +1,26 @@
 <script lang="ts">
 	import { page } from '$app/state';
+	import ClipboardListIcon from '@lucide/svelte/icons/clipboard-list';
 	import MenuIcon from '@lucide/svelte/icons/menu';
 	import type { ResolvedPathname } from '$app/types';
 	import Button from '../base/button/button.svelte';
 	import Drawer from '../Drawer.svelte';
-	import type { ShellLink } from './types';
+	import type { CartLink, ShellLink } from './types';
 
 	let {
 		title,
 		userName,
 		roles,
 		links,
-		accountHref
+		accountHref,
+		cart
 	}: {
 		title: string;
 		userName: string;
 		roles: readonly string[];
 		links: readonly ShellLink[];
 		accountHref?: ResolvedPathname | undefined;
+		cart?: CartLink | undefined;
 	} = $props();
 
 	let menuOpen = $state(false);
@@ -63,6 +66,27 @@
 
 		<div class="ml-auto flex items-center gap-2 md:ml-0">
 			<span data-testid="actor-roles" class="sr-only">{roles.join(', ')}</span>
+			{#if cart}
+				<Button
+					variant={isCurrent(cart.href) ? 'primary' : 'secondary'}
+					size="sm"
+					href={cart.href}
+					data-testid="cart-chip"
+					class="gap-2 px-3 sm:px-4"
+					aria-label="Заявка, изделий: {cart.count}"
+				>
+					<ClipboardListIcon class="sm:hidden" />
+					<span class="hidden sm:inline">Заявка</span>
+					{#if cart.count > 0}
+						<span
+							data-testid="cart-count"
+							class="rounded-pill bg-brand px-2 text-xs text-brand-fg tabular-nums"
+						>
+							{cart.count}
+						</span>
+					{/if}
+				</Button>
+			{/if}
 			{#if accountHref}
 				<Button
 					variant="secondary"
