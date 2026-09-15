@@ -26,6 +26,15 @@ describe('an optional prop forwarded to a generated component', () => {
 		expect(Object.keys(source)).toEqual(['name', 'id']);
 	});
 
+	it('keeps a key named __proto__ as an ordinary property', () => {
+		const props = JSON.parse('{"__proto__": 1, "name": "x"}') as Record<string, unknown>;
+
+		const result = definedProps(props);
+
+		expect(Object.keys(result).sort()).toEqual(['__proto__', 'name']);
+		expect(Object.getPrototypeOf(result)).toBe(Object.prototype);
+	});
+
 	it('keeps every defined value untouched, whatever the props are', () => {
 		fc.assert(
 			fc.property(
