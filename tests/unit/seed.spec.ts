@@ -101,6 +101,21 @@ describe('migrations and seed on a clean database', () => {
 		}
 	});
 
+	it('gives every variant a compatibility matrix with exactly one default option', () => {
+		const variants = db.select({ id: productVariants.id }).from(productVariants).all();
+		const matrix = db
+			.select({ variantId: productOptions.variantId, isDefault: productOptions.isDefault })
+			.from(productOptions)
+			.all();
+
+		expect(variants.length).toBeGreaterThan(0);
+		for (const variant of variants) {
+			const rows = matrix.filter((row) => row.variantId === variant.id);
+			expect(rows.length).toBeGreaterThan(0);
+			expect(rows.filter((row) => row.isDefault)).toHaveLength(1);
+		}
+	});
+
 	it('keeps dictionary codes unique inside a dictionary', () => {
 		const rows = db.select({ dict: dictItems.dict, code: dictItems.code }).from(dictItems).all();
 		const keys = new Set(rows.map((r) => `${r.dict}:${r.code}`));

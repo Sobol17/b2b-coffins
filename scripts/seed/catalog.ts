@@ -1,6 +1,7 @@
 import { and, eq } from 'drizzle-orm';
 import { z } from 'zod';
 import type { Db } from '../../src/lib/server/db/client';
+import type { OptionKind } from '../../src/lib/types/catalog';
 import {
 	categories,
 	options,
@@ -48,7 +49,7 @@ function upsertCategory(db: Db, title: string, sortOrder: number): number {
 function upsertOption(
 	db: Db,
 	value: {
-		kind: 'finish' | 'lacquer' | 'upholstery' | 'hardware' | 'kit';
+		kind: OptionKind;
 		title: string;
 		priceDeltaMinor: number;
 	}

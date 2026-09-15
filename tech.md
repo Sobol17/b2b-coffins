@@ -1,7 +1,7 @@
 # tech.md — ядро проекта
 
 **Проект:** B2B-портал + CRM для столярной мастерской (производство гробов)
-**Версия ядра:** v1.8
+**Версия ядра:** v1.9
 **Дата:** 15.09.2026
 **Владелец файла:** Sobol17 (тимлид и единственный разработчик)
 **Источник требований:** `TZ_B2B_CRM_stolyarka_v06.md`
@@ -11,6 +11,7 @@
 | Версия | Изменение |
 |---|---|
 | v1.0 | Первая заморозка ядра: стек, структура, схема БД, контракты очереди и событий, общие типы, UI-примитивы, правила кода, дорожная карта слайсов |
+| v1.9 | Слайс P1: в §8 добавлены проекции каталога `CategoryDto`, `ProductListItemDto`, `ProductDto`, `VariantDto`, `OptionDto` и `CatalogFilters`, список видов опций вынесен в `OPTION_KINDS`. Цена варианта в P1 берётся из `basePriceMinor`, P2 меняет источник на персональную цену без смены поля `priceMinor`. Черновые и удалённые позиции видит только роль с `catalog.manage`, скрытая позиция для портала отвечает 404 |
 | v1.8 | PWA перенесена на конец этапа 2: слайс K6 выведен из каркаса и стал слайсом C15 после C14. Вместе с ним переехал канал Web Push, потому что без service worker браузерный push не доставляется: P9 подключает только email, C6 и C12 работают без push, отзыв протухших подписок перешёл в C15. До C15 в приложении нет манифеста, service worker и VAPID-подписок |
 | v1.7 | Ближайший эпик: завершить этап 1. Всё, что вызывает спор или расходится с контрактом, переносится на этап 2: разрывы §18.6 в этапе 1 не поднимаются и не реализуются, по шрифту §18.7 этап 1 делает вариант А. По итогам K5 зафиксировано: `PushMessage` содержит ровно `title`, `body`, `url` (путь внутри приложения) и необязательный `tag` по §17.2, фейки почты и push умеют `failOnce` и `hangOnce`, `/api/health` отдаёт `queue: { workerRunning, pending, running, dead }` по §16 |
 | v1.6 | Добавлен §18 «Макеты портала»: папка `ui/` с десятью макетами стала источником внешнего вида портала, зафиксированы токены палитры «Ангел», типографика, соответствие элементов макета примитивам `lib/ui`, таблица «экран, роут, роли, слайс» и список разрывов контракта, которые макеты открывают, но которые без решения не реализуются. В каркас добавлен слайс K7 «Визуальная система и оболочка портала» с публичным лендингом на `/`. §4.4 и §17.1 приведены к фактическим адресам контуров `/portal/*` и `/crm/*`, цвета манифеста взяты из палитры |
@@ -959,6 +960,27 @@ export interface ListQuery<F = Record<string, unknown>> {
   search?: string; filters?: F;
 }
 export interface Page<T> { rows: T[]; total: number; page: number; perPage: number; }
+
+// catalog.ts — role projections of the catalog (P1). Price keys are optional and never selected for a price-blind role.
+export const OPTION_KINDS = ['finish','lacquer','upholstery','hardware','kit'] as const;
+export interface CatalogFilters { readonly categoryId?: number | undefined; }
+export interface CategoryDto { id: number; title: string; parentId: number | null; productCount: number; }
+export interface ProductListItemDto {
+  id: number; sku: string; title: string; categoryId: number | null; coverMediaId: number | null; variantCount: number;
+  minPriceMinor?: number;
+}
+export interface OptionDto { id: number; kind: OptionKind; title: string; isDefault: boolean; priceDeltaMinor?: number; }
+export interface VariantDto {
+  id: number; sku: string; sizeCode: string; materialTitle: string;
+  lengthMm: number | null; widthMm: number | null; heightMm: number | null; weightG: number | null;
+  options: OptionDto[];                  // compatibility matrix of the variant
+  priceMinor?: number;                   // base price in P1, personal price from P2
+  costPriceMinor?: number;               // owner only
+}
+export interface ProductDto {
+  id: number; sku: string; title: string; description: string | null;
+  categoryId: number | null; categoryTitle: string | null; mediaIds: number[]; variants: VariantDto[];
+}
 
 // money.ts — branded type, blocks accidental mixing with plain numbers
 export type Minor = number & { readonly __brand: 'minor' };
