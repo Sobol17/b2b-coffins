@@ -66,3 +66,26 @@ export function formatDateTime(iso: string, timeZone = 'UTC'): string {
 	const p = parts(iso, timeZone);
 	return `${p.day}.${p.month}.${p.year} ${p.hour}:${p.minute}`;
 }
+
+// Sizes are stored in millimetres and grams (tech.md 5.4); the storefront speaks centimetres and kilos.
+function centimetres(mm: number): string {
+	return String(Math.round(mm / 10));
+}
+
+/** "180 / 190 / 200 см", or an empty string when no length is known. */
+export function formatLengthsCm(lengthsMm: readonly number[]): string {
+	return lengthsMm.length === 0 ? '' : `${lengthsMm.map(centimetres).join(' / ')} см`;
+}
+
+export function formatDimensionsCm(
+	lengthMm: number | null,
+	widthMm: number | null,
+	heightMm: number | null
+): string {
+	return `${[lengthMm, widthMm, heightMm].map((mm) => (mm === null ? '—' : centimetres(mm))).join(' × ')} см`;
+}
+
+export function formatWeightKg(weightG: number | null): string {
+	if (weightG === null) return '—';
+	return `${(weightG / 1000).toLocaleString('ru-RU', { maximumFractionDigits: 1 })} кг`;
+}

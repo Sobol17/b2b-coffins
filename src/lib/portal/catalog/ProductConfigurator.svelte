@@ -1,0 +1,125 @@
+<script lang="ts">
+	import { Card, PriceCell, Select, type SelectOption } from '$lib/ui';
+	import type { OptionKind, ProductDto } from '$lib/types/catalog';
+	import type { ContactDto } from '$lib/types/counterparty';
+	import { formatMinor } from '$lib/utils/format';
+
+	/*
+	 * Choice of size and options by the compatibility matrix. The choice stays on the page for now:
+	 * sending it to a request draft, with the server check of the combination, is P4.
+	 */
+	let {
+		product,
+		selectedId = $bindable(null),
+		manager
+	}: { product: ProductDto; selectedId?: number | null; manager: ContactDto | null } = $props();
+
+	const KIND_LABEL: Readonly<Record<OptionKind, string>> = {
+		finish: 'Отделка',
+		lacquer: 'Лак',
+		upholstery: 'Обивка',
+		hardware: 'Фурнитура',
+		kit: 'Комплект'
+	};
+
+	let chosen = $state<Partial<Record<OptionKind, string>>>({});
+
+	const variant = $derived(
+		product.variants.find((item) => item.id === selectedId) ?? product.variants[0]
+	);
+	const sizeOptions = $derived<SelectOption[]>(
+		product.variants.map((item) => ({
+			value: String(item.id),
+			label: `${item.sizeCode} · ${item.materialTitle}`
+		}))
+	);
+	const groups = $derived.by(() => {
+		const kinds = [...new Set((variant?.options ?? []).map((option) => option.kind))];
+		return kinds.map((kind) => {
+			const own = (variant?.options ?? []).filter((option) => option.kind === kind);
+			return {
+				kind,
+				defaultValue: String(own.find((option) => option.isDefault)?.id ?? own[0]?.id ?? ''),
+				options: own.map((option): SelectOption => ({
+					value: String(option.id),
+					// A surcharge is money: it is only there for a role that received it.
+					label:
+						option.priceDeltaMinor === undefined || option.priceDeltaMinor === 0
+							? option.title
+							: `${option.title} (+${formatMinor(option.priceDeltaMinor)} ₽)`
+				}))
+			};
+		});
+	});
+	const inStock = $derived((variant?.stockQty ?? 0) > 0);
+
+	function valueOf(group: {
+		kind: OptionKind;
+		defaultValue: string;
+		options: SelectOption[];
+	}): string {
+		const picked = chosen[group.kind];
+		// A pick made for another size may not exist in the matrix of this one.
+		return picked !== undefined && group.options.some((option) => option.value === picked)
+			? picked
+			: group.defaultValue;
+	}
+</script>
+
+<Card.Root class="lg:sticky lg:top-28">
+	<Card.Content class="flex flex-col gap-5">
+		<div>
+			<div class="text-xs tracking-[0.08em] text-fg-faint">{variant?.sku ?? product.sku}</div>
+			<h1 class="mt-2 text-3xl sm:text-4xl">{product.title}</h1>
+			<p class="mt-2 text-fg-muted">
+				{[product.categoryTitle, `типоразмеров: ${product.variants.length}`]
+					.filter((part) => part !== null)
+					.join(' · ')}
+			</p>
+		</div>
+
+		<div
+			data-testid="product-page-price"
+			class="flex items-baseline gap-2.5 border-b border-border pb-4"
+		>
+			<span class="font-heading text-4xl font-semibold">
+				<PriceCell valueMinor={variant?.priceMinor} />
+				{#if variant?.priceMinor !== undefined}₽{/if}
+			</span>
+			{#if variant?.priceMinor !== undefined}
+				<span class="text-sm text-fg-faint">за штуку</span>
+			{/if}
+		</div>
+
+		<div data-testid="product-page-stock" class="rounded-inset bg-surface-muted p-4">
+			<div class="text-xs text-fg-faint">На складе</div>
+			<div class={['font-heading text-xl font-semibold', inStock && 'text-brand']}>
+				{inStock ? `${variant?.stockQty} шт` : 'Нет в наличии'}
+			</div>
+		</div>
+
+		{#if sizeOptions.length > 0}
+			<Select
+				label="Размер"
+				options={sizeOptions}
+				bind:value={() => String(variant?.id ?? ''), (next) => (selectedId = Number(next))}
+			/>
+		{/if}
+
+		{#each groups as group (group.kind)}
+			<Select
+				label={KIND_LABEL[group.kind]}
+				options={group.options}
+				bind:value={() => valueOf(group), (next) => (chosen = { ...chosen, [group.kind]: next })}
+			/>
+		{/each}
+
+		{#if manager}
+			<p class="border-t border-border pt-4 text-sm text-fg-muted">
+				Менеджер мастерской<br />
+				<span class="text-fg">{manager.fullName}</span>{#if manager.phone}
+					· {manager.phone}{/if}
+			</p>
+		{/if}
+	</Card.Content>
+</Card.Root>
