@@ -1,7 +1,7 @@
 # tech.md — ядро проекта
 
 **Проект:** B2B-портал + CRM для столярной мастерской (производство гробов)
-**Версия ядра:** v1.11
+**Версия ядра:** v1.12
 **Дата:** 15.09.2026
 **Владелец файла:** Sobol17 (тимлид и единственный разработчик)
 **Источник требований:** `TZ_B2B_CRM_stolyarka_v06.md`
@@ -11,6 +11,7 @@
 | Версия | Изменение |
 |---|---|
 | v1.0 | Первая заморозка ядра: стек, структура, схема БД, контракты очереди и событий, общие типы, UI-примитивы, правила кода, дорожная карта слайсов |
+| v1.12 | Слайс P4, корзина по макету «Корзина». Черновик один на пользователя в своём контрагенте и получает номер из `numbering_sequences` при создании: формат `{prefix}{period}-{00001}`, период считается в `org.timezone`, новый период начинает счёт с единицы. Позиция проверяется на сервере: опции только из матрицы варианта, без повторов и не больше одной каждого вида; одинаковые позиции складываются, в строке не больше 999 штук. Цена строки: персональная цена варианта плюс надбавки опций, умноженные на количество; скидка по договору берётся один раз с суммы заявки (`domain/request/pricing.ts`). Суммы черновика считаются и хранятся для любой роли, DTO отдаёт их только роли с ценами. Отправка `draft -> new` проверяется машиной состояний, пишет историю, событие `request.submitted` и аудит в одной транзакции и пересчитывает цены на момент отправки; ограничение `request.submit` в `rate_limits`. Повтор заявки копирует позиции в черновик и пропускает недоступные. Минимальная партия и шаблоны комплектов из §14 P4 не имеют полей в схеме и переносятся на этап 2 вместе с позициями §18.6. В §8 добавлены DTO черновика |
 | v1.11 | Слайс P3, витрина по макетам «Каталог», «Листинг товаров», «Карточка товара». `CatalogFilters` расширен материалами, отделкой, диапазоном длины и признаком наличия; все фильтры проверяются одним вариантом модели. В проекции каталога добавлены `CategoryDto.minPriceMinor`, `ProductListItemDto.materialTitles/lengthsMm/stockQty`, `VariantDto.stockQty`, `CatalogFacetsDto`, `CategoryGroupDto`. Остаток считается суммой `stock_moves` и на витрине не бывает меньше нуля; сид кладёт начальные остатки движениями `inventory` из `stock-balances.json`. Сортировка по цене идёт по минимальной персональной цене модели и для роли без цен игнорируется, чтобы порядок не выдавал цены. Категории образуют дерево по `parent_id`, раздел включает подкатегории. Прайс-лист XLSX отдаётся синхронно на `/portal/catalog/price-list.xlsx` только роли с ценами. `/api/files/[id]` отдаёт пока только медиа товаров по праву `catalog.read`, фото скрытого товара отвечает 404, остальные владельцы получают правила в своих слайсах. У `Checkbox` появился проп `value` для отправки в форме |
 | v1.10 | Слайс P2. Персональная цена варианта: позиция прайс-листа контрагента, затем позиция базового прайс-листа, затем `base_price_minor`; прайс-лист действует внутри `valid_from`/`valid_to`, логика в `domain/request/pricing.ts`. Скидка по договору `counterparties.discount_percent` применяется к сумме заявки (`requests.discount_minor`), а не к цене позиции. Сочетание со скидками `discount_rules` по категориям не определено и переносится на этап 2. Письмо с доступом сотруднику уходит через `MailDriver` напрямую, как восстановление пароля: временный пароль не может лежать в очереди, поэтому администратор видит его один раз на странице. Статус сотрудника выводится из учётной записи: отключён при `is_active = false`, приглашён при временном пароле без входа, иначе активен. Лимит `staff_limit` считает активные учётные записи, администратор не может отключить или понизить себя, создание сотрудника ограничено `staff.create` в `rate_limits`. В §8 добавлены проекции контрагента и сотрудников. Сид назначает контрагенту менеджера |
 | v1.9 | Слайс P1: в §8 добавлены проекции каталога `CategoryDto`, `ProductListItemDto`, `ProductDto`, `VariantDto`, `OptionDto` и `CatalogFilters`, список видов опций вынесен в `OPTION_KINDS`. Цена варианта в P1 берётся из `basePriceMinor`, P2 меняет источник на персональную цену без смены поля `priceMinor`. Черновые и удалённые позиции видит только роль с `catalog.manage`, скрытая позиция для портала отвечает 404 |
@@ -955,6 +956,22 @@ export interface RequestListItemDto {
   createdAt: string; readyAt: string | null; deliveredAt: string | null;
   totalMinor?: number; paidMinor?: number; charityAmountMinor?: number;
 }
+
+// Portal draft (P4). Money keys only for a role with prices; the stored sums are computed for every role.
+export interface DraftItemDto {
+  id: number; productId: number; productTitle: string; sku: string; sizeCode: string; materialTitle: string;
+  coverMediaId: number | null; qty: number; options: { id: number; kind: string; title: string }[];
+  unitPriceMinor?: number;               // variant price plus option surcharges, one piece
+  lineTotalMinor?: number;
+}
+export interface DraftDto {
+  id: number; number: string; items: DraftItemDto[]; unitCount: number;
+  isPickup: boolean; deliveryAddressId: number | null; comment: string | null; externalNumber: string | null;
+  addresses: DeliveryAddressDto[]; updatedAt: string;
+  itemsTotalMinor?: number; discountPercent?: number; discountMinor?: number; totalMinor?: number;
+}
+export interface SubmittedRequestDto { id: number; number: string; status: RequestStatus; }
+export interface LastRequestDto { id: number; number: string; submittedAt: string | null; itemCount: number; unitCount: number; totalMinor?: number; }
 
 // list.ts — one shape for every registry in the app
 export interface ListQuery<F = Record<string, unknown>> {
