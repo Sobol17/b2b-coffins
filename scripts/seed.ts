@@ -1,6 +1,6 @@
 import { config } from '../src/lib/server/config';
 import { createDb } from '../src/lib/server/db/client';
-import { seedCatalog, seedStockItems } from './seed/catalog';
+import { seedCatalog, seedStockBalances, seedStockItems } from './seed/catalog';
 import { seedCounterparties, seedCrmUsers, seedPriceLists, seedStaff } from './seed/parties';
 import {
 	seedDicts,
@@ -22,6 +22,7 @@ async function main(): Promise<void> {
 		notificationRules: seedNotificationRules(db),
 		stockItems: seedStockItems(db),
 		catalog: seedCatalog(db),
+		stockBalances: seedStockBalances(db),
 		crmUsers: await seedCrmUsers(db),
 		staff: seedStaff(db)
 	};

@@ -1,6 +1,12 @@
-import type { ProductRow } from './catalog.repository';
+import type { CategoryRow, ProductRow } from './catalog.repository';
 import type { OptionRow, VariantRow } from './variant.repository';
-import type { OptionDto, ProductDto, ProductListItemDto, VariantDto } from '$lib/types/catalog';
+import type {
+	CategoryDto,
+	OptionDto,
+	ProductDto,
+	ProductListItemDto,
+	VariantDto
+} from '$lib/types/catalog';
 import { definedProps } from '$lib/utils/props';
 
 /** Price of a variant for the actor: personal price, and the cost price for the owner. */
@@ -9,19 +15,35 @@ export interface VariantPrice {
 	readonly costPriceMinor?: number | undefined;
 }
 
+export interface ListItemExtra {
+	readonly variantCount: number;
+	readonly mediaIds: readonly number[];
+	readonly materialTitles: readonly string[];
+	readonly lengthsMm: readonly number[];
+	readonly stockQty: number;
+	readonly minPriceMinor: number | undefined;
+}
+
 /**
  * Role projection of the catalog (tech.md 8.1). A price argument is undefined for a role without
  * prices, and `definedProps` then leaves the key out of the object instead of sending null.
  */
 export class CatalogDtoMapper {
-	static toListItem(
-		row: ProductRow,
-		extra: {
-			variantCount: number;
-			mediaIds: readonly number[];
-			minPriceMinor: number | undefined;
-		}
-	): ProductListItemDto {
+	static toCategory(
+		row: CategoryRow,
+		productCount: number,
+		minPriceMinor: number | undefined
+	): CategoryDto {
+		return {
+			id: row.id,
+			title: row.title,
+			parentId: row.parentId,
+			productCount,
+			...definedProps({ minPriceMinor })
+		};
+	}
+
+	static toListItem(row: ProductRow, extra: ListItemExtra): ProductListItemDto {
 		return {
 			id: row.id,
 			sku: row.sku,
@@ -29,6 +51,9 @@ export class CatalogDtoMapper {
 			categoryId: row.categoryId,
 			coverMediaId: extra.mediaIds[0] ?? null,
 			variantCount: extra.variantCount,
+			materialTitles: extra.materialTitles,
+			lengthsMm: extra.lengthsMm,
+			stockQty: extra.stockQty,
 			...definedProps({ minPriceMinor: extra.minPriceMinor })
 		};
 	}
@@ -46,7 +71,8 @@ export class CatalogDtoMapper {
 	static toVariant(
 		row: VariantRow,
 		options: readonly OptionDto[],
-		price: VariantPrice | undefined
+		price: VariantPrice | undefined,
+		stockQty: number
 	): VariantDto {
 		return {
 			id: row.id,
@@ -58,6 +84,7 @@ export class CatalogDtoMapper {
 			heightMm: row.heightMm,
 			weightG: row.weightG,
 			options,
+			stockQty,
 			...definedProps({ priceMinor: price?.priceMinor, costPriceMinor: price?.costPriceMinor })
 		};
 	}

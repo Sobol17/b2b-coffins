@@ -1,14 +1,31 @@
-import { and, asc, eq, inArray, isNull, like, or, type SQL } from 'drizzle-orm';
-import { countExpression, offsetFor, orderByFor } from '../core/list';
+import {
+	and,
+	asc,
+	desc,
+	eq,
+	exists,
+	gte,
+	inArray,
+	like,
+	lte,
+	or,
+	sql,
+	type SQL
+} from 'drizzle-orm';
+import { countExpression, offsetFor } from '../core/list';
 import { BaseRepository } from '../core/repository';
-import { categories, media, products } from '../db/schema';
+import {
+	categories,
+	media,
+	productOptions,
+	productVariants,
+	products,
+	stockMoves
+} from '../db/schema';
+import { productVisible, variantVisible, type Visibility } from './visibility';
 import type { CatalogFilters } from '$lib/types/catalog';
-import type { ListQuery } from '$lib/types/list';
 
-export interface Visibility {
-	/** Drafts and hidden positions exist only for the workshop that manages the catalog. */
-	readonly publishedOnly: boolean;
-}
+export type { Visibility } from './visibility';
 
 export interface ProductRow {
 	readonly id: number;
@@ -22,7 +39,22 @@ export interface CategoryRow {
 	readonly id: number;
 	readonly title: string;
 	readonly parentId: number | null;
+	/** Visible products placed directly in this category. */
 	readonly productCount: number;
+}
+
+/** What the storefront matches products by. Category ids already include the subcategories. */
+export interface ProductMatch {
+	readonly categoryIds?: readonly number[] | undefined;
+	readonly search?: string | undefined;
+	readonly filters?: CatalogFilters | undefined;
+}
+
+export interface ProductPage {
+	readonly page: number;
+	readonly perPage: number;
+	readonly sort: 'sortOrder' | 'title';
+	readonly dir: 'asc' | 'desc';
 }
 
 const PRODUCT_COLUMNS = {
@@ -32,8 +64,6 @@ const PRODUCT_COLUMNS = {
 	categoryId: products.categoryId,
 	description: products.description
 };
-
-const SORTABLE = { title: products.title, sku: products.sku, sortOrder: products.sortOrder };
 
 /** Products, categories and product media. The catalog is shared, so no counterparty filter here. */
 export class CatalogRepository extends BaseRepository<typeof products> {
@@ -45,7 +75,7 @@ export class CatalogRepository extends BaseRepository<typeof products> {
 		const counts = this.db()
 			.select({ categoryId: products.categoryId, count: countExpression })
 			.from(products)
-			.where(this.visible(visibility))
+			.where(productVisible(visibility))
 			.groupBy(products.categoryId)
 			.all();
 		const byCategory = new Map(counts.map((row) => [row.categoryId, row.count]));
@@ -59,27 +89,46 @@ export class CatalogRepository extends BaseRepository<typeof products> {
 	}
 
 	listProducts(
-		query: ListQuery<CatalogFilters>,
+		match: ProductMatch,
+		page: ProductPage,
 		visibility: Visibility
 	): { rows: ProductRow[]; total: number } {
-		const where = this.visible(visibility, this.matching(query));
+		const where = this.matching(match, visibility);
 		const [counted] = this.db()
 			.select({ total: countExpression })
 			.from(products)
 			.where(where)
 			.all();
+		const column = page.sort === 'title' ? products.title : products.sortOrder;
 		const rows = this.db()
 			.select(PRODUCT_COLUMNS)
 			.from(products)
 			.where(where)
-			.orderBy(
-				orderByFor({ ...query, dir: query.dir ?? 'asc' }, SORTABLE, products.sortOrder),
-				asc(products.id)
-			)
-			.limit(query.perPage)
-			.offset(offsetFor(query))
+			.orderBy(page.dir === 'desc' ? desc(column) : asc(column), asc(products.id))
+			.limit(page.perPage)
+			.offset(offsetFor({ page: page.page, perPage: page.perPage }))
 			.all();
 		return { rows, total: counted?.total ?? 0 };
+	}
+
+	/** Every matching id in catalog order, for a sort the database cannot do (personal price). */
+	matchingIds(match: ProductMatch, visibility: Visibility): number[] {
+		return this.db()
+			.select({ id: products.id })
+			.from(products)
+			.where(this.matching(match, visibility))
+			.orderBy(asc(products.sortOrder), asc(products.id))
+			.all()
+			.map((row) => row.id);
+	}
+
+	findByIds(ids: readonly number[]): ProductRow[] {
+		if (ids.length === 0) return [];
+		return this.db()
+			.select(PRODUCT_COLUMNS)
+			.from(products)
+			.where(inArray(products.id, [...ids]))
+			.all();
 	}
 
 	findProduct(
@@ -90,7 +139,7 @@ export class CatalogRepository extends BaseRepository<typeof products> {
 			.select({ ...PRODUCT_COLUMNS, categoryTitle: categories.title })
 			.from(products)
 			.leftJoin(categories, eq(categories.id, products.categoryId))
-			.where(this.visible(visibility, eq(products.id, id)))
+			.where(and(productVisible(visibility), eq(products.id, id)))
 			.all();
 		return row;
 	}
@@ -112,23 +161,67 @@ export class CatalogRepository extends BaseRepository<typeof products> {
 		return byProduct;
 	}
 
-	private visible(visibility: Visibility, extra?: SQL): SQL | undefined {
+	private matching(match: ProductMatch, visibility: Visibility): SQL | undefined {
+		// Bound parameters, never string-built SQL: the search text is user input.
+		const pattern = match.search === undefined ? undefined : `%${match.search}%`;
 		return and(
-			isNull(products.deletedAt),
-			visibility.publishedOnly ? eq(products.isPublished, true) : undefined,
-			extra
+			productVisible(visibility),
+			match.categoryIds === undefined
+				? undefined
+				: inArray(products.categoryId, [...match.categoryIds]),
+			pattern === undefined
+				? undefined
+				: or(like(products.title, pattern), like(products.sku, pattern)),
+			this.variantMatch(match.filters, visibility)
 		);
 	}
 
-	private matching(query: ListQuery<CatalogFilters>): SQL | undefined {
-		const categoryId = query.filters?.categoryId;
-		// Bound parameters, never string-built SQL: the search text is user input.
-		const pattern = query.search === undefined ? undefined : `%${query.search}%`;
-		return and(
-			categoryId === undefined ? undefined : eq(products.categoryId, categoryId),
-			pattern === undefined
+	/**
+	 * One variant has to meet every filter at once: "oak" and "200 cm" mean an oak variant of
+	 * 200 cm, not an oak model that also comes as a 200 cm pine one.
+	 */
+	private variantMatch(
+		filters: CatalogFilters | undefined,
+		visibility: Visibility
+	): SQL | undefined {
+		if (!filters) return undefined;
+		const conditions = [
+			filters.materialIds?.length
+				? inArray(productVariants.materialId, [...filters.materialIds])
+				: undefined,
+			filters.lengthFromMm === undefined
 				? undefined
-				: or(like(products.title, pattern), like(products.sku, pattern))
+				: gte(productVariants.lengthMm, filters.lengthFromMm),
+			filters.lengthToMm === undefined
+				? undefined
+				: lte(productVariants.lengthMm, filters.lengthToMm),
+			filters.finishOptionIds?.length
+				? exists(
+						this.db()
+							.select({ one: sql`1` })
+							.from(productOptions)
+							.where(
+								and(
+									eq(productOptions.variantId, productVariants.id),
+									inArray(productOptions.optionId, [...filters.finishOptionIds])
+								)
+							)
+					)
+				: undefined,
+			// Balance is the sum of moves (tech.md 5.7): there is no stored figure to read instead.
+			filters.inStock
+				? sql`(select coalesce(sum(${stockMoves.qty}), 0) from ${stockMoves} where ${stockMoves.stockItemId} = ${productVariants.stockItemId}) > 0`
+				: undefined
+		].filter((condition): condition is SQL => condition !== undefined);
+		if (conditions.length === 0) return undefined;
+
+		return exists(
+			this.db()
+				.select({ one: sql`1` })
+				.from(productVariants)
+				.where(
+					and(eq(productVariants.productId, products.id), variantVisible(visibility), ...conditions)
+				)
 		);
 	}
 }

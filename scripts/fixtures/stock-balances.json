@@ -1,0 +1,10 @@
+[
+	{ "stockItem": "MDL-101-180-CHB", "qty": 24 },
+	{ "stockItem": "MDL-101-190-CHB", "qty": 10 },
+	{ "stockItem": "MDL-102-190-PIN", "qty": 6 },
+	{ "stockItem": "MDL-201-180-PIN", "qty": 12 },
+	{ "stockItem": "MDL-201-190-PIN", "qty": 8 },
+	{ "stockItem": "MDL-202-180-BIR", "qty": 4 },
+	{ "stockItem": "MDL-301-190-OAK", "qty": 2 },
+	{ "stockItem": "MDL-303-190-ASH", "qty": 3 }
+]

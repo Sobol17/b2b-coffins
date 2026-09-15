@@ -5,8 +5,11 @@
 
 	let { data, children }: LayoutProps = $props();
 
-	// Only routes that exist: Каталог arrives with P3 and Заявки with P6 (tech.md 18.5).
-	const links = [{ href: resolve('/portal'), label: 'Главная' }];
+	// Only routes that exist: Заявки arrive with P6 (tech.md 18.5).
+	const links = [
+		{ href: resolve('/portal'), label: 'Главная' },
+		{ href: resolve('/portal/catalog'), label: 'Каталог' }
+	];
 
 	const footerCaption = $derived.by(() => {
 		const manager = data.counterparty.manager;

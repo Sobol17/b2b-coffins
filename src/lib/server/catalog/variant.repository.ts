@@ -1,8 +1,15 @@
-import { and, asc, eq, inArray, isNull, sql, type SQL } from 'drizzle-orm';
-import { countExpression } from '../core/list';
+import { and, asc, eq, inArray, sql } from 'drizzle-orm';
 import { BaseRepository } from '../core/repository';
-import { dictItems, options, productOptions, productVariants } from '../db/schema';
-import type { Visibility } from './catalog.repository';
+import {
+	categories,
+	dictItems,
+	options,
+	productOptions,
+	productVariants,
+	products,
+	stockMoves
+} from '../db/schema';
+import { productVisible, variantVisible, type Visibility } from './visibility';
 import type { OptionKind } from '$lib/types/catalog';
 
 export interface VariantRow {
@@ -30,9 +37,25 @@ export interface PriceRow {
 	readonly costPriceMinor?: number;
 }
 
+export interface VariantCategoryRow {
+	readonly id: number;
+	readonly productId: number;
+	readonly categoryId: number | null;
+}
+
+export interface PriceListVariantRow {
+	readonly id: number;
+	readonly sku: string;
+	readonly sizeCode: string;
+	readonly materialTitle: string;
+	readonly lengthMm: number | null;
+	readonly productTitle: string;
+	readonly categoryTitle: string | null;
+}
+
 /**
- * Variants, the compatibility matrix and prices. Descriptive reads never touch a money column;
- * prices live in separate methods the service calls only for a role allowed to see them.
+ * Variants, the compatibility matrix, stock and prices. Descriptive reads never touch a money
+ * column; prices live in separate methods called only for a role allowed to see them.
  */
 export class VariantRepository extends BaseRepository<typeof productVariants> {
 	constructor() {
@@ -55,20 +78,64 @@ export class VariantRepository extends BaseRepository<typeof productVariants> {
 			})
 			.from(productVariants)
 			.innerJoin(dictItems, eq(dictItems.id, productVariants.materialId))
-			.where(this.visible(visibility, inArray(productVariants.productId, [...productIds])))
+			.where(and(variantVisible(visibility), inArray(productVariants.productId, [...productIds])))
 			.orderBy(asc(productVariants.lengthMm), asc(productVariants.sku))
 			.all();
 	}
 
-	countByProducts(productIds: readonly number[], visibility: Visibility): Map<number, number> {
-		if (productIds.length === 0) return new Map();
-		const rows = this.db()
-			.select({ productId: productVariants.productId, count: countExpression })
+	/** Visible variants with the category of their model, for per-category figures. */
+	withCategories(visibility: Visibility): VariantCategoryRow[] {
+		return this.db()
+			.select({
+				id: productVariants.id,
+				productId: productVariants.productId,
+				categoryId: products.categoryId
+			})
 			.from(productVariants)
-			.where(this.visible(visibility, inArray(productVariants.productId, [...productIds])))
-			.groupBy(productVariants.productId)
+			.innerJoin(products, eq(products.id, productVariants.productId))
+			.where(and(productVisible(visibility), variantVisible(visibility)))
 			.all();
-		return new Map(rows.map((row) => [row.productId, row.count]));
+	}
+
+	findAllForPriceList(visibility: Visibility): PriceListVariantRow[] {
+		return this.db()
+			.select({
+				id: productVariants.id,
+				sku: productVariants.sku,
+				sizeCode: productVariants.sizeCode,
+				materialTitle: dictItems.title,
+				lengthMm: productVariants.lengthMm,
+				productTitle: products.title,
+				categoryTitle: categories.title
+			})
+			.from(productVariants)
+			.innerJoin(products, eq(products.id, productVariants.productId))
+			.innerJoin(dictItems, eq(dictItems.id, productVariants.materialId))
+			.leftJoin(categories, eq(categories.id, products.categoryId))
+			.where(and(productVisible(visibility), variantVisible(visibility)))
+			.orderBy(
+				asc(categories.sortOrder),
+				asc(products.sortOrder),
+				asc(productVariants.lengthMm),
+				asc(productVariants.sku)
+			)
+			.all();
+	}
+
+	/** Stock balance per variant: the sum of the moves of its stock item (tech.md 5.7). */
+	stockByVariants(variantIds: readonly number[]): Map<number, number> {
+		if (variantIds.length === 0) return new Map();
+		const rows = this.db()
+			.select({
+				id: productVariants.id,
+				qty: sql<number>`coalesce(sum(${stockMoves.qty}), 0)`
+			})
+			.from(productVariants)
+			.leftJoin(stockMoves, eq(stockMoves.stockItemId, productVariants.stockItemId))
+			.where(inArray(productVariants.id, [...variantIds]))
+			.groupBy(productVariants.id)
+			.all();
+		return new Map(rows.map((row) => [row.id, row.qty]));
 	}
 
 	/** Active options allowed per variant, defaults first. */
@@ -125,13 +192,5 @@ export class VariantRepository extends BaseRepository<typeof productVariants> {
 			.where(inArray(options.id, [...optionIds]))
 			.all();
 		return new Map(rows.map((row) => [row.id, row.priceDeltaMinor]));
-	}
-
-	private visible(visibility: Visibility, extra: SQL): SQL | undefined {
-		return and(
-			isNull(productVariants.deletedAt),
-			visibility.publishedOnly ? eq(productVariants.isPublished, true) : undefined,
-			extra
-		);
 	}
 }
