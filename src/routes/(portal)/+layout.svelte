@@ -7,6 +7,7 @@
 
 	const links = [
 		{ href: resolve('/portal'), label: 'Главная' },
+		{ href: resolve('/portal/profile'), label: 'Профиль' },
 		{ href: resolve('/password/change'), label: 'Сменить пароль' }
 	];
 </script>
