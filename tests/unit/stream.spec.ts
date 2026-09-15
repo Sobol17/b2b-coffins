@@ -107,4 +107,23 @@ describe('event stream body', () => {
 		expect(hub.listenerCount('charity')).toBe(0);
 		expect((await reader.read()).done).toBe(true);
 	});
+
+	it('survives a browser that cancels the body before the request aborts', async () => {
+		const hub = new StreamHub();
+		const abort = new AbortController();
+		const reader = openEventStream('charity', abort.signal, hub).getReader();
+		await readChunk(reader);
+		const uncaught: unknown[] = [];
+		const record = (err: unknown): void => void uncaught.push(err);
+		process.on('uncaughtException', record);
+
+		await reader.cancel();
+		abort.abort();
+		// Node rethrows a listener error on the next tick, so give it one before checking.
+		await new Promise((resolve) => setImmediate(resolve));
+		process.off('uncaughtException', record);
+
+		expect(uncaught).toEqual([]);
+		expect(hub.listenerCount('charity')).toBe(0);
+	});
 });

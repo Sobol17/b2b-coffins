@@ -54,6 +54,9 @@ export function openEventStream(
 			signal.addEventListener(
 				'abort',
 				() => {
+					// The browser usually cancels the body before the request signal aborts. Closing an
+					// already cancelled controller throws outside any handler and takes the process down.
+					if (closed) return;
 					close();
 					controller.close();
 				},
