@@ -11,6 +11,15 @@
 	<div class="grid gap-6 md:grid-cols-2">
 		<Card.Root>
 			<Card.Content class="flex flex-col gap-3">
+				<h2 class="text-2xl">Собрать заявку</h2>
+				<p class="text-fg-muted">
+					Подбор моделей по каталогу, размеры, отделка и наличие на складе.
+				</p>
+				<Button href={resolve('/portal/catalog')} class="self-start">Открыть каталог</Button>
+			</Card.Content>
+		</Card.Root>
+		<Card.Root>
+			<Card.Content class="flex flex-col gap-3">
 				<h2 class="text-2xl">Мой аккаунт</h2>
 				<p class="text-fg-muted">Контактные данные и пароль для входа в портал.</p>
 				<Button variant="secondary" href={resolve('/portal/profile')} class="self-start">

@@ -124,6 +124,12 @@ export const staffFixture = z.object({
 	position: z.string().min(1)
 });
 
+/** Opening balance of a stock item, posted once as an `inventory` move. */
+export const stockBalanceFixture = z.object({
+	stockItem: z.string().min(1),
+	qty: z.number().int().positive()
+});
+
 export const stockItemFixture = z.object({
 	kind: z.enum(['product', 'component']),
 	code: z.string().min(1),

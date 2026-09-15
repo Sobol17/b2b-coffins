@@ -8,12 +8,15 @@
 		checked = $bindable(false),
 		id,
 		name,
+		value,
 		disabled = false
 	}: {
 		label: string;
 		checked?: boolean;
 		id?: string | undefined;
 		name?: string | undefined;
+		/** Submitted with the form when checked. Several boxes with one name send a list. */
+		value?: string | undefined;
 		disabled?: boolean;
 	} = $props();
 
@@ -22,6 +25,6 @@
 </script>
 
 <div data-slot="checkbox-field" class="flex items-center gap-2">
-	<BaseCheckbox id={fieldId} {disabled} bind:checked {...definedProps({ name })} />
+	<BaseCheckbox id={fieldId} {disabled} bind:checked {...definedProps({ name, value })} />
 	<Label for={fieldId}>{label}</Label>
 </div>

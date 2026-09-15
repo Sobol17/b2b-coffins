@@ -1,7 +1,7 @@
 # tech.md — ядро проекта
 
 **Проект:** B2B-портал + CRM для столярной мастерской (производство гробов)
-**Версия ядра:** v1.10
+**Версия ядра:** v1.11
 **Дата:** 15.09.2026
 **Владелец файла:** Sobol17 (тимлид и единственный разработчик)
 **Источник требований:** `TZ_B2B_CRM_stolyarka_v06.md`
@@ -11,6 +11,7 @@
 | Версия | Изменение |
 |---|---|
 | v1.0 | Первая заморозка ядра: стек, структура, схема БД, контракты очереди и событий, общие типы, UI-примитивы, правила кода, дорожная карта слайсов |
+| v1.11 | Слайс P3, витрина по макетам «Каталог», «Листинг товаров», «Карточка товара». `CatalogFilters` расширен материалами, отделкой, диапазоном длины и признаком наличия; все фильтры проверяются одним вариантом модели. В проекции каталога добавлены `CategoryDto.minPriceMinor`, `ProductListItemDto.materialTitles/lengthsMm/stockQty`, `VariantDto.stockQty`, `CatalogFacetsDto`, `CategoryGroupDto`. Остаток считается суммой `stock_moves` и на витрине не бывает меньше нуля; сид кладёт начальные остатки движениями `inventory` из `stock-balances.json`. Сортировка по цене идёт по минимальной персональной цене модели и для роли без цен игнорируется, чтобы порядок не выдавал цены. Категории образуют дерево по `parent_id`, раздел включает подкатегории. Прайс-лист XLSX отдаётся синхронно на `/portal/catalog/price-list.xlsx` только роли с ценами. `/api/files/[id]` отдаёт пока только медиа товаров по праву `catalog.read`, фото скрытого товара отвечает 404, остальные владельцы получают правила в своих слайсах. У `Checkbox` появился проп `value` для отправки в форме |
 | v1.10 | Слайс P2. Персональная цена варианта: позиция прайс-листа контрагента, затем позиция базового прайс-листа, затем `base_price_minor`; прайс-лист действует внутри `valid_from`/`valid_to`, логика в `domain/request/pricing.ts`. Скидка по договору `counterparties.discount_percent` применяется к сумме заявки (`requests.discount_minor`), а не к цене позиции. Сочетание со скидками `discount_rules` по категориям не определено и переносится на этап 2. Письмо с доступом сотруднику уходит через `MailDriver` напрямую, как восстановление пароля: временный пароль не может лежать в очереди, поэтому администратор видит его один раз на странице. Статус сотрудника выводится из учётной записи: отключён при `is_active = false`, приглашён при временном пароле без входа, иначе активен. Лимит `staff_limit` считает активные учётные записи, администратор не может отключить или понизить себя, создание сотрудника ограничено `staff.create` в `rate_limits`. В §8 добавлены проекции контрагента и сотрудников. Сид назначает контрагенту менеджера |
 | v1.9 | Слайс P1: в §8 добавлены проекции каталога `CategoryDto`, `ProductListItemDto`, `ProductDto`, `VariantDto`, `OptionDto` и `CatalogFilters`, список видов опций вынесен в `OPTION_KINDS`. Цена варианта в P1 берётся из `basePriceMinor`, P2 меняет источник на персональную цену без смены поля `priceMinor`. Черновые и удалённые позиции видит только роль с `catalog.manage`, скрытая позиция для портала отвечает 404 |
 | v1.8 | PWA перенесена на конец этапа 2: слайс K6 выведен из каркаса и стал слайсом C15 после C14. Вместе с ним переехал канал Web Push, потому что без service worker браузерный push не доставляется: P9 подключает только email, C6 и C12 работают без push, отзыв протухших подписок перешёл в C15. До C15 в приложении нет манифеста, service worker и VAPID-подписок |
@@ -964,10 +965,20 @@ export interface Page<T> { rows: T[]; total: number; page: number; perPage: numb
 
 // catalog.ts — role projections of the catalog (P1). Price keys are optional and never selected for a price-blind role.
 export const OPTION_KINDS = ['finish','lacquer','upholstery','hardware','kit'] as const;
-export interface CatalogFilters { readonly categoryId?: number | undefined; }
-export interface CategoryDto { id: number; title: string; parentId: number | null; productCount: number; }
+export const CATALOG_SORTS = ['sortOrder','title','price'] as const;   // price: personal price, ignored for a price-blind role
+export interface CatalogFilters {                                        // one variant has to satisfy all filters at once (P3)
+  categoryId?: number; materialIds?: number[]; finishOptionIds?: number[];
+  lengthFromMm?: number; lengthToMm?: number; inStock?: boolean;
+}
+export interface CategoryDto { id: number; title: string; parentId: number | null; productCount: number; minPriceMinor?: number; }
+export interface CategoryGroupDto { category: CategoryDto; children: CategoryDto[]; showcase: ProductListItemDto[]; }
+export interface CatalogFacetsDto {
+  materials: { id: number; title: string; productCount: number }[]; finishes: { id: number; title: string }[];
+  lengthMm: { min: number | null; max: number | null };
+}
 export interface ProductListItemDto {
   id: number; sku: string; title: string; categoryId: number | null; coverMediaId: number | null; variantCount: number;
+  materialTitles: string[]; lengthsMm: number[]; stockQty: number;   // stock: sum of moves, never below zero
   minPriceMinor?: number;
 }
 export interface OptionDto { id: number; kind: OptionKind; title: string; isDefault: boolean; priceDeltaMinor?: number; }
@@ -975,6 +986,7 @@ export interface VariantDto {
   id: number; sku: string; sizeCode: string; materialTitle: string;
   lengthMm: number | null; widthMm: number | null; heightMm: number | null; weightG: number | null;
   options: OptionDto[];                  // compatibility matrix of the variant
+  stockQty: number;                      // sum of stock moves, never below zero
   priceMinor?: number;                   // base price in P1, personal price from P2
   costPriceMinor?: number;               // owner only
 }
@@ -1043,7 +1055,7 @@ export class RequestDtoMapper {
 | `Input` / `Textarea` / `NumberInput` | `label`, `error`, `hint`, `required`, `bind:value` |
 | `MoneyInput` | `bind:valueMinor`, ввод в рублях, хранение в копейках |
 | `Select` / `Combobox` | `options: {value,label}[]`, `bind:value`, `searchable` |
-| `Checkbox` / `Switch` / `RadioGroup` | `label`, `bind:checked` |
+| `Checkbox` / `Switch` / `RadioGroup` | `label`, `bind:checked`; у `Checkbox` ещё `name` и `value` для отправки в форме |
 | `DatePicker` / `DateRangePicker` | `bind:value: string`, ISO-строки |
 | `FileUpload` | `accept`, `maxSizeMb`, `multiple`, `onUploaded(mediaId)` |
 | `DataTable` | `columns`, `rows`, `total`, `query: ListQuery`, `onQueryChange`, `exportUrl`, серверная пагинация |

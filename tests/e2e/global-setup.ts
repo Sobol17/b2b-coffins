@@ -4,7 +4,7 @@ import { hashPassword } from '../../src/lib/server/auth/password';
 import { createDb, type Db } from '../../src/lib/server/db/client';
 import { rateLimits, roles, sessions, userRoles, users } from '../../src/lib/server/db/schema';
 import { TEMP_ACCOUNTS } from './fixtures';
-import { seedCatalog, seedStockItems } from '../../scripts/seed/catalog';
+import { seedCatalog, seedStockBalances, seedStockItems } from '../../scripts/seed/catalog';
 import {
 	seedCounterparties,
 	seedCrmUsers,
@@ -37,6 +37,7 @@ export default async function globalSetup(): Promise<void> {
 	seedNotificationRules(db);
 	seedStockItems(db);
 	seedCatalog(db);
+	seedStockBalances(db);
 	await seedCrmUsers(db);
 	seedStaff(db);
 	await seedCounterparties(db, seedPriceLists(db));

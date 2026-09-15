@@ -8,9 +8,10 @@ import {
 	productOptions,
 	productVariants,
 	products,
-	stockItems
+	stockItems,
+	stockMoves
 } from '../../src/lib/server/db/schema';
-import { catalogFixture, loadFixture, stockItemFixture } from './schema';
+import { catalogFixture, loadFixture, stockBalanceFixture, stockItemFixture } from './schema';
 import { dictIdByCode } from './reference';
 
 export function seedStockItems(db: Db): number {
@@ -32,6 +33,41 @@ export function seedStockItems(db: Db): number {
 			.run();
 	}
 	return rows.length;
+}
+
+/**
+ * Opening balances, so the storefront has stock to show before the warehouse screens exist (C8).
+ * Moves are append-only: an item that already has any move is left alone on a rerun.
+ */
+export function seedStockBalances(db: Db): number {
+	const rows = loadFixture('stock-balances.json', z.array(stockBalanceFixture));
+	let posted = 0;
+	for (const row of rows) {
+		const [item] = db
+			.select({ id: stockItems.id })
+			.from(stockItems)
+			.where(eq(stockItems.code, row.stockItem))
+			.all();
+		if (!item) throw new Error(`stock balance references unknown item ${row.stockItem}`);
+		const [existing] = db
+			.select({ id: stockMoves.id })
+			.from(stockMoves)
+			.where(eq(stockMoves.stockItemId, item.id))
+			.limit(1)
+			.all();
+		if (existing) continue;
+		db.insert(stockMoves)
+			.values({
+				stockItemId: item.id,
+				qty: row.qty,
+				type: 'inventory',
+				comment: 'Начальный остаток из сида',
+				occurredAt: new Date()
+			})
+			.run();
+		posted += 1;
+	}
+	return posted;
 }
 
 function upsertCategory(db: Db, title: string, sortOrder: number): number {

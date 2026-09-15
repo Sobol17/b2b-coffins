@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { migrate } from 'drizzle-orm/better-sqlite3/migrator';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createDb, type Db } from '../../src/lib/server/db/client';
-import { seedCatalog, seedStockItems } from '../../scripts/seed/catalog';
+import { seedCatalog, seedStockBalances, seedStockItems } from '../../scripts/seed/catalog';
 import {
 	seedCounterparties,
 	seedCrmUsers,
@@ -26,6 +26,7 @@ import {
 	productVariants,
 	products,
 	roles,
+	stockMoves,
 	userRoles,
 	users
 } from '../../src/lib/server/db/schema';
@@ -39,7 +40,9 @@ const COUNTED_TABLES = {
 	priceListItems,
 	counterparties,
 	users,
-	userRoles
+	userRoles,
+	// Opening balances are append-only moves: a rerun must not post them twice.
+	stockMoves
 };
 
 function countAll(db: Db): Record<string, number> {
@@ -59,6 +62,7 @@ async function runSeed(db: Db): Promise<void> {
 	seedNotificationRules(db);
 	seedStockItems(db);
 	seedCatalog(db);
+	seedStockBalances(db);
 	await seedCrmUsers(db);
 	seedStaff(db);
 	await seedCounterparties(db, seedPriceLists(db));
