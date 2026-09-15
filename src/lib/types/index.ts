@@ -1,5 +1,6 @@
 export * from './actor';
 export * from './catalog';
+export * from './counterparty';
 export * from './dicts';
 export * from './events';
 export * from './list';

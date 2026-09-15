@@ -117,20 +117,6 @@ export class VariantRepository extends BaseRepository<typeof productVariants> {
 		);
 	}
 
-	minPrices(productIds: readonly number[], visibility: Visibility): Map<number, number> {
-		if (productIds.length === 0) return new Map();
-		const rows = this.db()
-			.select({
-				productId: productVariants.productId,
-				minPriceMinor: sql<number>`min(${productVariants.basePriceMinor})`
-			})
-			.from(productVariants)
-			.where(this.visible(visibility, inArray(productVariants.productId, [...productIds])))
-			.groupBy(productVariants.productId)
-			.all();
-		return new Map(rows.map((row) => [row.productId, row.minPriceMinor]));
-	}
-
 	optionDeltas(optionIds: readonly number[]): Map<number, number> {
 		if (optionIds.length === 0) return new Map();
 		const rows = this.db()
