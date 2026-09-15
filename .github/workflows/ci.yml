@@ -1,9 +1,9 @@
 name: ci
 
+# Manual runs only while one person develops: the same gate runs locally before every merge,
+# and an automatic run on each PR cost more time than it caught (tech.md 11.1).
 on:
-  pull_request:
-  push:
-    branches: [main]
+  workflow_dispatch:
 
 concurrency:
   group: ci-${{ github.ref }}
