@@ -7,6 +7,7 @@ import {
 	uniqueIndex,
 	type AnySQLiteColumn
 } from 'drizzle-orm/sqlite-core';
+import { OPTION_KINDS } from '$lib/types/catalog';
 import { DICT_CODES } from '$lib/types/dicts';
 import { bool, createdAt, money, pk, ts, updatedAt } from './_shared';
 import { stockItems } from './stock';
@@ -67,7 +68,7 @@ export const productVariants = sqliteTable(
 /** Options: finish, lacquer colour, upholstery, hardware, kit. */
 export const options = sqliteTable('options', {
 	id: pk(),
-	kind: text('kind', { enum: ['finish', 'lacquer', 'upholstery', 'hardware', 'kit'] }).notNull(),
+	kind: text('kind', { enum: OPTION_KINDS }).notNull(),
 	title: text('title').notNull(),
 	priceDeltaMinor: integer('price_delta_minor').notNull().default(0),
 	stockItemId: integer('stock_item_id').references(() => stockItems.id),

@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { z } from 'zod';
+import { OPTION_KINDS } from '../../src/lib/types/catalog';
 import { DICT_CODES } from '../../src/lib/types/dicts';
 import { EVENT_KEYS } from '../../src/lib/types/events';
 import { ROLE_CODES } from '../../src/lib/types/roles';
@@ -48,7 +49,7 @@ export const catalogFixture = z.object({
 	options: z.array(
 		z.object({
 			code: z.string().min(1),
-			kind: z.enum(['finish', 'lacquer', 'upholstery', 'hardware', 'kit']),
+			kind: z.enum(OPTION_KINDS),
 			title: z.string().min(1),
 			priceDeltaMinor: z.number().int()
 		})
