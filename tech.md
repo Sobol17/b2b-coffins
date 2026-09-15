@@ -1,7 +1,7 @@
 # tech.md — ядро проекта
 
 **Проект:** B2B-портал + CRM для столярной мастерской (производство гробов)
-**Версия ядра:** v1.9
+**Версия ядра:** v1.10
 **Дата:** 15.09.2026
 **Владелец файла:** Sobol17 (тимлид и единственный разработчик)
 **Источник требований:** `TZ_B2B_CRM_stolyarka_v06.md`
@@ -11,6 +11,7 @@
 | Версия | Изменение |
 |---|---|
 | v1.0 | Первая заморозка ядра: стек, структура, схема БД, контракты очереди и событий, общие типы, UI-примитивы, правила кода, дорожная карта слайсов |
+| v1.10 | Слайс P2. Персональная цена варианта: позиция прайс-листа контрагента, затем позиция базового прайс-листа, затем `base_price_minor`; прайс-лист действует внутри `valid_from`/`valid_to`, логика в `domain/request/pricing.ts`. Скидка по договору `counterparties.discount_percent` применяется к сумме заявки (`requests.discount_minor`), а не к цене позиции. Сочетание со скидками `discount_rules` по категориям не определено и переносится на этап 2. Письмо с доступом сотруднику уходит через `MailDriver` напрямую, как восстановление пароля: временный пароль не может лежать в очереди, поэтому администратор видит его один раз на странице. Статус сотрудника выводится из учётной записи: отключён при `is_active = false`, приглашён при временном пароле без входа, иначе активен. Лимит `staff_limit` считает активные учётные записи, администратор не может отключить или понизить себя, создание сотрудника ограничено `staff.create` в `rate_limits`. В §8 добавлены проекции контрагента и сотрудников. Сид назначает контрагенту менеджера |
 | v1.9 | Слайс P1: в §8 добавлены проекции каталога `CategoryDto`, `ProductListItemDto`, `ProductDto`, `VariantDto`, `OptionDto` и `CatalogFilters`, список видов опций вынесен в `OPTION_KINDS`. Цена варианта в P1 берётся из `basePriceMinor`, P2 меняет источник на персональную цену без смены поля `priceMinor`. Черновые и удалённые позиции видит только роль с `catalog.manage`, скрытая позиция для портала отвечает 404 |
 | v1.8 | PWA перенесена на конец этапа 2: слайс K6 выведен из каркаса и стал слайсом C15 после C14. Вместе с ним переехал канал Web Push, потому что без service worker браузерный push не доставляется: P9 подключает только email, C6 и C12 работают без push, отзыв протухших подписок перешёл в C15. До C15 в приложении нет манифеста, service worker и VAPID-подписок |
 | v1.7 | Ближайший эпик: завершить этап 1. Всё, что вызывает спор или расходится с контрактом, переносится на этап 2: разрывы §18.6 в этапе 1 не поднимаются и не реализуются, по шрифту §18.7 этап 1 делает вариант А. По итогам K5 зафиксировано: `PushMessage` содержит ровно `title`, `body`, `url` (путь внутри приложения) и необязательный `tag` по §17.2, фейки почты и push умеют `failOnce` и `hangOnce`, `/api/health` отдаёт `queue: { workerRunning, pending, running, dead }` по §16 |
@@ -981,6 +982,24 @@ export interface ProductDto {
   id: number; sku: string; title: string; description: string | null;
   categoryId: number | null; categoryTitle: string | null; mediaIds: number[]; variants: VariantDto[];
 }
+
+// counterparty.ts — counterparty card and portal staff (P2). Money and the discount only for a role with prices.
+export const STAFF_STATUSES = ['active','invited','disabled'] as const;   // derived, never stored
+export interface ContactDto { fullName: string; phone: string | null; email: string; }
+export interface CounterpartySummaryDto { name: string; manager: ContactDto | null; }
+export interface CounterpartyCardDto {
+  id: number; name: string; legalName: string | null; inn: string | null; kpp: string | null;
+  address: string | null; phone: string | null; email: string | null; settlementScheme: SettlementScheme;
+  contract: { number: string; signedAt: string | null; validUntil: string | null } | null;
+  manager: ContactDto | null; staffPreview: (ContactDto & { role: PortalRole })[]; staffCount: number; staffLimit: number;
+  discountPercent?: number; debtMinor?: number; yearPurchasesMinor?: number; yearDeliveries?: number;
+}
+export interface StaffMemberDto {
+  id: number; fullName: string; email: string; phone: string | null; role: PortalRole;
+  status: StaffStatus; lastLoginAt: string | null; isSelf: boolean;
+}
+export interface StaffPageDto extends Page<StaffMemberDto> { activeCount: number; staffLimit: number; }
+export interface CreatedStaffDto { member: StaffMemberDto; temporaryPassword: string; mailSent: boolean; }
 
 // money.ts — branded type, blocks accidental mixing with plain numbers
 export type Minor = number & { readonly __brand: 'minor' };
