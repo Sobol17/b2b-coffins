@@ -62,3 +62,66 @@ export interface RequestListItemDto {
 	paidMinor?: number;
 	charityAmountMinor?: number;
 }
+
+export interface DeliveryAddressDto {
+	readonly id: number;
+	readonly title: string;
+	readonly address: string;
+	readonly isDefault: boolean;
+}
+
+export interface DraftItemOptionDto {
+	readonly id: number;
+	readonly kind: string;
+	readonly title: string;
+}
+
+/** A line of the portal draft (P4). Money keys only for a role with prices. */
+export interface DraftItemDto {
+	readonly id: number;
+	readonly productId: number;
+	readonly productTitle: string;
+	readonly sku: string;
+	readonly sizeCode: string;
+	readonly materialTitle: string;
+	readonly coverMediaId: number | null;
+	readonly qty: number;
+	readonly options: readonly DraftItemOptionDto[];
+	/** Personal price of the variant plus the option surcharges, for one piece. */
+	readonly unitPriceMinor?: number;
+	readonly lineTotalMinor?: number;
+}
+
+/** The cart: the actor's own draft request with its delivery settings. */
+export interface DraftDto {
+	readonly id: number;
+	readonly number: string;
+	readonly items: readonly DraftItemDto[];
+	readonly unitCount: number;
+	readonly isPickup: boolean;
+	readonly deliveryAddressId: number | null;
+	readonly comment: string | null;
+	readonly externalNumber: string | null;
+	readonly addresses: readonly DeliveryAddressDto[];
+	readonly updatedAt: string;
+	readonly itemsTotalMinor?: number;
+	readonly discountPercent?: number;
+	readonly discountMinor?: number;
+	readonly totalMinor?: number;
+}
+
+export interface SubmittedRequestDto {
+	readonly id: number;
+	readonly number: string;
+	readonly status: RequestStatus;
+}
+
+/** Summary of the last sent request, for the "repeat" panel of the portal home. */
+export interface LastRequestDto {
+	readonly id: number;
+	readonly number: string;
+	readonly submittedAt: string | null;
+	readonly itemCount: number;
+	readonly unitCount: number;
+	readonly totalMinor?: number;
+}
