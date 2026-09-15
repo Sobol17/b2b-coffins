@@ -1,6 +1,7 @@
 import { requireAction, requireScope } from '$lib/server/auth/guard';
 import { PolicyService } from '$lib/server/auth/policy';
 import { CounterpartyService } from '$lib/server/counterparty/counterparty.service';
+import { DraftService } from '$lib/server/request/draft.service';
 import { OrgService } from '$lib/server/settings/org.service';
 import type { LayoutServerLoad } from './$types';
 
@@ -17,6 +18,7 @@ export const load: LayoutServerLoad = ({ locals, url }) => {
 		},
 		counterparty: new CounterpartyService(actor).summary(),
 		timezone: OrgService.timezone(),
+		cartUnits: new DraftService(actor).unitCount(),
 		// Menu hint only: the staff page and its actions check the right again on the server.
 		canManageStaff: PolicyService.can(actor, 'counterparty.staff.manage')
 	};

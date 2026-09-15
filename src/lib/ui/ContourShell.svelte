@@ -4,7 +4,7 @@
 	import Button from './base/button/button.svelte';
 	import PortalHeader from './shell/PortalHeader.svelte';
 	import ShellFooter from './shell/ShellFooter.svelte';
-	import type { ShellLink } from './shell/types';
+	import type { CartLink, ShellLink } from './shell/types';
 
 	/*
 	 * One shell for both contours. The portal variant follows the mockups of tech.md 18: floating
@@ -17,6 +17,7 @@
 		links,
 		variant = 'crm',
 		accountHref,
+		cart,
 		footerCaption = 'Портал контрагента столярной мастерской',
 		children
 	}: {
@@ -26,6 +27,7 @@
 		links: readonly ShellLink[];
 		variant?: 'crm' | 'portal';
 		accountHref?: ResolvedPathname | undefined;
+		cart?: CartLink | undefined;
 		footerCaption?: string;
 		children: Snippet;
 	} = $props();
@@ -33,7 +35,7 @@
 
 {#if variant === 'portal'}
 	<div class="flex min-h-screen flex-col">
-		<PortalHeader {title} {userName} {roles} {links} {accountHref} />
+		<PortalHeader {title} {userName} {roles} {links} {accountHref} {cart} />
 		<main class="mx-auto w-full max-w-shell flex-1 px-4 pt-4 pb-10 sm:px-6">
 			{@render children()}
 		</main>

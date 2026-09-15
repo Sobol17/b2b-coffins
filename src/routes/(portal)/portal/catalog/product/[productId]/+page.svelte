@@ -7,7 +7,7 @@
 	import { Breadcrumbs, Button } from '$lib/ui';
 	import type { PageProps } from './$types';
 
-	let { data }: PageProps = $props();
+	let { data, form }: PageProps = $props();
 
 	let selectedId = $state<number | null>(null);
 	const variant = $derived(
@@ -39,6 +39,7 @@
 			product={data.product}
 			bind:selectedId
 			manager={data.counterparty.manager}
+			formError={form?.formError}
 		/>
 	</div>
 
