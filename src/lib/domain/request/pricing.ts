@@ -43,3 +43,41 @@ export function discountMinor(itemsTotalMinor: number, percent: number): number 
 	}
 	return applyPercent(itemsTotalMinor, percent);
 }
+
+export interface LineInput {
+	/** Personal price of the variant, without options. */
+	readonly unitPriceMinor: number;
+	readonly optionDeltasMinor: readonly number[];
+	readonly qty: number;
+}
+
+/**
+ * Price of one request line: the variant price plus every option surcharge, times the quantity.
+ * @throws RangeError for a quantity that is not a positive whole number.
+ */
+export function lineTotalMinor(line: LineInput): number {
+	if (!Number.isInteger(line.qty) || line.qty < 1) {
+		throw new RangeError(`quantity must be a positive integer: ${line.qty}`);
+	}
+	const piece = line.optionDeltasMinor.reduce((sum, delta) => sum + delta, line.unitPriceMinor);
+	return piece * line.qty;
+}
+
+export interface RequestTotals {
+	readonly itemsTotalMinor: number;
+	readonly discountMinor: number;
+	readonly totalMinor: number;
+}
+
+/**
+ * Totals of a request. The contract discount applies once to the items total, not per line:
+ * rounding per line would drift from the sum by a kopeck for every line.
+ */
+export function requestTotals(
+	lineTotals: readonly number[],
+	discountPercent: number
+): RequestTotals {
+	const itemsTotalMinor = lineTotals.reduce((sum, value) => sum + value, 0);
+	const discount = discountMinor(itemsTotalMinor, discountPercent);
+	return { itemsTotalMinor, discountMinor: discount, totalMinor: itemsTotalMinor - discount };
+}

@@ -1,18 +1,25 @@
 <script lang="ts">
-	import { Card, PriceCell, Select, type SelectOption } from '$lib/ui';
+	import { enhance } from '$app/forms';
+	import { Button, Card, NumberInput, PriceCell, Select, toast, type SelectOption } from '$lib/ui';
 	import type { OptionKind, ProductDto } from '$lib/types/catalog';
 	import type { ContactDto } from '$lib/types/counterparty';
 	import { formatMinor } from '$lib/utils/format';
 
 	/*
-	 * Choice of size and options by the compatibility matrix. The choice stays on the page for now:
-	 * sending it to a request draft, with the server check of the combination, is P4.
+	 * Choice of size and options by the compatibility matrix, sent to the draft request. The page
+	 * only offers valid picks; the server checks the combination again when the line arrives (P4).
 	 */
 	let {
 		product,
 		selectedId = $bindable(null),
-		manager
-	}: { product: ProductDto; selectedId?: number | null; manager: ContactDto | null } = $props();
+		manager,
+		formError
+	}: {
+		product: ProductDto;
+		selectedId?: number | null;
+		manager: ContactDto | null;
+		formError?: string | undefined;
+	} = $props();
 
 	const KIND_LABEL: Readonly<Record<OptionKind, string>> = {
 		finish: 'Отделка',
@@ -23,6 +30,8 @@
 	};
 
 	let chosen = $state<Partial<Record<OptionKind, string>>>({});
+	let qty = $state(1);
+	let pending = $state(false);
 
 	const variant = $derived(
 		product.variants.find((item) => item.id === selectedId) ?? product.variants[0]
@@ -98,21 +107,58 @@
 			</div>
 		</div>
 
-		{#if sizeOptions.length > 0}
-			<Select
-				label="Размер"
-				options={sizeOptions}
-				bind:value={() => String(variant?.id ?? ''), (next) => (selectedId = Number(next))}
-			/>
-		{/if}
+		<form
+			method="POST"
+			action="?/add"
+			class="flex flex-col gap-5"
+			use:enhance={() => {
+				pending = true;
+				return async ({ result, update }) => {
+					pending = false;
+					await update({ reset: false });
+					if (result.type === 'success') toast.success('Позиция добавлена в заявку');
+				};
+			}}
+		>
+			{#if sizeOptions.length > 0}
+				<Select
+					label="Размер"
+					options={sizeOptions}
+					bind:value={() => String(variant?.id ?? ''), (next) => (selectedId = Number(next))}
+				/>
+			{/if}
 
-		{#each groups as group (group.kind)}
-			<Select
-				label={KIND_LABEL[group.kind]}
-				options={group.options}
-				bind:value={() => valueOf(group), (next) => (chosen = { ...chosen, [group.kind]: next })}
-			/>
-		{/each}
+			{#each groups as group (group.kind)}
+				<Select
+					label={KIND_LABEL[group.kind]}
+					options={group.options}
+					bind:value={() => valueOf(group), (next) => (chosen = { ...chosen, [group.kind]: next })}
+				/>
+				<input type="hidden" name="option" value={valueOf(group)} />
+			{/each}
+
+			{#if variant}
+				<input type="hidden" name="variantId" value={variant.id} />
+				<div class="flex items-end gap-3">
+					<div class="w-28">
+						<NumberInput name="qty" label="Количество" min={1} max={999} bind:value={qty} />
+					</div>
+					<Button
+						type="submit"
+						size="lg"
+						class="flex-1"
+						loading={pending}
+						data-testid="add-to-draft"
+					>
+						Добавить в заявку
+					</Button>
+				</div>
+			{/if}
+
+			{#if formError}
+				<p data-testid="add-error" class="text-sm text-danger">{formError}</p>
+			{/if}
+		</form>
 
 		{#if manager}
 			<p class="border-t border-border pt-4 text-sm text-fg-muted">

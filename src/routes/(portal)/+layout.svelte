@@ -27,6 +27,7 @@
 	roles={data.user.roles}
 	{links}
 	accountHref={resolve('/portal/profile')}
+	cart={{ href: resolve('/portal/cart'), count: data.cartUnits }}
 	{footerCaption}
 >
 	{@render children()}
