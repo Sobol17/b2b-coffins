@@ -11,6 +11,7 @@
 		"discountPercent": 5,
 		"settlementScheme": "weekly",
 		"staffLimit": 10,
+		"manager": "manager@workshop.example",
 		"addresses": [
 			{
 				"title": "Основной склад",
