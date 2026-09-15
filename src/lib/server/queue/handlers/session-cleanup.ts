@@ -11,7 +11,7 @@ export const sessionCleanupHandler = defineHandler({
 			new SessionCleanupRepository().purgeExpired(ctx.now, tx)
 		);
 		// Dead push subscriptions become known only when the real push driver reports 404 or 410,
-		// which arrives with P9; until then this job has nothing to revoke there.
+		// which arrives with C15; until then this job has nothing to revoke there.
 		ctx.logger.info(removed, 'expired sessions and reset tokens purged');
 	}
 });

@@ -2,55 +2,169 @@
 @import 'tw-animate-css';
 
 /*
- * Design tokens (tech.md 9). Every colour, radius, shadow and spacing step in the app comes from
- * here. A slice that hard-codes a colour in a component gets rolled back.
+ * Design tokens (tech.md 9, palette of tech.md 18.2). Every colour, radius, shadow and spacing step
+ * in the app comes from here. A slice that hard-codes a colour in a component gets rolled back.
  *
  * The block has two halves. The first is the project palette in semantic names the slices read.
  * The second aliases the names the shadcn primitives were generated against, so those components
  * follow the palette without being rewritten.
  */
+
+/* Barlow ships no Cyrillic: digits, Latin and the rouble sign use it, Russian text falls back to the
+   system face, exactly as the mockups render (tech.md 18.3, variant A). Files are self-hosted because
+   the CSP allows fonts from 'self' only. */
+@font-face {
+	font-family: 'Barlow';
+	font-style: normal;
+	font-weight: 400;
+	font-display: swap;
+	src: url('/fonts/barlow-400-latin.woff2') format('woff2');
+	unicode-range:
+		U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
+		U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+	font-family: 'Barlow';
+	font-style: normal;
+	font-weight: 400;
+	font-display: swap;
+	src: url('/fonts/barlow-400-latin-ext.woff2') format('woff2');
+	unicode-range:
+		U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329,
+		U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F,
+		U+A720-A7FF;
+}
+@font-face {
+	font-family: 'Barlow';
+	font-style: normal;
+	font-weight: 500;
+	font-display: swap;
+	src: url('/fonts/barlow-500-latin.woff2') format('woff2');
+	unicode-range:
+		U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
+		U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+	font-family: 'Barlow';
+	font-style: normal;
+	font-weight: 500;
+	font-display: swap;
+	src: url('/fonts/barlow-500-latin-ext.woff2') format('woff2');
+	unicode-range:
+		U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329,
+		U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F,
+		U+A720-A7FF;
+}
+@font-face {
+	font-family: 'Barlow Condensed';
+	font-style: normal;
+	font-weight: 600;
+	font-display: swap;
+	src: url('/fonts/barlow-condensed-600-latin.woff2') format('woff2');
+	unicode-range:
+		U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
+		U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+	font-family: 'Barlow Condensed';
+	font-style: normal;
+	font-weight: 600;
+	font-display: swap;
+	src: url('/fonts/barlow-condensed-600-latin-ext.woff2') format('woff2');
+	unicode-range:
+		U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329,
+		U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F,
+		U+A720-A7FF;
+}
+
 @theme {
+	/* Type */
+	--font-sans: 'Barlow', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+	--font-heading: 'Barlow Condensed', 'Barlow', system-ui, -apple-system, 'Segoe UI', sans-serif;
+
+	/* Ramps. Semantic tokens below point at them; a slice reaches for a ramp only when no
+	   semantic name fits. */
+	--color-brand-100: #edf4fb;
+	--color-brand-200: #d6e7f6;
+	--color-brand-300: #b3d3ec;
+	--color-brand-400: #8bbce1;
+	--color-brand-500: #5e9fd2;
+	--color-brand-600: #3d84bd;
+	--color-brand-700: #2b6fae;
+	--color-brand-800: #1f5183;
+	--color-brand-900: #143658;
+
+	--color-neutral-100: #f5f7fa;
+	--color-neutral-200: #eef1f5;
+	--color-neutral-300: #e2e7ee;
+	--color-neutral-400: #cbd3de;
+	--color-neutral-500: #a7b2c1;
+	--color-neutral-600: #8592a3;
+	--color-neutral-700: #5f6b7a;
+	--color-neutral-800: #414b58;
+	--color-neutral-900: #1b2430;
+
+	--color-mist-100: #f1f4f8;
+	--color-mist-200: #e0e7f0;
+	--color-mist-300: #c7d4e3;
+	--color-mist-400: #a8bcd2;
+	--color-mist-500: #8aa3bd;
+	--color-mist-600: #6d88a5;
+	--color-mist-700: #56708b;
+	--color-mist-800: #3d5266;
+	--color-mist-900: #273543;
+
 	/* Surfaces and text */
-	--color-surface: oklch(99% 0.003 90);
-	--color-surface-raised: oklch(100% 0 0);
-	--color-surface-muted: oklch(96.5% 0.006 90);
-	--color-border: oklch(90% 0.008 90);
-	--color-border-strong: oklch(82% 0.01 90);
-	--color-fg: oklch(25% 0.015 90);
-	--color-fg-muted: oklch(52% 0.012 90);
+	--color-surface: var(--color-neutral-200);
+	--color-surface-raised: #ffffff;
+	--color-surface-muted: var(--color-neutral-100);
+	--color-chip: var(--color-neutral-200);
+	--color-chip-hover: var(--color-neutral-300);
+	--color-border: color-mix(in srgb, var(--color-neutral-900) 10%, transparent);
+	--color-border-strong: var(--color-neutral-400);
+	--color-fg: var(--color-neutral-900);
+	--color-fg-muted: var(--color-neutral-700);
+	--color-fg-faint: var(--color-neutral-600);
 
 	/* Brand and intent */
-	--color-brand: oklch(45% 0.09 250);
-	--color-brand-hover: oklch(40% 0.09 250);
-	--color-brand-fg: oklch(99% 0.005 250);
-	--color-danger: oklch(55% 0.19 27);
-	--color-danger-fg: oklch(99% 0.005 27);
-	--color-warning: oklch(58% 0.13 75);
-	--color-success: oklch(52% 0.13 150);
+	--color-brand: var(--color-brand-700);
+	--color-brand-hover: var(--color-brand-600);
+	--color-brand-active: var(--color-brand-800);
+	--color-brand-fg: #ffffff;
+	--color-danger: #8a3b2f;
+	--color-danger-fg: #ffffff;
+	--color-warning: #8a6420;
+	--color-success: #3f5c3a;
 
 	/* Status tones. StatusBadge and Stepper read them through lib/ui/status.ts, never inline. */
-	--color-tone-neutral: oklch(45% 0.01 90);
-	--color-tone-neutral-soft: oklch(94% 0.006 90);
-	--color-tone-info: oklch(48% 0.12 250);
-	--color-tone-info-soft: oklch(95% 0.03 250);
-	--color-tone-progress: oklch(50% 0.13 60);
-	--color-tone-progress-soft: oklch(95% 0.04 60);
-	--color-tone-ready: oklch(48% 0.1 195);
-	--color-tone-ready-soft: oklch(95% 0.03 195);
-	--color-tone-warning: oklch(50% 0.12 75);
-	--color-tone-warning-soft: oklch(95% 0.05 75);
-	--color-tone-success: oklch(46% 0.13 150);
-	--color-tone-success-soft: oklch(94% 0.04 150);
-	--color-tone-danger: oklch(50% 0.18 27);
-	--color-tone-danger-soft: oklch(95% 0.03 27);
+	--color-tone-neutral: var(--color-neutral-800);
+	--color-tone-neutral-soft: var(--color-neutral-200);
+	--color-tone-info: var(--color-brand-800);
+	--color-tone-info-soft: var(--color-brand-100);
+	--color-tone-progress: var(--color-mist-800);
+	--color-tone-progress-soft: var(--color-mist-200);
+	--color-tone-ready: var(--color-brand-900);
+	--color-tone-ready-soft: var(--color-brand-200);
+	--color-tone-warning: #7a5a1c;
+	--color-tone-warning-soft: #f6efe0;
+	--color-tone-success: #3f5c3a;
+	--color-tone-success-soft: #e9f0e6;
+	--color-tone-danger: #8a3b2f;
+	--color-tone-danger-soft: #f5e9e6;
 
-	/* Radii */
-	--radius: 0.625rem;
-	--radius-card: 0.75rem;
+	/* Radii: small parts, insets and photos, panels and cards, pills */
+	--radius: 0.875rem;
+	--radius-sm: 0.5rem;
+	--radius-inset: 0.875rem;
+	--radius-card: 1.125rem;
+	--radius-pill: 9999px;
 
-	/* Shadows */
-	--shadow-card: 0 1px 2px oklch(25% 0.015 90 / 0.06), 0 1px 3px oklch(25% 0.015 90 / 0.04);
-	--shadow-overlay: 0 10px 30px oklch(25% 0.015 90 / 0.14);
+	/* Shadows: panels are flat and separate by white on grey; only overlays lift. */
+	--shadow-card: none;
+	--shadow-overlay: 0 24px 60px color-mix(in srgb, var(--color-neutral-900) 18%, transparent);
+
+	/* Page container of the mockups. */
+	--container-shell: 90rem;
 
 	/* Minimum touch target for the shop floor and driver screens (tech.md 16, a11y). */
 	--spacing-touch: 2.75rem;
@@ -64,7 +178,7 @@
 	--color-popover-foreground: var(--color-fg);
 	--color-primary: var(--color-brand);
 	--color-primary-foreground: var(--color-brand-fg);
-	--color-secondary: var(--color-surface-muted);
+	--color-secondary: var(--color-chip);
 	--color-secondary-foreground: var(--color-fg);
 	--color-muted: var(--color-surface-muted);
 	--color-muted-foreground: var(--color-fg-muted);
@@ -76,9 +190,33 @@
 	--color-ring: var(--color-brand);
 }
 
-html {
-	background-color: var(--color-surface);
-	color: var(--color-fg);
+@layer base {
+	html {
+		background-color: var(--color-surface);
+		color: var(--color-fg);
+		font-family: var(--font-sans);
+	}
+
+	/* 15 px text of the mockups goes on body, not on the root: the root stays at 16 px, so rem sizes
+	   keep their pixel values and the 44 px touch target does not shrink to 41. */
+	body {
+		font-size: 0.9375rem;
+		line-height: 1.55;
+	}
+
+	h1,
+	h2,
+	h3,
+	h4 {
+		font-family: var(--font-heading);
+		font-weight: 600;
+		line-height: 1.08;
+		letter-spacing: -0.01em;
+	}
+
+	::selection {
+		background: var(--color-brand-200);
+	}
 }
 
 /* The shop floor and driver screens are used with gloves on: never shrink a tap target. */

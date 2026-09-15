@@ -5,18 +5,17 @@
 
 	let { data, children }: LayoutProps = $props();
 
-	const links = [
-		{ href: resolve('/portal'), label: 'Главная' },
-		{ href: resolve('/portal/profile'), label: 'Профиль' },
-		{ href: resolve('/password/change'), label: 'Сменить пароль' }
-	];
+	// Only routes that exist: Каталог arrives with P3 and Заявки with P6 (tech.md 18.5).
+	const links = [{ href: resolve('/portal'), label: 'Главная' }];
 </script>
 
 <ContourShell
-	title="Портал контрагента"
+	variant="portal"
+	title="портал контрагента"
 	userName={data.user.fullName}
 	roles={data.user.roles}
 	{links}
+	accountHref={resolve('/portal/profile')}
 >
 	{@render children()}
 </ContourShell>

@@ -25,7 +25,7 @@
 
 <div data-slot="field" class="flex flex-col gap-1.5">
 	{#if label}
-		<Label for={id}>
+		<Label for={id} class="text-[0.8125rem] font-normal text-fg-muted">
 			{label}
 			{#if required}<span aria-hidden="true" class="text-danger">*</span>{/if}
 		</Label>

@@ -10,19 +10,20 @@
 	 * core file is the contract every slice codes against.
 	 */
 	export const buttonVariants = tv({
-		base: "group/button inline-flex shrink-0 items-center justify-center rounded-lg border border-transparent bg-clip-padding text-sm font-medium whitespace-nowrap transition-all outline-none select-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 active:not-aria-[haspopup]:translate-y-px disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-danger aria-invalid:ring-3 aria-invalid:ring-danger/20 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+		base: "group/button inline-flex shrink-0 items-center justify-center rounded-pill border border-transparent bg-clip-padding text-sm font-medium whitespace-nowrap transition-all outline-none select-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 active:not-aria-[haspopup]:translate-y-px disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-danger aria-invalid:ring-3 aria-invalid:ring-danger/20 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
 		variants: {
 			variant: {
-				primary: 'bg-brand text-brand-fg hover:bg-brand-hover',
-				secondary:
-					'border-border bg-surface-raised text-fg hover:bg-surface-muted aria-expanded:bg-surface-muted',
-				ghost: 'text-fg hover:bg-surface-muted aria-expanded:bg-surface-muted',
+				// Pills of tech.md 18.4: sky blue primary, grey chip secondary, link-coloured ghost.
+				primary: 'bg-brand text-brand-fg hover:bg-brand-hover active:bg-brand-active',
+				secondary: 'bg-chip text-fg hover:bg-chip-hover aria-expanded:bg-chip-hover',
+				ghost:
+					'text-brand hover:bg-surface-muted hover:text-brand-hover aria-expanded:bg-surface-muted',
 				danger: 'bg-danger text-danger-fg hover:bg-danger/90'
 			},
 			size: {
-				sm: 'h-8 gap-1.5 px-3 text-xs',
-				md: 'h-9 gap-2 px-4',
-				lg: 'h-10 gap-2 px-5 text-base',
+				sm: 'h-9.5 gap-1.5 px-4 text-sm',
+				md: 'h-11 gap-2 px-5 text-[0.9375rem]',
+				lg: 'h-13 gap-2 px-7 text-base',
 				// The shop floor and driver screens tap with gloves on: 44 px minimum (tech.md 16).
 				touch: 'min-h-touch min-w-touch gap-2 px-5 text-base'
 			}
