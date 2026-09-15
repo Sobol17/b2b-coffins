@@ -15,3 +15,6 @@ bun.lockb
 # Project core documents: source of truth, formatted by hand
 tech.md
 CLAUDE.md
+
+# Design source: bundled mockups, not formatted
+/ui/
