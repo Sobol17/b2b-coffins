@@ -54,12 +54,15 @@ test('the server refuses an option outside the compatibility matrix', async ({ p
 	await login(page, 'cp_admin');
 	const path = await openVolga(page);
 
+	// An action posted as JSON answers HTTP 200 and carries the failure status in the body.
 	const response = await page.request.post(`${path}?/add`, {
-		headers: { origin: ORIGIN },
+		headers: { origin: ORIGIN, accept: 'application/json' },
 		form: { variantId: '1', qty: '1', option: '999999' }
 	});
 
-	expect(response.status()).toBe(422);
+	expect(await response.json()).toMatchObject({ type: 'failure', status: 422 });
+	await page.reload();
+	await expect(page.getByTestId('cart-count')).toHaveCount(0);
 });
 
 test('a workshop role gets 403 on the cart page and on its actions', async ({ page }) => {
