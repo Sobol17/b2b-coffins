@@ -1,4 +1,4 @@
-import { eq } from 'drizzle-orm';
+import { eq, like } from 'drizzle-orm';
 import { migrate } from 'drizzle-orm/better-sqlite3/migrator';
 import { hashPassword } from '../../src/lib/server/auth/password';
 import { createDb, type Db } from '../../src/lib/server/db/client';
@@ -48,6 +48,9 @@ export default async function globalSetup(): Promise<void> {
 	// Counters and sessions survive a run; clearing them keeps a rerun from hitting a lockout.
 	db.delete(rateLimits).run();
 	db.delete(sessions).run();
+	// Accounts the staff spec creates. They stay in the audit journal, so they are disabled rather
+	// than deleted: a disabled account frees its seat of the staff limit for the next run.
+	db.update(users).set({ isActive: false }).where(like(users.email, 'e2e.%')).run();
 	db.update(users).set({ failedAttempts: 0, lockedUntil: null }).run();
 }
 

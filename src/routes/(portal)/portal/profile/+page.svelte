@@ -1,6 +1,8 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import { resolve } from '$app/paths';
+	import { profileNavItems } from '$lib/portal/profile-nav';
+	import CounterpartyOverview from '$lib/portal/profile/CounterpartyOverview.svelte';
 	import ProfileNav from '$lib/portal/ProfileNav.svelte';
 	import { Breadcrumbs, Button, Card, Input, toast } from '$lib/ui';
 	import type { PageProps } from './$types';
@@ -18,13 +20,16 @@
 	</div>
 
 	<div class="grid gap-6 lg:grid-cols-[17.5rem_1fr] lg:items-start">
-		<ProfileNav
-			title={profile.fullName}
-			items={[{ href: resolve('/portal/profile'), label: 'Профиль', active: true }]}
-		/>
+		<ProfileNav title={data.card.name} items={profileNavItems('profile', data.canManageStaff)} />
 
 		<section class="flex flex-col gap-6">
-			<h1 class="px-2 text-4xl">Мой аккаунт</h1>
+			<CounterpartyOverview
+				card={data.card}
+				canManageStaff={data.canManageStaff}
+				timeZone={data.timezone}
+			/>
+
+			<h2 class="px-2 pt-2 text-3xl">Мой аккаунт</h2>
 
 			<Card.Root>
 				<Card.Content>

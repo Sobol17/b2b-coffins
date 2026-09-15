@@ -17,6 +17,7 @@
 		links,
 		variant = 'crm',
 		accountHref,
+		footerCaption = 'Портал контрагента столярной мастерской',
 		children
 	}: {
 		title: string;
@@ -25,6 +26,7 @@
 		links: readonly ShellLink[];
 		variant?: 'crm' | 'portal';
 		accountHref?: ResolvedPathname | undefined;
+		footerCaption?: string;
 		children: Snippet;
 	} = $props();
 </script>
@@ -35,7 +37,7 @@
 		<main class="mx-auto w-full max-w-shell flex-1 px-4 pt-4 pb-10 sm:px-6">
 			{@render children()}
 		</main>
-		<ShellFooter caption="Портал контрагента столярной мастерской" />
+		<ShellFooter caption={footerCaption} />
 	</div>
 {:else}
 	<div class="flex min-h-screen flex-col">

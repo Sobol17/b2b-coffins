@@ -1,8 +1,9 @@
 import { PolicyService } from '../auth/policy';
 import { NotFoundError } from '../core/errors';
 import { BaseService } from '../core/service';
+import { PersonalPriceResolver } from '../pricing/personal-price';
 import { CatalogRepository, type Visibility } from './catalog.repository';
-import { CatalogDtoMapper } from './dto';
+import { CatalogDtoMapper, type VariantPrice } from './dto';
 import { VariantRepository, type VariantRow } from './variant.repository';
 import type { ActorContext } from '$lib/types/actor';
 import type {
@@ -19,7 +20,8 @@ export class CatalogService extends BaseService {
 	constructor(
 		ctx: ActorContext,
 		private readonly products: CatalogRepository = new CatalogRepository(),
-		private readonly variants: VariantRepository = new VariantRepository()
+		private readonly variants: VariantRepository = new VariantRepository(),
+		private readonly pricing: PersonalPriceResolver = new PersonalPriceResolver()
 	) {
 		super(ctx);
 	}
@@ -38,7 +40,7 @@ export class CatalogService extends BaseService {
 		const ids = rows.map((row) => row.id);
 		const counts = this.variants.countByProducts(ids, visibility);
 		const media = this.products.mediaByProducts(ids);
-		const minPrices = this.ctx.canSeePrices ? this.variants.minPrices(ids, visibility) : undefined;
+		const minPrices = this.ctx.canSeePrices ? this.minPersonalPrices(ids, visibility) : undefined;
 
 		return {
 			rows: rows.map((row) =>
@@ -73,9 +75,7 @@ export class CatalogService extends BaseService {
 		const variantIds = variants.map((variant) => variant.id);
 		const optionRows = this.variants.findOptions(variantIds);
 		const withPrices = this.ctx.canSeePrices;
-		const prices = withPrices
-			? this.variants.findPrices(variantIds, this.ctx.canSeeCost)
-			: undefined;
+		const prices = withPrices ? this.personalPrices(variantIds, this.ctx.canSeeCost) : undefined;
 		const deltas = withPrices
 			? this.variants.optionDeltas([...new Set(optionRows.map((row) => row.id))])
 			: undefined;
@@ -88,6 +88,48 @@ export class CatalogService extends BaseService {
 					.map((row) => CatalogDtoMapper.toOption(row, deltas?.get(row.id))),
 				prices?.get(variant.id)
 			)
+		);
+	}
+
+	/** Lowest personal price per product for the list card, over the variants the actor may see. */
+	private minPersonalPrices(
+		productIds: readonly number[],
+		visibility: Visibility
+	): Map<number, number> {
+		const variants = this.variants.findByProducts(productIds, visibility);
+		const prices = this.personalPrices(
+			variants.map((variant) => variant.id),
+			false
+		);
+		const minimum = new Map<number, number>();
+		for (const variant of variants) {
+			const price = prices.get(variant.id)?.priceMinor;
+			const current = minimum.get(variant.productId);
+			if (price !== undefined && (current === undefined || price < current)) {
+				minimum.set(variant.productId, price);
+			}
+		}
+		return minimum;
+	}
+
+	/**
+	 * The price the actor's counterparty pays per variant, plus the cost for the owner. Called only
+	 * for a role with prices: a price-blind actor never reaches a money column.
+	 */
+	private personalPrices(
+		variantIds: readonly number[],
+		withCost: boolean
+	): Map<number, VariantPrice> {
+		const stored = this.variants.findPrices(variantIds, withCost);
+		const personal = this.pricing.resolve(
+			this.ctx.counterpartyId,
+			new Map([...stored].map(([id, row]) => [id, row.basePriceMinor]))
+		);
+		return new Map(
+			[...stored].map(([id, row]) => [
+				id,
+				{ priceMinor: personal.get(id) ?? row.basePriceMinor, costPriceMinor: row.costPriceMinor }
+			])
 		);
 	}
 

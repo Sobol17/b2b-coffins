@@ -111,6 +111,12 @@ export function seedPriceLists(db: Db): Map<string, number> {
 	return ids;
 }
 
+function userIdByEmail(db: Db, email: string): number {
+	const [row] = db.select({ id: users.id }).from(users).where(eq(users.email, email)).all();
+	if (!row) throw new Error(`manager ${email} is missing, seed CRM users first`);
+	return row.id;
+}
+
 type CounterpartyValues = typeof counterparties.$inferInsert;
 
 /** Name is the natural key of the fixture; the table itself has no unique index on it. */
@@ -151,7 +157,8 @@ export async function seedCounterparties(
 			priceListId,
 			discountPercent: fixture.discountPercent,
 			settlementScheme: fixture.settlementScheme,
-			staffLimit: fixture.staffLimit
+			staffLimit: fixture.staffLimit,
+			managerId: fixture.manager ? userIdByEmail(db, fixture.manager) : null
 		};
 		const counterpartyId = upsertCounterparty(db, fixture.name, values);
 

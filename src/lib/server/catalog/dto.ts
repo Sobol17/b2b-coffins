@@ -1,7 +1,13 @@
 import type { ProductRow } from './catalog.repository';
-import type { OptionRow, PriceRow, VariantRow } from './variant.repository';
+import type { OptionRow, VariantRow } from './variant.repository';
 import type { OptionDto, ProductDto, ProductListItemDto, VariantDto } from '$lib/types/catalog';
 import { definedProps } from '$lib/utils/props';
+
+/** Price of a variant for the actor: personal price, and the cost price for the owner. */
+export interface VariantPrice {
+	readonly priceMinor: number;
+	readonly costPriceMinor?: number | undefined;
+}
 
 /**
  * Role projection of the catalog (tech.md 8.1). A price argument is undefined for a role without
@@ -40,7 +46,7 @@ export class CatalogDtoMapper {
 	static toVariant(
 		row: VariantRow,
 		options: readonly OptionDto[],
-		price: PriceRow | undefined
+		price: VariantPrice | undefined
 	): VariantDto {
 		return {
 			id: row.id,
@@ -52,7 +58,7 @@ export class CatalogDtoMapper {
 			heightMm: row.heightMm,
 			weightG: row.weightG,
 			options,
-			...definedProps({ priceMinor: price?.basePriceMinor, costPriceMinor: price?.costPriceMinor })
+			...definedProps({ priceMinor: price?.priceMinor, costPriceMinor: price?.costPriceMinor })
 		};
 	}
 

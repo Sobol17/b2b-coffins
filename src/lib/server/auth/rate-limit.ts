@@ -12,7 +12,9 @@ export interface RateLimitRule {
 export const RATE_LIMITS = {
 	login: { limit: 10, windowSec: 300, blockSec: 900 },
 	'password.reset': { limit: 5, windowSec: 900, blockSec: 900 },
-	'password.change': { limit: 10, windowSec: 900, blockSec: 900 }
+	'password.change': { limit: 10, windowSec: 900, blockSec: 900 },
+	// Creating an account sends a mail with a password: a runaway form must not spam mailboxes.
+	'staff.create': { limit: 20, windowSec: 3600, blockSec: 3600 }
 } as const satisfies Record<string, RateLimitRule>;
 
 export type RateLimitAction = keyof typeof RATE_LIMITS;

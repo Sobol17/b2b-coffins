@@ -12,9 +12,10 @@
 export function definedProps<T extends Record<string, unknown>>(
 	props: T
 ): { [K in keyof T]?: Exclude<T[K], undefined> } {
-	const defined: Record<string, unknown> = {};
-	for (const [key, value] of Object.entries(props)) {
-		if (value !== undefined) defined[key] = value;
-	}
+	// fromEntries defines own data properties. Assigning `defined[key] = value` instead would turn a
+	// `__proto__` key into a prototype change and silently drop it.
+	const defined = Object.fromEntries(
+		Object.entries(props).filter(([, value]) => value !== undefined)
+	);
 	return defined as { [K in keyof T]?: Exclude<T[K], undefined> };
 }

@@ -7,6 +7,14 @@
 
 	// Only routes that exist: Каталог arrives with P3 and Заявки with P6 (tech.md 18.5).
 	const links = [{ href: resolve('/portal'), label: 'Главная' }];
+
+	const footerCaption = $derived.by(() => {
+		const manager = data.counterparty.manager;
+		if (!manager) return `${data.counterparty.name}: портал контрагента`;
+		return [`Менеджер ${manager.fullName}`, manager.phone, manager.email]
+			.filter((part) => part !== null)
+			.join(' · ');
+	});
 </script>
 
 <ContourShell
@@ -16,6 +24,7 @@
 	roles={data.user.roles}
 	{links}
 	accountHref={resolve('/portal/profile')}
+	{footerCaption}
 >
 	{@render children()}
 </ContourShell>

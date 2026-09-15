@@ -97,6 +97,8 @@ export const counterpartyFixture = z.object({
 	discountPercent: z.number().int().min(0).max(100),
 	settlementScheme: z.enum(['on_fact', 'weekly', 'monthly']),
 	staffLimit: z.number().int().positive(),
+	/** E-mail of a CRM user; the seed of CRM users runs first. */
+	manager: z.email().optional(),
 	addresses: z.array(
 		z.object({
 			title: z.string().min(1),
