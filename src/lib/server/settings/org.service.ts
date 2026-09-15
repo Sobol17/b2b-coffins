@@ -1,5 +1,8 @@
-import { orgRequisitesSchema } from '$lib/validation/settings';
+import { orgRequisitesSchema, orgTimezoneSchema } from '$lib/validation/settings';
 import { SettingsRepository } from './settings.repository';
+
+// Same default as `users.timezone`: the workshop and its first customers are in this zone.
+const FALLBACK_TIMEZONE = 'Europe/Moscow';
 
 export interface PublicContacts {
 	readonly phone: string | null;
@@ -15,5 +18,11 @@ export class OrgService {
 		const parsed = orgRequisitesSchema.safeParse(repo.findValue('org.requisites'));
 		if (!parsed.success) return { phone: null, address: null };
 		return { phone: parsed.data.phone ?? null, address: parsed.data.address ?? null };
+	}
+
+	/** Timezone for rendering stored UTC timestamps (tech.md 13.1). */
+	static timezone(repo: SettingsRepository = new SettingsRepository()): string {
+		const parsed = orgTimezoneSchema.safeParse(repo.findValue('org.timezone'));
+		return parsed.success ? parsed.data : FALLBACK_TIMEZONE;
 	}
 }

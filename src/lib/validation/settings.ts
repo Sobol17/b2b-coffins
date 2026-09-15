@@ -8,3 +8,15 @@ export const orgRequisitesSchema = z.object({
 });
 
 export type OrgRequisites = z.infer<typeof orgRequisitesSchema>;
+
+function isKnownTimeZone(timeZone: string): boolean {
+	try {
+		new Intl.DateTimeFormat('ru-RU', { timeZone });
+		return true;
+	} catch {
+		return false;
+	}
+}
+
+/** `settings.org.timezone`: an IANA zone the runtime knows, or dates would throw while rendering. */
+export const orgTimezoneSchema = z.string().min(1).refine(isKnownTimeZone);

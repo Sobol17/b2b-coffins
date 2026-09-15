@@ -1,12 +1,16 @@
 import { fail } from '@sveltejs/kit';
 import { requireAction, requireScope } from '$lib/server/auth/guard';
+import { CounterpartyService } from '$lib/server/counterparty/counterparty.service';
 import { ProfileService } from '$lib/server/profile/profile.service';
 import { updateProfileSchema } from '$lib/validation/profile';
 import type { Actions, PageServerLoad } from './$types';
 
 export const load: PageServerLoad = ({ locals, url }) => {
-	const actor = requireScope(locals.actor, 'portal', url.pathname);
-	return { profile: new ProfileService(requireAction(actor, 'portal.access')).get() };
+	const actor = requireAction(requireScope(locals.actor, 'portal', url.pathname), 'portal.access');
+	return {
+		profile: new ProfileService(actor).get(),
+		card: new CounterpartyService(actor).card()
+	};
 };
 
 export const actions = {
