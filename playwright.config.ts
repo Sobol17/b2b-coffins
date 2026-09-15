@@ -11,7 +11,9 @@ export default defineConfig({
 	retries: process.env.CI ? 1 : 0,
 	reporter: process.env.CI ? 'github' : 'list',
 	webServer: {
-		command: 'pnpm build && pnpm preview --port 4173',
+		// Migrate before the server boots: Playwright starts it ahead of globalSetup, and the queue
+		// worker reads job_queue on init, so a fresh database would crash the preview.
+		command: 'pnpm build && pnpm db:migrate && pnpm preview --port 4173',
 		port: 4173,
 		reuseExistingServer: !process.env.CI,
 		env: {

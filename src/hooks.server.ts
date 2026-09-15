@@ -1,10 +1,22 @@
-import { json, redirect, type Handle, type HandleServerError } from '@sveltejs/kit';
+import {
+	json,
+	redirect,
+	type Handle,
+	type HandleServerError,
+	type ServerInit
+} from '@sveltejs/kit';
 import { sequence } from '@sveltejs/kit/hooks';
 import { setSessionCookie } from '$lib/server/auth/cookies';
 import { SESSION_COOKIE, SessionService } from '$lib/server/auth/session.service';
 import { AppError, httpStatusFor, publicErrorBody } from '$lib/server/core/errors';
 import { logger } from '$lib/server/logger';
 import { isProduction } from '$lib/server/config';
+import { startWorker } from '$lib/server/queue/runtime';
+
+// The worker lives with the server process: `node build` and the e2e preview both start it here.
+export const init: ServerInit = () => {
+	startWorker();
+};
 
 // Sits next to the CSP that SvelteKit emits from its own `csp` config.
 const SECURITY_HEADERS: ReadonlyArray<readonly [string, string]> = [

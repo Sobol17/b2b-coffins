@@ -15,9 +15,15 @@ const messageSchema = z.object({
 export class FakeMailDriver implements MailDriver {
 	readonly sent: MailMessage[] = [];
 	private failNext = false;
+	private hangNext = false;
 
 	failOnce(): void {
 		this.failNext = true;
+	}
+
+	/** The next send never settles, like an SMTP server that accepted the socket and went quiet. */
+	hangOnce(): void {
+		this.hangNext = true;
 	}
 
 	async send(message: MailMessage): Promise<void> {
@@ -29,6 +35,10 @@ export class FakeMailDriver implements MailDriver {
 			this.failNext = false;
 			throw new Error('fake mail driver failure');
 		}
+		if (this.hangNext) {
+			this.hangNext = false;
+			return new Promise<void>(() => {});
+		}
 
 		this.sent.push(parsed.data);
 		// Subject only: the body of a reset mail carries a token.
@@ -38,6 +48,7 @@ export class FakeMailDriver implements MailDriver {
 	reset(): void {
 		this.sent.length = 0;
 		this.failNext = false;
+		this.hangNext = false;
 	}
 }
 

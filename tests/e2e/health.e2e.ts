@@ -7,6 +7,17 @@ test('health endpoint answers on the production bundle', async ({ request }) => 
 	expect(await response.json()).toMatchObject({ status: 'ok' });
 });
 
+test('health reports a running worker and the queue counters', async ({ request }) => {
+	const body = await (await request.get('/api/health')).json();
+
+	expect(body.queue).toMatchObject({
+		workerRunning: true,
+		pending: expect.any(Number),
+		running: expect.any(Number),
+		dead: expect.any(Number)
+	});
+});
+
 test('security headers are set on every response', async ({ request }) => {
 	const response = await request.get('/api/health');
 	const headers = response.headers();
