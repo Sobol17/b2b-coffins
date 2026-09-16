@@ -3,7 +3,6 @@ export const EVENT_KEYS = [
 	'request.accepted',
 	'request.ready',
 	'request.delivered',
-	'request.delivery_failed',
 	'request.cancelled',
 	'request.rejected',
 	'request.payment_marked',

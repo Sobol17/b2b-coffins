@@ -1,5 +1,5 @@
 import { TRANSITIONS, type TransitionDenial } from './state-machine';
-import type { RequestStatus } from '$lib/types/request';
+import type { RequestStatus, Transition } from '$lib/types/request';
 
 /** The moment column a request stamps when it enters a status. Other statuses carry no moment. */
 export const STATUS_STAMPS = {
@@ -18,10 +18,15 @@ export function stampFor(status: RequestStatus): StampField | undefined {
 
 /**
  * The automatic step that follows entering `status`, if the table has one. The system takes it in
- * the same transaction, so a delivered request never rests in `delivered`.
+ * the transaction of the manual move and only when its guards hold, so a delivery that collected
+ * the cash runs on to `paid` while a delivery billed by invoice stops at `awaiting_payment`.
  */
+export function autoTransition(status: RequestStatus): Transition | undefined {
+	return TRANSITIONS.find((t) => t.from === status && t.auto === true);
+}
+
 export function autoFollowUp(status: RequestStatus): RequestStatus | undefined {
-	return TRANSITIONS.find((t) => t.from === status && t.auto === true)?.to;
+	return autoTransition(status)?.to;
 }
 
 export type DenialKind = 'conflict' | 'forbidden' | 'validation';

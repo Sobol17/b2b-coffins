@@ -10,11 +10,11 @@ import {
 } from './request-transition.repository';
 import { evaluateGuards } from '$lib/domain/request/guards';
 import {
+	TRANSITIONS,
 	checkTransition,
-	findTransition,
 	type TransitionDenial
 } from '$lib/domain/request/state-machine';
-import { autoFollowUp, denialKind, stampFor } from '$lib/domain/request/transition-flow';
+import { autoTransition, denialKind, stampFor } from '$lib/domain/request/transition-flow';
 import type { ActorContext } from '$lib/types/actor';
 import type { RequestStatus, SubmittedRequestDto, Transition } from '$lib/types/request';
 import type { RequestTransitionInput } from '$lib/validation/request';
@@ -43,14 +43,7 @@ export class RequestTransitionService extends BaseService {
 			const transition = this.check(request, input, tx);
 
 			this.step(request.id, transition, this.ctx.userId, input, tx);
-			let status: RequestStatus = transition.to;
-			// The automatic step belongs to the same move: a delivered request never rests in delivered.
-			const next = autoFollowUp(status);
-			const follow = next === undefined ? undefined : findTransition(status, next);
-			if (follow) {
-				this.step(request.id, follow, null, { reasonId: null, comment: null }, tx);
-				status = follow.to;
-			}
+			const status = this.chainAutoSteps(request.id, transition.to, tx);
 
 			return {
 				result: { id: request.id, number: request.number, status },
@@ -91,6 +84,39 @@ export class RequestTransitionService extends BaseService {
 		});
 		if (!verdict.ok) throw this.refusal(verdict.denial, request.status, input.to);
 		return verdict.transition;
+	}
+
+	/**
+	 * Automatic steps belong to the move that opened the way for them (tech.md 6.2, invariant 7), so
+	 * they run here rather than in a job, and stop at the first guard that does not hold.
+	 */
+	private chainAutoSteps(requestId: number, from: RequestStatus, tx: Tx): RequestStatus {
+		let status = from;
+		// Bounded by the table: every step moves forward, so the chain cannot revisit a status.
+		for (let taken = 0; taken < TRANSITIONS.length; taken += 1) {
+			const step = this.nextAutoStep(requestId, status, tx);
+			if (!step) return status;
+			this.step(requestId, step, null, { reasonId: null, comment: null }, tx);
+			status = step.to;
+		}
+		return status;
+	}
+
+	/** The system stands in for nobody: only the guards decide whether the step is taken. */
+	private nextAutoStep(requestId: number, from: RequestStatus, tx: Tx): Transition | undefined {
+		const candidate = autoTransition(from);
+		if (!candidate) return undefined;
+
+		const verdict = checkTransition({
+			from,
+			to: candidate.to,
+			actorRoles: ['system'],
+			isOwnRequest: true,
+			isAssigned: true,
+			hasReason: false,
+			guards: evaluateGuards(this.repo.guardFacts(requestId, tx))
+		});
+		return verdict.ok ? verdict.transition : undefined;
 	}
 
 	private step(

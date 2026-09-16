@@ -30,26 +30,26 @@
 
 	{
 		"dict": "refusal_reason",
-		"code": "address_wrong",
-		"title": "Адрес указан неверно",
+		"code": "out_of_assortment",
+		"title": "Позиции нет в ассортименте",
 		"sortOrder": 10
 	},
 	{
 		"dict": "refusal_reason",
-		"code": "recipient_absent",
-		"title": "Получателя нет на месте",
+		"code": "no_capacity",
+		"title": "Нет свободных мощностей на срок",
 		"sortOrder": 20
 	},
 	{
 		"dict": "refusal_reason",
-		"code": "not_accepted",
-		"title": "Контрагент не принял",
+		"code": "debt",
+		"title": "Задолженность контрагента",
 		"sortOrder": 30
 	},
 	{
 		"dict": "refusal_reason",
-		"code": "out_of_assortment",
-		"title": "Позиции нет в ассортименте",
+		"code": "duplicate",
+		"title": "Дубль ранее принятой заявки",
 		"sortOrder": 40
 	},
 
@@ -67,8 +67,8 @@
 	},
 	{
 		"dict": "stock_move_reason",
-		"code": "delivery_refusal",
-		"title": "Отказ при доставке",
+		"code": "write_off",
+		"title": "Списание повреждённого",
 		"sortOrder": 30
 	},
 

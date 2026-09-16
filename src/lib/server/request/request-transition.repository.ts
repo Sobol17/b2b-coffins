@@ -106,7 +106,7 @@ export class RequestTransitionRepository extends BaseRepository<typeof requests>
 		};
 	}
 
-	/** A delivery refusal names its reason from the refusal_reason dictionary, nothing else. */
+	/** A rejection names its reason from the refusal_reason dictionary, nothing else. */
 	isRefusalReason(reasonId: number, tx?: Tx): boolean {
 		return (
 			this.db(tx)

@@ -17,8 +17,6 @@ export class OutboxRequestEffects implements RequestEffects {
 				return bus.emit('request.ready', requestId, tx);
 			case 'emit:request.delivered':
 				return bus.emit('request.delivered', requestId, tx);
-			case 'emit:request.delivery_failed':
-				return bus.emit('request.delivery_failed', requestId, tx);
 			case 'emit:request.paid':
 				return bus.emit('request.paid', requestId, tx);
 			// The audit row comes from BaseService.audited, which wraps every move.
@@ -29,7 +27,6 @@ export class OutboxRequestEffects implements RequestEffects {
 			case 'consumeComponents':
 			case 'produceStockItems':
 			case 'shipStockItems':
-			case 'reverseShipment':
 			case 'freezeCharity':
 				return;
 		}
