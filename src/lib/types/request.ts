@@ -1,3 +1,4 @@
+import type { Page } from './list';
 import type { RoleCode } from './roles';
 
 export const REQUEST_STATUSES = [
@@ -53,7 +54,12 @@ export interface RequestListItemDto {
 	priority: RequestPriority;
 	counterpartyName: string | null;
 	itemCount: number;
+	unitCount: number;
+	firstItemTitle: string | null;
+	authorName: string | null;
+	externalNumber: string | null;
 	createdAt: string;
+	submittedAt: string | null;
 	readyAt: string | null;
 	deliveredAt: string | null;
 	totalMinor?: number;
@@ -122,4 +128,90 @@ export interface LastRequestDto {
 	readonly itemCount: number;
 	readonly unitCount: number;
 	readonly totalMinor?: number;
+}
+
+export const REQUEST_SORTS = ['submittedAt', 'number', 'total'] as const;
+export type RequestSort = (typeof REQUEST_SORTS)[number];
+
+/** Filters of the portal registry. An empty status list means every status the actor may see. */
+export interface RequestFilters {
+	readonly statuses?: readonly RequestStatus[];
+	/** ISO dates of a closed window over `submittedAt`, read in the organisation timezone. */
+	readonly from?: string;
+	readonly to?: string;
+}
+
+export interface RequestListPageDto extends Page<RequestListItemDto> {
+	/** Counted over the whole filtered set, not over the page: the chips show totals. */
+	readonly countsByStatus: Readonly<Record<RequestStatus, number>>;
+}
+
+/** A line of a sent request (P6). Money keys only for a role with prices. */
+export interface RequestItemDto {
+	readonly id: number;
+	readonly productId: number;
+	readonly productTitle: string;
+	readonly sku: string;
+	readonly sizeCode: string;
+	readonly materialTitle: string;
+	readonly qty: number;
+	readonly engraving: string | null;
+	readonly comment: string | null;
+	readonly options: readonly DraftItemOptionDto[];
+	readonly unitPriceMinor?: number;
+	readonly lineTotalMinor?: number;
+}
+
+export interface RequestHistoryStepDto {
+	readonly id: number;
+	readonly fromStatus: RequestStatus | null;
+	readonly toStatus: RequestStatus;
+	/** Null for an automatic step: the system stands in for nobody (tech.md 6.2). */
+	readonly actorName: string | null;
+	readonly reasonTitle: string | null;
+	readonly comment: string | null;
+	readonly createdAt: string;
+}
+
+export interface RequestCommentDto {
+	readonly id: number;
+	readonly authorName: string;
+	readonly isMine: boolean;
+	readonly body: string;
+	readonly createdAt: string;
+}
+
+export interface RequestAttachmentDto {
+	readonly id: number;
+	readonly name: string;
+	readonly mime: string;
+	readonly sizeBytes: number;
+	readonly createdAt: string;
+}
+
+/** The request card of the portal. Money keys only for a role with prices. */
+export interface RequestCardDto {
+	readonly id: number;
+	readonly number: string;
+	readonly status: RequestStatus;
+	readonly priority: RequestPriority;
+	readonly createdAt: string;
+	readonly submittedAt: string | null;
+	readonly externalNumber: string | null;
+	readonly comment: string | null;
+	readonly authorName: string | null;
+	readonly isPickup: boolean;
+	readonly deliveryAddress: string | null;
+	readonly items: readonly RequestItemDto[];
+	readonly unitCount: number;
+	readonly history: readonly RequestHistoryStepDto[];
+	readonly comments: readonly RequestCommentDto[];
+	readonly attachments: readonly RequestAttachmentDto[];
+	/** Moves this actor may ask for, guards aside (tech.md 6.2). */
+	readonly targets: readonly RequestStatus[];
+	readonly itemsTotalMinor?: number;
+	readonly discountPercent?: number;
+	readonly discountMinor?: number;
+	readonly totalMinor?: number;
+	readonly paidMinor?: number;
 }
