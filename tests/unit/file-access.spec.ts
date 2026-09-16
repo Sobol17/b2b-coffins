@@ -22,7 +22,11 @@ function product(sku: string, isPublished: boolean): number {
 	return row?.id ?? 0;
 }
 
-function stored(path: string, ownerScope: 'product' | 'request', ownerId: number): number {
+function stored(
+	path: string,
+	ownerScope: 'product' | 'request' | 'contract',
+	ownerId: number
+): number {
 	const [row] = db
 		.insert(media)
 		.values({ path, mime: 'image/jpeg', sizeBytes: photo.length, ownerScope, ownerId })
@@ -36,6 +40,7 @@ const hidden = product('FILE-2', false);
 const coverId = stored('products/cover.jpg', 'product', published);
 const hiddenCoverId = stored('products/cover.jpg', 'product', hidden);
 const attachmentId = stored('products/cover.jpg', 'request', 1);
+const contractId = stored('products/cover.jpg', 'contract', 1);
 const escapeId = stored('../../etc/passwd', 'product', published);
 const goneId = stored('products/missing.jpg', 'product', published);
 
@@ -68,8 +73,18 @@ describe('file access through /api/files/[id]', () => {
 		});
 	});
 
-	it('refuses files of other owners until their slices define who reads them', async () => {
-		await expect(service('owner').open(attachmentId)).rejects.toThrow(ForbiddenError);
+	it('serves a request attachment to the workshop side that reads every request', async () => {
+		await expect(service('owner').open(attachmentId)).resolves.toMatchObject({
+			mime: 'image/jpeg'
+		});
+	});
+
+	it('refuses a request attachment to a counterparty the request does not belong to', async () => {
+		await expect(service('cp_admin').open(attachmentId)).rejects.toThrow(ForbiddenError);
+	});
+
+	it('refuses files of the owners whose slices have not defined a reader yet', async () => {
+		await expect(service('owner').open(contractId)).rejects.toThrow(ForbiddenError);
 	});
 
 	it('refuses a role without catalog access', async () => {

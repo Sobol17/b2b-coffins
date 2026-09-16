@@ -1,7 +1,7 @@
 # tech.md — ядро проекта
 
 **Проект:** B2B-портал + CRM для столярной мастерской (производство гробов)
-**Версия ядра:** v1.14
+**Версия ядра:** v1.15
 **Дата:** 16.09.2026
 **Владелец файла:** Sobol17 (тимлид и единственный разработчик)
 **Источник требований:** `TZ_B2B_CRM_stolyarka_v06.md`
@@ -11,6 +11,7 @@
 | Версия | Изменение |
 |---|---|
 | v1.0 | Первая заморозка ядра: стек, структура, схема БД, контракты очереди и событий, общие типы, UI-примитивы, правила кода, дорожная карта слайсов |
+| v1.15 | Слайс P6, экраны «Мои заявки» и «Заявка (детальная)». Реестр портала отдаёт отправленные заявки: администратор контрагента видит весь контрагент, сотрудник только свои, черновик в реестр не попадает. Фильтры реестра: статусы чипами со счётчиками, окно дат по `submittedAt`, поиск по номеру и по своему номеру контрагента, сортировка `REQUEST_SORTS`; сортировка по сумме для роли без цен игнорируется, чтобы порядок не выдавал цены. В §8 добавлены `RequestFilters`, `RequestListPageDto`, `RequestItemDto`, `RequestHistoryStepDto`, `RequestCommentDto`, `RequestAttachmentDto`, `RequestCardDto`, а `RequestListItemDto` получил `unitCount`, `firstItemTitle`, `authorName`, `externalNumber` и `submittedAt`. Переписка с менеджером: портал читает и пишет `comments` только с `is_internal = false`, чужие внутренние комментарии не приходят в ответе. Вложения заявки: `POST /api/files` кладёт файл в `media` с `owner_scope = 'request'`, имя файла берётся из последнего сегмента `media.path`, поэтому колонка под него не заводится; `/api/files/[id]` отдаёт вложение только тому, кому видна сама заявка. Ограничения `file.upload` и `request.comment` в `rate_limits` по §12. У `FileUpload` появился проп `fields`: файл уходит на `POST /api/files` вместе с идентификатором заявки. `FilterBar` получил поле типа `date` на `DatePicker`. Отказ доменного сервиса в `load` карточки отдаётся своим статусом через `orHttpStatus`, иначе SvelteKit превращает его в 500 |
 | v1.14 | Слайс P5. Отказ при доставке убран из системы: строка `delivered -> ready` вышла из §6.2, вместе с ней ушли эффект `reverseShipment` и событие `request.delivery_failed`. Обратных переходов в потоке не осталось, инвариант 1 переформулирован. Строка `awaiting_payment -> paid` стала системным автоматическим шагом с guard `fullyPaid`: менеджер двигает не статус, а отметку оплаты. Добавлен инвариант 7: автоматический шаг берётся в транзакции действия, открывшего ему дорогу, и только при прошедших guard-ах, шаги идут цепочкой. Водитель при доставке отмечает принятые наличные, отметка пишет `payment_marks` со способом `cash`, и заявка доходит до `paid` одним действием; оплата по счёту оставляет её в `awaiting_payment` до отметки администратора (C6, C7). §6.3 переписан: компенсация обратным движением относится к ошибке в складском журнале, а не к откату статуса |
 | v1.13 | CI переведён на ручной запуск (`workflow_dispatch`), пока разработчик один: автоматический прогон на каждый PR и пуш в `main` съедал время каждого мёрджа. Гейт §11.1 прогоняется локально перед мёрджем тем же набором команд, workflow запускается из Actions по кнопке. Мёрдж в `main` по-прежнему только через PR. Команда `webServer` в Playwright накатывает миграции до старта сервера: воркер очереди читает `job_queue` при запуске, а `globalSetup` выполняется позже |
 | v1.12 | Слайс P4, корзина по макету «Корзина». Черновик один на пользователя в своём контрагенте и получает номер из `numbering_sequences` при создании: формат `{prefix}{period}-{00001}`, период считается в `org.timezone`, новый период начинает счёт с единицы. Позиция проверяется на сервере: опции только из матрицы варианта, без повторов и не больше одной каждого вида; одинаковые позиции складываются, в строке не больше 999 штук. Цена строки: персональная цена варианта плюс надбавки опций, умноженные на количество; скидка по договору берётся один раз с суммы заявки (`domain/request/pricing.ts`). Суммы черновика считаются и хранятся для любой роли, DTO отдаёт их только роли с ценами. Отправка `draft -> new` проверяется машиной состояний, пишет историю, событие `request.submitted` и аудит в одной транзакции и пересчитывает цены на момент отправки; ограничение `request.submit` в `rate_limits`. Повтор заявки копирует позиции в черновик и пропускает недоступные. Минимальная партия и шаблоны комплектов из §14 P4 не имеют полей в схеме и переносятся на этап 2 вместе с позициями §18.6. В §8 добавлены DTO черновика |
@@ -954,8 +955,9 @@ export interface Transition {
 // Role-projected DTO. Price fields are optional by type, so a missing check fails at compile time.
 export interface RequestListItemDto {
   id: number; number: string; status: RequestStatus; priority: 'normal' | 'urgent';
-  counterpartyName: string | null; itemCount: number;
-  createdAt: string; readyAt: string | null; deliveredAt: string | null;
+  counterpartyName: string | null; itemCount: number; unitCount: number;
+  firstItemTitle: string | null; authorName: string | null; externalNumber: string | null;
+  createdAt: string; submittedAt: string | null; readyAt: string | null; deliveredAt: string | null;
   totalMinor?: number; paidMinor?: number; charityAmountMinor?: number;
 }
 
@@ -974,6 +976,38 @@ export interface DraftDto {
 }
 export interface SubmittedRequestDto { id: number; number: string; status: RequestStatus; }
 export interface LastRequestDto { id: number; number: string; submittedAt: string | null; itemCount: number; unitCount: number; totalMinor?: number; }
+
+// Portal registry and card of a sent request (P6). Drafts never show up here: the cart owns them.
+export const REQUEST_SORTS = ['submittedAt','number','total'] as const;   // total: ignored for a price-blind role
+export interface RequestFilters {
+  statuses?: RequestStatus[];            // empty means every status the actor may see
+  from?: string; to?: string;            // ISO dates, closed window over submittedAt
+}
+export interface RequestListPageDto extends Page<RequestListItemDto> {
+  countsByStatus: Record<RequestStatus, number>;   // chips of the registry, counted before paging
+}
+export interface RequestItemDto {
+  id: number; productId: number; productTitle: string; sku: string; sizeCode: string; materialTitle: string;
+  qty: number; engraving: string | null; comment: string | null;
+  options: { id: number; kind: string; title: string }[];
+  unitPriceMinor?: number; lineTotalMinor?: number;
+}
+export interface RequestHistoryStepDto {
+  id: number; fromStatus: RequestStatus | null; toStatus: RequestStatus;
+  actorName: string | null;              // null for an automatic step of tech.md 6.2
+  reasonTitle: string | null; comment: string | null; createdAt: string;
+}
+export interface RequestCommentDto { id: number; authorName: string; isMine: boolean; body: string; createdAt: string; }
+export interface RequestAttachmentDto { id: number; name: string; mime: string; sizeBytes: number; createdAt: string; }
+export interface RequestCardDto {
+  id: number; number: string; status: RequestStatus; priority: 'normal' | 'urgent';
+  createdAt: string; submittedAt: string | null; externalNumber: string | null; comment: string | null;
+  authorName: string | null; isPickup: boolean; deliveryAddress: string | null;
+  items: RequestItemDto[]; unitCount: number;
+  history: RequestHistoryStepDto[]; comments: RequestCommentDto[]; attachments: RequestAttachmentDto[];
+  targets: RequestStatus[];              // moves the actor may ask for, guards aside (tech.md 6.2)
+  itemsTotalMinor?: number; discountPercent?: number; discountMinor?: number; totalMinor?: number; paidMinor?: number;
+}
 
 // list.ts — one shape for every registry in the app
 export interface ListQuery<F = Record<string, unknown>> {
@@ -1076,7 +1110,7 @@ export class RequestDtoMapper {
 | `Select` / `Combobox` | `options: {value,label}[]`, `bind:value`, `searchable` |
 | `Checkbox` / `Switch` / `RadioGroup` | `label`, `bind:checked`; у `Checkbox` ещё `name` и `value` для отправки в форме |
 | `DatePicker` / `DateRangePicker` | `bind:value: string`, ISO-строки |
-| `FileUpload` | `accept`, `maxSizeMb`, `multiple`, `onUploaded(mediaId)` |
+| `FileUpload` | `accept`, `maxSizeMb`, `multiple`, `fields` (доп. поля формы, например владелец файла), `onUploaded(mediaId)` |
 | `DataTable` | `columns`, `rows`, `total`, `query: ListQuery`, `onQueryChange`, `exportUrl`, серверная пагинация |
 | `FilterBar` | `fields`, `bind:filters`, сохранение в URL |
 | `Modal` / `Drawer` / `ConfirmDialog` | `open`, `title`, `onClose`, `{#snippet body()}` |

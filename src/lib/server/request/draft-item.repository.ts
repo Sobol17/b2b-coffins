@@ -21,6 +21,8 @@ export interface DraftLineRow {
 	readonly sku: string;
 	readonly sizeCode: string;
 	readonly materialTitle: string;
+	readonly engraving: string | null;
+	readonly comment: string | null;
 }
 
 export interface LineOptionRow {
@@ -52,7 +54,9 @@ const LINE_COLUMNS = {
 	productTitle: products.title,
 	sku: productVariants.sku,
 	sizeCode: productVariants.sizeCode,
-	materialTitle: dictItems.title
+	materialTitle: dictItems.title,
+	engraving: requestItems.engraving,
+	comment: requestItems.comment
 };
 
 /** Lines of a request and their options. Money columns are read by `linePrices` only. */

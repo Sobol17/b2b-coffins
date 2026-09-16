@@ -16,7 +16,11 @@ export const RATE_LIMITS = {
 	// Creating an account sends a mail with a password: a runaway form must not spam mailboxes.
 	'staff.create': { limit: 20, windowSec: 3600, blockSec: 3600 },
 	// Every sent request lands on the manager's board and notifies people (tech.md 12).
-	'request.submit': { limit: 30, windowSec: 3600, blockSec: 900 }
+	'request.submit': { limit: 30, windowSec: 3600, blockSec: 900 },
+	// A thread the manager reads, so a runaway form must not bury the real messages.
+	'request.comment': { limit: 60, windowSec: 3600, blockSec: 900 },
+	// An upload writes to disk: the budget is what keeps the files directory from filling up.
+	'file.upload': { limit: 40, windowSec: 3600, blockSec: 900 }
 } as const satisfies Record<string, RateLimitRule>;
 
 export type RateLimitAction = keyof typeof RATE_LIMITS;

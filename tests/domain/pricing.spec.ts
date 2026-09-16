@@ -2,6 +2,7 @@ import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 import {
 	discountMinor,
+	discountPercentOf,
 	isPriceListActive,
 	resolveUnitPrice
 } from '../../src/lib/domain/request/pricing';
@@ -117,5 +118,20 @@ describe('contract discount', () => {
 	it('rounds half up on the kopeck, like the rest of the app', () => {
 		expect(discountMinor(12_345, 4)).toBe(494);
 		expect(discountMinor(50, 1)).toBe(1);
+	});
+});
+
+describe('discount percent behind a frozen request (P6)', () => {
+	it('reads back the percent the request was priced with', () => {
+		fc.assert(
+			fc.property(fc.integer({ min: 10_000, max: 100_000_000 }), percent, (total, rate) => {
+				expect(discountPercentOf(total, discountMinor(total, rate))).toBe(rate);
+			})
+		);
+	});
+
+	it('calls a request without a discount a request at zero percent', () => {
+		expect(discountPercentOf(120_000, 0)).toBe(0);
+		expect(discountPercentOf(0, 0)).toBe(0);
 	});
 });

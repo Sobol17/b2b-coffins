@@ -1,4 +1,4 @@
-import { applyPercent } from '$lib/utils/money';
+import { applyPercent, roundHalfUp } from '$lib/utils/money';
 
 export interface PriceListWindow {
 	readonly validFrom: Date | null;
@@ -80,4 +80,13 @@ export function requestTotals(
 	const itemsTotalMinor = lineTotals.reduce((sum, value) => sum + value, 0);
 	const discount = discountMinor(itemsTotalMinor, discountPercent);
 	return { itemsTotalMinor, discountMinor: discount, totalMinor: itemsTotalMinor - discount };
+}
+
+/**
+ * The percent behind a discount a request froze when it was sent. The card shows the rate of that
+ * request, which is not the rate of the counterparty today: settings move, a sent request does not.
+ */
+export function discountPercentOf(itemsTotalMinor: number, discountMinor: number): number {
+	if (itemsTotalMinor <= 0 || discountMinor <= 0) return 0;
+	return roundHalfUp((discountMinor * 100) / itemsTotalMinor);
 }

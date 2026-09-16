@@ -81,6 +81,11 @@ export class PolicyService {
 		return roles.includes('owner');
 	}
 
+	/** The administrator of a counterparty reads its whole history, an employee only the own (P6). */
+	static seesWholeCounterparty(actor: Pick<ActorContext, 'roles'>): boolean {
+		return actor.roles.includes('cp_admin');
+	}
+
 	static isPortalRole(role: RoleCode): boolean {
 		return (PORTAL_ROLES as readonly RoleCode[]).includes(role);
 	}

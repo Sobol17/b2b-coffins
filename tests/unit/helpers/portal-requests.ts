@@ -69,11 +69,17 @@ export function seedOrderingWorld(db: Db): OrderingWorld {
 	return {
 		cpId,
 		otherCpId,
-		adminId: insertUser({ email: 'admin@rs.example', role: 'cp_admin', counterpartyId: cpId }),
+		adminId: insertUser({
+			email: 'admin@rs.example',
+			role: 'cp_admin',
+			counterpartyId: cpId,
+			fullName: 'Ольга Смирнова'
+		}),
 		employeeId: insertUser({
 			email: 'employee@rs.example',
 			role: 'cp_employee',
-			counterpartyId: cpId
+			counterpartyId: cpId,
+			fullName: 'Илья Коротков'
 		}),
 		outsiderId: insertUser({
 			email: 'admin@pamyat.example',

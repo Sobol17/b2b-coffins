@@ -14,6 +14,7 @@
 		accept,
 		maxSizeMb = 10,
 		multiple = false,
+		fields = {},
 		onUploaded,
 		label,
 		hint,
@@ -23,6 +24,8 @@
 		accept?: string | undefined;
 		maxSizeMb?: number;
 		multiple?: boolean;
+		/** Extra form fields posted with the file, such as the owner the slice attaches it to. */
+		fields?: Record<string, string>;
 		onUploaded: (mediaId: number) => void;
 		label?: string | undefined;
 		hint?: string | undefined;
@@ -58,6 +61,7 @@
 	async function upload(file: File): Promise<void> {
 		const body = new FormData();
 		body.append('file', file);
+		for (const [key, value] of Object.entries(fields)) body.append(key, value);
 		const response = await fetch(UPLOAD_URL, { method: 'POST', body });
 		if (!response.ok) throw new Error(`Сервер ответил ${response.status}`);
 		const payload: unknown = await response.json();
