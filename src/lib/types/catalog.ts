@@ -36,7 +36,7 @@ export interface CategoryDto {
 	/** Lowest personal price inside the category tree, for a role with prices. */
 	readonly minPriceMinor?: number;
 	/** Lowest agency price inside the tree: what a portal role without prices sees as "from". */
-	readonly minAgencyPriceMinor?: number;
+	readonly agencyMinPriceMinor?: number;
 }
 
 /*

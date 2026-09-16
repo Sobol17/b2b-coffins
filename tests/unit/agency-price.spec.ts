@@ -130,7 +130,7 @@ describe('agency price in the catalog', () => {
 		const category = new CatalogService(employee)
 			.categories()
 			.find((row) => row.id === product.categoryId);
-		expect(category?.minAgencyPriceMinor).toBe(250_000);
+		expect(category?.agencyMinPriceMinor).toBe(250_000);
 		expect(category?.minPriceMinor).toBeUndefined();
 	});
 

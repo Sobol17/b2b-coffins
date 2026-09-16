@@ -34,3 +34,13 @@ export async function login(page: Page, role: RoleKey): Promise<void> {
 	await page.click('button[type="submit"]');
 	await page.waitForURL(HOME_BY_SCOPE[account.scope]);
 }
+
+/**
+ * Money keys of a server answer that a role without prices must never receive (tech.md 8.1).
+ * An agency price is the counterparty's own number, so keys with the `agency` prefix are allowed.
+ */
+export function purchaseMoneyKeys(body: string): string[] {
+	return [...body.matchAll(/"([A-Za-z]*Minor)"/g)]
+		.map(([, key]) => key ?? '')
+		.filter((key) => !key.startsWith('agency'));
+}

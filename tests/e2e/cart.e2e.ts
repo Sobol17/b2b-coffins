@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { login } from './fixtures';
+import { login, purchaseMoneyKeys } from './fixtures';
 
 const ORIGIN = 'http://localhost:4173';
 
@@ -28,7 +28,7 @@ test('an employee builds a request from the catalog and sends it for pickup', as
 	).toBeVisible();
 	await expect(page.getByTestId('draft-total')).toHaveText('—');
 	const body = await (await page.request.get('/portal/cart/__data.json')).text();
-	expect(body).not.toContain('Minor');
+	expect(purchaseMoneyKeys(body)).toEqual([]);
 
 	await page.getByText('Самовывоз со склада мастерской').click();
 	await page.getByTestId('submit-draft').click();

@@ -34,14 +34,14 @@ export class CatalogDtoMapper {
 		row: CategoryRow,
 		productCount: number,
 		minPriceMinor: number | undefined,
-		minAgencyPriceMinor: number | undefined
+		agencyMinPriceMinor: number | undefined
 	): CategoryDto {
 		return {
 			id: row.id,
 			title: row.title,
 			parentId: row.parentId,
 			productCount,
-			...definedProps({ minPriceMinor, minAgencyPriceMinor })
+			...definedProps({ minPriceMinor, agencyMinPriceMinor })
 		};
 	}
 

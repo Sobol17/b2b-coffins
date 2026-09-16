@@ -8,7 +8,7 @@
 
 	/** The "from" figure of a section: the agency price a role sees, else its purchase price. */
 	function minOf(category: CategoryDto): number | undefined {
-		return category.minAgencyPriceMinor ?? category.minPriceMinor;
+		return category.agencyMinPriceMinor ?? category.minPriceMinor;
 	}
 </script>
 
