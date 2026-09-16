@@ -43,5 +43,6 @@ describe('job payload contract of tech.md 7.2', () => {
 	it('builds idempotency keys in the documented shape', () => {
 		expect(jobKey.sessionCleanup(new Date('2026-09-15T23:59:00Z'))).toBe('cleanup:20260915');
 		expect(jobKey.fanout('request.ready', 42)).toBe('fanout:request.ready:42');
+		expect(jobKey.charityRecount('year:2026', 42)).toBe('charity:year:2026:42');
 	});
 });

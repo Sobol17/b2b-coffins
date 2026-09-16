@@ -20,3 +20,14 @@ function isKnownTimeZone(timeZone: string): boolean {
 
 /** `settings.org.timezone`: an IANA zone the runtime knows, or dates would throw while rendering. */
 export const orgTimezoneSchema = z.string().min(1).refine(isKnownTimeZone);
+
+/** `settings.charity.rate_bp`: basis points of the request total that go to the fund (tech.md 5.9). */
+export const charityRateSchema = z.number().int().min(0).max(10_000);
+
+/** `settings.charity.fund`: the fund the banner names. */
+export const charityFundSchema = z.object({
+	title: z.string().min(1),
+	url: z.url().optional()
+});
+
+export type CharityFund = z.infer<typeof charityFundSchema>;

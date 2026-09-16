@@ -33,5 +33,7 @@ function utcDay(now: Date): string {
 /** Idempotency keys in the exact shape of tech.md 7.2. */
 export const jobKey = {
 	sessionCleanup: (now: Date): string => `cleanup:${utcDay(now)}`,
-	fanout: (eventKey: EventKey, entityId: number): string => `fanout:${eventKey}:${entityId}`
+	fanout: (eventKey: EventKey, entityId: number): string => `fanout:${eventKey}:${entityId}`,
+	// One recount per delivered request: an hourly key dropped the second delivery of the hour (v1.18).
+	charityRecount: (scope: string, requestId: number): string => `charity:${scope}:${requestId}`
 } as const;

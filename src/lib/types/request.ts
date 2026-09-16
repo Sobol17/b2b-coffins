@@ -217,4 +217,6 @@ export interface RequestCardDto {
 	readonly discountMinor?: number;
 	readonly totalMinor?: number;
 	readonly paidMinor?: number;
+	/** Frozen on delivery (P8); a role without prices never receives it. */
+	readonly charityAmountMinor?: number;
 }
