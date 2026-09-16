@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { resolve } from '$app/paths';
-	import { Button, PriceCell } from '$lib/ui';
+	import PricePair from '$lib/portal/PricePair.svelte';
+	import { Button } from '$lib/ui';
 	import type { ProductListItemDto } from '$lib/types/catalog';
 	import { formatLengthsCm } from '$lib/utils/format';
 	import ProductPhoto from './ProductPhoto.svelte';
@@ -27,11 +28,11 @@
 		</h3>
 		<div class="text-sm text-fg-muted">{details}</div>
 		<div data-testid="product-price" class="mt-auto pt-3 font-heading text-2xl font-semibold">
-			{#if product.minPriceMinor !== undefined}
-				от <PriceCell valueMinor={product.minPriceMinor} /> ₽
-			{:else}
-				<PriceCell />
-			{/if}
+			<PricePair
+				agencyMinor={product.agencyPriceMinor}
+				purchaseMinor={product.minPriceMinor}
+				prefix={product.agencyPriceMinor === undefined ? 'от ' : undefined}
+			/>
 		</div>
 		<div
 			data-testid="product-stock"

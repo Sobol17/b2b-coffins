@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
-	import { Button, Card, NumberInput, PriceCell, Select, toast, type SelectOption } from '$lib/ui';
+	import PricePair from '$lib/portal/PricePair.svelte';
+	import { Button, Card, NumberInput, Select, toast, type SelectOption } from '$lib/ui';
 	import type { OptionKind, ProductDto } from '$lib/types/catalog';
 	import type { ContactDto } from '$lib/types/counterparty';
 	import { formatMinor } from '$lib/utils/format';
@@ -92,10 +93,9 @@
 			class="flex items-baseline gap-2.5 border-b border-border pb-4"
 		>
 			<span class="font-heading text-4xl font-semibold">
-				<PriceCell valueMinor={variant?.priceMinor} />
-				{#if variant?.priceMinor !== undefined}₽{/if}
+				<PricePair agencyMinor={product.agencyPriceMinor} purchaseMinor={variant?.priceMinor} />
 			</span>
-			{#if variant?.priceMinor !== undefined}
+			{#if product.agencyPriceMinor !== undefined || variant?.priceMinor !== undefined}
 				<span class="text-sm text-fg-faint">за штуку</span>
 			{/if}
 		</div>

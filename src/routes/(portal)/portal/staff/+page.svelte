@@ -80,7 +80,10 @@
 	<div class="grid gap-6 lg:grid-cols-[17.5rem_1fr] lg:items-start">
 		<ProfileNav
 			title={data.counterparty.name}
-			items={profileNavItems('staff', data.canManageStaff)}
+			items={profileNavItems('staff', {
+				staff: data.canManageStaff,
+				prices: data.canManagePrices
+			})}
 		/>
 
 		<section class="flex flex-col gap-6">
@@ -89,7 +92,7 @@
 					<h1 class="mb-2 text-4xl">Мои сотрудники</h1>
 					<p class="max-w-2xl text-fg-muted">
 						Доступ к порталу для сотрудников агентства. Администратор управляет сотрудниками и видит
-						цены, сотрудник собирает заявки без цен.
+						закупочные цены, сотрудник работает с ценами агентства.
 					</p>
 				</div>
 				<Button class="sm:ml-auto" onclick={() => (createOpen = true)}>Добавить сотрудника</Button>

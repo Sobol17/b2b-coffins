@@ -1,7 +1,7 @@
 # tech.md — ядро проекта
 
 **Проект:** B2B-портал + CRM для столярной мастерской (производство гробов)
-**Версия ядра:** v1.15
+**Версия ядра:** v1.16
 **Дата:** 16.09.2026
 **Владелец файла:** Sobol17 (тимлид и единственный разработчик)
 **Источник требований:** `TZ_B2B_CRM_stolyarka_v06.md`
@@ -11,6 +11,7 @@
 | Версия | Изменение |
 |---|---|
 | v1.0 | Первая заморозка ядра: стек, структура, схема БД, контракты очереди и событий, общие типы, UI-примитивы, правила кода, дорожная карта слайсов |
+| v1.16 | Слайс P7 переопределён. Документы и печатные формы выведены из системы: убраны таблицы `documents` и `document_templates`, список `DOCUMENT_KINDS`, топик `document.generate`, значение `document` в `media.ownerScope`, строка `pdfmake` в §3 и папка `server/documents/`, нумерация переехала в `server/numbering/`. Слайс C11 выведен из дорожной карты, его номер не переиспользуется; C5 ищет заявку по номеру без бланка, C6 остался без просмотра накладной, C10 отдаёт ведомость только в XLSX, P8 отдаёт справку по фонду в XLSX. Вместо документов портал получил цены агентства: таблица `counterparty_product_prices`, одна цена на `product`, размер и опции её не меняют. Цена агентства только для показа клиенту: в `requests.total_minor`, скидку по договору, отчисление в фонд и прайс-лист XLSX она не входит. `cp_admin` заполняет её на экране «Мои цены» и видит рядом закупочную, `cp_employee` видит только цену агентства. В §8 добавлены `CategoryDto.agencyMinPriceMinor`, `ProductListItemDto.agencyPriceMinor`, `ProductDto.agencyPriceMinor`, `DraftItemDto.agencyUnitPriceMinor`, `RequestItemDto.agencyUnitPriceMinor`, в матрицу прав `prices.manage`. Сортировка каталога по цене для сотрудника идёт по цене агентства, модель без цены уходит в конец. Правило §8.1 уточнено: ответ роли без цен не содержит закупочных ключей, ключи с префиксом `agency` разрешены |
 | v1.15 | Слайс P6, экраны «Мои заявки» и «Заявка (детальная)». Реестр портала отдаёт отправленные заявки: администратор контрагента видит весь контрагент, сотрудник только свои, черновик в реестр не попадает. Фильтры реестра: статусы чипами со счётчиками, окно дат по `submittedAt`, поиск по номеру и по своему номеру контрагента, сортировка `REQUEST_SORTS`; сортировка по сумме для роли без цен игнорируется, чтобы порядок не выдавал цены. В §8 добавлены `RequestFilters`, `RequestListPageDto`, `RequestItemDto`, `RequestHistoryStepDto`, `RequestCommentDto`, `RequestAttachmentDto`, `RequestCardDto`, а `RequestListItemDto` получил `unitCount`, `firstItemTitle`, `authorName`, `externalNumber` и `submittedAt`. Переписка с менеджером: портал читает и пишет `comments` только с `is_internal = false`, чужие внутренние комментарии не приходят в ответе. Вложения заявки: `POST /api/files` кладёт файл в `media` с `owner_scope = 'request'`, имя файла берётся из последнего сегмента `media.path`, поэтому колонка под него не заводится; `/api/files/[id]` отдаёт вложение только тому, кому видна сама заявка. Ограничения `file.upload` и `request.comment` в `rate_limits` по §12. У `FileUpload` появился проп `fields`: файл уходит на `POST /api/files` вместе с идентификатором заявки. `FilterBar` получил поле типа `date` на `DatePicker`. Отказ доменного сервиса в `load` карточки отдаётся своим статусом через `orHttpStatus`, иначе SvelteKit превращает его в 500 |
 | v1.14 | Слайс P5. Отказ при доставке убран из системы: строка `delivered -> ready` вышла из §6.2, вместе с ней ушли эффект `reverseShipment` и событие `request.delivery_failed`. Обратных переходов в потоке не осталось, инвариант 1 переформулирован. Строка `awaiting_payment -> paid` стала системным автоматическим шагом с guard `fullyPaid`: менеджер двигает не статус, а отметку оплаты. Добавлен инвариант 7: автоматический шаг берётся в транзакции действия, открывшего ему дорогу, и только при прошедших guard-ах, шаги идут цепочкой. Водитель при доставке отмечает принятые наличные, отметка пишет `payment_marks` со способом `cash`, и заявка доходит до `paid` одним действием; оплата по счёту оставляет её в `awaiting_payment` до отметки администратора (C6, C7). §6.3 переписан: компенсация обратным движением относится к ошибке в складском журнале, а не к откату статуса |
 | v1.13 | CI переведён на ручной запуск (`workflow_dispatch`), пока разработчик один: автоматический прогон на каждый PR и пуш в `main` съедал время каждого мёрджа. Гейт §11.1 прогоняется локально перед мёрджем тем же набором команд, workflow запускается из Actions по кнопке. Мёрдж в `main` по-прежнему только через PR. Команда `webServer` в Playwright накатывает миграции до старта сервера: воркер очереди читает `job_queue` при запуске, а `globalSetup` выполняется позже |
@@ -39,7 +40,7 @@
 
 Два логических контура в одном приложении:
 
-- `/portal` — контрагенты: каталог, оформление заявки, статусы, документы, баннер пожертвований;
+- `/portal` — контрагенты: каталог, оформление заявки, статусы, свои цены для показа клиенту, баннер пожертвований;
 - `/crm` — сотрудники мастерской: доска заявок, склад, персонал, отчёты, цеховой и водительский экраны.
 
 ## 2. Стадии и этапы
@@ -78,7 +79,6 @@
 | Фоновые задачи | Внутрипроцессный воркер + таблица `job_queue` | Транзакционный outbox, ретраи, идемпотентность |
 | Реальное время | SSE (`/api/stream/:topic`) | Счётчик пожертвований, доска заявок |
 | Импорт таблиц | `exceljs` (XLSX), `papaparse` (CSV) | Расчётные таблицы и расценки |
-| PDF | `pdfmake` | Спецификация, накладная, бланк в цех, ведомость |
 | Пароли | `@node-rs/argon2` (argon2id) | Политика сложности в `lib/server/auth/policy.ts` |
 | Почта | `nodemailer` за интерфейсом `MailDriver` | Фейк с первого дня |
 | Web Push | `web-push`, VAPID | Драйвер `PushDriver` за тем же интерфейсом. Реальная отправка подключается в C15 |
@@ -178,7 +178,7 @@ src/
       queue/                      queue.ts, worker.ts, handlers/*.ts
       events/                     bus.ts, catalog.ts
       notifications/              service.ts, drivers/{mail,push}/{real,fake}.ts, templates/
-      documents/                  generator.ts, templates/*.ts, numbering.ts
+      numbering/                  numbering.ts, numbering.repository.ts
       files/                      storage.ts, validate.ts, image.ts
       audit/                      audit.service.ts
       config.ts                   единый разбор env через Zod
@@ -191,7 +191,7 @@ src/
     (portal)/                     контур контрагента, адреса /portal/*
       +layout.server.ts           guard: только роли портала
       portal/
-        catalog/ , cart/ , requests/ , profile/ , staff/ , charity/
+        catalog/ , cart/ , requests/ , prices/ , profile/ , staff/ , charity/
     (crm)/                        контур мастерской, адреса /crm/*
       +layout.server.ts           guard: только роли CRM
       crm/
@@ -410,7 +410,7 @@ export const media = sqliteTable('media', {
   mime: text('mime').notNull(),
   sizeBytes: integer('size_bytes').notNull(),
   width: integer('width'), height: integer('height'),
-  ownerScope: text('owner_scope', { enum: ['product', 'request', 'contract', 'document', 'import'] }).notNull(),
+  ownerScope: text('owner_scope', { enum: ['product', 'request', 'contract', 'import'] }).notNull(),
   ownerId: integer('owner_id'),
   sortOrder: integer('sort_order').notNull().default(0),
   uploadedBy: integer('uploaded_by').references(() => users.id),
@@ -434,6 +434,16 @@ export const priceListItems = sqliteTable('price_list_items', {
   variantId: integer('variant_id').notNull().references(() => productVariants.id, { onDelete: 'cascade' }),
   priceMinor: money('price_minor')
 }, (t) => ({ uq: uniqueIndex('pli_uq').on(t.priceListId, t.variantId) }));
+
+// Agency price (P7): the counterparty shows it to its own client. Display only, never part of a request sum.
+export const counterpartyProductPrices = sqliteTable('counterparty_product_prices', {
+  id: pk(),
+  counterpartyId: integer('counterparty_id').notNull().references(() => counterparties.id, { onDelete: 'cascade' }),
+  productId: integer('product_id').notNull().references(() => products.id, { onDelete: 'cascade' }),
+  priceMinor: money('price_minor'),
+  updatedById: integer('updated_by_id').notNull().references(() => users.id),
+  updatedAt: updatedAt()
+}, (t) => ({ uq: uniqueIndex('cpp_uq').on(t.counterpartyId, t.productId) }));
 
 export const discountRules = sqliteTable('discount_rules', {
   id: pk(),
@@ -667,7 +677,7 @@ export const payrollLines = sqliteTable('payroll_lines', {
 }, (t) => ({ uq: uniqueIndex('payroll_lines_uq').on(t.periodId, t.staffId) }));
 ```
 
-### 5.9 Благотворительность, документы, сквозное
+### 5.9 Благотворительность, нумерация, сквозное
 
 ```ts
 export const charityTransfers = sqliteTable('charity_transfers', {
@@ -689,35 +699,12 @@ export const charityTotals = sqliteTable('charity_totals', {
 });
 
 export const numberingSequences = sqliteTable('numbering_sequences', {
-  key: text('key').primaryKey(),             // 'request' | 'invoice' | 'spec'
+  key: text('key').primaryKey(),             // 'request'
   prefix: text('prefix').notNull().default(''),
   period: text('period', { enum: ['none', 'year', 'month'] }).notNull().default('year'),
   periodKey: text('period_key').notNull().default(''),
   lastValue: integer('last_value').notNull().default(0)
 });
-
-export const documentTemplates = sqliteTable('document_templates', {
-  id: pk(),
-  kind: text('kind', { enum: DOCUMENT_KINDS }).notNull(),
-  version: integer('version').notNull().default(1),
-  title: text('title').notNull(),
-  body: text('body', { mode: 'json' }).$type<Record<string, unknown>>(),
-  isActive: integer('is_active', { mode: 'boolean' }).notNull().default(true)
-});
-
-export const documents = sqliteTable('documents', {
-  id: pk(),
-  kind: text('kind', { enum: DOCUMENT_KINDS }).notNull(),
-  number: text('number'),
-  requestId: integer('request_id').references(() => requests.id, { onDelete: 'cascade' }),
-  periodId: integer('period_id').references(() => payrollPeriods.id),
-  variant: text('variant', { enum: ['full', 'no_prices'] }).notNull().default('full'),
-  status: text('status', { enum: ['queued', 'ready', 'failed'] }).notNull().default('queued'),
-  fileId: integer('file_id').references(() => media.id),
-  error: text('error'),
-  createdById: integer('created_by_id').references(() => users.id),
-  createdAt: createdAt()
-}, (t) => ({ reqIdx: index('documents_request_idx').on(t.requestId) }));
 
 export const notificationTemplates = sqliteTable('notification_templates', {
   id: pk(),
@@ -859,7 +846,7 @@ export const TRANSITIONS: readonly Transition[] = [
 
 ### 7.1 Транзакционный outbox
 
-Сервис не отправляет письмо и не генерирует PDF по месту. Он вставляет строку в `job_queue` внутри своей транзакции. Воркер `lib/server/queue/worker.ts` опрашивает таблицу раз в секунду, берёт задачу через `UPDATE ... WHERE status='pending' AND visible_at <= now` и выполняет хендлер.
+Сервис не отправляет письмо и не собирает экспорт по месту. Он вставляет строку в `job_queue` внутри своей транзакции. Воркер `lib/server/queue/worker.ts` опрашивает таблицу раз в секунду, берёт задачу через `UPDATE ... WHERE status='pending' AND visible_at <= now` и выполняет хендлер.
 
 ```ts
 export interface JobHandler<T> {
@@ -882,7 +869,6 @@ export interface JobHandler<T> {
 |---|---|---|---|
 | `notification.dispatch` | `{ notificationId: number }` | `notification:{id}` | Отправка одного уведомления в один канал, отметка `sent`/`failed` |
 | `notification.fanout` | `{ eventKey: EventKey, entityId: number }` | `fanout:{eventKey}:{entityId}` | Разворачивает событие в строки `notifications` по матрице ролей и личным настройкам |
-| `document.generate` | `{ documentId: number }` | `document:{id}` | Рендер PDF/XLSX, запись `media`, статус `ready` |
 | `charity.recount` | `{ scope: string }` | `charity:{scope}:{yyyymmddhh}` | Пересборка `charity_totals`, публикация в SSE-топик `charity` |
 | `stock.threshold.check` | `{ stockItemId: number }` | `threshold:{id}:{yyyymmdd}` | Сравнение остатка с порогом, событие `stock.below_threshold` |
 | `import.bom` | `{ mediaId: number, actorId: number }` | `import-bom:{mediaId}` | Разбор XLSX/CSV, создание `bom_versions` + `bom_norms` |
@@ -967,6 +953,7 @@ export interface DraftItemDto {
   coverMediaId: number | null; qty: number; options: { id: number; kind: string; title: string }[];
   unitPriceMinor?: number;               // variant price plus option surcharges, one piece
   lineTotalMinor?: number;
+  agencyUnitPriceMinor?: number;         // shown to both portal roles, never summed into the draft (P7)
 }
 export interface DraftDto {
   id: number; number: string; items: DraftItemDto[]; unitCount: number;
@@ -990,7 +977,7 @@ export interface RequestItemDto {
   id: number; productId: number; productTitle: string; sku: string; sizeCode: string; materialTitle: string;
   qty: number; engraving: string | null; comment: string | null;
   options: { id: number; kind: string; title: string }[];
-  unitPriceMinor?: number; lineTotalMinor?: number;
+  unitPriceMinor?: number; lineTotalMinor?: number; agencyUnitPriceMinor?: number;
 }
 export interface RequestHistoryStepDto {
   id: number; fromStatus: RequestStatus | null; toStatus: RequestStatus;
@@ -1018,12 +1005,12 @@ export interface Page<T> { rows: T[]; total: number; page: number; perPage: numb
 
 // catalog.ts — role projections of the catalog (P1). Price keys are optional and never selected for a price-blind role.
 export const OPTION_KINDS = ['finish','lacquer','upholstery','hardware','kit'] as const;
-export const CATALOG_SORTS = ['sortOrder','title','price'] as const;   // price: personal price, ignored for a price-blind role
+export const CATALOG_SORTS = ['sortOrder','title','price'] as const;   // price: personal price; a price-blind role sorts by the agency price, models without one go last
 export interface CatalogFilters {                                        // one variant has to satisfy all filters at once (P3)
   categoryId?: number; materialIds?: number[]; finishOptionIds?: number[];
   lengthFromMm?: number; lengthToMm?: number; inStock?: boolean;
 }
-export interface CategoryDto { id: number; title: string; parentId: number | null; productCount: number; minPriceMinor?: number; }
+export interface CategoryDto { id: number; title: string; parentId: number | null; productCount: number; minPriceMinor?: number; agencyMinPriceMinor?: number; }
 export interface CategoryGroupDto { category: CategoryDto; children: CategoryDto[]; showcase: ProductListItemDto[]; }
 export interface CatalogFacetsDto {
   materials: { id: number; title: string; productCount: number }[]; finishes: { id: number; title: string }[];
@@ -1033,6 +1020,7 @@ export interface ProductListItemDto {
   id: number; sku: string; title: string; categoryId: number | null; coverMediaId: number | null; variantCount: number;
   materialTitles: string[]; lengthsMm: number[]; stockQty: number;   // stock: sum of moves, never below zero
   minPriceMinor?: number;
+  agencyPriceMinor?: number;             // price of the counterparty for its own client (P7), one per model
 }
 export interface OptionDto { id: number; kind: OptionKind; title: string; isDefault: boolean; priceDeltaMinor?: number; }
 export interface VariantDto {
@@ -1046,6 +1034,7 @@ export interface VariantDto {
 export interface ProductDto {
   id: number; sku: string; title: string; description: string | null;
   categoryId: number | null; categoryTitle: string | null; mediaIds: number[]; variants: VariantDto[];
+  agencyPriceMinor?: number;             // one per model: the size and the options never move it (P7)
 }
 
 // counterparty.ts — counterparty card and portal staff (P2). Money and the discount only for a role with prices.
@@ -1072,8 +1061,7 @@ export type Minor = number & { readonly __brand: 'minor' };
 // dicts.ts
 export const DICT_CODES = ['material','finish','fabric','hardware','unit','work_type','refusal_reason','stock_move_reason','transport'] as const;
 export const STOCK_MOVE_TYPES = ['production','shipment','adjustment','inventory','reversal','purchase'] as const;
-export const DOCUMENT_KINDS = ['specification','waybill','shop_order','label','payroll_sheet','stock_report','charity_report'] as const;
-export const JOB_TOPICS = ['notification.dispatch','notification.fanout','document.generate','charity.recount','stock.threshold.check','import.bom','import.rates','payroll.calculate','report.export','session.cleanup'] as const;
+export const JOB_TOPICS = ['notification.dispatch','notification.fanout','charity.recount','stock.threshold.check','import.bom','import.rates','payroll.calculate','report.export','session.cleanup'] as const;
 ```
 
 ### 8.1 Проекции по ролям
@@ -1091,7 +1079,7 @@ export class RequestDtoMapper {
 }
 ```
 
-Правило: `select` для роли без цен не тянет ценовые колонки из БД. Проверка в e2e: ответ сервера для `cp_employee` не содержит подстроки `Minor` ни в одном ключе.
+Правило: `select` для роли без цен не тянет закупочные колонки из БД. Цена агентства закупочной не считается: контрагент задал её сам и показывает своему клиенту, поэтому она приходит обеим ролям портала в ключах с префиксом `agency`. Проверка в e2e: в ответе сервера для `cp_employee` нет ключа с подстрокой `Minor` без префикса `agency`.
 
 ---
 
@@ -1141,7 +1129,7 @@ export class RequestDtoMapper {
 Обязательные типы на слайс:
 
 1. **Контрактные на стыках.** Payload джоба и события валидируется Zod-схемой из этого файла. Фейковые драйверы почты и push проверяют вход и падают на мусоре. Ответ сервера для роли без цен проверяется на отсутствие ценовых полей.
-2. **Идемпотентность джобов.** Каждый хендлер прогоняется дважды с тем же payload. Эффект ровно один: одно письмо, один документ, одно складское движение.
+2. **Идемпотентность джобов.** Каждый хендлер прогоняется дважды с тем же payload. Эффект ровно один: одно письмо, один экспорт, одно складское движение.
 3. **Путь ошибки.** Фейк умеет возвращать ошибку и таймаут. Проверяем ретрай, бэкофф, переход в `dead`, отсутствие частичного эффекта.
 4. **Property-based (fast-check) на чистой логике.** `domain/request/state-machine`, `domain/request/pricing`, `domain/stock/balance`, `domain/payroll/calc`, `domain/charity/rate`. Генерируем входы, проверяем инварианты из §6.2.
 5. **E2E по ролям (Playwright).** На каждый слайс с UI: сценарий целевой роли плюс негативный сценарий чужой роли (прямая ссылка на чужой объект даёт 403).
@@ -1388,10 +1376,10 @@ CONTRACT GAP
 **P6. Портал: мои заявки.** Список с фильтрами по статусу и периоду, поиск по номеру, видимость «вся организация» для администратора и «свои» для сотрудника, карточка со составом, суммами по роли, историей статусов, комментарии с менеджером и вложения.
 **DoD:** контрагент отслеживает статус без звонка, сотрудник видит ту же карточку без сумм, чужая заявка по прямой ссылке даёт 403.
 
-**P7. Документы портала.** Нумерация, шаблоны, генерация спецификации и накладной в PDF через очередь, вариант без цен для роли сотрудника, скачивание через `/api/files/[id]` с проверкой прав.
-**DoD:** спецификация и накладная скачиваются с корректными реквизитами и номером, сотруднику контрагента отдаётся версия без стоимостей.
+**P7. Портал: цены агентства.** Экран «Мои цены» для `cp_admin`: своя цена на карточку товара, одна цена на модель, размер и опции её не меняют. Цена агентства идёт в каталог, в карточку товара, в строку корзины и в строку заявки. `cp_employee` видит только её, `cp_admin` видит рядом закупочную серым. В суммы заявки, скидку по договору и отчисление в фонд цена агентства не входит.
+**DoD:** администратор задаёт цену товару и видит её рядом с закупочной, сотрудник видит цену агентства в каталоге и в строке заявки, закупочные цены и суммы заявки сотруднику не приходят ни в одном ответе, правка цены агентства не двигает итоги заявки.
 
-**P8. Баннер пожертвований.** Расчёт и заморозка отчисления в момент `delivered`, `charity_totals` и джоб пересчёта, SSE-обновление счётчика, баннер с фондом и анимированным счётчиком, счётчик за год и число заявок, личный вклад контрагента, строка «в фонд с этой заявки» в карточке, справка за период в PDF.
+**P8. Баннер пожертвований.** Расчёт и заморозка отчисления в момент `delivered`, `charity_totals` и джоб пересчёта, SSE-обновление счётчика, баннер с фондом и анимированным счётчиком, счётчик за год и число заявок, личный вклад контрагента, строка «в фонд с этой заявки» в карточке, справка за период в XLSX.
 **DoD:** счётчик растёт при доставке без перезагрузки страницы, смена ставки не двигает уже зафиксированные суммы, отменённые заявки и заявки на склад в счётчик не попадают.
 
 **P9. Уведомления портала и стабилизация этапа.** Драйвер email на реальных ключах, шаблоны, матрица «событие × роль × канал», личные настройки пользователя, лог доставки и ретраи. Канал push появляется в C15. Далее: сквозные e2e по портальным ролям, адаптив, a11y, аудит утечки цен и прямых ссылок, инструкция контрагенту.
@@ -1411,10 +1399,10 @@ CONTRACT GAP
 **C4. CRM: доска и реестр заявок.** Канбан по шести статусам с фильтрами, реестр с сортировкой, поиском и экспортом XLSX, ручное создание заявки, заявка на склад, приём в работу с фиксацией цен и скидки, назначение исполнителей, приоритет, отклонение, контролируемое изменение состава после запуска, флаги внимания (заявка без исполнителя, долгое ожидание оплаты).
 **DoD:** менеджер ведёт заявку от приёма до готовности только из CRM, все изменения после запуска в работу пишутся в историю с комментарием.
 
-**C5. Цеховое рабочее место.** Мобильный список «Мои заявки» с учётом приоритета, поиск по номеру заявки с бланка, действия «Взял» и «Готово», загрузка фото результата, требования к изделию, перечень комплектующих по норме, цены и контрагент скрыты, крупные тач-цели.
+**C5. Цеховое рабочее место.** Мобильный список «Мои заявки» с учётом приоритета, поиск по номеру заявки, действия «Взял» и «Готово», загрузка фото результата, требования к изделию, перечень комплектующих по норме, цены и контрагент скрыты, крупные тач-цели.
 **DoD:** столяр ведёт заявку с телефона, не заходя в общий интерфейс CRM, переход в `ready` доступен только назначенному исполнителю.
 
-**C6. Водительское рабочее место и доставка.** Список заявок в работе для планирования, список готовых с адресом, контактом и кнопкой навигации, «Доставлено» с переводом в `delivered`, флажок «принял оплату наличными» рядом с ним, просмотр накладной. Флажок пишет `payment_marks` со способом `cash` на всю сумму заявки в транзакции доставки, дальше цепочка автоматических шагов §6.2 доводит заявку до `paid`. Без флажка заявка останавливается в `awaiting_payment` и ждёт отметки оплаты по счёту из C7. Отказа при доставке в системе нет. Push при переходе в `ready` подключается в C15.
+**C6. Водительское рабочее место и доставка.** Список заявок в работе для планирования, список готовых с адресом, контактом и кнопкой навигации, «Доставлено» с переводом в `delivered`, флажок «принял оплату наличными» рядом с ним. Флажок пишет `payment_marks` со способом `cash` на всю сумму заявки в транзакции доставки, дальше цепочка автоматических шагов §6.2 доводит заявку до `paid`. Без флажка заявка останавливается в `awaiting_payment` и ждёт отметки оплаты по счёту из C7. Отказа при доставке в системе нет. Push при переходе в `ready` подключается в C15.
 **DoD:** водитель видит заявку в списке готовых сразу после перехода в `ready` и доводит её до `delivered`, доставка с наличными закрывает заявку в `paid` одним действием, доставка без наличных оставляет её в `awaiting_payment`.
 
 **C7. Оплата и закрытие.** Отметки оплаты с датой, суммой, способом и комментарием, частичная оплата с остатком, индикатор задолженности контрагента, флаг долгого ожидания оплаты, аудит правок. Статус заявки менеджер руками не двигает: он ставит отметку оплаты, а `awaiting_payment -> paid` берёт система в транзакции этой отметки, как только отметки покрывают сумму (§6.2, инвариант 7).
@@ -1426,11 +1414,10 @@ CONTRACT GAP
 **C9. Склад: расчётные таблицы комплектующих.** Импорт XLSX/CSV с предпросмотром и отчётом об ошибках, версионирование, ручное редактирование норм, автоматическое списание комплектующих при переходе в `ready`, расчёт потребности по заявкам в работе и дефицита.
 **DoD:** файл бизнеса создаёт версию норм, изготовление списывает комплектующие автоматически, дефицит виден списком, старые списания не пересчитываются.
 
-**C10. Персонал и еженедельные выплаты.** Справочник сотрудников, импорт и версионирование расценок, ежедневный чеклист присутствия с копированием вчерашнего дня, работы и количества, дневной заработок, недельный свод, корректировки с комментарием, закрытие и переоткрытие периода, отметка выплаты, ведомость в XLSX и PDF, отчёты по сотрудникам и видам работ.
+**C10. Персонал и еженедельные выплаты.** Справочник сотрудников, импорт и версионирование расценок, ежедневный чеклист присутствия с копированием вчерашнего дня, работы и количества, дневной заработок, недельный свод, корректировки с комментарием, закрытие и переоткрытие периода, отметка выплаты, ведомость в XLSX, отчёты по сотрудникам и видам работ.
 **DoD:** день отмечается за минуту, недельная ведомость совпадает с контрольным примером бизнеса до копейки, закрытый период не редактируется без переоткрытия с записью в аудит.
 
-**C11. Документы и печатные формы целиком.** Бланк в цех с крупным номером заявки и перечнем комплектующих, этикетки, ведомость выплат, реестр остатков, массовая печать, асинхронная генерация через очередь, версии шаблонов.
-**DoD:** все формы печатаются с корректными реквизитами и номерами, массовая печать десяти бланков не блокирует интерфейс.
+Номер C11 выведен из дорожной карты вместе с документами и не переиспользуется.
 
 **C12. Уведомления CRM.** Полная матрица событий CRM, шаблоны с переменными, предпросмотр и тестовая отправка, персональные настройки, лог доставки. Канал push и отзыв протухших подписок подключаются в C15.
 **DoD:** по каждому событию из §7.3 адресаты получают уведомление в выбранных каналах, лог показывает статус доставки.
@@ -1451,7 +1438,7 @@ CONTRACT GAP
 | R1. Приём заявок | K1–K5, K7, P1–P7 |
 | R2. Портал целиком | P8, P9 |
 | R3. Производство и доставка | C1–C7 |
-| R4. Склад, выплаты, отчётность, PWA | C8–C15 |
+| R4. Склад, выплаты, отчётность, PWA | C8–C10, C12–C15 |
 
 ---
 
@@ -1574,7 +1561,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 
 | Категория | Требование | Как проверяем |
 |---|---|---|
-| Производительность | Отклик реестра не выше 1 с при 10 тыс. заявок и 50 тыс. движений, генерация документа не выше 5 с | Нагрузочный прогон в C14 на сгенерированных данных |
+| Производительность | Отклик реестра не выше 1 с при 10 тыс. заявок и 50 тыс. движений, экспорт отчёта не выше 5 с | Нагрузочный прогон в C14 на сгенерированных данных |
 | Нагрузка | 20 одновременных пользователей, 200 контрагентов, 5 тыс. заявок в год | Один процесс, SQLite WAL |
 | Доступность | 99% в рабочее время, обновления вне смен | Проверяется после выноса деплоя в отдельную задачу |
 | Целостность | Остаток равен сумме движений, движение и статус в одной транзакции | Property-based и e2e |
@@ -1651,7 +1638,7 @@ self.addEventListener('notificationclick', (e) => {
 });
 ```
 
-`skipWaiting` здесь безопасен: воркер не управляет отдачей документов, поэтому мгновенная замена версии не перезагружает страницу под руками у столяра.
+`skipWaiting` здесь безопасен: воркер не управляет отдачей файлов, поэтому мгновенная замена версии не перезагружает страницу под руками у столяра.
 
 **Cache Storage не используется вообще.** Ни оболочка, ни данные, ни картинки. Проверяется e2e: после логина, работы с каталогом и выхода `caches.keys()` возвращает пустой список. Появление кеша в этой проверке означает, что кто-то добавил `fetch`-обработчик в обход §17.
 
@@ -1753,16 +1740,17 @@ Payload push-уведомления не содержит цен, персона
 |---|---|---|---|---|
 | Лендинг | `/` | гость | K7 | Шапка с чипом телефона и кнопкой «Вход для контрагентов» на `/login`, первый экран, постоянные факты (срок изготовления, регион доставки), товарные группы текстом, «Производство», «Как мы работаем», подвал. Кнопки «Стать контрагентом» и «Запросить условия» открывают `mailto:` и `tel:` из `org.requisites`. Счётчики каталога и остатка гостю не показываются: публичного доступа к данным каталога нет |
 | Главная портала | `/portal` | `cp_admin`, `cp_employee` | P6, блоки дополняют P2, P4, P8 | Заголовок с именем контрагента и договором (P2). Три показателя: заявки в работе с суммой для `cp_admin`, ближайшая готовность по `readyAt`, скидка `discountPercent` (P2). Панели «Собрать заявку» и «Повторить заявку» (P4). Таблица активных заявок `new…awaiting_payment` и закрытых за три месяца (P6). Баннер пожертвований в макете отсутствует, P8 ставит его под показателями |
-| Каталог | `/portal/catalog` | обе | P3 | Группы верхнего уровня `categories` с подкатегориями, число артикулов, «от N ₽» только для `cp_admin`, кнопка «Скачать прайс-лист XLSX» только для `cp_admin` |
-| Листинг товаров | `/portal/catalog/[categoryId]` | обе | P3 | Фильтры: материал (`dict_items` `material`), отделка (`options` `finish`), длина (`lengthMm`), наличие по остатку. Сортировка, число на странице, выбранные фильтры чипами, сетка карточек с артикулом, названием, ценой и остатком |
-| Карточка товара | `/portal/catalog/product/[productId]` | обе | P3 просмотр, P4 добавление | Галерея `media`, характеристики из полей варианта и справочника материалов, описание, выбор размера (`sizeCode` варианта), обивка и тиснение из `options` по матрице `product_options`, цена за штуку, остаток, количество, «Добавить в заявку» (P4), похожие позиции той же категории |
-| Корзина | `/portal/cart` | обе | P4 | Черновик заявки: строки с вариантом и опциями, цена и сумма строки для `cp_admin`, количество, удаление, очистка. Отгрузка: адрес из `delivery_addresses` или самовывоз (`isPickup`), комментарий, поле «Ваш номер заявки» (`externalNumber`, в макете нет, добавляется). Итог: позиции, изделия, сумма, скидка по договору, к оплате (только `cp_admin`). «Оформить заявку» выполняет `draft -> new` |
+| Каталог | `/portal/catalog` | обе | P3, P7 | Группы верхнего уровня `categories` с подкатегориями, число артикулов, «от N ₽» по закупочной цене для `cp_admin` и по цене агентства для `cp_employee` (P7), кнопка «Скачать прайс-лист XLSX» только для `cp_admin` |
+| Листинг товаров | `/portal/catalog/[categoryId]` | обе | P3, P7 | Фильтры: материал (`dict_items` `material`), отделка (`options` `finish`), длина (`lengthMm`), наличие по остатку. Сортировка, число на странице, выбранные фильтры чипами, сетка карточек с артикулом, названием, ценой и остатком. Из P7: карточка показывает цену агентства, у `cp_admin` под ней закупочная серым, сотрудник сортирует по цене агентства |
+| Карточка товара | `/portal/catalog/product/[productId]` | обе | P3 просмотр, P4 добавление, P7 цена | Галерея `media`, характеристики из полей варианта и справочника материалов, описание, выбор размера (`sizeCode` варианта), обивка и тиснение из `options` по матрице `product_options`, цена за штуку, остаток, количество, «Добавить в заявку» (P4), похожие позиции той же категории. Из P7: цена агентства на модель, у `cp_admin` рядом закупочная серым |
+| Корзина | `/portal/cart` | обе | P4, P7 | Черновик заявки: строки с вариантом и опциями, цена и сумма строки для `cp_admin`, количество, удаление, очистка. Отгрузка: адрес из `delivery_addresses` или самовывоз (`isPickup`), комментарий, поле «Ваш номер заявки» (`externalNumber`, в макете нет, добавляется). Итог: позиции, изделия, сумма, скидка по договору, к оплате (только `cp_admin`). Из P7: в строке цена агентства за штуку, суммы строки и итога в ценах агентства не считаются. «Оформить заявку» выполняет `draft -> new` |
 | Мои заявки | `/portal/requests` | обе | P6 | Раскладка профиля с боковым меню, строки-карточки: номер, дата, статус, первая позиция, число позиций и изделий, сумма для `cp_admin`, автор (`createdById`) для администратора. Чипы статусов с числами, поиск по номеру, сортировка. Фильтр периода из DoD P6 добавляется, в макете его нет. «Новая заявка» ведёт в каталог |
-| Заявка (детальная) | `/portal/requests/[id]` | обе | P6, P7, P8 | Показатели: позиции, сумма (`cp_admin`), статус. Состав заявки `DataTable`, комментарий, параметры отгрузки и скидка, «Повторить заявку» (P4), «Отменить заявку» для `new -> cancelled` (P5), карточка менеджера. Из DoD P6 добавляются `Stepper` истории статусов, переписка с менеджером (`comments` без `isInternal`) и вложения, из P7 документы, из P8 строка «в фонд с этой заявки» |
+| Заявка (детальная) | `/portal/requests/[id]` | обе | P6, P7, P8 | Показатели: позиции, сумма (`cp_admin`), статус. Состав заявки `DataTable`, комментарий, параметры отгрузки и скидка, «Повторить заявку» (P4), «Отменить заявку» для `new -> cancelled` (P5), карточка менеджера. Из DoD P6 добавляются `Stepper` истории статусов, переписка с менеджером (`comments` без `isInternal`) и вложения, из P7 цена агентства в строке состава, из P8 строка «в фонд с этой заявки» |
 | Профиль контрагента | `/portal/profile` | обе | K5 аккаунт, P2 карточка | K5: раскладка профиля и блок «Мой аккаунт» с формой ФИО и телефона, эталонная вертикаль. P2: название, реквизиты (`legalName`, `inn`, `kpp`, `address`, `phone`, `email`), договор (`contracts`), показатели скидки, задолженности и закупки за год для `cp_admin`, превью трёх сотрудников, менеджер. Кнопка «Изменить данные» реквизитов не рисуется: реквизиты правит менеджер в C3 |
+| Мои цены | `/portal/prices` | `cp_admin`, у `cp_employee` 403 | P7 | `DataTable` моделей каталога: артикул, название, категория, закупочная цена «от N ₽» серым, поле своей цены на `MoneyInput`. Поиск и фильтр категории через `FilterBar`, серверная пагинация, сохранение страницы одной формой. Пустое поле означает, что цена не задана: сотрудник видит прочерк |
 | Мои сотрудники | `/portal/staff` | `cp_admin`, у `cp_employee` 403 | P2 | `DataTable` с выбором строк: ФИО и email, роль (`cp_admin` «Администратор», `cp_employee` «Сотрудник»), телефон, последний вход (`lastLoginAt`), статус (активен; приглашён при `mustChangePassword` и пустом `lastLoginAt`; отключён при `isActive = false`). Поиск, фильтры роли и статуса, «Добавить сотрудника» с временным паролем письмом, «Сменить роль», «Отключить», счётчик «N из `staffLimit`» |
 
-Навигация шапки портала: «Главная», «Каталог», «Заявки». Пункт «Доставка» из макета не рисуется, экрана под него нет. Боковое меню профиля: «Профиль», «Мои сотрудники» только для `cp_admin`, «Мои заявки». Подвал: контакты менеджера и «Выйти», ссылки «Условия поставки» и «Помощь» не рисуются до появления страниц.
+Навигация шапки портала: «Главная», «Каталог», «Заявки». Пункт «Доставка» из макета не рисуется, экрана под него нет. Боковое меню профиля: «Профиль», «Мои сотрудники» и «Мои цены» только для `cp_admin`, «Мои заявки». Подвал: контакты менеджера и «Выйти», ссылки «Условия поставки» и «Помощь» не рисуются до появления страниц.
 
 ### 18.6 Разрывы контракта, которые открывают макеты
 
@@ -1774,11 +1762,11 @@ Payload push-уведомления не содержит цен, персона
 | 2 | Ступени цены «от 50 шт», «от 100 шт» | Таблицы ступеней цены от объёма | P3, P4 |
 | 3 | «Под заказ, срок 4 дня», «Срок производства 3 дня», «Готовность заявки 20 июня» | Срока изготовления варианта и плановой даты готовности заявки | P3, P4, P6 |
 | 4 | Цветные свотчи фильтра и цвет обивки | Значения цвета у `options` | P3 |
-| 5 | Паспорт изделия, габаритный чертёж, сертификат PDF в карточке товара | Вида документа изделия, `media.ownerScope = 'product'` задуман под фото | P3 |
+| 5 | Паспорт изделия, габаритный чертёж, сертификат PDF в карточке товара | Документов в системе нет, `media.ownerScope = 'product'` задуман под фото | P3 |
 | 6 | Позиции вне каталога и услуги в составе заявки («по чертежу», «упаковка усиленная») | `request_items.variantId` обязателен | P4 |
 | 7 | «Добавить по артикулам», «В спецификацию», «Запросить образец», «Отправить запрос» | Сценариев нет в объёме P3 и P4 | P3, P4 |
 | 8 | Стоимость доставки и порог бесплатной доставки | Полей стоимости доставки | P4 |
-| 9 | «Запросить счёт на оплату» | Вида `invoice` в `DOCUMENT_KINDS` (ключ нумерации `invoice` уже есть) | P7 |
+| 9 | «Запросить счёт на оплату» | Сценария счёта нет, документов в системе нет (§5.9) | P6 |
 | 10 | ОГРН, банк, расчётный счёт контрагента | Полей в `counterparties` | P2 |
 | 11 | Должность сотрудника и роль «Наблюдатель» с правом только смотреть | Поля должности у `users` и роли в `ROLE_CODES` | P2 |
 | 12 | Прогрессивная скидка «до 5 % от 1 500 000 ₽ в квартал» | Скидка только фиксированным `discountPercent` и `discount_rules` | P2 |

@@ -2,7 +2,7 @@ import { eq } from 'drizzle-orm';
 import { BaseRepository } from '../core/repository';
 import type { Tx } from '../db/client';
 import { numberingSequences } from '../db/schema';
-import type { SequenceState } from '$lib/domain/documents/numbering';
+import type { SequenceState } from '$lib/domain/numbering/numbering';
 
 export class NumberingRepository extends BaseRepository<typeof numberingSequences> {
 	constructor() {

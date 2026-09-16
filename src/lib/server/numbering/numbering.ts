@@ -1,6 +1,6 @@
 import type { Tx } from '../db/client';
 import { NumberingRepository } from './numbering.repository';
-import { nextNumber } from '$lib/domain/documents/numbering';
+import { nextNumber } from '$lib/domain/numbering/numbering';
 
 export type NumberingKey = 'request' | 'invoice' | 'spec';
 

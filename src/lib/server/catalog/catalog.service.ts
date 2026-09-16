@@ -1,4 +1,5 @@
 import { PolicyService } from '../auth/policy';
+import { AgencyPricing } from '../pricing/agency-pricing';
 import { NotFoundError } from '../core/errors';
 import { offsetFor } from '../core/list';
 import { BaseService } from '../core/service';
@@ -45,28 +46,36 @@ export class CatalogService extends BaseService {
 		private readonly products: CatalogRepository = new CatalogRepository(),
 		private readonly variants: VariantRepository = new VariantRepository(),
 		private readonly facetRows: CatalogFacetsRepository = new CatalogFacetsRepository(),
-		private readonly pricing: CatalogPricing = new CatalogPricing(ctx, variants)
+		private readonly pricing: CatalogPricing = new CatalogPricing(ctx, variants),
+		private readonly agency: AgencyPricing = new AgencyPricing(ctx)
 	) {
 		super(ctx);
-		this.projector = new ProductListProjector(products, variants, pricing);
+		this.projector = new ProductListProjector(products, variants, pricing, agency);
 	}
 
-	/** Every category with the count of its tree and the lowest personal price inside it. */
+	/** Every category with the count of its tree and the lowest price inside it, by role. */
 	categories(): CategoryDto[] {
 		this.assertRead();
 		const visibility = this.visibility();
 		const tree = this.tree(visibility);
-		const minPrices = this.pricing.minBy(
-			this.variants
-				.withCategories(visibility)
-				.flatMap((variant) =>
-					variant.categoryId === null
-						? []
-						: tree.ancestorsAndSelf(variant.categoryId).map((key) => ({ id: variant.id, key }))
-				)
-		);
+		const perCategory = this.variants
+			.withCategories(visibility)
+			.flatMap((variant) =>
+				variant.categoryId === null
+					? []
+					: tree
+							.ancestorsAndSelf(variant.categoryId)
+							.map((key) => ({ id: variant.id, productId: variant.productId, key }))
+			);
+		const minPrices = this.pricing.minBy(perCategory);
+		const minAgency = this.agency.minBy(perCategory);
 		return tree.rows.map((row) =>
-			CatalogDtoMapper.toCategory(row, tree.totalCount(row.id), minPrices?.get(row.id))
+			CatalogDtoMapper.toCategory(
+				row,
+				tree.totalCount(row.id),
+				minPrices?.get(row.id),
+				minAgency?.get(row.id)
+			)
 		);
 	}
 
@@ -150,7 +159,12 @@ export class CatalogService extends BaseService {
 
 		const variants = this.variants.findByProducts([product.id], visibility);
 		const mediaIds = this.products.mediaByProducts([product.id]).get(product.id) ?? [];
-		return CatalogDtoMapper.toProduct(product, mediaIds, this.projectVariants(variants));
+		return CatalogDtoMapper.toProduct(
+			product,
+			mediaIds,
+			this.projectVariants(variants),
+			this.agency.forProducts([product.id])?.get(product.id)
+		);
 	}
 
 	/** Other models of the same category, for the "similar positions" row of the product page. */
@@ -199,8 +213,10 @@ export class CatalogService extends BaseService {
 
 	private sortOf(sort: string | undefined): CatalogSort {
 		const known = CATALOG_SORTS.find((candidate) => candidate === sort) ?? 'sortOrder';
-		// Ordering by price would still tell a price-blind role which model costs more.
-		return known === 'price' && !this.ctx.canSeePrices ? 'sortOrder' : known;
+		// In the workshop, ordering by price would still tell a price-blind role which model costs
+		// more. In the portal it sorts by the agency price, which the counterparty set itself.
+		const blind = !this.ctx.canSeePrices && this.ctx.scope !== 'portal';
+		return known === 'price' && blind ? 'sortOrder' : known;
 	}
 
 	private page(

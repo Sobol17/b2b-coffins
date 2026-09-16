@@ -2,7 +2,7 @@ import { VariantRepository } from '../catalog/variant.repository';
 import { DeliveryAddressRepository } from '../counterparty/delivery-address.repository';
 import { NotFoundError, ValidationError } from '../core/errors';
 import type { Tx } from '../db/client';
-import { Numbering } from '../documents/numbering';
+import { Numbering } from '../numbering/numbering';
 import { OrgService } from '../settings/org.service';
 import { DraftItemRepository } from './draft-item.repository';
 import { DraftRepository, type DraftRow } from './draft.repository';

@@ -18,7 +18,7 @@
 		<h1 class="text-4xl sm:text-5xl">Каталог</h1>
 		<span data-testid="catalog-summary" class="pb-1.5 text-fg-muted">
 			Моделей: {data.total}, групп: {data.groups.length}.
-			{#if data.user.canSeePrices}Цены по вашему договору.{/if}
+			{#if data.user.canSeePrices}Цены по вашему договору.{:else}Цены вашего агентства.{/if}
 		</span>
 		{#if data.user.canSeePrices}
 			<!-- A file download, not a page: the browser saves it instead of navigating. -->

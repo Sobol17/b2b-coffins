@@ -37,9 +37,11 @@ describe('PolicyService, the single point of permission checks', () => {
 		expect(PolicyService.canSeePrices(['owner', 'driver'])).toBe(false);
 	});
 
-	it('grants the owner every action but portal access, and the shop roles no management', () => {
+	it('grants the owner every action but the portal ones, and the shop roles no management', () => {
+		// The agency price belongs to the counterparty, so the workshop owner does not hold it either.
+		const portalOnly: readonly string[] = ['portal.access', 'prices.manage'];
 		for (const action of ACTIONS) {
-			expect(PolicyService.can({ roles: ['owner'] }, action)).toBe(action !== 'portal.access');
+			expect(PolicyService.can({ roles: ['owner'] }, action)).toBe(!portalOnly.includes(action));
 		}
 		for (const role of ['carpenter', 'painter', 'driver'] as const) {
 			expect(PolicyService.can({ roles: [role] }, 'settings.manage')).toBe(false);

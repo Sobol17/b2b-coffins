@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { login } from './fixtures';
+import { login, purchaseMoneyKeys } from './fixtures';
 import { assignCrew, e2eDb, statusOf, transition } from './transitions';
 
 const db = e2eDb();
@@ -50,7 +50,7 @@ test('an employee sees the same card without a single amount', async ({ page }) 
 
 	const path = new URL(page.url()).pathname;
 	const body = await (await page.request.get(`${path}/__data.json`)).text();
-	expect(body).not.toContain('Minor');
+	expect(purchaseMoneyKeys(body)).toEqual([]);
 	await expect(page.getByTestId('request-totals')).toHaveCount(0);
 });
 

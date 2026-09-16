@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { login } from './fixtures';
+import { login, purchaseMoneyKeys } from './fixtures';
 
 async function openVolga(page: Page): Promise<string> {
 	await page.goto('/portal/catalog');
@@ -65,7 +65,7 @@ test('the employee sees the same product with a dash and no money in the server 
 
 	await expect(page.getByTestId('product-page-price')).toHaveText('—');
 	const body = await (await page.request.get(`${path}/__data.json`)).text();
-	expect(body).not.toContain('Minor');
+	expect(purchaseMoneyKeys(body)).toEqual([]);
 	expect(body).not.toContain('830000');
 });
 

@@ -1,3 +1,4 @@
+import { AgencyPricing } from '../pricing/agency-pricing';
 import { CardDtoMapper } from './card.dto';
 import { DraftItemRepository } from './draft-item.repository';
 import { RequestCardRepository } from './request-card.repository';
@@ -11,7 +12,8 @@ export class RequestCardService extends SentRequestService {
 	constructor(
 		ctx: ActorContext,
 		cards: RequestCardRepository = new RequestCardRepository(),
-		private readonly lines: DraftItemRepository = new DraftItemRepository()
+		private readonly lines: DraftItemRepository = new DraftItemRepository(),
+		private readonly agency: AgencyPricing = new AgencyPricing(ctx)
 	) {
 		super(ctx, cards);
 	}
@@ -29,6 +31,7 @@ export class RequestCardService extends SentRequestService {
 			lines,
 			options: this.lines.lineOptions(itemIds),
 			prices: this.ctx.canSeePrices ? this.lines.linePrices(itemIds) : undefined,
+			agencyPrices: this.agency.forProducts(lines.map((line) => line.productId)),
 			history: this.cards.history(row.id),
 			comments: this.cards.comments(row.id),
 			attachments: this.cards.attachments(row.id),

@@ -20,7 +20,13 @@
 	</div>
 
 	<div class="grid gap-6 lg:grid-cols-[17.5rem_1fr] lg:items-start">
-		<ProfileNav title={data.card.name} items={profileNavItems('profile', data.canManageStaff)} />
+		<ProfileNav
+			title={data.card.name}
+			items={profileNavItems('profile', {
+				staff: data.canManageStaff,
+				prices: data.canManagePrices
+			})}
+		/>
 
 		<section class="flex flex-col gap-6">
 			<CounterpartyOverview

@@ -6,7 +6,6 @@ import { JOB_TOPICS } from '../../src/lib/types/dicts';
 const DOCUMENTED = {
 	'notification.dispatch': { notificationId: 1 },
 	'notification.fanout': { eventKey: 'request.submitted', entityId: 7 },
-	'document.generate': { documentId: 3 },
 	'charity.recount': { scope: 'year:2026' },
 	'stock.threshold.check': { stockItemId: 4 },
 	'import.bom': { mediaId: 5, actorId: 2 },
@@ -31,9 +30,9 @@ describe('job payload contract of tech.md 7.2', () => {
 	});
 
 	it('rejects an identifier that is not a positive integer', () => {
-		const schema = JOB_PAYLOAD_SCHEMAS['document.generate'];
-		expect(schema.safeParse({ documentId: 0 }).success).toBe(false);
-		expect(schema.safeParse({ documentId: '3' }).success).toBe(false);
+		const schema = JOB_PAYLOAD_SCHEMAS['payroll.calculate'];
+		expect(schema.safeParse({ periodId: 0 }).success).toBe(false);
+		expect(schema.safeParse({ periodId: '9' }).success).toBe(false);
 	});
 
 	it('rejects an event key outside the catalog of tech.md 7.3', () => {

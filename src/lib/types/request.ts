@@ -94,6 +94,8 @@ export interface DraftItemDto {
 	/** Personal price of the variant plus the option surcharges, for one piece. */
 	readonly unitPriceMinor?: number;
 	readonly lineTotalMinor?: number;
+	/** Agency price of the model, one piece. Display only: no draft sum reads it (P7). */
+	readonly agencyUnitPriceMinor?: number;
 }
 
 /** The cart: the actor's own draft request with its delivery settings. */
@@ -160,6 +162,7 @@ export interface RequestItemDto {
 	readonly options: readonly DraftItemOptionDto[];
 	readonly unitPriceMinor?: number;
 	readonly lineTotalMinor?: number;
+	readonly agencyUnitPriceMinor?: number;
 }
 
 export interface RequestHistoryStepDto {
