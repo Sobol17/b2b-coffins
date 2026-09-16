@@ -1,5 +1,4 @@
 import { eq } from 'drizzle-orm';
-import { seedSettings } from '../../../scripts/seed/reference';
 import type { Db } from '../../../src/lib/server/db/client';
 import { charityTotals, jobQueue, requests, settings } from '../../../src/lib/server/db/schema';
 import { DraftService } from '../../../src/lib/server/request/draft.service';
@@ -12,10 +11,9 @@ import { assign, move } from './transitions';
 
 const pickup = { deliveryAddressId: null, isPickup: true, comment: null, externalNumber: null };
 
-/** The ordering world of P4 plus the workshop crew and the seeded settings, rate 100 bp. */
+/** The ordering world of P4 plus the workshop crew; the seeded rate is 100 bp. */
 export function seedCharityWorld(db: Db) {
 	const world = seedOrderingWorld(db);
-	seedSettings(db);
 	const ids = {
 		manager: insertUser({ email: 'mgr@fund.example', role: 'manager', counterpartyId: null }),
 		carpenter: insertUser({ email: 'carp@fund.example', role: 'carpenter', counterpartyId: null }),

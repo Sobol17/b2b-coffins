@@ -32,6 +32,7 @@ export interface CardRow {
 	readonly discountMinor?: number;
 	readonly totalMinor?: number;
 	readonly paidMinor?: number;
+	readonly charityAmountMinor?: number | null;
 }
 
 export interface HistoryRow {
@@ -78,7 +79,9 @@ const MONEY_COLUMNS = {
 	itemsTotalMinor: requests.itemsTotalMinor,
 	discountMinor: requests.discountMinor,
 	totalMinor: requests.totalMinor,
-	paidMinor: requests.paidMinor
+	paidMinor: requests.paidMinor,
+	// A share of the total: the same rule as the money above keeps it from a price-blind role.
+	charityAmountMinor: requests.charityAmountMinor
 };
 
 /** Everything the request card shows, read row by row. The right to see it is decided upstream. */

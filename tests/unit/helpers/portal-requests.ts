@@ -1,7 +1,7 @@
 import { and, eq } from 'drizzle-orm';
 import { seedCatalog, seedStockItems } from '../../../scripts/seed/catalog';
 import { seedPriceLists } from '../../../scripts/seed/parties';
-import { seedDicts, seedNumbering } from '../../../scripts/seed/reference';
+import { seedDicts, seedNumbering, seedSettings } from '../../../scripts/seed/reference';
 import { PolicyService } from '../../../src/lib/server/auth/policy';
 import type { Db } from '../../../src/lib/server/db/client';
 import {
@@ -34,6 +34,8 @@ export function seedOrderingWorld(db: Db): OrderingWorld {
 	seedStockItems(db);
 	seedCatalog(db);
 	seedNumbering(db);
+	// A delivery freezes the charity rate from settings (P8), so the world carries the seeded ones.
+	seedSettings(db);
 	const lists = seedPriceLists(db);
 	const [cp] = db
 		.insert(counterparties)
