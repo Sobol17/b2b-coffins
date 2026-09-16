@@ -51,7 +51,10 @@ function sent(): number {
 	return new RequestSubmitService(adminCtx).submit(pickup).id;
 }
 
-/** Walks the acceptance path of P5 and stops at `upTo`. */
+/**
+ * Walks the acceptance path of P5 and stops at `upTo`. Cash collected at the door is a payment
+ * mark written before the delivery move, the way the driver's checkbox will write it in C6.
+ */
 function drive(id: number, upTo: RequestStatus): void {
 	assign(id, carpenterId, 'carpenter');
 	assign(id, driverId, 'driver');
@@ -59,16 +62,14 @@ function drive(id: number, upTo: RequestStatus): void {
 	if (upTo === 'in_work') return;
 	move(carpenterCtx, id, 'ready');
 	if (upTo === 'ready') return;
+	if (upTo === 'paid') pay(id, totalOf(id), driverId);
 	move(driverCtx, id, 'delivered');
-	if (upTo !== 'paid') return;
-	pay(id, totalOf(id), managerId);
-	move(managerCtx, id, 'paid');
 }
 
 beforeEach(() => resetRequests(db));
 
 describe('request transitions (P5)', () => {
-	it('walks new -> in_work -> ready -> delivered -> awaiting_payment -> paid', () => {
+	it('walks new -> in_work -> ready -> delivered -> awaiting_payment -> paid on cash', () => {
 		const id = sent();
 
 		drive(id, 'paid');
@@ -98,13 +99,51 @@ describe('request transitions (P5)', () => {
 		}).toEqual({ accepted: true, ready: true, delivered: true, paid: true });
 	});
 
-	it('takes the automatic step to awaiting_payment without an actor', () => {
+	it('stops a delivery billed by invoice at awaiting_payment', () => {
 		const id = sent();
 
 		drive(id, 'delivered');
 
 		expect(statusOf(id)).toBe('awaiting_payment');
 		expect(history(id).at(-1)).toMatchObject({ toStatus: 'awaiting_payment', actorId: null });
+	});
+
+	it('writes the automatic steps without an actor and leaves the manual one with its own', () => {
+		const id = sent();
+
+		drive(id, 'paid');
+
+		const automatic = history(id).slice(-2);
+		expect(automatic.map((row) => [row.toStatus, row.actorId])).toEqual([
+			['awaiting_payment', null],
+			['paid', null]
+		]);
+		expect(history(id).at(-3)).toMatchObject({ toStatus: 'delivered', actorId: driverId });
+	});
+
+	it('keeps a partly paid delivery in awaiting_payment', () => {
+		const id = sent();
+		assign(id, carpenterId, 'carpenter');
+		assign(id, driverId, 'driver');
+		move(managerCtx, id, 'in_work');
+		move(carpenterCtx, id, 'ready');
+		pay(id, totalOf(id) - 1, driverId);
+
+		move(driverCtx, id, 'delivered');
+
+		expect(statusOf(id)).toBe('awaiting_payment');
+	});
+
+	it('refuses to let a human close the request by hand', () => {
+		const id = sent();
+		drive(id, 'delivered');
+		pay(id, totalOf(id), managerId);
+
+		expect(refused(() => move(managerCtx, id, 'paid'))).toEqual({
+			name: 'ForbiddenError',
+			status: 403
+		});
+		expect(statusOf(id)).toBe('awaiting_payment');
 	});
 
 	it('answers 409 to a move the table does not list', () => {
@@ -122,15 +161,6 @@ describe('request transitions (P5)', () => {
 
 		expect(refused(() => move(managerCtx, id, 'in_work')).status).toBe(409);
 		expect(history(id)).toHaveLength(1);
-	});
-
-	it('answers 409 until the payment marks cover the total', () => {
-		const id = sent();
-		drive(id, 'delivered');
-		pay(id, totalOf(id) - 1, managerId);
-
-		expect(refused(() => move(managerCtx, id, 'paid')).status).toBe(409);
-		expect(statusOf(id)).toBe('awaiting_payment');
 	});
 
 	it('answers 403 on a request of another counterparty', () => {
@@ -165,41 +195,20 @@ describe('request transitions (P5)', () => {
 		});
 	});
 
-	it('answers 422 to a delivery refusal without a reason', () => {
+	it('demands a dictionary reason before the manager rejects a request', () => {
 		const id = sent();
-		drive(id, 'ready');
-		// The move happens against the stored status, so the refusal is set up on `delivered`.
-		db.update(requests).set({ status: 'delivered' }).where(eq(requests.id, id)).run();
 
-		expect(refused(() => move(driverCtx, id, 'ready'))).toEqual({
+		expect(refused(() => move(managerCtx, id, 'rejected'))).toEqual({
 			name: 'ValidationError',
 			status: 422
 		});
-	});
+		expect(
+			refused(() => move(managerCtx, id, 'rejected', { reasonId: dictId('material', 'pine') }))
+		).toEqual({ name: 'ValidationError', status: 422 });
 
-	it('returns the request to ready on a refusal that names a dictionary reason', () => {
-		const id = sent();
-		drive(id, 'ready');
-		db.update(requests).set({ status: 'delivered' }).where(eq(requests.id, id)).run();
-		const reason = dictId('refusal_reason', 'address_wrong');
-
-		const moved = move(driverCtx, id, 'ready', { reasonId: reason, comment: 'Никого нет' });
-
-		expect(moved.status).toBe('ready');
-		expect(history(id).at(-1)).toMatchObject({ reasonId: reason, comment: 'Никого нет' });
-		expect(fanouts('request.delivery_failed')).toHaveLength(1);
-	});
-
-	it('refuses a reason that does not come from the refusal dictionary', () => {
-		const id = sent();
-		drive(id, 'ready');
-		db.update(requests).set({ status: 'delivered' }).where(eq(requests.id, id)).run();
-
-		const denial = refused(() =>
-			move(driverCtx, id, 'ready', { reasonId: dictId('material', 'pine') })
-		);
-
-		expect(denial).toEqual({ name: 'ValidationError', status: 422 });
+		const reason = dictId('refusal_reason', 'no_capacity');
+		expect(move(managerCtx, id, 'rejected', { reasonId: reason }).status).toBe('rejected');
+		expect(history(id).at(-1)).toMatchObject({ toStatus: 'rejected', reasonId: reason });
 	});
 
 	it('queues one fanout per event and keeps the payload inside the queue contract', () => {
@@ -213,16 +222,6 @@ describe('request transitions (P5)', () => {
 			eventKey: 'request.ready',
 			entityId: id
 		});
-	});
-
-	it('queues the ready fanout once even when the request reaches ready twice', () => {
-		const id = sent();
-		drive(id, 'ready');
-		db.update(requests).set({ status: 'delivered' }).where(eq(requests.id, id)).run();
-
-		move(driverCtx, id, 'ready', { reasonId: dictId('refusal_reason', 'recipient_absent') });
-
-		expect(fanouts('request.ready')).toHaveLength(1);
 	});
 
 	it('writes every move to the audit journal', () => {
