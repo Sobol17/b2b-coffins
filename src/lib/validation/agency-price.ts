@@ -11,9 +11,9 @@ export const agencyPriceEntrySchema = z.object({
 		.max(AGENCY_PRICE_MAX_MINOR, { error: 'Слишком большая цена' })
 });
 
-/** The page submits every visible row at once; the bound matches the largest page size. */
+/** The page submits every visible row at once; the bound matches MAX_PER_PAGE of core/list. */
 export const agencyPricePageSchema = z.object({
-	entries: z.array(agencyPriceEntrySchema).max(100)
+	entries: z.array(agencyPriceEntrySchema).max(200)
 });
 
 /** Filters from the query string. A tampered value is dropped, not turned into a 422 page. */

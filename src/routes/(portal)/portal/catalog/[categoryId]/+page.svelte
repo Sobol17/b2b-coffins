@@ -15,13 +15,9 @@
 	const sortOptions = $derived<SelectOption[]>([
 		{ value: 'sortOrder', label: 'По умолчанию' },
 		{ value: 'title', label: 'По названию' },
-		// The price sort exists only where prices do; the server ignores it for other roles anyway.
-		...(data.user.canSeePrices
-			? [
-					{ value: 'price:asc', label: 'Сначала дешевле' },
-					{ value: 'price:desc', label: 'Сначала дороже' }
-				]
-			: [])
+		// Both portal roles sort by the price they see: purchase for one, agency for the other (P7).
+		{ value: 'price:asc', label: 'Сначала дешевле' },
+		{ value: 'price:desc', label: 'Сначала дороже' }
 	]);
 	const perPageOptions = $derived<SelectOption[]>(
 		data.perPageOptions.map((size) => ({ value: String(size), label: String(size) }))

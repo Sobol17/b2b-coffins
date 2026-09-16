@@ -1,10 +1,15 @@
 <script lang="ts">
 	import { resolve } from '$app/paths';
 	import { Button, PriceCell } from '$lib/ui';
-	import type { CategoryGroupDto } from '$lib/types/catalog';
+	import type { CategoryDto, CategoryGroupDto } from '$lib/types/catalog';
 	import ProductPhoto from './ProductPhoto.svelte';
 
 	let { group, number }: { group: CategoryGroupDto; number: number } = $props();
+
+	/** The "from" figure of a section: the agency price a role sees, else its purchase price. */
+	function minOf(category: CategoryDto): number | undefined {
+		return category.minAgencyPriceMinor ?? category.minPriceMinor;
+	}
 </script>
 
 <section
@@ -18,8 +23,8 @@
 		<h2 class="mb-3 text-3xl sm:text-4xl">{group.category.title}</h2>
 		<p class="text-fg-muted">
 			Моделей: {group.category.productCount}
-			{#if group.category.minPriceMinor !== undefined}
-				· от <PriceCell valueMinor={group.category.minPriceMinor} /> ₽
+			{#if minOf(group.category) !== undefined}
+				· от <PriceCell valueMinor={minOf(group.category)} /> ₽
 			{/if}
 		</p>
 		<Button variant="secondary" class="mt-4" href={resolve(`/portal/catalog/${group.category.id}`)}>
@@ -38,8 +43,8 @@
 					<div class="font-heading text-xl font-semibold">{child.title}</div>
 					<div class="text-sm text-fg-muted">
 						Моделей: {child.productCount}
-						{#if child.minPriceMinor !== undefined}
-							· от <PriceCell valueMinor={child.minPriceMinor} /> ₽
+						{#if minOf(child) !== undefined}
+							· от <PriceCell valueMinor={minOf(child)} /> ₽
 						{/if}
 					</div>
 				</div>
@@ -57,8 +62,8 @@
 					<div class="font-heading text-xl font-semibold">{product.title}</div>
 					<div class="text-sm text-fg-muted">
 						Размеров: {product.variantCount}
-						{#if product.minPriceMinor !== undefined}
-							· от <PriceCell valueMinor={product.minPriceMinor} /> ₽
+						{#if product.agencyPriceMinor ?? product.minPriceMinor}
+							· <PriceCell valueMinor={product.agencyPriceMinor ?? product.minPriceMinor} /> ₽
 						{/if}
 					</div>
 				</div>

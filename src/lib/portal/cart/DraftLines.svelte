@@ -2,6 +2,7 @@
 	import { enhance } from '$app/forms';
 	import { resolve } from '$app/paths';
 	import ProductPhoto from '$lib/portal/catalog/ProductPhoto.svelte';
+	import PricePair from '$lib/portal/PricePair.svelte';
 	import { Button, PriceCell } from '$lib/ui';
 	import type { DraftDto } from '$lib/types/request';
 	import { MAX_LINE_QTY } from '$lib/validation/request';
@@ -55,8 +56,11 @@
 					class="col-span-3 flex items-center justify-between gap-3 sm:col-span-1 sm:justify-end"
 				>
 					<span class="text-sm text-fg-muted">
-						<PriceCell valueMinor={item.unitPriceMinor} />
-						{#if item.unitPriceMinor !== undefined}₽ за шт{/if}
+						<PricePair
+							agencyMinor={item.agencyUnitPriceMinor}
+							purchaseMinor={item.unitPriceMinor}
+							suffix="₽ за шт"
+						/>
 					</span>
 					<form
 						method="POST"

@@ -19,7 +19,8 @@ export const load: LayoutServerLoad = ({ locals, url }) => {
 		counterparty: new CounterpartyService(actor).summary(),
 		timezone: OrgService.timezone(),
 		cartUnits: new DraftService(actor).unitCount(),
-		// Menu hint only: the staff page and its actions check the right again on the server.
-		canManageStaff: PolicyService.can(actor, 'counterparty.staff.manage')
+		// Menu hints only: every page and action checks the right again on the server.
+		canManageStaff: PolicyService.can(actor, 'counterparty.staff.manage'),
+		canManagePrices: PolicyService.can(actor, 'prices.manage')
 	};
 };

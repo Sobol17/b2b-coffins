@@ -1,4 +1,5 @@
 <script lang="ts">
+	import PricePair from '$lib/portal/PricePair.svelte';
 	import { DataTable, PriceCell, type DataTableColumn } from '$lib/ui';
 	import type { RequestCardDto } from '$lib/types/request';
 
@@ -9,12 +10,14 @@
 		{ key: 'unitPriceMinor', label: 'Цена', align: 'end' },
 		{ key: 'lineTotalMinor', label: 'Сумма', align: 'end' }
 	];
+	// A role without prices still sees what its own agency charges the client (tech.md P7).
+	const AGENCY: DataTableColumn[] = [{ key: 'agencyUnitPriceMinor', label: 'Цена', align: 'end' }];
 
 	const columns = $derived<DataTableColumn[]>([
 		{ key: 'productTitle', label: 'Позиция' },
 		{ key: 'options', label: 'Параметры' },
 		{ key: 'qty', label: 'Кол-во', align: 'end' },
-		...(canSeePrices ? MONEY : [])
+		...(canSeePrices ? MONEY : AGENCY)
 	]);
 
 	const rows = $derived([...request.items]);
@@ -43,8 +46,10 @@
 			</span>
 		{:else if column.key === 'qty'}
 			{row.qty} шт
+		{:else if column.key === 'agencyUnitPriceMinor'}
+			<PriceCell valueMinor={row.agencyUnitPriceMinor} />
 		{:else if column.key === 'unitPriceMinor'}
-			<PriceCell valueMinor={row.unitPriceMinor} />
+			<PricePair agencyMinor={row.agencyUnitPriceMinor} purchaseMinor={row.unitPriceMinor} />
 		{:else}
 			<PriceCell valueMinor={row.lineTotalMinor} />
 		{/if}
