@@ -4,6 +4,11 @@ import { login } from './fixtures';
 /** The portal side of P4: a sent request is what every later slice starts from. */
 export async function sendRequest(page: Page, role: 'cp_admin' | 'cp_employee'): Promise<string> {
 	await login(page, role);
+	return submitRequest(page);
+}
+
+/** One more request from the account the page is already signed in with. */
+export async function submitRequest(page: Page): Promise<string> {
 	await page.goto('/portal/catalog');
 	await page.getByTestId('showcase-tile').filter({ hasText: 'Модель «Волга»' }).click();
 	await page.getByLabel('Количество').fill('1');
