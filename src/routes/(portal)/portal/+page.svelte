@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { resolve } from '$app/paths';
+	import CharityBanner from '$lib/portal/charity/CharityBanner.svelte';
 	import { Button, Card, PriceCell, StatusBadge } from '$lib/ui';
 	import { formatDate } from '$lib/utils/format';
 	import type { PageProps } from './$types';
@@ -11,6 +12,10 @@
 
 <div class="flex flex-col gap-6">
 	<h1 data-testid="portal-home" class="px-2 pt-4 text-4xl sm:text-5xl">Портал контрагента</h1>
+
+	{#if data.charity}
+		<CharityBanner banner={data.charity} />
+	{/if}
 
 	<div class="grid gap-6 md:grid-cols-2">
 		<Card.Root>
