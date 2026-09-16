@@ -43,16 +43,14 @@ function assertProperty(property: fc.IPropertyWithHooks<unknown[]>): void {
 }
 
 describe('request state machine, invariants of tech.md 6.2', () => {
-	it('moves forward along the main flow, with delivered -> ready as the only step back', () => {
+	it('moves forward only: the table lists no step back along the main flow', () => {
 		const backwards = TRANSITIONS.filter((t) => {
 			const fromIndex = MAIN_FLOW.indexOf(t.from);
 			const toIndex = MAIN_FLOW.indexOf(t.to);
 			return fromIndex >= 0 && toIndex >= 0 && toIndex < fromIndex;
 		});
 
-		expect(backwards).toEqual([
-			expect.objectContaining({ from: 'delivered', to: 'ready', requiresReason: true })
-		]);
+		expect(backwards).toEqual([]);
 	});
 
 	it('rejects every pair that the table does not list', () => {
@@ -104,15 +102,18 @@ describe('request state machine, invariants of tech.md 6.2', () => {
 		}
 	});
 
-	it('keeps the automatic delivered -> awaiting_payment step away from humans', () => {
+	it('keeps every automatic step away from humans', () => {
 		assertProperty(
 			fc.property(fc.constantFrom(...ROLE_CODES), (role) => {
-				const result = checkTransition(permissive('delivered', 'awaiting_payment', [role]));
-				return result.ok === false && result.denial.code === 'role_not_allowed';
+				return TRANSITIONS.filter((t) => t.auto === true).every((t) => {
+					const result = checkTransition(permissive(t.from, t.to, [role]));
+					return result.ok === false && result.denial.code === 'role_not_allowed';
+				});
 			})
 		);
 
 		expect(checkTransition(permissive('delivered', 'awaiting_payment', ['system'])).ok).toBe(true);
+		expect(checkTransition(permissive('awaiting_payment', 'paid', ['system'])).ok).toBe(true);
 	});
 
 	it('offers a role only the targets the table grants it', () => {
@@ -128,7 +129,7 @@ describe('request state machine, invariants of tech.md 6.2', () => {
 
 	it('closes the payment step behind the fullyPaid guard', () => {
 		const input = {
-			...permissive('awaiting_payment', 'paid', ['manager']),
+			...permissive('awaiting_payment', 'paid', ['system']),
 			guards: { fullyPaid: false }
 		};
 

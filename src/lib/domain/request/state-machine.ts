@@ -41,18 +41,12 @@ export const TRANSITIONS: readonly Transition[] = [
 		assignedOnly: true,
 		effects: ['shipStockItems', 'freezeCharity', 'emit:request.delivered']
 	},
-	{
-		from: 'delivered',
-		to: 'ready',
-		roles: ['driver', 'manager', 'owner'],
-		requiresReason: true,
-		effects: ['reverseShipment', 'emit:request.delivery_failed']
-	},
 	{ from: 'delivered', to: 'awaiting_payment', roles: ['system'], auto: true },
 	{
 		from: 'awaiting_payment',
 		to: 'paid',
-		roles: ['manager', 'owner'],
+		roles: ['system'],
+		auto: true,
 		guards: ['fullyPaid'],
 		effects: ['emit:request.paid']
 	}

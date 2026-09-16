@@ -1,5 +1,4 @@
-import { config } from '../src/lib/server/config';
-import { createDb } from '../src/lib/server/db/client';
+import { database } from '../src/lib/server/db/client';
 import { counterpartyCreate } from './admin/counterparty';
 import { priceImport } from './admin/price';
 import { requestTransition } from './admin/request';
@@ -11,12 +10,13 @@ const USAGE = `pnpm admin <command> [options]
   counterparty:create  --name --price-list --admin-email --admin-name --admin-password
                        [--discount] [--scheme] [--inn] [--address] [--phone] [--email]
   price:import         --file <xlsx|csv> --price-list
-  request:transition   --request <number> --to <status> [--actor] [--reason] [--comment]
+  request:transition   --request <number> --to <status> --actor <email> [--reason] [--comment]
 `;
 
 async function main(): Promise<void> {
 	const [command, ...argv] = process.argv.slice(2);
-	const db = createDb(config.DATABASE_PATH);
+	// The same handle the services hold: the console must not race its own process over WAL.
+	const db = database;
 
 	switch (command) {
 		case 'user:create':

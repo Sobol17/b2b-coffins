@@ -128,3 +128,8 @@ export function optionId(db: Db, title: string): number {
 	if (!row) throw new Error(`no option ${title}`);
 	return row.id;
 }
+
+/** A workshop actor: CRM scope, no counterparty row filter. */
+export function crmActor(role: RoleCode, userId: number): ActorContext {
+	return portalActor(role, userId, null);
+}

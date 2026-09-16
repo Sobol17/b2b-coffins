@@ -25,10 +25,8 @@ export const EFFECT_CODES = [
 	'produceStockItems',
 	'shipStockItems',
 	'freezeCharity',
-	'reverseShipment',
 	'emit:request.ready',
 	'emit:request.delivered',
-	'emit:request.delivery_failed',
 	'emit:request.paid'
 ] as const;
 export type EffectCode = (typeof EFFECT_CODES)[number];
