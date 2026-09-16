@@ -4,7 +4,7 @@
 	export interface FilterField {
 		readonly key: string;
 		readonly label: string;
-		readonly type: 'text' | 'select';
+		readonly type: 'text' | 'select' | 'date';
 		readonly options?: readonly SelectOption[];
 	}
 </script>
@@ -13,6 +13,7 @@
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
 	import Button from '$lib/ui/base/button/button.svelte';
+	import DatePicker from './DatePicker.svelte';
 	import Input from './Input.svelte';
 	import Select from './Select.svelte';
 
@@ -63,6 +64,11 @@
 				<Select
 					label={field.label}
 					options={field.options ?? []}
+					bind:value={() => filters[field.key] ?? '', (next) => set(field.key, next)}
+				/>
+			{:else if field.type === 'date'}
+				<DatePicker
+					label={field.label}
 					bind:value={() => filters[field.key] ?? '', (next) => set(field.key, next)}
 				/>
 			{:else}

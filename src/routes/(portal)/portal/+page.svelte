@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { resolve } from '$app/paths';
-	import { Button, Card, PriceCell } from '$lib/ui';
+	import { Button, Card, PriceCell, StatusBadge } from '$lib/ui';
 	import { formatDate } from '$lib/utils/format';
 	import type { PageProps } from './$types';
 
@@ -47,6 +47,31 @@
 						клик.
 					</p>
 				{/if}
+			</Card.Content>
+		</Card.Root>
+
+		<Card.Root class="md:col-span-2">
+			<Card.Content class="flex flex-col gap-3">
+				<h2 class="text-2xl">Заявки в работе</h2>
+				{#if data.activeRequests.length === 0}
+					<p class="text-fg-muted">Активных заявок нет. Соберите новую заявку из каталога.</p>
+				{:else}
+					<ul data-testid="active-requests" class="flex flex-col gap-2">
+						{#each data.activeRequests as row (row.id)}
+							<li class="flex flex-wrap items-center gap-3">
+								<a class="underline" href={resolve(`/portal/requests/${row.id}`)}>{row.number}</a>
+								<StatusBadge status={row.status} />
+								<span class="text-fg-muted">{row.firstItemTitle ?? 'Позиции не указаны'}</span>
+								{#if row.totalMinor !== undefined}
+									<span class="ml-auto"><PriceCell valueMinor={row.totalMinor} /> ₽</span>
+								{/if}
+							</li>
+						{/each}
+					</ul>
+				{/if}
+				<Button variant="secondary" href={resolve('/portal/requests')} class="self-start">
+					Все заявки
+				</Button>
 			</Card.Content>
 		</Card.Root>
 

@@ -1,7 +1,7 @@
 import { resolve } from '$app/paths';
 import type { ResolvedPathname } from '$app/types';
 
-export type ProfileSection = 'profile' | 'staff';
+export type ProfileSection = 'profile' | 'staff' | 'requests';
 
 export interface ProfileNavItem {
 	readonly href: ResolvedPathname;
@@ -9,7 +9,7 @@ export interface ProfileNavItem {
 	readonly active: boolean;
 }
 
-/** One menu for the profile pages. «Мои заявки» joins it with P6. */
+/** One menu for the profile pages of the mockups: account, staff and the request registry. */
 export function profileNavItems(
 	current: ProfileSection,
 	canManageStaff: boolean
@@ -25,5 +25,10 @@ export function profileNavItems(
 			active: current === 'staff'
 		});
 	}
+	items.push({
+		href: resolve('/portal/requests'),
+		label: 'Мои заявки',
+		active: current === 'requests'
+	});
 	return items;
 }

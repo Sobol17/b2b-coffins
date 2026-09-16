@@ -3,6 +3,9 @@ import { REQUEST_STATUSES } from '$lib/types/request';
 
 const id = z.coerce.number().int().positive();
 
+/** The `[id]` of a request route: user input like any other. */
+export const requestIdSchema = id;
+
 export const MAX_LINE_QTY = 999;
 
 /** A day of the calendar, the shape both date pickers of the registry send. */
