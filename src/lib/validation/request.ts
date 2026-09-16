@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { REQUEST_STATUSES } from '$lib/types/request';
 
 const id = z.coerce.number().int().positive();
 
@@ -59,3 +60,18 @@ export type DraftDetailsInput = z.infer<typeof draftDetailsSchema>;
 export function draftItemForm(form: FormData): Record<string, unknown> {
 	return { ...Object.fromEntries(form), optionIds: form.getAll('option') };
 }
+
+/** Empty, absent or null all mean "no reference", so a form without the field validates. */
+const optionalId = z
+	.union([z.literal(''), z.null(), id])
+	.optional()
+	.transform((value) => (typeof value === 'number' ? value : null));
+
+/** A status move of a sent request. The state machine decides whether the pair is allowed. */
+export const requestTransitionSchema = z.object({
+	to: z.enum(REQUEST_STATUSES, { error: 'Неизвестный статус' }),
+	reasonId: optionalId,
+	comment: optionalText(500, 'Комментарий не длиннее 500 символов')
+});
+
+export type RequestTransitionInput = z.infer<typeof requestTransitionSchema>;
