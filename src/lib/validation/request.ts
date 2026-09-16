@@ -5,6 +5,12 @@ const id = z.coerce.number().int().positive();
 
 export const MAX_LINE_QTY = 999;
 
+/** A day of the calendar, the shape both date pickers of the registry send. */
+const isoDate = z
+	.string()
+	.regex(/^\d{4}-\d{2}-\d{2}$/, { error: 'Дата в формате ГГГГ-ММ-ДД' })
+	.optional();
+
 const qty = z.coerce
 	.number({ error: 'Укажите количество' })
 	.int({ error: 'Количество должно быть целым' })
@@ -75,3 +81,32 @@ export const requestTransitionSchema = z.object({
 });
 
 export type RequestTransitionInput = z.infer<typeof requestTransitionSchema>;
+
+/** A message of the portal thread with the manager (P6). Internal notes belong to the CRM. */
+export const requestCommentSchema = z.object({
+	body: z
+		.string({ error: 'Напишите сообщение' })
+		.trim()
+		.min(1, { error: 'Напишите сообщение' })
+		.max(2000, { error: 'Сообщение не длиннее 2000 символов' })
+});
+
+export type RequestCommentInput = z.infer<typeof requestCommentSchema>;
+
+/** Filters of the registry: chips of statuses and a closed window of dates over the sent moment. */
+export const requestFiltersSchema = z.object({
+	statuses: z.array(z.enum(REQUEST_STATUSES)).default([]),
+	from: isoDate,
+	to: isoDate
+});
+
+export type RequestFiltersInput = z.infer<typeof requestFiltersSchema>;
+
+/** Query of the registry page: repeated `status` fields plus the period of the date pickers. */
+export function requestFiltersFrom(params: URLSearchParams): Record<string, unknown> {
+	return {
+		statuses: params.getAll('status'),
+		from: params.get('from') ?? undefined,
+		to: params.get('to') ?? undefined
+	};
+}

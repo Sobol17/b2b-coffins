@@ -1,4 +1,4 @@
-import { aliasedTable, and, asc, eq, inArray, ne, type SQL } from 'drizzle-orm';
+import { aliasedTable, and, asc, eq, ne, type SQL } from 'drizzle-orm';
 import { BaseRepository } from '../core/repository';
 import type { Tx } from '../db/client';
 import {
@@ -146,6 +146,51 @@ export class RequestCardRepository extends BaseRepository<typeof requests> {
 			.all();
 	}
 
+	/** A message of the portal thread: never internal, the CRM owns that flag (tech.md 5.6). */
+	insertComment(entry: { requestId: number; authorId: number; body: string }, tx: Tx): CommentRow {
+		const [created] = this.db(tx)
+			.insert(comments)
+			.values({ ...entry, isInternal: false })
+			.returning({ id: comments.id, createdAt: comments.createdAt })
+			.all();
+		if (!created) throw new Error('failed to insert a request comment');
+		return {
+			...created,
+			authorId: entry.authorId,
+			authorName: this.authorName(entry.authorId, tx),
+			body: entry.body
+		};
+	}
+
+	insertAttachment(
+		file: { requestId: number; path: string; mime: string; sizeBytes: number; uploadedBy: number },
+		tx: Tx
+	): AttachmentRow {
+		const [created] = this.db(tx)
+			.insert(media)
+			.values({
+				path: file.path,
+				mime: file.mime,
+				sizeBytes: file.sizeBytes,
+				ownerScope: 'request',
+				ownerId: file.requestId,
+				uploadedBy: file.uploadedBy
+			})
+			.returning({ id: media.id, createdAt: media.createdAt })
+			.all();
+		if (!created) throw new Error('failed to insert a request attachment');
+		return { ...created, path: file.path, mime: file.mime, sizeBytes: file.sizeBytes };
+	}
+
+	private authorName(userId: number, tx: Tx): string | null {
+		const [row] = this.db(tx)
+			.select({ fullName: users.fullName })
+			.from(users)
+			.where(eq(users.id, userId))
+			.all();
+		return row?.fullName ?? null;
+	}
+
 	attachments(requestId: number, tx?: Tx): AttachmentRow[] {
 		return this.db(tx)
 			.select({
@@ -159,19 +204,6 @@ export class RequestCardRepository extends BaseRepository<typeof requests> {
 			.where(and(eq(media.ownerScope, 'request'), eq(media.ownerId, requestId)))
 			.orderBy(asc(media.id))
 			.all();
-	}
-
-	/** Request ids the media rows belong to, for the file route to check the right on each. */
-	ownersOf(mediaIds: readonly number[], tx?: Tx): Map<number, number> {
-		if (mediaIds.length === 0) return new Map();
-		const rows = this.db(tx)
-			.select({ id: media.id, ownerId: media.ownerId })
-			.from(media)
-			.where(and(eq(media.ownerScope, 'request'), inArray(media.id, [...mediaIds])))
-			.all();
-		return new Map(
-			rows.filter((row) => row.ownerId !== null).map((row) => [row.id, row.ownerId as number])
-		);
 	}
 
 	private visibleWhere(ctx: ActorContext, id: number, ownOnly: boolean): SQL | undefined {

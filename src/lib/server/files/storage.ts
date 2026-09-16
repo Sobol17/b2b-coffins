@@ -1,5 +1,5 @@
-import { readFile } from 'node:fs/promises';
-import { isAbsolute, relative, resolve } from 'node:path';
+import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { dirname, isAbsolute, relative, resolve } from 'node:path';
 import { config } from '../config';
 
 /**
@@ -28,4 +28,19 @@ export async function readStoredFile(
 	} catch {
 		return null;
 	}
+}
+
+/**
+ * Writes a file the server placed itself. The path comes from the domain, never from the client,
+ * and a path that climbs out of the root is a bug rather than an attack: it fails loudly.
+ */
+export async function writeStoredFile(
+	relativePath: string,
+	bytes: Buffer,
+	root: string = config.FILES_DIR
+): Promise<void> {
+	const full = storedFilePath(relativePath, root);
+	if (full === null) throw new Error(`stored path escapes the files root: ${relativePath}`);
+	await mkdir(dirname(full), { recursive: true });
+	await writeFile(full, bytes);
 }

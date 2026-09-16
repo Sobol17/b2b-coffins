@@ -28,6 +28,6 @@ export abstract class PortalRequestService extends BaseService {
 
 	/** The administrator sees the requests of the whole counterparty, an employee only the own (P6). */
 	protected seesWholeCounterparty(): boolean {
-		return this.ctx.roles.includes('cp_admin');
+		return PolicyService.seesWholeCounterparty(this.ctx);
 	}
 }
