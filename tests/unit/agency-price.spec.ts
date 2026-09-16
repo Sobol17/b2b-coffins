@@ -4,6 +4,7 @@ import { normalizeListQuery } from '../../src/lib/server/core/list';
 import { AgencyPriceService } from '../../src/lib/server/pricing/agency-price.service';
 import { CatalogService } from '../../src/lib/server/catalog/catalog.service';
 import {
+	auditLog,
 	counterpartyProductPrices,
 	productVariants,
 	products
@@ -62,6 +63,14 @@ describe('agency prices of a counterparty (P7)', () => {
 		expect(row?.agencyPriceMinor).toBe(250_000);
 		// The purchase price stays next to it: the administrator compares the two.
 		expect(row?.minPurchasePriceMinor).toBeGreaterThan(0);
+	});
+
+	it('records the change in the journal with the models it touched', () => {
+		new AgencyPriceService(admin).save([{ productId, priceMinor: 250_000 }]);
+		const [entry] = db.select().from(auditLog).where(eq(auditLog.action, 'agency_price.set')).all();
+		expect(entry?.entity).toBe('counterparty_product_price');
+		expect(entry?.entityId).toBe(world.cpId);
+		expect(entry?.after).toEqual({ updated: [productId], cleared: [] });
 	});
 
 	it('writes nothing when the same page is submitted twice', () => {
