@@ -1,18 +1,27 @@
 import { CharityTotalsRepository } from '../charity/charity-totals.repository';
 import { RequestStatsRepository } from '../request/request-stats.repository';
+import { OrgService } from '../settings/org.service';
 import { streamHub, type StreamHub, type StreamTopic } from './stream';
+import { formatCharityScope, yearInZone } from '$lib/domain/charity/rate';
 import type { StreamMessage } from '$lib/types/stream';
 
 const HEARTBEAT_MS = 15_000;
 
 /** Current state of a topic, sent first so a fresh connection never waits for the next change. */
-export function streamSnapshot(topic: StreamTopic, now: Date): StreamMessage {
+export function streamSnapshot(
+	topic: StreamTopic,
+	now: Date,
+	timeZone: string = OrgService.timezone()
+): StreamMessage {
 	if (topic === 'requests') {
 		return { topic, byStatus: new RequestStatsRepository().countByStatus() };
 	}
 	const totals = new CharityTotalsRepository();
 	const all = totals.findByScope('all');
-	const year = totals.findByScope(`year:${now.getUTCFullYear()}`);
+	// The year of the banner is the year on the workshop's wall clock, as in the recount job.
+	const year = totals.findByScope(
+		formatCharityScope({ kind: 'year', year: yearInZone(now, timeZone) })
+	);
 	return {
 		topic,
 		totalMinor: all?.amountMinor ?? 0,
