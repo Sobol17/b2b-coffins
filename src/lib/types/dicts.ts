@@ -21,21 +21,9 @@ export const STOCK_MOVE_TYPES = [
 ] as const;
 export type StockMoveType = (typeof STOCK_MOVE_TYPES)[number];
 
-export const DOCUMENT_KINDS = [
-	'specification',
-	'waybill',
-	'shop_order',
-	'label',
-	'payroll_sheet',
-	'stock_report',
-	'charity_report'
-] as const;
-export type DocumentKind = (typeof DOCUMENT_KINDS)[number];
-
 export const JOB_TOPICS = [
 	'notification.dispatch',
 	'notification.fanout',
-	'document.generate',
 	'charity.recount',
 	'stock.threshold.check',
 	'import.bom',

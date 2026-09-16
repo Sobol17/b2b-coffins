@@ -6,13 +6,10 @@ import {
 	text,
 	uniqueIndex
 } from 'drizzle-orm/sqlite-core';
-import { DOCUMENT_KINDS, JOB_TOPICS } from '$lib/types/dicts';
+import { JOB_TOPICS } from '$lib/types/dicts';
 import { EVENT_KEYS } from '$lib/types/events';
 import { ROLE_CODES } from '$lib/types/roles';
 import { bool, createdAt, money, pk, ts, updatedAt } from './_shared';
-import { media } from './catalog';
-import { payrollPeriods } from './payroll';
-import { requests } from './requests';
 import { users } from './users';
 
 export const charityTransfers = sqliteTable('charity_transfers', {
@@ -36,7 +33,7 @@ export const charityTotals = sqliteTable('charity_totals', {
 });
 
 export const numberingSequences = sqliteTable('numbering_sequences', {
-	key: text('key').primaryKey(), // 'request' | 'invoice' | 'spec'
+	key: text('key').primaryKey(), // 'request'
 	prefix: text('prefix').notNull().default(''),
 	period: text('period', { enum: ['none', 'year', 'month'] })
 		.notNull()
@@ -44,37 +41,6 @@ export const numberingSequences = sqliteTable('numbering_sequences', {
 	periodKey: text('period_key').notNull().default(''),
 	lastValue: integer('last_value').notNull().default(0)
 });
-
-export const documentTemplates = sqliteTable('document_templates', {
-	id: pk(),
-	kind: text('kind', { enum: DOCUMENT_KINDS }).notNull(),
-	version: integer('version').notNull().default(1),
-	title: text('title').notNull(),
-	body: text('body', { mode: 'json' }).$type<Record<string, unknown>>(),
-	isActive: bool('is_active').notNull().default(true)
-});
-
-export const documents = sqliteTable(
-	'documents',
-	{
-		id: pk(),
-		kind: text('kind', { enum: DOCUMENT_KINDS }).notNull(),
-		number: text('number'),
-		requestId: integer('request_id').references(() => requests.id, { onDelete: 'cascade' }),
-		periodId: integer('period_id').references(() => payrollPeriods.id),
-		variant: text('variant', { enum: ['full', 'no_prices'] })
-			.notNull()
-			.default('full'),
-		status: text('status', { enum: ['queued', 'ready', 'failed'] })
-			.notNull()
-			.default('queued'),
-		fileId: integer('file_id').references(() => media.id),
-		error: text('error'),
-		createdById: integer('created_by_id').references(() => users.id),
-		createdAt: createdAt()
-	},
-	(t) => [index('documents_request_idx').on(t.requestId)]
-);
 
 export const notificationTemplates = sqliteTable(
 	'notification_templates',

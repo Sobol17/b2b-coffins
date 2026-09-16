@@ -11,7 +11,6 @@ const id = z.number().int().positive();
 export const JOB_PAYLOAD_SCHEMAS = {
 	'notification.dispatch': z.strictObject({ notificationId: id }),
 	'notification.fanout': z.strictObject({ eventKey: z.enum(EVENT_KEYS), entityId: id }),
-	'document.generate': z.strictObject({ documentId: id }),
 	'charity.recount': z.strictObject({ scope: z.string().min(1) }),
 	'stock.threshold.check': z.strictObject({ stockItemId: id }),
 	'import.bom': z.strictObject({ mediaId: id, actorId: id }),

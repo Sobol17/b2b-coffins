@@ -39,7 +39,7 @@ export class FileAccessService extends BaseService {
 		if (row.ownerId === null) throw new ForbiddenError('file.read');
 		// An attachment follows its request: whoever may open the card may open what hangs on it.
 		if (row.ownerScope === 'request') return this.assertAttachment(row.ownerId);
-		// Contracts and documents (P7) bring their own rules with their slices.
+		// Contracts bring their own rules with their slice.
 		if (row.ownerScope !== 'product') throw new ForbiddenError('file.read');
 		this.assert(PolicyService.can(this.ctx, 'catalog.read'), 'catalog.read');
 		const visibility = { publishedOnly: !PolicyService.can(this.ctx, 'catalog.manage') };

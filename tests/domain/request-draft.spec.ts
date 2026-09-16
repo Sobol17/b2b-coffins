@@ -4,7 +4,7 @@ import {
 	nextNumber,
 	periodKeyOf,
 	type SequenceState
-} from '../../src/lib/domain/documents/numbering';
+} from '../../src/lib/domain/numbering/numbering';
 import { checkOptionSelection, sameSelection } from '../../src/lib/domain/request/item-options';
 import { lineTotalMinor, requestTotals } from '../../src/lib/domain/request/pricing';
 import { OPTION_KINDS } from '../../src/lib/types/catalog';
