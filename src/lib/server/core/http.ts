@@ -23,6 +23,18 @@ export function rethrowAsHttp(err: unknown): never {
 	throw err;
 }
 
+/**
+ * For page loads that read one object: a domain refusal renders the error page of its own status,
+ * because SvelteKit turns an unmapped error from a load into a 500 before the hooks see it.
+ */
+export function orHttpStatus<T>(run: () => T): T {
+	try {
+		return run();
+	} catch (err) {
+		rethrowAsHttp(err);
+	}
+}
+
 /** For form actions: a domain refusal becomes a `fail` the page shows next to the form. */
 export function actionFailure(err: unknown) {
 	if (!(err instanceof AppError)) throw err;

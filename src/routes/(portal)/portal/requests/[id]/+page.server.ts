@@ -1,5 +1,5 @@
 import { requireAction, requireScope } from '$lib/server/auth/guard';
-import { actionFailure, invalidForm, orNotFound } from '$lib/server/core/http';
+import { actionFailure, invalidForm, orHttpStatus } from '$lib/server/core/http';
 import { RequestCardService } from '$lib/server/request/request-card.service';
 import { RequestCommentService } from '$lib/server/request/request-comment.service';
 import { RequestTransitionService } from '$lib/server/request/request-transition.service';
@@ -19,7 +19,7 @@ function reader(locals: App.Locals, url: URL): ActorContext {
 export const load: PageServerLoad = ({ locals, params, url }) => {
 	const actor = reader(locals, url);
 	const id = requestIdSchema.parse(params.id);
-	return { request: orNotFound(() => new RequestCardService(actor).card(id), 'Заявка не найдена') };
+	return { request: orHttpStatus(() => new RequestCardService(actor).card(id)) };
 };
 
 export const actions = {
