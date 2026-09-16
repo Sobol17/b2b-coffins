@@ -49,9 +49,13 @@ describe('portal request registry (P6)', () => {
 	});
 
 	it('never opens a window that ends before it starts', () => {
-		const day = fc.date({ min: new Date('2020-01-01'), max: new Date('2030-01-01') });
+		const day = fc.date({
+			min: new Date('2020-01-01'),
+			max: new Date('2030-01-01'),
+			noInvalidDate: true
+		});
 		const property = fc.property(day, day, (left, right) => {
-			const [from, to] = [left, right].map((at) => at.toISOString().slice(0, 10)).sort();
+			const [from = '', to = ''] = [left, right].map((at) => at.toISOString().slice(0, 10)).sort();
 			const window = dateWindow({ from, to }, MOSCOW);
 			return (window.from?.getTime() ?? 0) <= (window.to?.getTime() ?? 0);
 		});

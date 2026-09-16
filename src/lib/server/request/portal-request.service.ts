@@ -14,6 +14,18 @@ export abstract class PortalRequestService extends BaseService {
 		return this.ctx.counterpartyId;
 	}
 
+	/**
+	 * @returns the counterparty whose requests the actor may read.
+	 * @throws ForbiddenError for a workshop role: the portal registry is the counterparty contour.
+	 */
+	protected requireReader(): number {
+		this.assert(PolicyService.can(this.ctx, 'request.read.own'), 'request.read.own');
+		if (this.ctx.scope !== 'portal' || this.ctx.counterpartyId === null) {
+			throw new ForbiddenError('request.read.own');
+		}
+		return this.ctx.counterpartyId;
+	}
+
 	/** The administrator sees the requests of the whole counterparty, an employee only the own (P6). */
 	protected seesWholeCounterparty(): boolean {
 		return this.ctx.roles.includes('cp_admin');
