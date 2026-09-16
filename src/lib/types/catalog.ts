@@ -35,6 +35,8 @@ export interface CategoryDto {
 	readonly productCount: number;
 	/** Lowest personal price inside the category tree, for a role with prices. */
 	readonly minPriceMinor?: number;
+	/** Lowest agency price inside the tree: what a portal role without prices sees as "from". */
+	readonly minAgencyPriceMinor?: number;
 }
 
 /*
@@ -53,6 +55,8 @@ export interface ProductListItemDto {
 	/** Sum of the stock balances of the visible variants, never below zero. */
 	readonly stockQty: number;
 	readonly minPriceMinor?: number;
+	/** Price the counterparty shows its own client (P7). One per model, both portal roles see it. */
+	readonly agencyPriceMinor?: number;
 }
 
 export interface OptionDto {
@@ -91,4 +95,6 @@ export interface ProductDto {
 	readonly categoryTitle: string | null;
 	readonly mediaIds: readonly number[];
 	readonly variants: readonly VariantDto[];
+	/** One per model: neither the size nor the options move it (P7). */
+	readonly agencyPriceMinor?: number;
 }

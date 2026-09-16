@@ -3,6 +3,7 @@ import { VariantRepository } from '../catalog/variant.repository';
 import { CounterpartyRepository } from '../counterparty/counterparty.repository';
 import { DeliveryAddressRepository } from '../counterparty/delivery-address.repository';
 import type { Tx } from '../db/client';
+import { AgencyPricing } from '../pricing/agency-pricing';
 import { PersonalPriceResolver } from '../pricing/personal-price';
 import { DraftItemRepository } from './draft-item.repository';
 import { DraftDtoMapper } from './draft.dto';
@@ -25,7 +26,8 @@ export class DraftCalculator {
 		private readonly resolver: PersonalPriceResolver = new PersonalPriceResolver(),
 		private readonly counterparties: CounterpartyRepository = new CounterpartyRepository(),
 		private readonly addresses: DeliveryAddressRepository = new DeliveryAddressRepository(),
-		private readonly catalog: CatalogRepository = new CatalogRepository()
+		private readonly catalog: CatalogRepository = new CatalogRepository(),
+		private readonly agency: AgencyPricing = new AgencyPricing(ctx)
 	) {}
 
 	/** Stores line prices and request totals at the counterparty's current prices. */
@@ -77,6 +79,7 @@ export class DraftCalculator {
 			covers: this.catalog.mediaByProducts([...new Set(lines.map((line) => line.productId))]),
 			addresses: this.addresses.listOwn(this.ctx),
 			prices: withPrices ? this.lines.linePrices(lines.map((line) => line.id)) : undefined,
+			agencyPrices: this.agency.forProducts(lines.map((line) => line.productId)),
 			totals: withPrices ? this.drafts.totals(draft.id) : undefined,
 			discountPercent: withPrices
 				? this.counterparties.findOwn(this.ctx)?.discountPercent

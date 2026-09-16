@@ -12,6 +12,8 @@ export interface DraftParts {
 	readonly addresses: readonly DeliveryAddressRow[];
 	/** Undefined for a role without prices: the money columns were never read. */
 	readonly prices: ReadonlyMap<number, LinePriceRow> | undefined;
+	/** Agency prices per model (P7). Undefined outside the portal; never summed into the draft. */
+	readonly agencyPrices: ReadonlyMap<number, number> | undefined;
 	readonly totals: RequestTotals | undefined;
 	readonly discountPercent: number | undefined;
 }
@@ -55,7 +57,8 @@ export class DraftDtoMapper {
 				.map((option) => ({ id: option.optionId, kind: option.kind, title: option.title })),
 			...definedProps({
 				unitPriceMinor: price === undefined ? undefined : price.unitPriceMinor + price.optionsMinor,
-				lineTotalMinor: price?.lineTotalMinor
+				lineTotalMinor: price?.lineTotalMinor,
+				agencyUnitPriceMinor: parts.agencyPrices?.get(line.productId)
 			})
 		};
 	}

@@ -17,6 +17,8 @@ export interface CardParts {
 	readonly options: readonly LineOptionRow[];
 	/** Undefined for a role without prices: the money columns were never read. */
 	readonly prices: ReadonlyMap<number, LinePriceRow> | undefined;
+	/** Agency prices per model (P7). Undefined outside the portal; never summed into the card. */
+	readonly agencyPrices: ReadonlyMap<number, number> | undefined;
 	readonly history: readonly HistoryRow[];
 	readonly comments: readonly CommentRow[];
 	readonly attachments: readonly AttachmentRow[];
@@ -107,7 +109,8 @@ export class CardDtoMapper {
 				.map((option) => ({ id: option.optionId, kind: option.kind, title: option.title })),
 			...definedProps({
 				unitPriceMinor: price === undefined ? undefined : price.unitPriceMinor + price.optionsMinor,
-				lineTotalMinor: price?.lineTotalMinor
+				lineTotalMinor: price?.lineTotalMinor,
+				agencyUnitPriceMinor: parts.agencyPrices?.get(line.productId)
 			})
 		};
 	}

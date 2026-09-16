@@ -14,6 +14,7 @@ export const ACTIONS = [
 	'request.assign',
 	'counterparty.manage',
 	'counterparty.staff.manage',
+	'prices.manage',
 	'stock.read',
 	'stock.manage',
 	'payroll.read',
@@ -29,8 +30,9 @@ export type Action = (typeof ACTIONS)[number];
  * and every mutating route calls it before it touches a service.
  */
 const GRANTS: Readonly<Record<RoleCode, readonly Action[]>> = {
-	// Owner holds every action except the portal one: the portal contour belongs to counterparties.
-	owner: ACTIONS.filter((action) => action !== 'portal.access'),
+	// Owner holds every action except the portal ones: that contour belongs to counterparties, and
+	// the agency price is the counterparty's own number, not a workshop setting.
+	owner: ACTIONS.filter((action) => action !== 'portal.access' && action !== 'prices.manage'),
 	manager: [
 		'crm.access',
 		'catalog.read',
@@ -54,7 +56,8 @@ const GRANTS: Readonly<Record<RoleCode, readonly Action[]>> = {
 		'catalog.read',
 		'request.create',
 		'request.read.own',
-		'counterparty.staff.manage'
+		'counterparty.staff.manage',
+		'prices.manage'
 	],
 	cp_employee: ['portal.access', 'catalog.read', 'request.create', 'request.read.own']
 } as const;

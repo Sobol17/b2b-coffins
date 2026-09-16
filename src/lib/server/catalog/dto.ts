@@ -22,6 +22,7 @@ export interface ListItemExtra {
 	readonly lengthsMm: readonly number[];
 	readonly stockQty: number;
 	readonly minPriceMinor: number | undefined;
+	readonly agencyPriceMinor: number | undefined;
 }
 
 /**
@@ -32,14 +33,15 @@ export class CatalogDtoMapper {
 	static toCategory(
 		row: CategoryRow,
 		productCount: number,
-		minPriceMinor: number | undefined
+		minPriceMinor: number | undefined,
+		minAgencyPriceMinor: number | undefined
 	): CategoryDto {
 		return {
 			id: row.id,
 			title: row.title,
 			parentId: row.parentId,
 			productCount,
-			...definedProps({ minPriceMinor })
+			...definedProps({ minPriceMinor, minAgencyPriceMinor })
 		};
 	}
 
@@ -54,7 +56,10 @@ export class CatalogDtoMapper {
 			materialTitles: extra.materialTitles,
 			lengthsMm: extra.lengthsMm,
 			stockQty: extra.stockQty,
-			...definedProps({ minPriceMinor: extra.minPriceMinor })
+			...definedProps({
+				minPriceMinor: extra.minPriceMinor,
+				agencyPriceMinor: extra.agencyPriceMinor
+			})
 		};
 	}
 
@@ -92,7 +97,8 @@ export class CatalogDtoMapper {
 	static toProduct(
 		row: ProductRow & { categoryTitle: string | null },
 		mediaIds: readonly number[],
-		variants: readonly VariantDto[]
+		variants: readonly VariantDto[],
+		agencyPriceMinor: number | undefined
 	): ProductDto {
 		return {
 			id: row.id,
@@ -102,7 +108,8 @@ export class CatalogDtoMapper {
 			categoryId: row.categoryId,
 			categoryTitle: row.categoryTitle,
 			mediaIds,
-			variants
+			variants,
+			...definedProps({ agencyPriceMinor })
 		};
 	}
 }

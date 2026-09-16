@@ -5,6 +5,7 @@ export * from './dicts';
 export * from './events';
 export * from './list';
 export * from './money';
+export * from './pricing';
 export * from './request';
 export * from './roles';
 export * from './stream';

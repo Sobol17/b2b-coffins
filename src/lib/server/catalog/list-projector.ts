@@ -1,3 +1,4 @@
+import type { AgencyPricing } from '../pricing/agency-pricing';
 import type { CatalogPricing } from './catalog-pricing';
 import type { CatalogRepository, ProductRow } from './catalog.repository';
 import { CatalogDtoMapper } from './dto';
@@ -14,7 +15,8 @@ export class ProductListProjector {
 	constructor(
 		private readonly products: CatalogRepository,
 		private readonly variants: VariantRepository,
-		private readonly pricing: CatalogPricing
+		private readonly pricing: CatalogPricing,
+		private readonly agency: AgencyPricing
 	) {}
 
 	project(rows: readonly ProductRow[], visibility: Visibility): ProductListItemDto[] {
@@ -25,6 +27,7 @@ export class ProductListProjector {
 			variants.map((variant) => ({ id: variant.id, key: variant.productId }))
 		);
 		const media = this.products.mediaByProducts(ids);
+		const agencyPrices = this.agency.forProducts(ids);
 
 		return rows.map((row) => {
 			const own = variants.filter((variant) => variant.productId === row.id);
@@ -37,16 +40,21 @@ export class ProductListProjector {
 				).sort((a, b) => a - b),
 				// A negative balance is a stock error for the workshop (C8), not "minus five coffins".
 				stockQty: own.reduce((sum, variant) => sum + Math.max(0, stock.get(variant.id) ?? 0), 0),
-				minPriceMinor: minPrices?.get(row.id)
+				minPriceMinor: minPrices?.get(row.id),
+				agencyPriceMinor: agencyPrices?.get(row.id)
 			});
 		});
 	}
 
-	/** Ids ordered by the lowest personal price; models without a price go last in catalog order. */
+	/**
+	 * Ids ordered by the price the actor sees: the lowest personal price, and the agency price for
+	 * a portal role without prices. Models without one go last in catalog order.
+	 */
 	orderByPrice(ids: readonly number[], dir: 'asc' | 'desc', visibility: Visibility): number[] {
 		const variants = this.variants.findByProducts(ids, visibility);
 		const minPrices =
 			this.pricing.minBy(variants.map((variant) => ({ id: variant.id, key: variant.productId }))) ??
+			this.agency.forProducts(ids) ??
 			new Map<number, number>();
 		const position = new Map(ids.map((id, index) => [id, index]));
 

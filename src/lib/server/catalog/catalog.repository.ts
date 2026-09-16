@@ -122,6 +122,17 @@ export class CatalogRepository extends BaseRepository<typeof products> {
 			.map((row) => row.id);
 	}
 
+	/** Of the given models, the ones the actor may see. Guards a write that carries model ids. */
+	visibleIds(ids: readonly number[], visibility: Visibility): Set<number> {
+		if (ids.length === 0) return new Set();
+		const rows = this.db()
+			.select({ id: products.id })
+			.from(products)
+			.where(and(productVisible(visibility), inArray(products.id, [...ids])))
+			.all();
+		return new Set(rows.map((row) => row.id));
+	}
+
 	findByIds(ids: readonly number[]): ProductRow[] {
 		if (ids.length === 0) return [];
 		return this.db()
