@@ -28,7 +28,10 @@ seedNotificationTemplates(db);
 
 const ORIGIN = 'https://portal.example';
 const mail = new FakeMailDriver();
-let now = new Date('2026-09-17T09:00:00Z');
+// Real time plus a shift: `visible_at` is stored in whole seconds when a job is queued, so a
+// frozen clock would either miss fresh jobs or depend on the hour the suite runs at.
+let offsetMs = 0;
+const clock = (): Date => new Date(Date.now() + offsetMs);
 let switchedOn = true;
 
 function worker(): Worker {
@@ -42,10 +45,10 @@ function worker(): Worker {
 				notifications: rows,
 				mail: () => mail,
 				origin: ORIGIN,
-				clock: () => now
+				clock
 			})
 		],
-		clock: () => now
+		clock
 	});
 }
 
@@ -73,7 +76,7 @@ beforeEach(() => {
 	db.update(notificationTemplates).set({ isActive: true }).run();
 	mail.reset();
 	switchedOn = true;
-	now = new Date('2026-09-17T09:00:00Z');
+	offsetMs = 0;
 });
 
 describe('notification.fanout and notification.dispatch (P9)', () => {
@@ -210,6 +213,7 @@ describe('the error path of the dispatch', () => {
 		mail.failOnce();
 		const run = worker();
 
+		const before = Date.now();
 		await run.drain();
 		const [failed] = rowsOf('request.ready');
 		expect(failed).toMatchObject({
@@ -218,9 +222,14 @@ describe('the error path of the dispatch', () => {
 			error: 'fake mail driver failure'
 		});
 		const [job] = jobs('notification.dispatch');
-		expect(job?.visibleAt.getTime()).toBe(now.getTime() + backoffSeconds(1) * 1000);
+		const delayMs = (job?.visibleAt.getTime() ?? 0) - before;
+		// Whole seconds in storage: the delay lands within a second of the backoff.
+		expect(Math.abs(delayMs - backoffSeconds(1) * 1000)).toBeLessThanOrEqual(1000);
 
-		now = new Date(now.getTime() + backoffSeconds(1) * 1000);
+		await run.drain();
+		expect(rowsOf('request.ready')[0]?.status).toBe('failed');
+
+		offsetMs = backoffSeconds(1) * 1000 + 1000;
 		await run.drain();
 
 		expect(rowsOf('request.ready')[0]).toMatchObject({ status: 'sent', attempts: 2, error: null });
@@ -230,28 +239,46 @@ describe('the error path of the dispatch', () => {
 	it('gives up as dead after the last attempt and leaves the row failed', async () => {
 		const id = sent(actors.admin);
 		drive(id, 'ready');
-		const run = worker();
-		await run.drain(); // fanout
-		const [job] = jobs('notification.dispatch');
+		const rules = new NotificationRuleRepository();
+		const rows = new NotificationRepository();
+		const fanoutOnly = new Worker({
+			handlers: [
+				createNotificationFanoutHandler({ rules, notifications: rows, isEnabled: () => true })
+			],
+			clock
+		});
+		await fanoutOnly.drain();
 		db.update(jobQueue)
 			.set({ maxAttempts: 2 })
-			.where(eq(jobQueue.id, job?.id ?? 0))
+			.where(eq(jobQueue.topic, 'notification.dispatch'))
 			.run();
-		mail.reset();
+		const down = {
+			send: async () => {
+				throw new Error('smtp is down');
+			}
+		};
+		const run = new Worker({
+			handlers: [
+				createNotificationDispatchHandler({
+					rules,
+					notifications: rows,
+					mail: () => down,
+					origin: ORIGIN
+				})
+			],
+			clock
+		});
 
-		for (let attempt = 0; attempt < 2; attempt += 1) {
-			db.update(notifications).set({ status: 'queued' }).run();
-			db.update(jobQueue)
-				.set({ status: 'pending', visibleAt: now })
-				.where(eq(jobQueue.id, job?.id ?? 0))
-				.run();
-			mail.failOnce();
-			await run.drain();
-		}
+		await run.drain();
+		offsetMs = backoffSeconds(1) * 1000 + 1000;
+		await run.drain();
 
-		expect(jobs('notification.dispatch')[0]?.status).toBe('dead');
-		expect(rowsOf('request.ready')[0]?.status).toBe('failed');
-		expect(mail.sent).toHaveLength(0);
+		expect(jobs('notification.dispatch')[0]).toMatchObject({ status: 'dead', attempts: 2 });
+		expect(rowsOf('request.ready')[0]).toMatchObject({
+			status: 'failed',
+			attempts: 2,
+			error: 'smtp is down'
+		});
 	});
 
 	it('times a hanging server out and retries instead of waiting forever', async () => {
@@ -273,7 +300,7 @@ describe('the error path of the dispatch', () => {
 				})
 			],
 			timeoutMs: 20,
-			clock: () => now
+			clock
 		});
 
 		await run.drain();
@@ -304,7 +331,7 @@ describe('the error path of the dispatch', () => {
 				topic: 'notification.dispatch',
 				payload: { notificationId: 999_999 },
 				idempotencyKey: 'notification:999999',
-				visibleAt: now
+				visibleAt: clock()
 			})
 			.run();
 
