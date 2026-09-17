@@ -86,7 +86,7 @@
 				{#if item.action}
 					<a
 						href={item.action.href}
-						class="self-start text-sm font-medium text-brand underline-offset-4 hover:text-brand-hover hover:underline"
+						class="self-start text-sm font-medium text-link underline-offset-4 hover:text-link-hover hover:underline"
 						onclick={() => toast.dismiss(item.id)}
 					>
 						{item.action.label}

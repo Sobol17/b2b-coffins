@@ -22,14 +22,13 @@
 			</div>
 			<div class="flex flex-col gap-3">
 				<div class="text-xs tracking-[0.12em] text-fg-faint uppercase">Контакты</div>
-				{#if phone && telHref}<TelLink href={telHref} class="hover:text-brand">{phone}</TelLink
-					>{/if}
+				{#if phone && telHref}<TelLink href={telHref} class="hover:text-link">{phone}</TelLink>{/if}
 				{#if address}<span class="text-fg-muted">{address}</span>{/if}
 			</div>
 			<div class="flex flex-col gap-3">
 				<div class="text-xs tracking-[0.12em] text-fg-faint uppercase">Портал</div>
-				<a href={resolve('/login')} class="hover:text-brand">Вход для контрагентов</a>
-				<a href={resolve('/password/reset')} class="hover:text-brand">Восстановить доступ</a>
+				<a href={resolve('/login')} class="hover:text-link">Вход для контрагентов</a>
+				<a href={resolve('/password/reset')} class="hover:text-link">Восстановить доступ</a>
 			</div>
 		</div>
 		<div class="mt-12 text-sm text-fg-faint">© {year} Мастерская «Ангел»</div>

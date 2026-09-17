@@ -22,7 +22,7 @@
 	<div class="flex flex-1 flex-col gap-1.5 px-1.5 pt-4 pb-1.5">
 		<div class="text-xs tracking-[0.08em] text-fg-faint">{product.sku}</div>
 		<h3 class="text-xl">
-			<a href={resolve(`/portal/catalog/product/${product.id}`)} class="hover:text-brand">
+			<a href={resolve(`/portal/catalog/product/${product.id}`)} class="hover:text-link">
 				{product.title}
 			</a>
 		</h3>
@@ -36,7 +36,7 @@
 		</div>
 		<div
 			data-testid="product-stock"
-			class={['text-xs', product.stockQty > 0 ? 'text-brand' : 'text-fg-muted']}
+			class={['text-xs', product.stockQty > 0 ? 'text-link' : 'text-fg-muted']}
 		>
 			{product.stockQty > 0 ? `На складе ${product.stockQty} шт` : 'Нет на складе'}
 		</div>

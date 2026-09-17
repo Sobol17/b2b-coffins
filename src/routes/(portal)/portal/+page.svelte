@@ -35,7 +35,7 @@
 				{#if data.lastRequest}
 					<p data-testid="last-request" class="text-fg-muted">
 						Заявка {data.lastRequest.number}{#if data.lastRequest.submittedAt}
-							от {formatDate(data.lastRequest.submittedAt, data.timezone)}{/if}: позиций
+							&nbsp;от {formatDate(data.lastRequest.submittedAt, data.timezone)}{/if}: позиций
 						{data.lastRequest.itemCount}, изделий {data.lastRequest
 							.unitCount}{#if data.lastRequest.totalMinor !== undefined},
 							<PriceCell valueMinor={data.lastRequest.totalMinor} /> ₽{/if}.

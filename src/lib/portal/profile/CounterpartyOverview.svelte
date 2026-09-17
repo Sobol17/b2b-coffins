@@ -45,7 +45,7 @@
 			<div data-testid="counterparty-money" class="grid grid-cols-1 gap-3 sm:grid-cols-3">
 				<div class="rounded-inset bg-surface-muted p-4">
 					<div class="text-xs tracking-[0.1em] text-fg-faint uppercase">Скидка по договору</div>
-					<div class="font-heading text-3xl font-semibold text-brand">{card.discountPercent} %</div>
+					<div class="font-heading text-3xl font-semibold text-link">{card.discountPercent} %</div>
 				</div>
 				<div class="rounded-inset bg-surface-muted p-4">
 					<div class="text-xs tracking-[0.1em] text-fg-faint uppercase">Задолженность</div>

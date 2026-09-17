@@ -56,7 +56,7 @@
 				<Button
 					variant="ghost"
 					href={link.href}
-					class={isCurrent(link.href) ? 'text-brand' : 'text-fg'}
+					class={isCurrent(link.href) ? 'text-link' : 'text-fg'}
 					aria-current={isCurrent(link.href) ? 'page' : undefined}
 				>
 					{link.label}

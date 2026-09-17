@@ -16,7 +16,7 @@
 
 <section class="mx-auto max-w-5xl px-4 pt-14 pb-12 text-center sm:px-6 sm:pt-22 sm:pb-18">
 	<h1 class="mb-6 text-4xl sm:text-6xl">
-		Гробы и кресты <span class="text-mist-600">собственного</span> производства
+		Гробы и кресты <span class="text-brand-500">собственного</span> производства
 	</h1>
 	<p class="mx-auto mb-8 max-w-2xl text-lg text-fg-muted">
 		Оптовые поставки ритуальным агентствам. Полный цикл на одной площадке: сушка, сборка, отделка и
