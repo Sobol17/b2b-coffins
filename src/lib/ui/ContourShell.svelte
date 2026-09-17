@@ -19,6 +19,7 @@
 		accountHref,
 		cart,
 		footerCaption = 'Портал контрагента столярной мастерской',
+		search,
 		children
 	}: {
 		title: string;
@@ -29,13 +30,15 @@
 		accountHref?: ResolvedPathname | undefined;
 		cart?: CartLink | undefined;
 		footerCaption?: string;
+		/** Portal header search. The kit takes it as a snippet so it never imports portal code. */
+		search?: Snippet | undefined;
 		children: Snippet;
 	} = $props();
 </script>
 
 {#if variant === 'portal'}
 	<div class="flex min-h-screen flex-col">
-		<PortalHeader {title} {userName} {roles} {links} {accountHref} {cart} />
+		<PortalHeader {title} {userName} {roles} {links} {accountHref} {cart} {search} />
 		<main class="mx-auto w-full max-w-shell flex-1 px-4 pt-4 pb-10 sm:px-6">
 			{@render children()}
 		</main>

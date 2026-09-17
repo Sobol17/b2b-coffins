@@ -4,6 +4,7 @@
 	import ClipboardListIcon from '@lucide/svelte/icons/clipboard-list';
 	import MenuIcon from '@lucide/svelte/icons/menu';
 	import type { ResolvedPathname } from '$app/types';
+	import type { Snippet } from 'svelte';
 	import Button from '../base/button/button.svelte';
 	import Drawer from '../Drawer.svelte';
 	import type { CartLink, ShellLink } from './types';
@@ -14,7 +15,8 @@
 		roles,
 		links,
 		accountHref,
-		cart
+		cart,
+		search
 	}: {
 		title: string;
 		userName: string;
@@ -22,6 +24,7 @@
 		links: readonly ShellLink[];
 		accountHref?: ResolvedPathname | undefined;
 		cart?: CartLink | undefined;
+		search?: Snippet | undefined;
 	} = $props();
 
 	let menuOpen = $state(false);
@@ -43,15 +46,20 @@
 <header class="sticky top-0 z-10 bg-surface px-4 pt-4 pb-2 sm:px-6">
 	<div
 		data-testid="portal-header"
-		class="mx-auto flex h-16 max-w-shell items-center gap-4 rounded-card bg-surface-raised pr-3 pl-5 sm:h-20 sm:gap-8 sm:pr-5 sm:pl-7"
+		class="mx-auto flex h-16 max-w-shell items-center gap-3 rounded-card bg-surface-raised pr-2.5 pl-4 sm:h-20 sm:gap-8 sm:pr-5 sm:pl-7"
 	>
 		<a
 			href={resolve('/portal')}
 			data-testid="home-logo"
 			class="flex items-baseline gap-2.5 rounded-sm hover:text-link"
 		>
-			<span class="font-heading text-2xl font-semibold tracking-[0.14em]">АНГЕЛ</span>
-			<span class="hidden text-[0.6875rem] tracking-[0.1em] text-fg-faint uppercase sm:inline">
+			<span
+				class="font-heading text-xl font-semibold tracking-[0.12em] sm:text-2xl sm:tracking-[0.14em]"
+				>АНГЕЛ</span
+			>
+			<span
+				class="hidden text-[0.6875rem] tracking-[0.1em] whitespace-nowrap text-fg-faint uppercase xl:inline"
+			>
 				{title}
 			</span>
 		</a>
@@ -67,10 +75,23 @@
 					{link.label}
 				</Button>
 			{/each}
+			<!-- The account chip leaves the header on a phone, so its page moves into the menu. -->
+			{#if accountHref}
+				<Button
+					href={accountHref}
+					variant={isCurrent(accountHref) ? 'primary' : 'ghost'}
+					class="justify-start sm:hidden"
+					aria-current={isCurrent(accountHref) ? 'page' : undefined}
+					onclick={() => (menuOpen = false)}
+				>
+					Профиль
+				</Button>
+			{/if}
 		</nav>
 
-		<div class="ml-auto flex items-center gap-2 md:ml-0">
+		<div class="ml-auto flex items-center gap-1.5 sm:gap-2 md:ml-0">
 			<span data-testid="actor-roles" class="sr-only">{roles.join(', ')}</span>
+			{@render search?.()}
 			{#if cart}
 				<Button
 					variant={isCurrent(cart.href) ? 'primary' : 'secondary'}
@@ -98,7 +119,7 @@
 					size="sm"
 					href={accountHref}
 					data-testid="account-chip"
-					class="gap-2 pl-1.5"
+					class="hidden gap-2 px-1.5 sm:inline-flex lg:pr-4"
 					aria-label="Профиль: {userName}"
 				>
 					<span
@@ -107,7 +128,7 @@
 					>
 						{initials}
 					</span>
-					<span data-testid="actor-name" class="hidden sm:inline">{userName}</span>
+					<span data-testid="actor-name" class="hidden lg:inline">{userName}</span>
 				</Button>
 			{:else}
 				<span data-testid="actor-name" class="text-sm">{userName}</span>
@@ -115,7 +136,8 @@
 
 			<Button
 				variant="secondary"
-				class="w-11 px-0 md:hidden"
+				size="sm"
+				class="w-9.5 px-0 md:hidden"
 				aria-label="Открыть меню"
 				data-testid="menu-button"
 				onclick={() => (menuOpen = true)}
@@ -140,6 +162,18 @@
 					{link.label}
 				</Button>
 			{/each}
+			<!-- The account chip leaves the header on a phone, so its page moves into the menu. -->
+			{#if accountHref}
+				<Button
+					href={accountHref}
+					variant={isCurrent(accountHref) ? 'primary' : 'ghost'}
+					class="justify-start sm:hidden"
+					aria-current={isCurrent(accountHref) ? 'page' : undefined}
+					onclick={() => (menuOpen = false)}
+				>
+					Профиль
+				</Button>
+			{/if}
 		</nav>
 	{/snippet}
 </Drawer>
