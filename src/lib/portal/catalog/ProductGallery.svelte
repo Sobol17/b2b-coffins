@@ -8,15 +8,15 @@
 	const current = $derived(mediaIds[selected] ?? mediaIds[0] ?? null);
 </script>
 
-<div data-testid="product-gallery" class="rounded-card bg-surface-raised p-6">
-	<div class={['grid gap-3.5', mediaIds.length > 1 && 'sm:grid-cols-[5.75rem_1fr]']}>
+<div data-testid="product-gallery" class="rounded-card bg-surface-raised p-4 sm:p-5">
+	<div class={['grid gap-3', mediaIds.length > 1 && 'sm:grid-cols-[4.5rem_1fr]']}>
 		{#if mediaIds.length > 1}
-			<div class="flex gap-2.5 sm:flex-col">
+			<div class="flex gap-2 sm:flex-col">
 				{#each mediaIds as mediaId, index (mediaId)}
 					<Button
 						variant="ghost"
 						class={[
-							'h-auto w-20 overflow-hidden rounded-inset p-0 sm:w-full',
+							'h-auto w-16 overflow-hidden rounded-inset p-0 sm:w-full',
 							index === selected && 'ring-2 ring-brand'
 						]}
 						aria-label="Фото {index + 1}"
@@ -32,7 +32,7 @@
 			mediaId={current}
 			alt={title}
 			caption="основное фото изделия"
-			class="aspect-[4/3]"
+			class="aspect-[4/3] max-h-80 sm:max-h-96"
 		/>
 	</div>
 </div>
