@@ -1,0 +1,47 @@
+# Fixed name keeps volume names stable whatever directory the checkout lives in.
+name: b2b-coffins
+
+services:
+  app:
+    build: .
+    image: b2b-coffins:latest
+    restart: unless-stopped
+    # On the server `.env` holds production values: compose reads it for APP_DOMAIN too.
+    env_file: .env
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      ORIGIN: https://${APP_DOMAIN:?set APP_DOMAIN in .env}
+      DATABASE_PATH: /app/data/app.db
+      FILES_DIR: /app/data/files
+      # Caddy is the only hop in front, so the client IP for login rate limits is the last XFF entry.
+      ADDRESS_HEADER: X-Forwarded-For
+      XFF_DEPTH: 1
+      # Request attachments go up to 10 MB; adapter-node refuses anything over 512K by default.
+      BODY_SIZE_LIMIT: 12M
+    volumes:
+      - app-data:/app/data
+    expose:
+      - '3000'
+
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    depends_on:
+      app:
+        condition: service_healthy
+    environment:
+      APP_DOMAIN: ${APP_DOMAIN}
+    ports:
+      - '80:80'
+      - '443:443'
+      - '443:443/udp'
+    volumes:
+      - ./docker/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+
+volumes:
+  app-data:
+  caddy-data:
+  caddy-config:
