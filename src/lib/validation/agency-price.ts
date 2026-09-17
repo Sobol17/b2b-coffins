@@ -9,6 +9,8 @@ export const agencyPriceEntrySchema = z.object({
 		.int({ error: 'Введите сумму в рублях' })
 		.min(0, { error: 'Цена не может быть отрицательной' })
 		.max(AGENCY_PRICE_MAX_MINOR, { error: 'Слишком большая цена' })
+		// The money field takes whole rubles; a crafted form must not store kopecks behind it.
+		.multipleOf(100, { error: 'Введите цену в целых рублях' })
 });
 
 /** The page submits every visible row at once; the bound matches MAX_PER_PAGE of core/list. */

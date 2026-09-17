@@ -5,7 +5,8 @@ const ORIGIN = 'http://localhost:4173';
 const MODEL = 'Модель «Канцлер»';
 const PRICE_RUBLES = '154 300';
 // The app groups thousands with a no-break space, the same character `formatMinor` writes.
-const PRICE_SHOWN = '154\u00a0300,00';
+// Whole rubles: the screens carry no kopecks (v1.32).
+const PRICE_SHOWN = /154\u00a0300(?![,\d])/;
 
 async function openModel(page: Page, title: string): Promise<string> {
 	await page.goto('/portal/catalog');

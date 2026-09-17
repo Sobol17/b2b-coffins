@@ -53,7 +53,7 @@ test('the product page quotes the personal price to the administrator', async ({
 	await openVolga(page);
 
 	// Partner price list of the seed: MDL-201-180-PIN costs 8 300 ₽ instead of the base 8 900 ₽.
-	await expect(page.getByTestId('product-page-price')).toContainText('8 300,00');
+	await expect(page.getByTestId('product-page-price')).toContainText(/8\u00a0300(?![,\d])/);
 	await expect(page.getByTestId('product-page-stock')).toContainText('12 шт');
 });
 

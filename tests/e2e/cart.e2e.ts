@@ -43,7 +43,9 @@ test('the administrator sees the personal total with the contract discount', asy
 
 	await page.goto('/portal/cart');
 	await expect(page.getByTestId('draft-discount')).toContainText('5 %');
-	await expect(page.getByTestId('draft-total')).toContainText(',');
+	// Whole rubles on screen (v1.32): a digit is there, a kopeck separator is not.
+	await expect(page.getByTestId('draft-total')).toContainText(/\d/);
+	await expect(page.getByTestId('draft-total')).not.toContainText(',');
 
 	// Leave the seed account without a draft for the next run.
 	await page.getByRole('button', { name: 'Очистить' }).click();

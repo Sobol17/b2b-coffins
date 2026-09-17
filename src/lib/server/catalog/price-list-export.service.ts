@@ -4,7 +4,7 @@ import { BaseService } from '../core/service';
 import { CatalogPricing } from './catalog-pricing';
 import { VariantRepository } from './variant.repository';
 import type { ActorContext } from '$lib/types/actor';
-import { fromMinor } from '$lib/utils/money';
+import { fromMinor, roundHalfUp } from '$lib/utils/money';
 
 export interface PriceListLine {
 	readonly sku: string;
@@ -62,12 +62,12 @@ export class PriceListExportService extends BaseService {
 			{ header: 'Размер', key: 'sizeCode', width: 10 },
 			{ header: 'Материал', key: 'materialTitle', width: 14 },
 			{ header: 'Длина, мм', key: 'lengthMm', width: 12 },
-			{ header: 'Цена, ₽', key: 'price', width: 14, style: { numFmt: '#,##0.00' } }
+			{ header: 'Цена, ₽', key: 'price', width: 14, style: { numFmt: '#,##0' } }
 		];
 		sheet.getRow(1).font = { bold: true };
 		for (const line of lines) {
-			// The sheet is a document for people: rubles as numbers. Kopecks stay integers in the app.
-			sheet.addRow({ ...line, price: fromMinor(line.priceMinor) });
+			// The sheet is a document for people: whole rubles, like the screens. Kopecks stay in the app.
+			sheet.addRow({ ...line, price: roundHalfUp(fromMinor(line.priceMinor)) });
 		}
 		return Buffer.from(await workbook.xlsx.writeBuffer());
 	}
