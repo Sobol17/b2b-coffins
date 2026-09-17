@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { cn } from '$lib/utils/cn';
 	import * as Popover from '$lib/ui/base/popover/index.js';
 	import Button from '$lib/ui/base/button/button.svelte';
 	import Field from './Field.svelte';
@@ -49,7 +50,7 @@
 					<Button
 						{...props}
 						variant="secondary"
-						class="w-full justify-start font-normal"
+						class={cn('w-full justify-start font-normal', value === '' && 'text-muted-foreground')}
 						aria-invalid={error ? 'true' : undefined}
 					>
 						{value === '' ? placeholder : formatDate(`${value}T00:00:00Z`)}
