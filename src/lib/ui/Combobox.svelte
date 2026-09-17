@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { cn } from '$lib/utils/cn';
 	import * as Popover from '$lib/ui/base/popover/index.js';
 	import Button from '$lib/ui/base/button/button.svelte';
 	import Field from './Field.svelte';
@@ -16,7 +17,7 @@
 		id,
 		name,
 		searchable = true,
-		placeholder = 'Выберите значение',
+		placeholder,
 		disabled = false
 	}: {
 		options: readonly SelectOption[];
@@ -28,7 +29,8 @@
 		id?: string | undefined;
 		name?: string | undefined;
 		searchable?: boolean;
-		placeholder?: string;
+		/** Required: a generic «choose a value» tells nothing about the field. */
+		placeholder: string;
 		disabled?: boolean;
 	} = $props();
 
@@ -58,7 +60,7 @@
 					<Button
 						{...props}
 						variant="secondary"
-						class="w-full justify-between font-normal"
+						class={cn('w-full justify-between font-normal', !selected && 'text-muted-foreground')}
 						aria-invalid={error ? 'true' : undefined}
 					>
 						{selected?.label ?? placeholder}

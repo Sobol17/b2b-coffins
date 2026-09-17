@@ -2,6 +2,7 @@
 	import { enhance } from '$app/forms';
 	import { resolve } from '$app/paths';
 	import { Button, Card, ErrorState, Input } from '$lib/ui';
+	import { PLACEHOLDER } from '$lib/utils/placeholders';
 	import type { ActionData, PageData } from './$types';
 
 	let { data, form }: { data: PageData; form: ActionData } = $props();
@@ -20,6 +21,7 @@
 				name="newPassword"
 				type="password"
 				label="Новый пароль"
+				placeholder="Введите новый пароль"
 				autocomplete="new-password"
 				required
 			/>
@@ -27,6 +29,7 @@
 				name="repeatPassword"
 				type="password"
 				label="Повторите пароль"
+				placeholder="Повторите пароль"
 				autocomplete="new-password"
 				required
 			/>
@@ -45,7 +48,14 @@
 		</Card.Root>
 	{:else}
 		<form method="POST" action="?/request" use:enhance class="flex flex-col gap-4">
-			<Input name="email" type="email" label="Электронная почта" autocomplete="username" required />
+			<Input
+				name="email"
+				type="email"
+				label="Электронная почта"
+				placeholder={PLACEHOLDER.email}
+				autocomplete="username"
+				required
+			/>
 
 			{#if form?.formError}
 				<div data-testid="form-error"><ErrorState title={form.formError} /></div>

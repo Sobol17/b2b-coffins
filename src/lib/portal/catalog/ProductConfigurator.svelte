@@ -23,7 +23,9 @@
 		formError?: string | undefined;
 	} = $props();
 
-	const KIND_LABEL: Readonly<Record<OptionKind, string>> = { color: 'Цвет' };
+	const KIND_TEXT: Readonly<Record<OptionKind, { label: string; placeholder: string }>> = {
+		color: { label: 'Цвет', placeholder: 'Выберите цвет' }
+	};
 
 	let chosen = $state<Partial<Record<OptionKind, string>>>({});
 	let qty = $state(1);
@@ -119,6 +121,7 @@
 			{#if sizeOptions.length > 0}
 				<Select
 					label="Размер"
+					placeholder="Выберите размер"
 					options={sizeOptions}
 					bind:value={() => String(variant?.id ?? ''), (next) => (selectedId = Number(next))}
 				/>
@@ -126,7 +129,8 @@
 
 			{#each groups as group (group.kind)}
 				<Select
-					label={KIND_LABEL[group.kind]}
+					label={KIND_TEXT[group.kind].label}
+					placeholder={KIND_TEXT[group.kind].placeholder}
 					options={group.options}
 					bind:value={() => valueOf(group), (next) => (chosen = { ...chosen, [group.kind]: next })}
 				/>
@@ -138,7 +142,14 @@
 				<!-- Wraps on a narrow phone: the pill button never shrinks below its label. -->
 				<div class="flex flex-wrap items-end gap-3">
 					<div class="w-28">
-						<NumberInput name="qty" label="Количество" min={1} max={999} bind:value={qty} />
+						<NumberInput
+							name="qty"
+							label="Количество"
+							placeholder="Введите количество"
+							min={1}
+							max={999}
+							bind:value={qty}
+						/>
 					</div>
 					<Button
 						type="submit"

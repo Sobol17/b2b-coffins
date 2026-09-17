@@ -5,6 +5,7 @@
 		readonly key: string;
 		readonly label: string;
 		readonly type: 'text' | 'select' | 'date';
+		readonly placeholder: string;
 		readonly options?: readonly SelectOption[];
 	}
 </script>
@@ -63,17 +64,20 @@
 			{#if field.type === 'select'}
 				<Select
 					label={field.label}
+					placeholder={field.placeholder}
 					options={field.options ?? []}
 					bind:value={() => filters[field.key] ?? '', (next) => set(field.key, next)}
 				/>
 			{:else if field.type === 'date'}
 				<DatePicker
 					label={field.label}
+					placeholder={field.placeholder}
 					bind:value={() => filters[field.key] ?? '', (next) => set(field.key, next)}
 				/>
 			{:else}
 				<Input
 					label={field.label}
+					placeholder={field.placeholder}
 					bind:value={() => filters[field.key] ?? '', (next) => set(field.key, next)}
 				/>
 			{/if}

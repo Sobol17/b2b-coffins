@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import { Button, Input, Modal, Select, withToast, type ToastSpec } from '$lib/ui';
+	import { PLACEHOLDER } from '$lib/utils/placeholders';
 	import { ROLE_OPTIONS } from './labels';
 
 	type Field = 'fullName' | 'email' | 'phone' | 'role';
@@ -55,6 +56,7 @@
 			<Input
 				name="fullName"
 				label="Имя и фамилия"
+				placeholder={PLACEHOLDER.fullName}
 				required
 				autocomplete="off"
 				error={errors?.fullName?.join(', ')}
@@ -63,12 +65,26 @@
 				name="email"
 				type="email"
 				label="Электронная почта"
+				placeholder={PLACEHOLDER.email}
 				required
 				autocomplete="off"
 				error={errors?.email?.join(', ')}
 			/>
-			<Input name="phone" type="tel" label="Телефон" error={errors?.phone?.join(', ')} />
-			<Select name="role" label="Роль" options={ROLE_OPTIONS} bind:value={role} required />
+			<Input
+				name="phone"
+				type="tel"
+				label="Телефон"
+				placeholder={PLACEHOLDER.phone}
+				error={errors?.phone?.join(', ')}
+			/>
+			<Select
+				name="role"
+				label="Роль"
+				placeholder="Выберите роль"
+				options={ROLE_OPTIONS}
+				bind:value={role}
+				required
+			/>
 
 			{#if formError}
 				<p data-testid="create-error" class="text-sm text-danger">{formError}</p>

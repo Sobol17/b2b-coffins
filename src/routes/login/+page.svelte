@@ -3,6 +3,7 @@
 	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
 	import { Button, Card, ErrorState, Input } from '$lib/ui';
+	import { PLACEHOLDER } from '$lib/utils/placeholders';
 	import type { ActionData, PageData } from './$types';
 
 	let { data, form }: { data: PageData; form: ActionData } = $props();
@@ -33,6 +34,7 @@
 				name="email"
 				type="email"
 				label="Электронная почта"
+				placeholder={PLACEHOLDER.email}
 				autocomplete="username"
 				required
 				value={form?.email ?? ''}
@@ -42,6 +44,7 @@
 				name="password"
 				type="password"
 				label="Пароль"
+				placeholder="Введите пароль"
 				autocomplete="current-password"
 				required
 			/>

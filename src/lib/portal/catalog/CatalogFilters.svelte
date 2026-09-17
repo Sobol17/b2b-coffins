@@ -29,6 +29,9 @@
 	const lengthTo = $derived(
 		filters.lengthToMm === undefined ? '' : String(filters.lengthToMm / 10)
 	);
+	// The bounds of the section are the natural sample values; without variants fall back to common sizes.
+	const minCm = $derived(String((facets.lengthMm.min ?? 1800) / 10));
+	const maxCm = $derived(String((facets.lengthMm.max ?? 2000) / 10));
 	const hint = $derived(
 		facets.lengthMm.min === null || facets.lengthMm.max === null
 			? undefined
@@ -79,8 +82,8 @@
 	<fieldset class="flex flex-col gap-2">
 		<legend class="mb-3 text-xs tracking-[0.14em] text-fg-faint uppercase">Длина, см</legend>
 		<div class="grid grid-cols-2 gap-2">
-			<Input name="lengthFrom" label="от" value={lengthFrom} />
-			<Input name="lengthTo" label="до" value={lengthTo} />
+			<Input name="lengthFrom" label="от" placeholder={minCm} value={lengthFrom} />
+			<Input name="lengthTo" label="до" placeholder={maxCm} value={lengthTo} />
 		</div>
 		{#if hint}<p class="text-xs text-fg-faint">{hint}</p>{/if}
 	</fieldset>

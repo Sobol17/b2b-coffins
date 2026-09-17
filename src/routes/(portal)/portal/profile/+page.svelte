@@ -5,6 +5,7 @@
 	import CounterpartyOverview from '$lib/portal/profile/CounterpartyOverview.svelte';
 	import ProfileNav from '$lib/portal/ProfileNav.svelte';
 	import { Breadcrumbs, Button, Card, Input, withToast } from '$lib/ui';
+	import { PLACEHOLDER } from '$lib/utils/placeholders';
 	import type { PageProps } from './$types';
 
 	let { data, form }: PageProps = $props();
@@ -47,12 +48,14 @@
 						<Input
 							label="Электронная почта"
 							value={profile.email}
+							placeholder={PLACEHOLDER.email}
 							readonly
 							hint="Адрес для входа меняет менеджер мастерской"
 						/>
 						<Input
 							name="fullName"
 							label="Имя и фамилия"
+							placeholder={PLACEHOLDER.fullName}
 							value={profile.fullName}
 							autocomplete="name"
 							required
@@ -62,6 +65,7 @@
 							name="phone"
 							type="tel"
 							label="Телефон"
+							placeholder={PLACEHOLDER.phone}
 							value={profile.phone ?? ''}
 							autocomplete="tel"
 							error={form?.errors?.phone?.join(', ')}

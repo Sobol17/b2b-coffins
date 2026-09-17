@@ -6,9 +6,24 @@
 	let { data, form }: { data: PageData; form: ActionData } = $props();
 
 	const fields = [
-		{ name: 'currentPassword', label: 'Текущий пароль', autocomplete: 'current-password' },
-		{ name: 'newPassword', label: 'Новый пароль', autocomplete: 'new-password' },
-		{ name: 'repeatPassword', label: 'Повторите новый пароль', autocomplete: 'new-password' }
+		{
+			name: 'currentPassword',
+			label: 'Текущий пароль',
+			placeholder: 'Введите текущий пароль',
+			autocomplete: 'current-password'
+		},
+		{
+			name: 'newPassword',
+			label: 'Новый пароль',
+			placeholder: 'Введите новый пароль',
+			autocomplete: 'new-password'
+		},
+		{
+			name: 'repeatPassword',
+			label: 'Повторите новый пароль',
+			placeholder: 'Повторите новый пароль',
+			autocomplete: 'new-password'
+		}
 	] as const;
 </script>
 
@@ -31,6 +46,7 @@
 				name={field.name}
 				type="password"
 				label={field.label}
+				placeholder={field.placeholder}
 				autocomplete={field.autocomplete}
 				required
 				error={form?.errors?.[field.name]?.join(', ')}

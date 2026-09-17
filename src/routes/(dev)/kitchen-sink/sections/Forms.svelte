@@ -38,29 +38,55 @@
 </script>
 
 <Showcase name="Input">
-	<Input label="Название" hint="Как в договоре" bind:value={text} required />
-	<Input label="С ошибкой" error="Поле обязательно" value="" />
+	<Input
+		label="Название"
+		hint="Как в договоре"
+		placeholder="Введите название"
+		bind:value={text}
+		required
+	/>
+	<Input label="С ошибкой" error="Поле обязательно" placeholder="Введите текст" value="" />
 </Showcase>
 
 <Showcase name="Textarea">
-	<Textarea label="Комментарий" bind:value={comment} hint="До 500 символов" />
+	<Textarea
+		label="Комментарий"
+		placeholder="Введите комментарий"
+		bind:value={comment}
+		hint="До 500 символов"
+	/>
 </Showcase>
 
 <Showcase name="NumberInput">
-	<NumberInput label="Количество" bind:value={qty} min={1} />
+	<NumberInput label="Количество" placeholder="Введите количество" bind:value={qty} min={1} />
 </Showcase>
 
 <Showcase name="MoneyInput">
-	<MoneyInput label="Цена" bind:valueMinor={priceMinor} hint="Рубли, хранение в копейках" />
+	<MoneyInput
+		label="Цена"
+		placeholder="Введите сумму"
+		bind:valueMinor={priceMinor}
+		hint="Рубли, хранение в копейках"
+	/>
 	<output data-testid="money-minor" class="text-sm text-fg-muted">{priceMinor}</output>
 </Showcase>
 
 <Showcase name="Select">
-	<Select label="Материал" options={materials} bind:value={material} />
+	<Select
+		label="Материал"
+		placeholder="Выберите материал"
+		options={materials}
+		bind:value={material}
+	/>
 </Showcase>
 
 <Showcase name="Combobox">
-	<Combobox label="Отделка" options={materials} bind:value={finish} />
+	<Combobox
+		label="Материал"
+		placeholder="Выберите материал"
+		options={materials}
+		bind:value={finish}
+	/>
 </Showcase>
 
 <Showcase name="Checkbox">

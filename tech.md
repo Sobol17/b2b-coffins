@@ -1,7 +1,7 @@
 # tech.md — ядро проекта
 
 **Проект:** B2B-портал + CRM для столярной мастерской (производство гробов)
-**Версия ядра:** v1.23
+**Версия ядра:** v1.24
 **Дата:** 17.09.2026
 **Статус:** этап 1 (портал, P1–P9) завершён 17.09.2026, этап 2 (CRM) не начат
 **Владелец файла:** Sobol17 (тимлид и единственный разработчик)
@@ -12,6 +12,7 @@
 | Версия | Изменение |
 |---|---|
 | v1.0 | Первая заморозка ядра: стек, структура, схема БД, контракты очереди и событий, общие типы, UI-примитивы, правила кода, дорожная карта слайсов |
+| v1.24 | Пустых полей в интерфейсе нет. `Input`, `Textarea`, `NumberInput`, `MoneyInput`, `Select` и `Combobox` требуют проп `placeholder`, поэтому поле без подсказки не проходит тайпчек. Общий текст «Выберите значение» у `Select` и `Combobox` убран. `DatePicker` и `DateRangePicker` оставляют свои значения по умолчанию «Выберите дату» и «Выберите период». `FilterField` получил обязательное поле `placeholder`. Плейсхолдер короткий: «Введите номер», «Выберите роль», без примеров значений и пояснений. Тексты полей почты, телефона и имени лежат в `lib/utils/placeholders.ts`. E2E `ui-placeholders` проверяет, что у видимых полей ввода на экранах входа, портала и в `kitchen-sink` плейсхолдер не пустой. §9 приведён к этому |
 | v1.23 | Добавлена команда `pnpm seed:demo` (`scripts/seed-demo.ts`, логика в `scripts/seed/demo.ts`): демо-заявки контрагента «Ритуал-Сервис» во всех статусах потока и журнал уведомлений для `admin@ritual-service.example` и `employee@ritual-service.example`. Заявки создаются через `DraftService`, `RequestSubmitService` и `RequestTransitionService` от имени реальных учёток сида, поэтому номер, история, события, аудит и складские движения появляются так же, как в приложении. Назначение исполнителей и отметку оплаты сидер пишет напрямую, пока их экранов нет (C4, C7). Очередь дочитывается в том же процессе, письма уходят только в фейковый драйвер при любом `MAIL_DRIVER`. Метка `externalNumber` вида `ДЕМО-n` делает повторный запуск пустым. Команда запускается после `pnpm seed` и в e2e не участвует: общий набор фикстур §10 остаётся прежним. §2 и §11 приведены к этому |
 | v1.22 | Опции изделия сведены к цвету: по бизнес-процессу клиент выбирает в карточке товара только размер и цвет. `OPTION_KINDS` и `options.kind` содержат одно значение `color`, виды `finish`, `lacquer`, `upholstery`, `hardware` и `kit` выведены из системы. Цвет не меняет цену: `priceDeltaMinor` остаётся в схеме, в фикстурах равен нулю. Фильтр листинга «Отделка» заменён на «Цвет»: `CatalogFilters.finishOptionIds` стал `colorOptionIds`, `CatalogFacetsDto.finishes` стал `colors`, параметр адреса `finish` стал `color`. Колонка `kind` в SQLite не имеет CHECK, поэтому миграции нет. Строки прежних видов в уже наполненной базе снимает сид: убирает их из матрицы `product_options` и из черновиков, удаляет неиспользованные, а упомянутые в отправленных заявках выключает через `isActive`. Словари `finish`, `fabric` и `hardware` в `DICT_CODES` описывают складские материалы этапа 2 и остаются. §5, §8 и §18 приведены к этому |
 | v1.21 | Поставка на демо-стенд. Приложение собирается в Docker-образ (`Dockerfile`, Node 22 на Debian slim) и запускается через `compose.yml` за Caddy, который выпускает сертификат Let's Encrypt для `APP_DOMAIN`. Контейнер `app` на старте применяет миграции и запускает `node build`, база и файлы лежат в томе `app-data`. `tsx` перенесён в зависимости рантайма: миграции, сид и CLI `pnpm admin` выполняются внутри контейнера. `adapter-node` получает `ADDRESS_HEADER=X-Forwarded-For` и `XFF_DEPTH=1`, чтобы лимиты входа видели IP клиента, и `BODY_SIZE_LIMIT=12M` под вложения до 10 МБ. Ключи стенда описаны в `.env.production.example`, порядок развёртывания, обновления и бэкапа в `docs/deploy.md`. CD по-прежнему нет: обновление запускается вручную. §3, §11, §11.1, §14 C14 и §16 приведены к этому |
@@ -1135,14 +1136,14 @@ export class RequestDtoMapper {
 |---|---|
 | `Button` | `variant: 'primary'\|'secondary'\|'ghost'\|'danger'`, `size: 'sm'\|'md'\|'lg'\|'touch'`, `loading`, `disabled` |
 | `TouchButton` | обёртка `Button` с `size='touch'`, минимум 44×44 px, для цеха и водителя |
-| `Input` / `Textarea` / `NumberInput` | `label`, `error`, `hint`, `required`, `bind:value` |
-| `MoneyInput` | `bind:valueMinor`, ввод в рублях, хранение в копейках |
-| `Select` / `Combobox` | `options: {value,label}[]`, `bind:value`, `searchable` |
+| `Input` / `Textarea` / `NumberInput` | `label`, `placeholder` (обязателен, v1.24), `error`, `hint`, `required`, `bind:value` |
+| `MoneyInput` | `bind:valueMinor`, `placeholder` (обязателен), ввод в рублях, хранение в копейках |
+| `Select` / `Combobox` | `options: {value,label}[]`, `placeholder` (обязателен, без общего «Выберите значение»), `bind:value`, `searchable` |
 | `Checkbox` / `Switch` / `RadioGroup` | `label`, `bind:checked`; у `Checkbox` ещё `name` и `value` для отправки в форме |
-| `DatePicker` / `DateRangePicker` | `bind:value: string`, ISO-строки |
+| `DatePicker` / `DateRangePicker` | `bind:value: string`, ISO-строки, `placeholder` по умолчанию «Выберите дату» и «Выберите период» |
 | `FileUpload` | `accept`, `maxSizeMb`, `multiple`, `fields` (доп. поля формы, например владелец файла), `onUploaded(mediaId)` |
 | `DataTable` | `columns`, `rows`, `total`, `query: ListQuery`, `onQueryChange`, `exportUrl`, серверная пагинация |
-| `FilterBar` | `fields`, `bind:filters`, сохранение в URL |
+| `FilterBar` | `fields` (у каждого поля свой `placeholder`), `bind:filters`, сохранение в URL |
 | `Modal` / `Drawer` / `ConfirmDialog` | `open`, `title`, `onClose`, `{#snippet body()}` |
 | `Toast` (`toast.success/error/info/warning`) | глобальный стор на рунах; `(title, { description?, durationMs?, action?: { label, href } })`, `durationMs: 0` держит тост до закрытия, наведение и фокус ставят таймер на паузу, повтор того же текста перезапускает тост вместо копии, в стопке не больше четырёх (v1.19). Исход form action показывает `withToast({ success?, reset?, pending?, onSuccess? })` из `lib/ui/form-toast.ts`: успех своим текстом, `formError` сервера текстом ошибки, ошибки полей фразой «Проверьте поля формы», обрыв связи отдельной фразой |
 | `StatusBadge` | `status: RequestStatus`, палитра и подпись из одного словаря |

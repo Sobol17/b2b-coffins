@@ -79,7 +79,7 @@
 		<Textarea
 			name="comment"
 			label="Комментарий к заявке"
-			placeholder="Например: разгрузка после 14:00"
+			placeholder="Введите комментарий"
 			value={draft.comment ?? ''}
 			rows={3}
 			maxlength={1000}
@@ -88,6 +88,7 @@
 			name="externalNumber"
 			label="Ваш номер заявки"
 			hint="Номер из вашей учётной системы, если он есть"
+			placeholder="Введите номер"
 			value={draft.externalNumber ?? ''}
 			maxlength={40}
 		/>

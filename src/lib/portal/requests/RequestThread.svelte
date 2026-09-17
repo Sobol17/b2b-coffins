@@ -67,6 +67,7 @@
 			<Textarea
 				name="body"
 				label="Сообщение менеджеру"
+				placeholder="Введите сообщение"
 				bind:value={body}
 				error={formError}
 				rows={3}
