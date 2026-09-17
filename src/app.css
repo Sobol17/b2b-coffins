@@ -76,15 +76,16 @@
 	--color-success: #3f5c3a;
 
 	/* Status tones. StatusBadge and Stepper read them through lib/ui/status.ts, never inline.
-	   The flow deepens along the ramp: new, in work, ready. */
+	   New and in work deepen along the blue ramp; ready is a strong green, so the request the
+	   agency can collect stands out, and paid stays a pale green after it. */
 	--color-tone-neutral: var(--color-neutral-800);
 	--color-tone-neutral-soft: var(--color-neutral-200);
 	--color-tone-info: var(--color-brand-800);
 	--color-tone-info-soft: var(--color-brand-100);
 	--color-tone-progress: var(--color-brand-800);
 	--color-tone-progress-soft: var(--color-brand-200);
-	--color-tone-ready: var(--color-brand-900);
-	--color-tone-ready-soft: var(--color-brand-400);
+	--color-tone-ready: #1f3d1b;
+	--color-tone-ready-soft: #b9dcae;
 	--color-tone-warning: #7a5a1c;
 	--color-tone-warning-soft: #f6efe0;
 	--color-tone-success: #3f5c3a;
