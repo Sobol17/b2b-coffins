@@ -49,7 +49,7 @@ describe('design tokens (tech.md 9, 18.2)', () => {
 		expect(css).toContain('--color-brand-800: #1c2b48');
 		expect(css).toContain('--color-neutral-200: #e8ecef');
 		expect(css).toContain('--color-brand: var(--color-brand-800)');
-		expect(css).toContain('--color-surface: var(--color-brand-250)');
+		expect(css).toContain('--color-surface: var(--color-brand-150)');
 		expect(css).toContain('--radius-card: 1.125rem');
 		expect(css).toContain('--radius-pill: 9999px');
 	});

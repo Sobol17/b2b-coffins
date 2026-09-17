@@ -17,9 +17,9 @@
 
 	/* Ramps. Semantic tokens below point at them; a slice reaches for a ramp only when no
 	   semantic name fits. */
-	--color-brand-100: #e1ebf3;
+	--color-brand-100: #e6f0fb;
+	--color-brand-150: #d0e2f5;
 	--color-brand-200: #c4d8e5;
-	--color-brand-250: #b5d0ec;
 	--color-brand-300: #a7c7e7;
 	--color-brand-400: #8eb1d1;
 	--color-brand-500: #40679b;
@@ -50,8 +50,8 @@
 
 	/* Surfaces and text. The four light palette colours fail as text on white (1.5 to 2.2), so they
 	   only ever fill a surface, and the text on them stays midnight. The page field is Baby Blue Eyes
-	   lifted a step with its saturation kept, so the tint survives a poor screen; muted text and links are dark enough to hold AA on it. */
-	--color-surface: var(--color-brand-250);
+	   lifted to a light sky with its saturation kept, so the tint survives a poor screen; muted text and links are dark enough to hold AA on it. */
+	--color-surface: var(--color-brand-150);
 	--color-surface-raised: #ffffff;
 	--color-surface-muted: var(--color-neutral-100);
 	--color-chip: var(--color-neutral-200);
