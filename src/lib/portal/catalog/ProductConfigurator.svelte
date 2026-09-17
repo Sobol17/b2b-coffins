@@ -141,14 +141,15 @@
 
 			{#if variant}
 				<input type="hidden" name="variantId" value={variant.id} />
-				<div class="flex items-end gap-3">
+				<!-- Wraps on a narrow phone: the pill button never shrinks below its label. -->
+				<div class="flex flex-wrap items-end gap-3">
 					<div class="w-28">
 						<NumberInput name="qty" label="Количество" min={1} max={999} bind:value={qty} />
 					</div>
 					<Button
 						type="submit"
 						size="lg"
-						class="flex-1"
+						class="min-w-48 flex-1"
 						loading={pending}
 						data-testid="add-to-draft"
 					>
