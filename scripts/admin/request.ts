@@ -52,7 +52,7 @@ export function requestTransition(db: Db, argv: readonly string[]): void {
 }
 
 /** The console acts as a real user: the same roles, the same counterparty, the same rights. */
-function actorContext(db: Db, email: string): ActorContext {
+export function actorContext(db: Db, email: string): ActorContext {
 	const [user] = db
 		.select({ id: users.id, counterpartyId: users.counterpartyId })
 		.from(users)
@@ -81,7 +81,7 @@ function actorContext(db: Db, email: string): ActorContext {
 	};
 }
 
-function refusalReasonId(db: Db, code: string): number {
+export function refusalReasonId(db: Db, code: string): number {
 	const [item] = db
 		.select({ id: dictItems.id })
 		.from(dictItems)

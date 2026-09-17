@@ -58,6 +58,12 @@
    docker compose run --rm app pnpm seed
    ```
 
+   Для показа добавьте демо-заявки «Ритуал-Сервис» во всех статусах и журнал уведомлений. Письма при этом не уходят даже с настроенным SMTP:
+
+   ```bash
+   docker compose run --rm app pnpm seed:demo
+   ```
+
    Сид повторно запускать безопасно. Логины и пароли лежат в `scripts/fixtures/counterparties.json` и `scripts/fixtures/crm-users.json`. Репозиторий их раскрывает, поэтому на стенде с реальными данными сид не запускайте.
 
 7. Проверьте стенд:
