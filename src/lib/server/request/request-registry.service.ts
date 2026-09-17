@@ -9,7 +9,6 @@ import type { ListQuery } from '$lib/types/list';
 import {
 	REQUEST_STATUSES,
 	type RequestFilters,
-	type RequestListItemDto,
 	type RequestListPageDto,
 	type RequestStatus
 } from '$lib/types/request';
@@ -39,14 +38,18 @@ export class RequestRegistryService extends PortalRequestService {
 		};
 	}
 
-	/** The active requests of the portal home: what the counterparty is waiting for right now. */
-	active(limit: number): RequestListItemDto[] {
+	/**
+	 * The active requests of the portal home: what the counterparty is waiting for right now. The
+	 * total counts past the limit, so the heading tells how many are in work.
+	 */
+	active(limit: number): Pick<RequestListPageDto, 'rows' | 'total'> {
 		this.requireReader();
-		return this.list({
+		const { rows, total } = this.list({
 			page: 1,
 			perPage: limit,
 			filters: { statuses: ACTIVE_STATUSES }
-		}).rows;
+		});
+		return { rows, total };
 	}
 
 	private params(query: ListQuery<RequestFilters>): RegistryQuery {

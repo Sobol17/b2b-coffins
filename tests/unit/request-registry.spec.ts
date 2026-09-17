@@ -149,6 +149,18 @@ describe('portal request registry (P6)', () => {
 		expect(page.rows.map((row) => row.id)).toEqual([second, first]);
 	});
 
+	it('gives the home page a short list and the full count of requests in work', () => {
+		send(adminCtx, VOLGA_180);
+		send(adminCtx, VOLGA_180);
+		const accepted = send(adminCtx, VOLGA_180);
+		toWork(accepted);
+
+		const active = registry().active(2);
+
+		expect(active.rows).toHaveLength(2);
+		expect(active.total).toBe(3);
+	});
+
 	it('refuses a workshop actor: the registry is the portal contour', () => {
 		expect(() => registry(carpenterCtx).list(listQuery())).toThrow();
 	});
