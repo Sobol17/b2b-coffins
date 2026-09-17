@@ -1,7 +1,7 @@
 # tech.md — ядро проекта
 
 **Проект:** B2B-портал + CRM для столярной мастерской (производство гробов)
-**Версия ядра:** v1.27
+**Версия ядра:** v1.28
 **Дата:** 17.09.2026
 **Статус:** этап 1 (портал, P1–P9) завершён 17.09.2026, этап 2 (CRM) не начат
 **Владелец файла:** Sobol17 (тимлид и единственный разработчик)
@@ -12,6 +12,7 @@
 | Версия | Изменение |
 |---|---|
 | v1.0 | Первая заморозка ядра: стек, структура, схема БД, контракты очереди и событий, общие типы, UI-примитивы, правила кода, дорожная карта слайсов |
+| v1.28 | Страница товара показывает счётчик вместо «Добавить в заявку», если в черновике уже есть строка того же варианта с теми же опциями. «−» на одной штуке удаляет строку. `DraftItemDto` получил `variantId`, `DraftService.linesOf(productId)` отдаёт строки модели и пустой список роли, которая не заказывает. Страница товара получила действия `?/qty` и `?/remove` поверх `setQty` и `removeItem`. Основное фото галереи ограничено по высоте |
 | v1.27 | Поле «Ваш номер заявки» убрано из корзины: `draftDetailsSchema` и `DraftDto` больше не несут `externalNumber`, сохранение черновика и отправка его не пишут. Колонка `requests.external_number` остаётся: по ней ищет реестр, её показывает карточка, ею помечает свои заявки `pnpm seed:demo` |
 | v1.26 | Кнопка «Выйти» портала перенесена из шапки и мобильного меню в боковое меню профиля, последним пунктом под разделами. Шапка портала только навигирует. В CRM выход остаётся в шапке (§18.5) |
 | v1.25 | Шрифты подключаются статическим `static/fonts/fonts.css` из `src/app.html`, а не `@font-face` в `app.css`, и три латинских начертания грузятся через `preload`. В dev Vite подменяет встроенный `app.css` своим тегом стиля, повторное объявление гарнитур перезагружало шрифты и сдвигало текст и колонки таблиц (§18.3). `DataTable` получил вид строк `.trow` макета: без рамки и линий, шапка капителью, строка подсвечивается при наведении (§18.4) |
@@ -975,7 +976,7 @@ export interface RequestListItemDto {
 
 // Portal draft (P4). Money keys only for a role with prices; the stored sums are computed for every role.
 export interface DraftItemDto {
-  id: number; productId: number; productTitle: string; sku: string; sizeCode: string; materialTitle: string;
+  id: number; productId: number; variantId: number; productTitle: string; sku: string; sizeCode: string; materialTitle: string;
   coverMediaId: number | null; qty: number; options: { id: number; kind: string; title: string }[];
   unitPriceMinor?: number;               // variant price plus option surcharges, one piece
   lineTotalMinor?: number;
