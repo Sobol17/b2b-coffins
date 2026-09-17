@@ -17,6 +17,20 @@ export const ACCOUNTS = {
 
 export type RoleKey = keyof typeof ACCOUNTS;
 
+/** Administrator of the second seeded counterparty: the stranger for row-level checks. */
+export const OTHER_COUNTERPARTY_ADMIN = {
+	email: 'admin@pamyat.example',
+	password: 'Portal!Admin2'
+} as const;
+
+export async function loginAs(page: Page, account: { email: string; password: string }) {
+	await page.goto('/login');
+	await page.fill('input[name="email"]', account.email);
+	await page.fill('input[name="password"]', account.password);
+	await page.click('button[type="submit"]');
+	await page.waitForURL(HOME_BY_SCOPE.portal);
+}
+
 /** Accounts the suite mutates. global-setup rewrites them before every run. */
 export const TEMP_ACCOUNTS = {
 	mustChange: { email: 'temp.change@workshop.example', password: 'Temp!Access1' },
