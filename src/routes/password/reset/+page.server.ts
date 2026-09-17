@@ -1,7 +1,7 @@
 import { fail, redirect } from '@sveltejs/kit';
 import { AuthService } from '$lib/server/auth/auth.service';
 import { AppError } from '$lib/server/core/errors';
-import { fakeMailDriver } from '$lib/server/notifications/drivers/mail';
+import { mailDriver } from '$lib/server/notifications/drivers/mail/select';
 import { applyResetSchema, requestResetSchema } from '$lib/validation/auth';
 import type { Actions, PageServerLoad } from './$types';
 
@@ -13,7 +13,7 @@ export const actions = {
 		if (!parsed.success) return fail(422, { errors: parsed.error.flatten().fieldErrors });
 
 		try {
-			await new AuthService(undefined, fakeMailDriver).requestReset(
+			await new AuthService(undefined, mailDriver()).requestReset(
 				parsed.data.email,
 				getClientAddress()
 			);
