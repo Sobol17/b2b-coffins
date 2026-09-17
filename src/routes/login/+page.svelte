@@ -18,41 +18,43 @@
 
 <svelte:head><title>Вход</title></svelte:head>
 
-<main class="mx-auto flex min-h-screen max-w-md flex-col justify-center gap-6 p-6">
-	<h1 class="text-2xl font-semibold">Вход в систему</h1>
+<main class="mx-auto flex min-h-screen max-w-md flex-col justify-center p-6">
+	<Card.Root class="px-6">
+		<h1 class="text-2xl font-semibold">Вход в систему</h1>
 
-	{#if notice}
-		<Card.Root><Card.Content class="text-sm">{notice}</Card.Content></Card.Root>
-	{/if}
-
-	<form method="POST" use:enhance class="flex flex-col gap-4">
-		<input type="hidden" name="redirectTo" value={data.redirectTo} />
-
-		<Input
-			name="email"
-			type="email"
-			label="Электронная почта"
-			autocomplete="username"
-			required
-			value={form?.email ?? ''}
-		/>
-
-		<Input
-			name="password"
-			type="password"
-			label="Пароль"
-			autocomplete="current-password"
-			required
-		/>
-
-		{#if form?.formError}
-			<div data-testid="form-error">
-				<ErrorState title={form.formError} />
-			</div>
+		{#if notice}
+			<p class="rounded-sm bg-surface-muted p-4 text-sm">{notice}</p>
 		{/if}
 
-		<Button type="submit">Войти</Button>
-	</form>
+		<form method="POST" use:enhance class="flex flex-col gap-4">
+			<input type="hidden" name="redirectTo" value={data.redirectTo} />
 
-	<a href={resolve('/password/reset')} class="text-sm text-fg-muted underline">Забыли пароль?</a>
+			<Input
+				name="email"
+				type="email"
+				label="Электронная почта"
+				autocomplete="username"
+				required
+				value={form?.email ?? ''}
+			/>
+
+			<Input
+				name="password"
+				type="password"
+				label="Пароль"
+				autocomplete="current-password"
+				required
+			/>
+
+			{#if form?.formError}
+				<div data-testid="form-error">
+					<ErrorState title={form.formError} />
+				</div>
+			{/if}
+
+			<Button type="submit">Войти</Button>
+		</form>
+
+		<a href={resolve('/password/reset')} class="text-sm text-fg-muted underline">Забыли пароль?</a>
+	</Card.Root>
 </main>
