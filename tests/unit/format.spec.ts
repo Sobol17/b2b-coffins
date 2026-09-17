@@ -10,42 +10,49 @@ import {
 	pluralRu
 } from '../../src/lib/utils/format';
 
-describe('rubles and kopecks in the money input', () => {
-	it('carries an amount to rubles and back without losing a kopeck', () => {
-		expect(() =>
-			fc.assert(
-				fc.property(
-					fc.integer({ min: -1e9, max: 1e9 }),
-					(minor) => parseRublesToMinor(formatMinor(minor)) === minor
-				)
-			)
-		).not.toThrow();
-	});
-
-	it('never produces a fractional kopeck from typed text', () => {
+describe('whole rubles on screen and in the money input', () => {
+	it('carries a whole-ruble amount to text and back unchanged', () => {
 		expect(() =>
 			fc.assert(
 				fc.property(
 					fc.integer({ min: -1e7, max: 1e7 }),
-					fc.integer({ min: 0, max: 99 }),
-					(rubles, kopecks) => {
-						const parsed = parseRublesToMinor(`${rubles},${String(kopecks).padStart(2, '0')}`);
-						return parsed !== null && Number.isInteger(parsed);
-					}
+					(rubles) => parseRublesToMinor(formatMinor(rubles * 100)) === rubles * 100
 				)
 			)
 		).not.toThrow();
 	});
 
-	it('rejects text that is not an amount', () => {
-		for (const input of ['', 'abc', '12,345', '1.2.3', '--5', '5 руб']) {
+	it('shows no kopecks and rounds half a ruble up in magnitude', () => {
+		expect(formatMinor(125000)).toBe('1\u00a0250');
+		expect(formatMinor(66880)).toBe('669');
+		expect(formatMinor(66849)).toBe('668');
+		expect(formatMinor(-72050)).toBe('-721');
+		expect(formatMinor(49)).toBe('0');
+		expect(formatMinor(-49)).toBe('0');
+	});
+
+	it('never prints a decimal separator for any amount', () => {
+		expect(() =>
+			fc.assert(
+				fc.property(
+					fc.integer({ min: -1e11, max: 1e11 }),
+					(minor) => !/[,.]/.test(formatMinor(minor))
+				)
+			)
+		).not.toThrow();
+	});
+
+	it('reads whole rubles with grouping spaces and refuses kopecks', () => {
+		expect(parseRublesToMinor('4 800')).toBe(480000);
+		expect(parseRublesToMinor('4\u00a0800')).toBe(480000);
+		for (const input of ['', 'abc', '4800,50', '4800.5', '12,345', '1.2.3', '--5', '5 руб']) {
 			expect(parseRublesToMinor(input)).toBeNull();
 		}
 	});
 
 	it('draws a dash instead of a zero when the value is absent', () => {
 		expect(formatMinor()).toBe(PRICE_DASH);
-		expect(formatMinor(125000)).toBe('1 250,00');
+		expect(formatMinor(0)).toBe('0');
 	});
 
 	it('renders a stored timestamp in the organisation timezone', () => {

@@ -1,11 +1,10 @@
 import type { Minor } from '$lib/types/money';
-import { toMinor } from './money';
+import { roundHalfUp } from './money';
 
 /** What a role without prices sees in place of a number (tech.md 8.1). */
 export const PRICE_DASH = '—';
 
 const GROUP_SEPARATOR = ' ';
-const DECIMAL_SEPARATOR = ',';
 
 function groupThousands(digits: string): string {
 	let out = '';
@@ -17,25 +16,24 @@ function groupThousands(digits: string): string {
 }
 
 /**
- * Renders whole kopecks as rubles. An absent amount is a dash, never a zero: a role without prices
- * gets no value from the server, and printing 0 would read as "free".
+ * Renders an amount in whole rubles: kopecks stay in storage and in the sums (tech.md 13.1), but on
+ * screen they are noise. An absent amount is a dash, never a zero: a role without prices gets no
+ * value from the server, and printing 0 would read as "free".
  */
 export function formatMinor(minor?: number | null): string {
 	if (minor === undefined || minor === null) return PRICE_DASH;
-	const whole = Math.trunc(minor);
-	const abs = Math.abs(whole);
-	const kopecks = String(abs % 100).padStart(2, '0');
-	const sign = whole < 0 ? '-' : '';
-	return `${sign}${groupThousands(String(Math.trunc(abs / 100)))}${DECIMAL_SEPARATOR}${kopecks}`;
+	const rubles = roundHalfUp(minor / 100);
+	const sign = rubles < 0 ? '-' : '';
+	return `${sign}${groupThousands(String(Math.abs(rubles)))}`;
 }
 
-const RUBLES_PATTERN = /^-?\d+([.,]\d{0,2})?$/;
+const RUBLES_PATTERN = /^-?\d+$/;
 
-/** Reads a ruble input back into whole kopecks. Returns null when the text is not an amount. */
+/** Reads a whole-ruble input into kopecks. Returns null when the text is not such an amount. */
 export function parseRublesToMinor(input: string): Minor | null {
 	const cleaned = input.replace(/\s/g, '');
 	if (!RUBLES_PATTERN.test(cleaned)) return null;
-	return toMinor(Number(cleaned.replace(DECIMAL_SEPARATOR, '.')));
+	return (Number(cleaned) * 100) as Minor;
 }
 
 function parts(iso: string, timeZone: string): Record<string, string> {

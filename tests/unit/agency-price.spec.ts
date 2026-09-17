@@ -13,6 +13,7 @@ import { RequestCardService } from '../../src/lib/server/request/request-card.se
 import { DraftService } from '../../src/lib/server/request/draft.service';
 import type { ActorContext } from '../../src/lib/types/actor';
 import type { AgencyPriceFilters } from '../../src/lib/types/pricing';
+import { agencyPriceEntrySchema } from '../../src/lib/validation/agency-price';
 import { migratedDatabase } from './helpers/db';
 import { portalActor, resetRequests, seedOrderingWorld } from './helpers/portal-requests';
 import { send } from './helpers/registry';
@@ -193,5 +194,16 @@ describe('agency price in the cart and in the request', () => {
 		expect(after.totalMinor).toBe(before.totalMinor);
 		expect(after.itemsTotalMinor).toBe(before.itemsTotalMinor);
 		expect(after.items[0]?.agencyUnitPriceMinor).toBe(999_999);
+	});
+});
+
+describe('agency price form', () => {
+	it('takes whole rubles only, the field has no kopecks', () => {
+		expect(agencyPriceEntrySchema.safeParse({ productId: 1, priceMinor: 250_000 }).success).toBe(
+			true
+		);
+		const kopecks = agencyPriceEntrySchema.safeParse({ productId: 1, priceMinor: 250_050 });
+		expect(kopecks.success).toBe(false);
+		expect(kopecks.error?.issues[0]?.message).toBe('Введите цену в целых рублях');
 	});
 });

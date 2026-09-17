@@ -4,7 +4,7 @@
 	import { formatMinor, parseRublesToMinor } from '$lib/utils/format';
 
 	/*
-	 * The form shows rubles, the binding stays in whole kopecks (tech.md 13.1). While the field is
+	 * The form shows whole rubles, the binding stays in kopecks (tech.md 13.1). While the field is
 	 * being edited the raw text wins, so a half-typed amount is not reformatted under the cursor.
 	 * Parsing tolerates the grouping spaces, so the formatted value can be edited in place.
 	 */
@@ -38,7 +38,7 @@
 	const text = $derived(draft ?? formatMinor(valueMinor));
 	const parseError = $derived(
 		draft !== null && draft !== '' && parseRublesToMinor(draft) === null
-			? 'Введите сумму в рублях'
+			? 'Введите сумму в целых рублях'
 			: undefined
 	);
 
@@ -56,7 +56,7 @@
 			{required}
 			{disabled}
 			type="text"
-			inputmode="decimal"
+			inputmode="numeric"
 			{placeholder}
 			class="tabular-nums"
 			value={text}

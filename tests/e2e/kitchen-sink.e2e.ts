@@ -158,13 +158,18 @@ test('the registry table pages through the server query', async ({ page }) => {
 	expect(secondPage).not.toBe(firstPage);
 });
 
-test('the money input keeps the amount in whole kopecks', async ({ page }) => {
+test('the money input takes whole rubles and keeps the amount in kopecks', async ({ page }) => {
 	await openKitchenSink(page);
 
-	const field = page.locator('[data-primitive="MoneyInput"] input[inputmode="decimal"]');
-	await field.fill('1234,56');
+	const field = page.locator('[data-primitive="MoneyInput"] input[inputmode="numeric"]');
+	await field.fill('1 234');
+	await expect(page.getByTestId('money-minor')).toHaveText('123400');
 
-	await expect(page.getByTestId('money-minor')).toHaveText('123456');
+	await field.fill('1234,56');
+	await expect(page.locator('[data-primitive="MoneyInput"]')).toContainText(
+		'Введите сумму в целых рублях'
+	);
+	await expect(page.getByTestId('money-minor')).toHaveText('123400');
 });
 
 test('a price that did not arrive is drawn as a dash', async ({ page }) => {
