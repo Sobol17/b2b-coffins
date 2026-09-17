@@ -36,7 +36,9 @@ function deps(overrides: Partial<CharityRecountDeps> = {}): CharityRecountDeps {
 	};
 }
 
-function worker(handlerDeps: CharityRecountDeps, clock: () => Date = () => now): Worker {
+// The real clock by default: `visible_at` is stored in whole seconds at enqueue time, so a clock
+// frozen at module load misses every job queued in a later second.
+function worker(handlerDeps: CharityRecountDeps, clock: () => Date = () => new Date()): Worker {
 	return new Worker({ handlers: [createCharityRecountHandler(handlerDeps)], clock });
 }
 
@@ -123,15 +125,15 @@ describe('charity.recount (P8)', () => {
 		broken.put = () => {
 			throw new Error('disk I/O error');
 		};
-		let clock = now;
-		const run = worker(deps({ totals: broken }), () => clock);
+		let offsetMs = 0;
+		const run = worker(deps({ totals: broken }), () => new Date(Date.now() + offsetMs));
 
 		await run.drain();
 		const [first] = recountJobs(db);
 		expect(first?.status).toBe('pending');
 
 		for (let attempt = 1; attempt < 5; attempt += 1) {
-			clock = new Date(clock.getTime() + backoffSeconds(attempt) * 1000);
+			offsetMs += backoffSeconds(attempt) * 1000;
 			await run.drain();
 		}
 
