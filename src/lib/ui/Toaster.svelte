@@ -11,20 +11,25 @@
 			icon: CircleCheckIcon,
 			label: 'Готово',
 			tone: 'text-tone-success',
-			bar: 'bg-tone-success'
+			badge: 'bg-tone-success-soft'
 		},
-		info: { icon: InfoIcon, label: 'Информация', tone: 'text-tone-info', bar: 'bg-tone-info' },
+		info: {
+			icon: InfoIcon,
+			label: 'Информация',
+			tone: 'text-tone-info',
+			badge: 'bg-tone-info-soft'
+		},
 		warning: {
 			icon: TriangleAlertIcon,
 			label: 'Внимание',
 			tone: 'text-tone-warning',
-			bar: 'bg-tone-warning'
+			badge: 'bg-tone-warning-soft'
 		},
 		error: {
 			icon: CircleAlertIcon,
 			label: 'Ошибка',
 			tone: 'text-tone-danger',
-			bar: 'bg-tone-danger'
+			badge: 'bg-tone-danger-soft'
 		}
 	} as const satisfies Record<ToastKind, object>;
 </script>
@@ -55,7 +60,7 @@
 			data-kind={item.kind}
 			role={item.kind === 'error' ? 'alert' : 'status'}
 			aria-atomic="true"
-			class="pointer-events-auto relative flex w-full items-start gap-3 overflow-hidden rounded-card bg-surface-raised py-3 pr-2 pl-5 text-fg shadow-overlay"
+			class="pointer-events-auto flex w-full items-start gap-3 rounded-card bg-surface-raised py-3 pr-2 pl-3 text-fg shadow-overlay"
 			onmouseenter={() => toast.pause(item.id)}
 			onmouseleave={() => toast.resume(item.id)}
 			onfocusin={() => toast.pause(item.id)}
@@ -63,9 +68,13 @@
 			in:fly={{ y: 16, duration: motion }}
 			out:fly={{ x: 24, duration: motion }}
 		>
-			<span aria-hidden="true" class={['absolute inset-y-0 left-0 w-1.5', meta.bar]}></span>
-			<meta.icon aria-hidden="true" class={['mt-0.5 size-5 shrink-0', meta.tone]} />
-			<div class="flex min-w-0 flex-1 flex-col gap-1">
+			<span
+				aria-hidden="true"
+				class={['grid size-9 shrink-0 place-items-center rounded-pill', meta.badge, meta.tone]}
+			>
+				<meta.icon class="size-5" />
+			</span>
+			<div class="flex min-w-0 flex-1 flex-col gap-1 pt-1.5">
 				<p class="font-medium break-words">
 					<span class="sr-only">{`${meta.label}: `}</span>{item.title}
 				</p>
