@@ -185,6 +185,18 @@ describe('managing accounts', () => {
 		).toEqual([adminId]);
 	});
 
+	it('finds a name or an address in any case and reads a typed wildcard as a plain character', async () => {
+		const created = await service().create(input('cp_employee', 'Светлана Орлова'));
+		const found = (search: string) =>
+			service()
+				.list({ page: 1, perPage: 20, search })
+				.rows.map((r) => r.id);
+
+		expect(found('светлана')).toEqual([created.member.id]);
+		expect(found('ОРЛОВА')).toEqual([created.member.id]);
+		expect(found('%')).toEqual([]);
+	});
+
 	it('disables an account and ends every session it holds', async () => {
 		const created = await service().create(input());
 		db.insert(sessions)

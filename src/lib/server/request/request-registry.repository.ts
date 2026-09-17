@@ -1,6 +1,7 @@
-import { and, asc, desc, eq, gte, inArray, like, lte, ne, or, sql, type SQL } from 'drizzle-orm';
+import { and, asc, desc, eq, gte, inArray, lte, ne, or, sql, type SQL } from 'drizzle-orm';
 import { BaseRepository } from '../core/repository';
 import { countExpression } from '../core/list';
+import { containsText } from '../core/search';
 import { productVariants, products, requestItems, requests, users } from '../db/schema';
 import type { DateWindow } from '$lib/domain/request/registry';
 import type { ActorContext } from '$lib/types/actor';
@@ -142,7 +143,7 @@ export class RequestRegistryRepository extends BaseRepository<typeof requests> {
 
 	private searchWhere(search: string | undefined): SQL | undefined {
 		if (search === undefined || search.trim() === '') return undefined;
-		const pattern = `%${search.trim()}%`;
-		return or(like(requests.number, pattern), like(requests.externalNumber, pattern));
+		const text = search.trim();
+		return or(containsText(requests.number, text), containsText(requests.externalNumber, text));
 	}
 }
