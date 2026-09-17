@@ -1,3 +1,4 @@
+import { CharityFreezer } from '../charity/charity-freezer';
 import type { Tx } from '../db/client';
 import { bus } from '../events/bus';
 import type { EffectCode } from '$lib/types/request';
@@ -11,6 +12,8 @@ export interface RequestEffects {
 }
 
 export class OutboxRequestEffects implements RequestEffects {
+	constructor(private readonly charity: CharityFreezer = new CharityFreezer()) {}
+
 	apply(effect: EffectCode, requestId: number, tx: Tx): void {
 		switch (effect) {
 			case 'emit:request.ready':
@@ -22,12 +25,13 @@ export class OutboxRequestEffects implements RequestEffects {
 			// The audit row comes from BaseService.audited, which wraps every move.
 			case 'audit':
 				return;
-			// Stock moves are wired in C8 and the charity freeze in P8 (tech.md 14). The table already
-			// names them, so those slices plug an implementation in here without touching the service.
+			case 'freezeCharity':
+				return this.charity.freeze(requestId, tx);
+			// Stock moves are wired in C8 (tech.md 14). The table already names them, so that slice
+			// plugs an implementation in here without touching the service.
 			case 'consumeComponents':
 			case 'produceStockItems':
 			case 'shipStockItems':
-			case 'freezeCharity':
 				return;
 		}
 	}

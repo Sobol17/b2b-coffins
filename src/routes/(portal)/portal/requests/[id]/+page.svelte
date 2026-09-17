@@ -92,6 +92,15 @@
 								<dt>К оплате</dt>
 								<dd><PriceCell valueMinor={request.totalMinor} /> ₽</dd>
 							</div>
+							{#if request.charityAmountMinor !== undefined}
+								<div
+									data-testid="request-charity"
+									class="flex justify-between gap-6 text-tone-info"
+								>
+									<dt>В фонд с этой заявки</dt>
+									<dd><PriceCell valueMinor={request.charityAmountMinor} /> ₽</dd>
+								</div>
+							{/if}
 						</dl>
 					{/if}
 				</Card.Content>

@@ -71,6 +71,20 @@ describe('snapshots', () => {
 		});
 	});
 
+	it('takes the year on the workshop clock, not in UTC', () => {
+		db.insert(charityTotals)
+			.values([
+				{ scope: 'year:2026', amountMinor: 300_00, requestCount: 2 },
+				{ scope: 'year:2027', amountMinor: 0, requestCount: 0 }
+			])
+			.run();
+
+		// 31 Dec 21:30 UTC is already the new year in Moscow.
+		const newYearEve = new Date('2026-12-31T21:30:00Z');
+		expect(streamSnapshot('charity', newYearEve, 'Europe/Moscow')).toMatchObject({ yearMinor: 0 });
+		expect(streamSnapshot('charity', newYearEve, 'UTC')).toMatchObject({ yearMinor: 300_00 });
+	});
+
 	it('counts requests per status and leaves portal drafts out', () => {
 		const base = { createdById: managerId, isStockRequest: true };
 		db.insert(requests)

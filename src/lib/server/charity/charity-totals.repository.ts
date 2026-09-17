@@ -1,5 +1,6 @@
 import { eq } from 'drizzle-orm';
 import { BaseRepository } from '../core/repository';
+import type { Tx } from '../db/client';
 import { charityTotals } from '../db/schema';
 
 export interface CharityTotal {
@@ -7,7 +8,7 @@ export interface CharityTotal {
 	readonly requestCount: number;
 }
 
-/** Reads the banner read model. The totals themselves are rebuilt by `charity.recount` (P8). */
+/** The banner read model. Only `charity.recount` writes it, always as a full rebuild of one row. */
 export class CharityTotalsRepository extends BaseRepository<typeof charityTotals> {
 	constructor() {
 		super(charityTotals);
@@ -20,5 +21,17 @@ export class CharityTotalsRepository extends BaseRepository<typeof charityTotals
 			.where(eq(charityTotals.scope, scope))
 			.all();
 		return row;
+	}
+
+	/** Replaces the row, so running the same recount twice leaves the same numbers. */
+	put(scope: string, total: CharityTotal, tx: Tx): void {
+		this.db(tx)
+			.insert(charityTotals)
+			.values({ scope, ...total })
+			.onConflictDoUpdate({
+				target: charityTotals.scope,
+				set: { ...total, updatedAt: new Date() }
+			})
+			.run();
 	}
 }

@@ -37,10 +37,11 @@ export async function login(page: Page, role: RoleKey): Promise<void> {
 
 /**
  * Money keys of a server answer that a role without prices must never receive (tech.md 8.1).
- * An agency price is the counterparty's own number, so keys with the `agency` prefix are allowed.
+ * An agency price is the counterparty's own number and the `public` keys are the fund's public
+ * figures (v1.18), so both prefixes are allowed.
  */
 export function purchaseMoneyKeys(body: string): string[] {
 	return [...body.matchAll(/"([A-Za-z]*Minor)"/g)]
 		.map(([, key]) => key ?? '')
-		.filter((key) => !key.startsWith('agency'));
+		.filter((key) => !key.startsWith('agency') && !key.startsWith('public'));
 }

@@ -1,7 +1,7 @@
 # tech.md — ядро проекта
 
 **Проект:** B2B-портал + CRM для столярной мастерской (производство гробов)
-**Версия ядра:** v1.17
+**Версия ядра:** v1.18
 **Дата:** 16.09.2026
 **Владелец файла:** Sobol17 (тимлид и единственный разработчик)
 **Источник требований:** `TZ_B2B_CRM_stolyarka_v06.md`
@@ -11,6 +11,7 @@
 | Версия | Изменение |
 |---|---|
 | v1.0 | Первая заморозка ядра: стек, структура, схема БД, контракты очереди и событий, общие типы, UI-примитивы, правила кода, дорожная карта слайсов |
+| v1.18 | Слайс P8. Ключ идемпотентности `charity.recount` стал `charity:{scope}:{requestId}`: часовой ключ терял вторую доставку за тот же час, и счётчик не рос. Хендлер пересобирает строку `charity_totals` целиком из `requests`, поэтому повторный прогон ничего не меняет. Отчисление считается при первом переходе в `delivered` как `roundHalfUp(totalMinor * rate_bp / 10000)`: цена агентства в базу не входит, заявка на склад отчисления не получает. В счётчик попадают заявки с зафиксированным отчислением, кроме заявок на склад, отменённых и отклонённых; год берётся по `deliveredAt` в `org.timezone`, `requestCount` в SSE считается за всё время. Форма `settings.charity.fund`: `{ title, url? }`. В §8 добавлен `CharityBannerDto`, `RequestCardDto` получил `charityAmountMinor`. Правило §8.1 уточнено: ключи с префиксом `public` несут публичные цифры фонда и разрешены любой роли. Личный вклад контрагента и отчисление с заявки получает только роль с ценами: по ним вычисляется объём закупок |
 | v1.17 | Справка по фонду за период убрана из P8. Выгрузки по благотворительности в системе нет: остаются счётчик, баннер и `charity_totals` |
 | v1.16 | Слайс P7 переопределён. Документы и печатные формы выведены из системы: убраны таблицы `documents` и `document_templates`, список `DOCUMENT_KINDS`, топик `document.generate`, значение `document` в `media.ownerScope`, строка `pdfmake` в §3 и папка `server/documents/`, нумерация переехала в `server/numbering/`. Слайс C11 выведен из дорожной карты, его номер не переиспользуется; C5 ищет заявку по номеру без бланка, C6 остался без просмотра накладной, C10 отдаёт ведомость только в XLSX, P8 отдаёт справку по фонду в XLSX. Вместо документов портал получил цены агентства: таблица `counterparty_product_prices`, одна цена на `product`, размер и опции её не меняют. Цена агентства только для показа клиенту: в `requests.total_minor`, скидку по договору, отчисление в фонд и прайс-лист XLSX она не входит. `cp_admin` заполняет её на экране «Мои цены» и видит рядом закупочную, `cp_employee` видит только цену агентства. В §8 добавлены `CategoryDto.agencyMinPriceMinor`, `ProductListItemDto.agencyPriceMinor`, `ProductDto.agencyPriceMinor`, `DraftItemDto.agencyUnitPriceMinor`, `RequestItemDto.agencyUnitPriceMinor`, в матрицу прав `prices.manage`. Сортировка каталога по цене для сотрудника идёт по цене агентства, модель без цены уходит в конец. Правило §8.1 уточнено: ответ роли без цен не содержит закупочных ключей, ключи с префиксом `agency` разрешены |
 | v1.15 | Слайс P6, экраны «Мои заявки» и «Заявка (детальная)». Реестр портала отдаёт отправленные заявки: администратор контрагента видит весь контрагент, сотрудник только свои, черновик в реестр не попадает. Фильтры реестра: статусы чипами со счётчиками, окно дат по `submittedAt`, поиск по номеру и по своему номеру контрагента, сортировка `REQUEST_SORTS`; сортировка по сумме для роли без цен игнорируется, чтобы порядок не выдавал цены. В §8 добавлены `RequestFilters`, `RequestListPageDto`, `RequestItemDto`, `RequestHistoryStepDto`, `RequestCommentDto`, `RequestAttachmentDto`, `RequestCardDto`, а `RequestListItemDto` получил `unitCount`, `firstItemTitle`, `authorName`, `externalNumber` и `submittedAt`. Переписка с менеджером: портал читает и пишет `comments` только с `is_internal = false`, чужие внутренние комментарии не приходят в ответе. Вложения заявки: `POST /api/files` кладёт файл в `media` с `owner_scope = 'request'`, имя файла берётся из последнего сегмента `media.path`, поэтому колонка под него не заводится; `/api/files/[id]` отдаёт вложение только тому, кому видна сама заявка. Ограничения `file.upload` и `request.comment` в `rate_limits` по §12. У `FileUpload` появился проп `fields`: файл уходит на `POST /api/files` вместе с идентификатором заявки. `FilterBar` получил поле типа `date` на `DatePicker`. Отказ доменного сервиса в `load` карточки отдаётся своим статусом через `orHttpStatus`, иначе SvelteKit превращает его в 500 |
@@ -787,6 +788,8 @@ export const settings = sqliteTable('settings', {
 
 Ключи `settings`: `org.requisites`, `org.timezone`, `charity.rate_bp`, `charity.fund`, `counterparty.staff_limit_default`, `payroll.week_closing_day`, `notifications.enabled`, `crm.ip_allowlist`.
 
+Форма `charity.rate_bp`: целое число базисных пунктов от 0 до 10000. Форма `charity.fund`: `{ title: string; url?: string }` (v1.18).
+
 ---
 
 ## 6. Машина состояний заявки
@@ -870,7 +873,7 @@ export interface JobHandler<T> {
 |---|---|---|---|
 | `notification.dispatch` | `{ notificationId: number }` | `notification:{id}` | Отправка одного уведомления в один канал, отметка `sent`/`failed` |
 | `notification.fanout` | `{ eventKey: EventKey, entityId: number }` | `fanout:{eventKey}:{entityId}` | Разворачивает событие в строки `notifications` по матрице ролей и личным настройкам |
-| `charity.recount` | `{ scope: string }` | `charity:{scope}:{yyyymmddhh}` | Пересборка `charity_totals`, публикация в SSE-топик `charity` |
+| `charity.recount` | `{ scope: string }` | `charity:{scope}:{requestId}` | Пересборка `charity_totals`, публикация в SSE-топик `charity` |
 | `stock.threshold.check` | `{ stockItemId: number }` | `threshold:{id}:{yyyymmdd}` | Сравнение остатка с порогом, событие `stock.below_threshold` |
 | `import.bom` | `{ mediaId: number, actorId: number }` | `import-bom:{mediaId}` | Разбор XLSX/CSV, создание `bom_versions` + `bom_norms` |
 | `import.rates` | `{ mediaId: number, actorId: number }` | `import-rates:{mediaId}` | Создание `work_rate_versions` + `work_rates` |
@@ -995,6 +998,14 @@ export interface RequestCardDto {
   history: RequestHistoryStepDto[]; comments: RequestCommentDto[]; attachments: RequestAttachmentDto[];
   targets: RequestStatus[];              // moves the actor may ask for, guards aside (tech.md 6.2)
   itemsTotalMinor?: number; discountPercent?: number; discountMinor?: number; totalMinor?: number; paidMinor?: number;
+  charityAmountMinor?: number;           // frozen on delivery (P8), role with prices only
+}
+
+// charity.ts — donation banner of the portal home (P8). `public` keys are the fund's public figures.
+export interface CharityBannerDto {
+  fundTitle: string; fundUrl: string | null;
+  publicTotalMinor: number; publicYearMinor: number; publicRequestCount: number;
+  ownTotalMinor?: number;                // scope cp:{id}; hidden from a price-blind role, it reveals the purchase volume
 }
 
 // list.ts — one shape for every registry in the app
@@ -1080,7 +1091,7 @@ export class RequestDtoMapper {
 }
 ```
 
-Правило: `select` для роли без цен не тянет закупочные колонки из БД. Цена агентства закупочной не считается: контрагент задал её сам и показывает своему клиенту, поэтому она приходит обеим ролям портала в ключах с префиксом `agency`. Проверка в e2e: в ответе сервера для `cp_employee` нет ключа с подстрокой `Minor` без префикса `agency`.
+Правило: `select` для роли без цен не тянет закупочные колонки из БД. Цена агентства закупочной не считается: контрагент задал её сам и показывает своему клиенту, поэтому она приходит обеим ролям портала в ключах с префиксом `agency`. Публичные цифры фонда (§7.4) приходят любой роли в ключах с префиксом `public` (v1.18). Проверка в e2e: в ответе сервера для `cp_employee` нет ключа с подстрокой `Minor` без префикса `agency` или `public`.
 
 ---
 

@@ -52,6 +52,8 @@ export class CardDtoMapper {
 				discountMinor: row.discountMinor,
 				totalMinor: row.totalMinor,
 				paidMinor: row.paidMinor,
+				// Null until the delivery freezes it: the card then has no donation line at all.
+				charityAmountMinor: row.charityAmountMinor ?? undefined,
 				discountPercent:
 					row.itemsTotalMinor === undefined || row.discountMinor === undefined
 						? undefined

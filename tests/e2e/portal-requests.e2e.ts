@@ -1,34 +1,10 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test } from '@playwright/test';
 import { login, purchaseMoneyKeys } from './fixtures';
+import { openCard, sendRequest } from './portal-flow';
 import { assignCrew, e2eDb, statusOf, transition } from './transitions';
 
 const db = e2eDb();
 const ORIGIN = 'http://localhost:4173';
-
-/** The portal side of P4: a sent request is what the registry and the card start from. */
-async function sendRequest(page: Page, role: 'cp_admin' | 'cp_employee'): Promise<string> {
-	await login(page, role);
-	await page.goto('/portal/catalog');
-	await page.getByTestId('showcase-tile').filter({ hasText: 'Модель «Волга»' }).click();
-	await page.getByLabel('Количество').fill('1');
-	await page.getByTestId('add-to-draft').click();
-
-	await page.goto('/portal/cart');
-	await page.getByText('Самовывоз со склада мастерской').click();
-	await page.getByTestId('submit-draft').click();
-
-	const banner = page.getByTestId('request-submitted');
-	await expect(banner).toContainText(/З-\d{4}-\d{5}/);
-	const number = (await banner.innerText()).match(/З-\d{4}-\d{5}/)?.[0];
-	if (!number) throw new Error('the portal did not show a request number');
-	return number;
-}
-
-async function openCard(page: Page, number: string): Promise<void> {
-	await page.goto('/portal/requests');
-	await page.getByTestId('request-row').filter({ hasText: number }).getByText('Открыть').click();
-	await expect(page.getByTestId('request-number')).toContainText(number);
-}
 
 test('the counterparty follows the status of a request without calling the workshop', async ({
 	page
