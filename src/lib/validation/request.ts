@@ -42,7 +42,7 @@ export const draftItemQtySchema = z.object({ itemId: id, qty });
 export const draftItemSchema = z.object({ itemId: id });
 export const repeatRequestSchema = z.object({ requestId: id });
 
-/** Delivery, comment and the counterparty's own number, saved with the draft and at submit. */
+/** Delivery and comment, saved with the draft and at submit. */
 export const draftDetailsSchema = z
 	.object({
 		delivery: z
@@ -50,16 +50,14 @@ export const draftDetailsSchema = z
 				error: 'Выберите адрес доставки или самовывоз'
 			})
 			.optional(),
-		comment: optionalText(1000, 'Комментарий не длиннее 1000 символов'),
-		externalNumber: optionalText(40, 'Номер не длиннее 40 символов')
+		comment: optionalText(1000, 'Комментарий не длиннее 1000 символов')
 	})
 	.transform((value) => ({
 		deliveryAddressId: value.delivery?.startsWith('address:')
 			? Number(value.delivery.slice('address:'.length))
 			: null,
 		isPickup: value.delivery === 'pickup',
-		comment: value.comment,
-		externalNumber: value.externalNumber
+		comment: value.comment
 	}));
 
 export type AddDraftItemInput = z.infer<typeof addDraftItemSchema>;

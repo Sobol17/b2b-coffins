@@ -99,17 +99,23 @@ function assertNoOpenDrafts(people: People): void {
 function submit(db: Db, people: People, counterpartyId: number, scenario: DemoScenario): number {
 	const author = people[scenario.author];
 	const drafts = new DraftService(author);
+	let draftId = 0;
 	for (const line of scenario.lines) {
 		const variantId = variantIdOf(db, line.sku);
-		drafts.addItem({ variantId, qty: line.qty, optionIds: [colorIdOf(db, variantId, line.color)] });
+		draftId = drafts.addItem({
+			variantId,
+			qty: line.qty,
+			optionIds: [colorIdOf(db, variantId, line.color)]
+		}).id;
 	}
+	// The portal no longer asks for an own number; the mark still tells demo requests apart.
+	db.update(requests).set({ externalNumber: scenario.mark }).where(eq(requests.id, draftId)).run();
 	const deliveryAddressId =
 		scenario.delivery === 'pickup' ? null : addressIdOf(db, counterpartyId, scenario.delivery);
 	return new RequestSubmitService(author).submit({
 		deliveryAddressId,
 		isPickup: deliveryAddressId === null,
-		comment: scenario.comment,
-		externalNumber: scenario.mark
+		comment: scenario.comment
 	}).id;
 }
 

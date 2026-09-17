@@ -107,7 +107,6 @@ export interface DraftDto {
 	readonly isPickup: boolean;
 	readonly deliveryAddressId: number | null;
 	readonly comment: string | null;
-	readonly externalNumber: string | null;
 	readonly addresses: readonly DeliveryAddressDto[];
 	readonly updatedAt: string;
 	readonly itemsTotalMinor?: number;

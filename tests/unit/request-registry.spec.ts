@@ -9,7 +9,7 @@ import {
 	seedOrderingWorld,
 	variantId
 } from './helpers/portal-requests';
-import { listQuery, send, sentAt } from './helpers/registry';
+import { listQuery, markExternal, send, sentAt } from './helpers/registry';
 import { assign, move } from './helpers/transitions';
 
 const db = migratedDatabase();
@@ -112,7 +112,8 @@ describe('portal request registry (P6)', () => {
 	});
 
 	it('finds a request by its number and by the number of the counterparty', () => {
-		const numbered = send(adminCtx, VOLGA_180, { externalNumber: 'ЗК-77' });
+		const numbered = send(adminCtx, VOLGA_180);
+		markExternal(numbered, 'ЗК-77');
 		const page = registry().list({ ...listQuery(), search: 'ЗК-77' });
 
 		expect(page.rows.map((row) => row.id)).toEqual([numbered]);

@@ -34,12 +34,11 @@ const outsiderCtx = portalActor('cp_admin', world.outsiderId, world.otherCpId);
 
 const VOLGA_180 = variantId(db, 'MDL-201-180-PIN');
 const LADA_180 = variantId(db, 'MDL-101-180-CHB');
-const pickup = { deliveryAddressId: null, isPickup: true, comment: null, externalNumber: null };
+const pickup = { deliveryAddressId: null, isPickup: true, comment: null };
 const toHome = () => ({
 	deliveryAddressId: world.homeAddressId,
 	isPickup: false,
-	comment: 'Разгрузка после 14:00',
-	externalNumber: 'РС-12'
+	comment: 'Разгрузка после 14:00'
 });
 
 function row(id: number) {
@@ -61,8 +60,7 @@ describe('sending a request (P4)', () => {
 		expect(sent).toEqual({ id: draft.id, number: draft.number, status: 'new' });
 		expect(row(draft.id)).toMatchObject({
 			status: 'new',
-			comment: 'Разгрузка после 14:00',
-			externalNumber: 'РС-12'
+			comment: 'Разгрузка после 14:00'
 		});
 		expect(row(draft.id)?.submittedAt).toBeInstanceOf(Date);
 		expect(

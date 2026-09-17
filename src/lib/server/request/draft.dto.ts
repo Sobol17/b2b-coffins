@@ -29,7 +29,6 @@ export class DraftDtoMapper {
 			isPickup: draft.isPickup,
 			deliveryAddressId: draft.deliveryAddressId,
 			comment: draft.comment,
-			externalNumber: draft.externalNumber,
 			addresses: parts.addresses.map((address) => ({ ...address })),
 			updatedAt: draft.updatedAt.toISOString(),
 			...definedProps({

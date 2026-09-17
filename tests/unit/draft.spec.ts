@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { ForbiddenError, NotFoundError, ValidationError } from '../../src/lib/server/core/errors';
 import { auditLog, requests } from '../../src/lib/server/db/schema';
 import { DraftService } from '../../src/lib/server/request/draft.service';
+import { draftDetailsSchema } from '../../src/lib/validation/request';
 import { migratedDatabase } from './helpers/db';
 import {
 	optionId,
@@ -102,22 +103,27 @@ describe('the portal draft (P4)', () => {
 			admin().saveDetails({
 				deliveryAddressId: world.foreignAddressId,
 				isPickup: false,
-				comment: null,
-				externalNumber: null
+				comment: null
 			})
 		).toThrow(NotFoundError);
 		const draft = admin().saveDetails({
 			deliveryAddressId: null,
 			isPickup: true,
-			comment: 'После 14:00',
-			externalNumber: 'РС-77'
+			comment: 'После 14:00'
 		});
-		expect(draft).toMatchObject({
-			isPickup: true,
-			comment: 'После 14:00',
-			externalNumber: 'РС-77'
-		});
+		expect(draft).toMatchObject({ isPickup: true, comment: 'После 14:00' });
+		expect(draft).not.toHaveProperty('externalNumber');
 		expect(draft.addresses.map((address) => address.id)).toEqual([world.homeAddressId]);
+	});
+
+	it('ignores an own request number posted with the details: the cart no longer asks for it', () => {
+		const parsed = draftDetailsSchema.parse({
+			delivery: 'pickup',
+			comment: '',
+			externalNumber: 'РС-77'
+		});
+
+		expect(parsed).not.toHaveProperty('externalNumber');
 	});
 
 	it('numbers the drafts of different people one after another', () => {
