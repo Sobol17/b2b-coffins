@@ -1,6 +1,6 @@
 import { fail } from '@sveltejs/kit';
 import { requireAction, requireScope } from '$lib/server/auth/guard';
-import { AppError, httpStatusFor } from '$lib/server/core/errors';
+import { AppError, httpStatusFor, userMessage } from '$lib/server/core/errors';
 import { parseListQuery } from '$lib/server/core/list';
 import { mailDriver } from '$lib/server/notifications/drivers/mail/select';
 import { StaffService } from '$lib/server/staff/staff.service';
@@ -22,7 +22,7 @@ function staffService(locals: App.Locals, url: URL): StaffService {
 
 function refused(action: StaffAction, err: unknown) {
 	if (!(err instanceof AppError)) throw err;
-	return fail(httpStatusFor(err), { action, formError: err.message });
+	return fail(httpStatusFor(err), { action, formError: userMessage(err) });
 }
 
 async function memberId(request: Request) {

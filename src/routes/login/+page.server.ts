@@ -2,7 +2,7 @@ import { fail, redirect } from '@sveltejs/kit';
 import { AuthService } from '$lib/server/auth/auth.service';
 import { setSessionCookie } from '$lib/server/auth/cookies';
 import { SESSION_TTL_DAYS } from '$lib/server/auth/session.service';
-import { AppError } from '$lib/server/core/errors';
+import { AppError, userMessage } from '$lib/server/core/errors';
 import { mailDriver } from '$lib/server/notifications/drivers/mail/select';
 import { loginSchema } from '$lib/validation/auth';
 import type { Actions, PageServerLoad } from './$types';
@@ -27,7 +27,7 @@ export const actions = {
 		} catch (err) {
 			if (!(err instanceof AppError)) throw err;
 			// One message for a wrong password and for an unknown address: no account enumeration.
-			return fail(422, { formError: err.message, email: parsed.data.email });
+			return fail(422, { formError: userMessage(err), email: parsed.data.email });
 		}
 
 		setSessionCookie(

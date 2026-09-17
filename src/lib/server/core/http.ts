@@ -1,5 +1,5 @@
 import { error, fail } from '@sveltejs/kit';
-import { AppError, NotFoundError, httpStatusFor, publicErrorBody } from './errors';
+import { AppError, NotFoundError, httpStatusFor, publicErrorBody, userMessage } from './errors';
 
 /**
  * For page loads: a missing object renders the SvelteKit 404 page. Left alone, SvelteKit would turn
@@ -38,7 +38,7 @@ export function orHttpStatus<T>(run: () => T): T {
 /** For form actions: a domain refusal becomes a `fail` the page shows next to the form. */
 export function actionFailure(err: unknown) {
 	if (!(err instanceof AppError)) throw err;
-	return fail(httpStatusFor(err), { formError: err.message });
+	return fail(httpStatusFor(err), { formError: userMessage(err) });
 }
 
 /** For form actions: the first message of a rejected form, shown next to the form. */

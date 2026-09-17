@@ -1,6 +1,6 @@
 import { fail } from '@sveltejs/kit';
 import { requireAction, requireScope } from '$lib/server/auth/guard';
-import { AppError, httpStatusFor } from '$lib/server/core/errors';
+import { AppError, httpStatusFor, userMessage } from '$lib/server/core/errors';
 import { parseListQuery } from '$lib/server/core/list';
 import { CatalogService } from '$lib/server/catalog/catalog.service';
 import { AgencyPriceService } from '$lib/server/pricing/agency-price.service';
@@ -37,7 +37,7 @@ export const actions = {
 			return { saved: service.save(parsed.data.entries) };
 		} catch (err) {
 			if (!(err instanceof AppError)) throw err;
-			return fail(httpStatusFor(err), { formError: err.message });
+			return fail(httpStatusFor(err), { formError: userMessage(err) });
 		}
 	}
 } satisfies Actions;
