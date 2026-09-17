@@ -97,3 +97,26 @@ test('the registry filters by status and finds a request by its number', async (
 	await page.getByLabel('Поиск по номеру').press('Enter');
 	await expect(page.getByText('Заявок не найдено')).toBeVisible();
 });
+
+test('the home page lists a fresh request among the active ones with its sum', async ({ page }) => {
+	const number = await sendRequest(page, 'cp_admin');
+
+	await page.goto('/portal');
+
+	const row = page.getByTestId('data-table-row').filter({ hasText: number });
+	await expect(row).toContainText('Заявка');
+	await expect(row).toContainText('₽');
+	await expect(page.getByTestId('active-requests-count')).toContainText('в работе');
+});
+
+test('an employee sees the active requests on the home page without amounts', async ({ page }) => {
+	const number = await sendRequest(page, 'cp_employee');
+
+	await page.goto('/portal');
+
+	const row = page.getByTestId('data-table-row').filter({ hasText: number });
+	await expect(row).toContainText('—');
+	await expect(row).not.toContainText('₽');
+	const body = await (await page.request.get('/portal/__data.json')).text();
+	expect(purchaseMoneyKeys(body)).toEqual([]);
+});
