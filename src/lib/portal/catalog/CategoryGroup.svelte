@@ -14,7 +14,7 @@
 
 <section
 	data-testid="category-group"
-	class="grid gap-8 rounded-card bg-surface-raised p-6 sm:p-10 lg:grid-cols-[20rem_1fr]"
+	class="grid grid-cols-1 gap-8 rounded-card bg-surface-raised p-6 sm:p-10 lg:grid-cols-[20rem_1fr]"
 >
 	<div>
 		<div class="mb-3 text-xs tracking-[0.14em] text-fg-faint uppercase">
@@ -32,7 +32,7 @@
 		</Button>
 	</div>
 
-	<div class="grid gap-3.5 sm:grid-cols-2 xl:grid-cols-3">
+	<div class="grid grid-cols-1 gap-3.5 sm:grid-cols-2 xl:grid-cols-3">
 		{#each group.children as child (child.id)}
 			<a
 				href={resolve(`/portal/catalog/${child.id}`)}

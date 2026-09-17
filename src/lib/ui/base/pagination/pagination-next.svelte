@@ -13,10 +13,10 @@
 
 <PaginationPrimitive.NextButton
 	bind:ref
-	aria-label="Go to next page"
+	aria-label="Следующая страница"
 	class={cn(buttonVariants({ variant: 'ghost', size: 'md' }), 'pr-1.5!', className)}
 	{...restProps}
 >
-	<span class="cn-pagination-next-text hidden sm:block">Next</span>
+	<span class="cn-pagination-next-text hidden sm:block">Вперёд</span>
 	<ChevronRightIcon data-icon="inline-end" />
 </PaginationPrimitive.NextButton>

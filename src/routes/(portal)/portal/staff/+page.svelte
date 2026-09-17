@@ -77,7 +77,7 @@
 		/>
 	</div>
 
-	<div class="grid gap-6 lg:grid-cols-[17.5rem_1fr] lg:items-start">
+	<div class="grid grid-cols-1 gap-6 lg:grid-cols-[17.5rem_1fr] lg:items-start">
 		<ProfileNav
 			title={data.counterparty.name}
 			items={profileNavItems('staff', {

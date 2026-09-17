@@ -44,6 +44,7 @@
 			</Card.Content>
 		</Card.Root>
 	{:else if !draft || draft.items.length === 0}
+		<h1 class="px-2 text-4xl sm:text-5xl">Заявка</h1>
 		<EmptyState
 			title="В заявке пока пусто"
 			description="Добавьте модели из каталога, и они появятся здесь."
@@ -61,7 +62,7 @@
 			</span>
 		</div>
 
-		<div class="grid items-start gap-6 lg:grid-cols-[1fr_25rem]">
+		<div class="grid grid-cols-1 items-start gap-6 lg:grid-cols-[1fr_25rem]">
 			<div class="flex flex-col gap-6">
 				<DraftLines {draft} />
 				<DeliveryPanel {draft} {formError} />

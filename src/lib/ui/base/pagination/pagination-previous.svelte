@@ -13,10 +13,10 @@
 
 <PaginationPrimitive.PrevButton
 	bind:ref
-	aria-label="Go to previous page"
+	aria-label="Предыдущая страница"
 	class={cn(buttonVariants({ variant: 'ghost', size: 'md' }), 'pl-1.5!', className)}
 	{...restProps}
 >
 	<ChevronLeftIcon data-icon="inline-start" />
-	<span class="cn-pagination-previous-text hidden sm:block">Previous</span>
+	<span class="cn-pagination-previous-text hidden sm:block">Назад</span>
 </PaginationPrimitive.PrevButton>

@@ -34,7 +34,7 @@
 
 <section class="mx-auto max-w-shell px-4 pb-6 sm:px-6">
 	<div
-		class="grid gap-6 rounded-card bg-surface-raised px-6 py-8 sm:grid-cols-2 sm:px-10 lg:grid-cols-4"
+		class="grid grid-cols-1 gap-6 rounded-card bg-surface-raised px-6 py-8 sm:grid-cols-2 sm:px-10 lg:grid-cols-4"
 	>
 		{#each facts as fact (fact.value)}
 			<div>

@@ -10,10 +10,11 @@
 	}: WithElementRef<HTMLAttributes<HTMLUListElement>> = $props();
 </script>
 
+<!-- Wraps instead of pushing the page sideways when a phone cannot fit every page number. -->
 <ul
 	bind:this={ref}
 	data-slot="pagination-content"
-	class={cn('flex items-center gap-0.5', className)}
+	class={cn('flex flex-wrap items-center justify-center gap-0.5', className)}
 	{...restProps}
 >
 	{@render children?.()}

@@ -89,7 +89,7 @@
 		<div data-testid="request-error"><ErrorState title={failure} /></div>
 	{/if}
 
-	<div class="grid gap-6 lg:grid-cols-[2fr_1fr] lg:items-start">
+	<div class="grid grid-cols-1 gap-6 lg:grid-cols-[2fr_1fr] lg:items-start">
 		<div class="flex flex-col gap-6">
 			<Card.Root>
 				<Card.Content class="flex flex-col gap-4">

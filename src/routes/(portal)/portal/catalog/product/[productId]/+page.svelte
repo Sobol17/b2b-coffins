@@ -30,7 +30,7 @@
 <div class="flex flex-col gap-6">
 	<div class="px-2"><Breadcrumbs items={crumbs} /></div>
 
-	<div class="grid items-start gap-6 lg:grid-cols-[1fr_27.5rem]">
+	<div class="grid grid-cols-1 items-start gap-6 lg:grid-cols-[1fr_27.5rem]">
 		<div class="flex flex-col gap-6">
 			<ProductGallery mediaIds={data.product.mediaIds} title={data.product.title} />
 			<ProductSpecs product={data.product} {variant} />
@@ -57,7 +57,7 @@
 					</Button>
 				{/if}
 			</div>
-			<div class="grid gap-5 sm:grid-cols-2 xl:grid-cols-4">
+			<div class="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-4">
 				{#each data.similar as product (product.id)}
 					<ProductCard {product} />
 				{/each}
