@@ -19,21 +19,22 @@
 	   semantic name fits. */
 	--color-brand-100: #e1ebf3;
 	--color-brand-200: #c4d8e5;
+	--color-brand-250: #b5d0ec;
 	--color-brand-300: #a7c7e7;
 	--color-brand-400: #8eb1d1;
-	--color-brand-500: #5b82ad;
-	--color-brand-600: #3d5f8f;
-	--color-brand-700: #2c4468;
+	--color-brand-500: #40679b;
+	--color-brand-600: #2f4f7f;
+	--color-brand-700: #253a5c;
 	--color-brand-800: #1c2b48;
 	--color-brand-900: #121d33;
 
-	--color-neutral-100: #f3f5f7;
+	--color-neutral-100: #eef4fa;
 	--color-neutral-200: #e8ecef;
 	--color-neutral-300: #dde3e8;
 	--color-neutral-400: #c5ced7;
 	--color-neutral-500: #9aa6b4;
-	--color-neutral-600: #66758a;
-	--color-neutral-700: #4d5b70;
+	--color-neutral-600: #4d5b70;
+	--color-neutral-700: #3f4d63;
 	--color-neutral-800: #36435a;
 	--color-neutral-900: #1c2b48;
 
@@ -48,8 +49,9 @@
 	--color-mist-900: #26374b;
 
 	/* Surfaces and text. The four light palette colours fail as text on white (1.5 to 2.2), so they
-	   only ever fill a surface, and the text on them stays midnight. */
-	--color-surface: var(--color-neutral-200);
+	   only ever fill a surface, and the text on them stays midnight. The page field is Baby Blue Eyes
+	   lifted a step with its saturation kept, so the tint survives a poor screen; muted text and links are dark enough to hold AA on it. */
+	--color-surface: var(--color-brand-250);
 	--color-surface-raised: #ffffff;
 	--color-surface-muted: var(--color-neutral-100);
 	--color-chip: var(--color-neutral-200);
@@ -153,7 +155,7 @@
 	}
 
 	::selection {
-		background: var(--color-brand-300);
+		background: var(--color-brand-400);
 	}
 }
 

@@ -49,7 +49,7 @@ describe('design tokens (tech.md 9, 18.2)', () => {
 		expect(css).toContain('--color-brand-800: #1c2b48');
 		expect(css).toContain('--color-neutral-200: #e8ecef');
 		expect(css).toContain('--color-brand: var(--color-brand-800)');
-		expect(css).toContain('--color-surface: var(--color-neutral-200)');
+		expect(css).toContain('--color-surface: var(--color-brand-250)');
 		expect(css).toContain('--radius-card: 1.125rem');
 		expect(css).toContain('--radius-pill: 9999px');
 	});
@@ -60,6 +60,7 @@ describe('design tokens (tech.md 9, 18.2)', () => {
 			['--color-fg', '--color-surface', 4.5],
 			['--color-fg-muted', '--color-surface', 4.5],
 			['--color-fg-faint', '--color-surface-raised', 4.5],
+			['--color-fg-muted', '--color-surface-muted', 4.5],
 			['--color-brand-fg', '--color-brand', 4.5],
 			['--color-brand-fg', '--color-brand-hover', 4.5],
 			['--color-link', '--color-surface-raised', 4.5],
