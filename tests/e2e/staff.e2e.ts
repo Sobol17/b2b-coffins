@@ -11,6 +11,14 @@ async function signIn(page: Page, email: string, password: string): Promise<void
 	await page.click('button[type="submit"]');
 }
 
+/**
+ * Accounts of earlier runs stay in the table disabled (global-setup), so a row may sit past the
+ * first page. The search narrows the table to the row under test.
+ */
+async function findStaff(page: Page, email: string): Promise<void> {
+	await page.getByRole('textbox', { name: 'Поиск по имени или почте' }).fill(email);
+}
+
 test('an administrator gives access to an employee who replaces the temporary password', async ({
 	page
 }) => {
@@ -27,6 +35,7 @@ test('an administrator gives access to an employee who replaces the temporary pa
 
 	const password = (await page.getByTestId('temporary-password').textContent())?.trim() ?? '';
 	expect(password.length).toBeGreaterThanOrEqual(12);
+	await findStaff(page, email);
 	await expect(page.getByTestId('data-table-row').filter({ hasText: email })).toContainText(
 		'Приглашён'
 	);
@@ -48,6 +57,7 @@ test('an administrator gives access to an employee who replaces the temporary pa
 test('the administrator is not offered to disable the own account', async ({ page }) => {
 	await login(page, 'cp_admin');
 	await page.goto('/portal/staff');
+	await findStaff(page, ACCOUNTS.cp_admin.email);
 
 	const ownRow = page.getByTestId('data-table-row').filter({ hasText: ACCOUNTS.cp_admin.email });
 	await expect(ownRow).toBeVisible();
