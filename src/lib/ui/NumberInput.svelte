@@ -12,6 +12,7 @@
 		max,
 		step = 1,
 		name,
+		placeholder,
 		disabled = false,
 		id
 	}: {
@@ -24,6 +25,8 @@
 		max?: number;
 		step?: number;
 		name?: string;
+		/** Required: shown once the number is cleared. */
+		placeholder: string;
 		disabled?: boolean;
 		id?: string | undefined;
 	} = $props();
@@ -42,6 +45,7 @@
 			{min}
 			{max}
 			{step}
+			{placeholder}
 			type="number"
 			inputmode="numeric"
 			class="tabular-nums"

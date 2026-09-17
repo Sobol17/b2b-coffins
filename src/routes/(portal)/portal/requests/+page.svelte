@@ -27,9 +27,14 @@
 	const FILTER_KEYS = ['search', 'from', 'to'] as const;
 
 	const fields: FilterField[] = [
-		{ key: 'search', label: 'Поиск по номеру', type: 'text' },
-		{ key: 'from', label: 'Отправлена с', type: 'date' },
-		{ key: 'to', label: 'по', type: 'date' }
+		{
+			key: 'search',
+			label: 'Поиск по номеру',
+			type: 'text',
+			placeholder: 'З-2026-00001 или ваш номер'
+		},
+		{ key: 'from', label: 'Отправлена с', type: 'date', placeholder: 'Любая дата' },
+		{ key: 'to', label: 'по', type: 'date', placeholder: 'Сегодня' }
 	];
 
 	const SORTS = [
@@ -122,6 +127,7 @@
 						<div class="min-w-48">
 							<Select
 								label="Сортировка"
+								placeholder="Порядок заявок"
 								options={data.user.canSeePrices ? SORTS : SORTS.slice(0, 2)}
 								bind:value={() => sortValue, changeSort}
 							/>

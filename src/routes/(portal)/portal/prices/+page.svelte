@@ -24,11 +24,17 @@
 	let { data, form }: PageProps = $props();
 
 	const fields = $derived<FilterField[]>([
-		{ key: 'search', label: 'Поиск по названию или артикулу', type: 'text' },
+		{
+			key: 'search',
+			label: 'Поиск по названию или артикулу',
+			type: 'text',
+			placeholder: 'Например: Волга или MDL-201'
+		},
 		{
 			key: 'categoryId',
 			label: 'Раздел',
 			type: 'select',
+			placeholder: 'Все разделы',
 			options: [
 				{ value: '', label: 'Все разделы' },
 				...data.categories.map((category) => ({

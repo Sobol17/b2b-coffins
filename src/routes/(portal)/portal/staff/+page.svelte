@@ -18,17 +18,24 @@
 	const FILTER_KEYS = ['search', 'role', 'status'] as const;
 
 	const fields: FilterField[] = [
-		{ key: 'search', label: 'Поиск по имени или почте', type: 'text' },
+		{
+			key: 'search',
+			label: 'Поиск по имени или почте',
+			type: 'text',
+			placeholder: 'Например: Иванов или ivanov@'
+		},
 		{
 			key: 'role',
 			label: 'Роль',
 			type: 'select',
+			placeholder: 'Все роли',
 			options: [{ value: '', label: 'Все роли' }, ...ROLE_OPTIONS]
 		},
 		{
 			key: 'status',
 			label: 'Статус',
 			type: 'select',
+			placeholder: 'Все статусы',
 			options: [{ value: '', label: 'Все статусы' }, ...STATUS_OPTIONS]
 		}
 	];

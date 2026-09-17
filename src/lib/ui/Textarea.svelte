@@ -24,7 +24,8 @@
 		value?: string;
 		id?: string | undefined;
 		name?: string | undefined;
-		placeholder?: string | undefined;
+		/** Required: an empty field gives no hint of what goes in. */
+		placeholder: string;
 		rows?: number;
 		disabled?: boolean;
 		readonly?: boolean;

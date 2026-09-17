@@ -16,7 +16,7 @@
 		id,
 		name,
 		searchable = true,
-		placeholder = 'Выберите значение',
+		placeholder,
 		disabled = false
 	}: {
 		options: readonly SelectOption[];
@@ -28,7 +28,8 @@
 		id?: string | undefined;
 		name?: string | undefined;
 		searchable?: boolean;
-		placeholder?: string;
+		/** Required: a generic «choose a value» tells nothing about the field. */
+		placeholder: string;
 		disabled?: boolean;
 	} = $props();
 

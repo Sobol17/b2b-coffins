@@ -88,6 +88,7 @@
 			name="externalNumber"
 			label="Ваш номер заявки"
 			hint="Номер из вашей учётной системы, если он есть"
+			placeholder="Например: РС-2026-015"
 			value={draft.externalNumber ?? ''}
 			maxlength={40}
 		/>

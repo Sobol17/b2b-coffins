@@ -13,7 +13,7 @@
 		value = $bindable(''),
 		id,
 		name,
-		placeholder = 'Выберите значение',
+		placeholder,
 		disabled = false
 	}: {
 		options: readonly SelectOption[];
@@ -24,7 +24,8 @@
 		value?: string;
 		id?: string | undefined;
 		name?: string | undefined;
-		placeholder?: string;
+		/** Required: a generic «choose a value» tells nothing about the field. */
+		placeholder: string;
 		disabled?: boolean;
 	} = $props();
 

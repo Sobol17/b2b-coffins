@@ -96,6 +96,7 @@
 						<div class="w-48">
 							<Select
 								label="Сортировка"
+								placeholder="Порядок товаров"
 								options={sortOptions}
 								bind:value={() => currentSort, changeSort}
 							/>
@@ -103,6 +104,7 @@
 						<div class="w-28">
 							<Select
 								label="На странице"
+								placeholder="Число товаров"
 								options={perPageOptions}
 								bind:value={() => String(data.products.perPage), changePerPage}
 							/>

@@ -31,7 +31,8 @@
 		id?: string | undefined;
 		name?: string | undefined;
 		type?: 'text' | 'email' | 'password' | 'search' | 'tel' | 'url';
-		placeholder?: string | undefined;
+		/** Required: an empty field gives no hint of what goes in. */
+		placeholder: string;
 		autocomplete?: FullAutoFill | undefined;
 		disabled?: boolean;
 		readonly?: boolean;

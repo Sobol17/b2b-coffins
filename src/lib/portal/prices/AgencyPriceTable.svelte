@@ -49,6 +49,7 @@
 						name={`price:${row.productId}`}
 						valueMinor={row.agencyPriceMinor ?? 0}
 						label=""
+						placeholder="Цена для клиента"
 					/>
 				</div>
 			{/key}

@@ -16,6 +16,7 @@
 		valueMinor = $bindable(0),
 		id,
 		name,
+		placeholder,
 		disabled = false
 	}: {
 		label?: string | undefined;
@@ -25,6 +26,8 @@
 		valueMinor?: number;
 		id?: string | undefined;
 		name?: string | undefined;
+		/** Required: shown once the amount is cleared. */
+		placeholder: string;
 		disabled?: boolean;
 	} = $props();
 
@@ -54,6 +57,7 @@
 			{disabled}
 			type="text"
 			inputmode="decimal"
+			{placeholder}
 			class="tabular-nums"
 			value={text}
 			oninput={onInput}
