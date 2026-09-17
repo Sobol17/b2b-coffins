@@ -1,0 +1,7 @@
+{$APP_DOMAIN} {
+	encode zstd gzip
+
+	# The app sets its own security headers and CSP; Caddy only terminates TLS and proxies.
+	# Server-sent events stream through as is: Caddy flushes text/event-stream immediately.
+	reverse_proxy app:3000
+}
