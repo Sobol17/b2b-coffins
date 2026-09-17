@@ -3,6 +3,7 @@ import {
 	OTHER_COUNTERPARTY_ADMIN,
 	login,
 	loginAs,
+	logout,
 	purchaseMoneyKeys,
 	type RoleKey
 } from './fixtures';
@@ -136,7 +137,7 @@ test('another counterparty reaches none of the requests by a direct link', async
 	const number = await sendRequest(page, 'cp_admin');
 	await openCard(page, number);
 	const card = new URL(page.url()).pathname;
-	await page.click('button:has-text("Выйти")');
+	await logout(page);
 
 	await loginAs(page, OTHER_COUNTERPARTY_ADMIN);
 

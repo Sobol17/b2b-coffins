@@ -3,6 +3,7 @@ import { login } from './fixtures';
 
 test('the target role sees its contour built from the kit', async ({ page }) => {
 	await login(page, 'cp_admin');
+	await page.goto('/portal/profile');
 
 	const logout = page.getByRole('button', { name: 'Выйти' });
 	await expect(logout).toBeVisible();

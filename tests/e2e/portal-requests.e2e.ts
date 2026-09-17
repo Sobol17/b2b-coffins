@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { login, purchaseMoneyKeys } from './fixtures';
+import { login, logout, purchaseMoneyKeys } from './fixtures';
 import { openCard, sendRequest } from './portal-flow';
 import { assignCrew, e2eDb, statusOf, transition } from './transitions';
 
@@ -36,7 +36,7 @@ test('a request the actor may not read answers 403 on a direct link', async ({ p
 	const foreign = new URL(page.url()).pathname;
 
 	// The employee reads only the own requests, so the card of the administrator is out of reach.
-	await page.click('button:has-text("Выйти")');
+	await logout(page);
 	await login(page, 'cp_employee');
 	const response = await page.request.get(foreign);
 

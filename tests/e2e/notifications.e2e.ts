@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { login, purchaseMoneyKeys } from './fixtures';
+import { login, logout, purchaseMoneyKeys } from './fixtures';
 import { sendRequest, submitRequest } from './portal-flow';
 import { assignCrew, e2eDb, transition } from './transitions';
 
@@ -27,7 +27,7 @@ async function expectSentInLog(page: Page, number: string, event: string): Promi
 }
 
 async function signOut(page: Page): Promise<void> {
-	await page.click('button:has-text("Выйти")');
+	await logout(page);
 }
 
 test('the author and the administrator get a letter when the request is ready', async ({

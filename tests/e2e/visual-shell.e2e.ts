@@ -48,6 +48,16 @@ test.describe('portal shell on a desktop', () => {
 		);
 		await expect(page.getByTestId('account-chip')).toHaveAttribute('href', '/portal/profile');
 		await expect(page.getByTestId('menu-button')).toBeHidden();
+		await expect(header.getByRole('button', { name: 'Выйти' })).toHaveCount(0);
+	});
+
+	test('logs out from the side menu of the profile', async ({ page }) => {
+		await login(page, 'cp_admin');
+		await page.goto('/portal/profile');
+
+		await page.getByTestId('logout').click();
+		await expect(page).toHaveURL('/login');
+		expect((await page.goto('/portal/profile'))?.url()).toContain('/login');
 	});
 
 	test('serves the brand fonts from the app itself', async ({ request }) => {
@@ -61,7 +71,9 @@ test.describe('portal shell on a desktop', () => {
 test.describe('portal shell on a phone', () => {
 	test.use({ viewport: { width: 390, height: 844 } });
 
-	test('folds the navigation into a drawer with the logout inside', async ({ page }) => {
+	test('folds the navigation into a drawer and keeps the logout in the profile', async ({
+		page
+	}) => {
 		await login(page, 'cp_employee');
 
 		await expect(page.getByTestId('portal-header').getByRole('navigation')).toBeHidden();
@@ -69,7 +81,10 @@ test.describe('portal shell on a phone', () => {
 
 		const drawer = page.getByTestId('drawer');
 		await expect(drawer.getByRole('link', { name: 'Главная' })).toBeVisible();
-		await drawer.getByRole('button', { name: 'Выйти' }).click();
+		await expect(drawer.getByRole('button', { name: 'Выйти' })).toHaveCount(0);
+
+		await page.goto('/portal/profile');
+		await page.getByTestId('logout').click();
 		await expect(page).toHaveURL('/login');
 	});
 
