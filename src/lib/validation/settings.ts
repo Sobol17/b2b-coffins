@@ -31,3 +31,6 @@ export const charityFundSchema = z.object({
 });
 
 export type CharityFund = z.infer<typeof charityFundSchema>;
+
+/** `settings.notifications.enabled`: the workshop-wide switch of every notification (P9). */
+export const notificationsEnabledSchema = z.boolean();
