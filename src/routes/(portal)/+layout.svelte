@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { resolve } from '$app/paths';
+	import HeaderSearch from '$lib/portal/search/HeaderSearch.svelte';
 	import ContourShell from '$lib/ui/ContourShell.svelte';
 	import type { LayoutProps } from './$types';
 
@@ -30,5 +31,8 @@
 	cart={{ href: resolve('/portal/cart'), count: data.cartUnits }}
 	{footerCaption}
 >
+	{#snippet search()}
+		<HeaderSearch rights={{ staff: data.canManageStaff, prices: data.canManagePrices }} />
+	{/snippet}
 	{@render children()}
 </ContourShell>
