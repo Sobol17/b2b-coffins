@@ -1,6 +1,7 @@
-import { and, asc, eq, isNotNull, isNull, like, or, type SQL } from 'drizzle-orm';
+import { and, asc, eq, isNotNull, isNull, or, type SQL } from 'drizzle-orm';
 import { countExpression, offsetFor, orderByFor } from '../core/list';
 import { BaseRepository } from '../core/repository';
+import { containsText } from '../core/search';
 import type { Tx } from '../db/client';
 import { counterparties, roles, userRoles, users } from '../db/schema';
 import type { ActorContext } from '$lib/types/actor';
@@ -59,16 +60,15 @@ export class StaffRepository extends BaseRepository<typeof users> {
 
 	list(ctx: ActorContext, query: ListQuery<StaffFilters>): { rows: StaffRow[]; total: number } {
 		const filters = query.filters;
-		// No lower-casing here: SQLite LIKE folds ASCII only, so a lowered Cyrillic name would never match.
-		const pattern = query.search === undefined ? undefined : `%${query.search}%`;
+		const search = query.search;
 		const where = this.members(
 			ctx,
 			and(
 				filters?.role === undefined ? undefined : eq(roles.code, filters.role),
 				filters?.status === undefined ? undefined : statusWhere(filters.status),
-				pattern === undefined
+				search === undefined
 					? undefined
-					: or(like(users.fullName, pattern), like(users.email, pattern))
+					: or(containsText(users.fullName, search), containsText(users.email, search))
 			)
 		);
 		const [counted] = this.db()

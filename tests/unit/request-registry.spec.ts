@@ -119,6 +119,19 @@ describe('portal request registry (P6)', () => {
 		expect(page.rows.map((row) => row.id)).toEqual([numbered]);
 	});
 
+	it('finds a number typed in lower case and reads a typed wildcard as a plain character', () => {
+		const numbered = send(adminCtx, VOLGA_180);
+		markExternal(numbered, 'ЗК-78');
+		const found = (search: string) =>
+			registry()
+				.list({ ...listQuery(), search })
+				.rows.map((row) => row.id);
+
+		expect(found('зк-78')).toEqual([numbered]);
+		expect(found('з-2026')).toContain(numbered);
+		expect(found('%')).toEqual([]);
+	});
+
 	it('carries the first line and the piece count of the request', () => {
 		send(adminCtx, VOLGA_180);
 
