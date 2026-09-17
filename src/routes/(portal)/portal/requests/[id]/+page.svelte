@@ -60,7 +60,7 @@
 					· ваш номер {request.externalNumber}{/if}
 			</p>
 		</div>
-		<div class="flex gap-3 sm:ml-auto">
+		<div class="flex flex-wrap gap-3 sm:ml-auto">
 			<form
 				method="POST"
 				action="/portal/cart?/repeat"

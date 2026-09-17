@@ -16,7 +16,7 @@ import { e2eDb, statusOf } from './transitions';
 
 const db = e2eDb();
 const ORIGIN = 'http://localhost:4173';
-const PHONE = { width: 390, height: 844 };
+const PHONE = { width: 360, height: 780 };
 
 interface PortalPaths {
 	readonly all: string[];
