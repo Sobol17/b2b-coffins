@@ -17,67 +17,72 @@
 
 	/* Ramps. Semantic tokens below point at them; a slice reaches for a ramp only when no
 	   semantic name fits. */
-	--color-brand-100: #edf4fb;
-	--color-brand-200: #d6e7f6;
-	--color-brand-300: #b3d3ec;
-	--color-brand-400: #8bbce1;
-	--color-brand-500: #5e9fd2;
-	--color-brand-600: #3d84bd;
-	--color-brand-700: #2b6fae;
-	--color-brand-800: #1f5183;
-	--color-brand-900: #143658;
+	--color-brand-100: #e1ebf3;
+	--color-brand-200: #c4d8e5;
+	--color-brand-300: #a7c7e7;
+	--color-brand-400: #8eb1d1;
+	--color-brand-500: #5b82ad;
+	--color-brand-600: #3d5f8f;
+	--color-brand-700: #2c4468;
+	--color-brand-800: #1c2b48;
+	--color-brand-900: #121d33;
 
-	--color-neutral-100: #f5f7fa;
-	--color-neutral-200: #eef1f5;
-	--color-neutral-300: #e2e7ee;
-	--color-neutral-400: #cbd3de;
-	--color-neutral-500: #a7b2c1;
-	--color-neutral-600: #8592a3;
-	--color-neutral-700: #5f6b7a;
-	--color-neutral-800: #414b58;
-	--color-neutral-900: #1b2430;
+	--color-neutral-100: #f3f5f7;
+	--color-neutral-200: #e8ecef;
+	--color-neutral-300: #dde3e8;
+	--color-neutral-400: #c5ced7;
+	--color-neutral-500: #9aa6b4;
+	--color-neutral-600: #66758a;
+	--color-neutral-700: #4d5b70;
+	--color-neutral-800: #36435a;
+	--color-neutral-900: #1c2b48;
 
-	--color-mist-100: #f1f4f8;
-	--color-mist-200: #e0e7f0;
-	--color-mist-300: #c7d4e3;
-	--color-mist-400: #a8bcd2;
-	--color-mist-500: #8aa3bd;
-	--color-mist-600: #6d88a5;
-	--color-mist-700: #56708b;
-	--color-mist-800: #3d5266;
-	--color-mist-900: #273543;
+	--color-mist-100: #f0f4f7;
+	--color-mist-200: #e2e9ef;
+	--color-mist-300: #c4d8e5;
+	--color-mist-400: #a9bccb;
+	--color-mist-500: #8b9fb1;
+	--color-mist-600: #6f8aa3;
+	--color-mist-700: #4f6a84;
+	--color-mist-800: #3a5068;
+	--color-mist-900: #26374b;
 
-	/* Surfaces and text */
+	/* Surfaces and text. The four light palette colours fail as text on white (1.5 to 2.2), so they
+	   only ever fill a surface, and the text on them stays midnight. */
 	--color-surface: var(--color-neutral-200);
 	--color-surface-raised: #ffffff;
 	--color-surface-muted: var(--color-neutral-100);
 	--color-chip: var(--color-neutral-200);
-	--color-chip-hover: var(--color-neutral-300);
+	--color-chip-hover: var(--color-brand-200);
 	--color-border: color-mix(in srgb, var(--color-neutral-900) 10%, transparent);
-	--color-border-strong: var(--color-neutral-400);
+	--color-border-strong: var(--color-brand-400);
 	--color-fg: var(--color-neutral-900);
 	--color-fg-muted: var(--color-neutral-700);
 	--color-fg-faint: var(--color-neutral-600);
 
-	/* Brand and intent */
-	--color-brand: var(--color-brand-700);
-	--color-brand-hover: var(--color-brand-600);
-	--color-brand-active: var(--color-brand-800);
+	/* Brand and intent. Body text and the accent fill share midnight, so link text takes a lighter
+	   step of the same ramp: otherwise an active nav item reads as plain text. */
+	--color-brand: var(--color-brand-800);
+	--color-brand-hover: var(--color-brand-700);
+	--color-brand-active: var(--color-brand-900);
 	--color-brand-fg: #ffffff;
+	--color-link: var(--color-brand-600);
+	--color-link-hover: var(--color-brand-800);
 	--color-danger: #8a3b2f;
 	--color-danger-fg: #ffffff;
 	--color-warning: #8a6420;
 	--color-success: #3f5c3a;
 
-	/* Status tones. StatusBadge and Stepper read them through lib/ui/status.ts, never inline. */
+	/* Status tones. StatusBadge and Stepper read them through lib/ui/status.ts, never inline.
+	   The flow deepens along the ramp: new, in work, ready. */
 	--color-tone-neutral: var(--color-neutral-800);
 	--color-tone-neutral-soft: var(--color-neutral-200);
 	--color-tone-info: var(--color-brand-800);
 	--color-tone-info-soft: var(--color-brand-100);
-	--color-tone-progress: var(--color-mist-800);
-	--color-tone-progress-soft: var(--color-mist-200);
+	--color-tone-progress: var(--color-brand-800);
+	--color-tone-progress-soft: var(--color-brand-200);
 	--color-tone-ready: var(--color-brand-900);
-	--color-tone-ready-soft: var(--color-brand-200);
+	--color-tone-ready-soft: var(--color-brand-400);
 	--color-tone-warning: #7a5a1c;
 	--color-tone-warning-soft: #f6efe0;
 	--color-tone-success: #3f5c3a;
@@ -148,7 +153,7 @@
 	}
 
 	::selection {
-		background: var(--color-brand-200);
+		background: var(--color-brand-300);
 	}
 }
 

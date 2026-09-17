@@ -27,7 +27,7 @@
 			</div>
 			<div data-testid="draft-discount" class="flex justify-between py-2">
 				<dt class="text-fg-muted">Скидка по договору {draft.discountPercent ?? 0} %</dt>
-				<dd class="text-brand">−<PriceCell valueMinor={draft.discountMinor} /> ₽</dd>
+				<dd class="text-link">−<PriceCell valueMinor={draft.discountMinor} /> ₽</dd>
 			</div>
 		{/if}
 	</dl>

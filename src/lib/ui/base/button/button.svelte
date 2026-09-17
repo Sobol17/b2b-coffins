@@ -17,7 +17,7 @@
 				primary: 'bg-brand text-brand-fg hover:bg-brand-hover active:bg-brand-active',
 				secondary: 'bg-chip text-fg hover:bg-chip-hover aria-expanded:bg-chip-hover',
 				ghost:
-					'text-brand hover:bg-surface-muted hover:text-brand-hover aria-expanded:bg-surface-muted',
+					'text-link hover:bg-surface-muted hover:text-link-hover aria-expanded:bg-surface-muted',
 				danger: 'bg-danger text-danger-fg hover:bg-danger/90'
 			},
 			size: {

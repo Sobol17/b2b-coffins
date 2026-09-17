@@ -43,7 +43,7 @@
 			</span>
 			<a
 				href={resolve('/portal/requests')}
-				class="ml-auto text-[14.5px] text-brand hover:text-brand-hover"
+				class="ml-auto text-[14.5px] text-link hover:text-link-hover"
 			>
 				Все заявки →
 			</a>
@@ -62,7 +62,7 @@
 					{#if column.key === 'number'}
 						<a
 							href={resolve(`/portal/requests/${row.id}`)}
-							class="font-heading text-[19px] font-semibold hover:text-brand"
+							class="font-heading text-[19px] font-semibold hover:text-link"
 						>
 							{row.number}
 						</a>

@@ -22,7 +22,7 @@
 					<div class="text-xs tracking-[0.08em] text-fg-faint">{item.sku}</div>
 					<a
 						href={resolve(`/portal/catalog/product/${item.productId}`)}
-						class="font-heading text-lg font-semibold hover:text-brand"
+						class="font-heading text-lg font-semibold hover:text-link"
 					>
 						{item.productTitle}
 					</a>

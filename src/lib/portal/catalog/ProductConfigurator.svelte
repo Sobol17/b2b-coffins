@@ -116,7 +116,7 @@
 
 		<div data-testid="product-page-stock" class="rounded-inset bg-surface-muted p-4">
 			<div class="text-xs text-fg-faint">На складе</div>
-			<div class={['font-heading text-xl font-semibold', inStock && 'text-brand']}>
+			<div class={['font-heading text-xl font-semibold', inStock && 'text-link']}>
 				{inStock ? `${variant?.stockQty} шт` : 'Нет в наличии'}
 			</div>
 		</div>
