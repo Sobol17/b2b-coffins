@@ -8,8 +8,17 @@
 
 <script lang="ts">
 	import { enhance } from '$app/forms';
-	import { Button, Input, RadioGroup, Textarea, type SelectOption } from '$lib/ui';
-	import type { DraftDto } from '$lib/types/request';
+	import { resolve } from '$app/paths';
+	import {
+		Button,
+		Input,
+		RadioGroup,
+		Textarea,
+		withToast,
+		type SelectOption,
+		type ToastSpec
+	} from '$lib/ui';
+	import type { DraftDto, SubmittedRequestDto } from '$lib/types/request';
 
 	let { draft, formError }: { draft: DraftDto; formError?: string | undefined } = $props();
 
@@ -22,6 +31,24 @@
 		})),
 		{ value: 'pickup', label: 'Самовывоз со склада мастерской' }
 	]);
+	function isSubmitted(value: unknown): value is SubmittedRequestDto {
+		return typeof value === 'object' && value !== null && 'number' in value && 'id' in value;
+	}
+
+	// One form, two buttons: the answer tells a sent request from a saved draft.
+	function confirmation(data: Record<string, unknown> | undefined): ToastSpec | null {
+		const sent = data?.['submitted'];
+		if (!isSubmitted(sent)) return data?.['saved'] ? { title: 'Черновик сохранён' } : null;
+		return {
+			title: `Заявка ${sent.number} отправлена`,
+			description: 'Менеджер мастерской примет её в работу и подтвердит цены',
+			action: {
+				label: 'Открыть заявку',
+				href: resolve(`/portal/requests/${sent.id}`)
+			}
+		};
+	}
+
 	const delivery = $derived(
 		picked ??
 			(draft.isPickup
@@ -36,7 +63,7 @@
 	id={DRAFT_FORM_ID}
 	method="POST"
 	action="?/submit"
-	use:enhance
+	use:enhance={withToast({ success: confirmation, reset: false })}
 	class="flex flex-col gap-5 rounded-card bg-surface-raised p-6 sm:p-8"
 >
 	<h2 class="text-2xl">Отгрузка</h2>

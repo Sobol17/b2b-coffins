@@ -15,6 +15,8 @@ export interface FormToastOptions {
 	readonly reset?: boolean;
 	/** Runs before the page updates, for example to close the modal the form lives in. */
 	readonly onSuccess?: (data: SuccessData) => void;
+	/** Drives the `loading` state of the submit button while the request is out. */
+	readonly pending?: (value: boolean) => void;
 }
 
 export const FORM_TOAST_TEXT = {
@@ -71,10 +73,16 @@ export function toastForResult(result: ActionResult, options: FormToastOptions =
  * a click never ends in silence.
  */
 export function withToast(options: FormToastOptions = {}): SubmitFunction {
-	return () =>
-		async ({ result, update }) => {
-			if (result.type === 'success') options.onSuccess?.(result.data);
-			toastForResult(result, options);
-			await update({ reset: options.reset ?? true });
+	return () => {
+		options.pending?.(true);
+		return async ({ result, update }) => {
+			try {
+				if (result.type === 'success') options.onSuccess?.(result.data);
+				toastForResult(result, options);
+				await update({ reset: options.reset ?? true });
+			} finally {
+				options.pending?.(false);
+			}
 		};
+	};
 }

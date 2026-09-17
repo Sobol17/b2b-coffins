@@ -2,7 +2,7 @@
 	import { enhance } from '$app/forms';
 	import { invalidateAll } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import { Button, Card, FileUpload, Textarea, toast } from '$lib/ui';
+	import { Button, Card, FileUpload, Textarea, toast, withToast } from '$lib/ui';
 	import { ATTACHMENT_MAX_BYTES, ATTACHMENT_MIMES } from '$lib/domain/request/attachments';
 	import { formatDateTime } from '$lib/utils/format';
 	import type { RequestAttachmentDto, RequestCommentDto } from '$lib/types/request';
@@ -29,7 +29,7 @@
 
 	function onUploaded(): void {
 		// The row is already stored; the load function re-reads the card and the list picks it up.
-		toast.success('Файл загружен');
+		toast.success('Файл прикреплён к заявке');
 		void invalidateAll();
 	}
 </script>
@@ -52,7 +52,18 @@
 			{/each}
 		</ul>
 
-		<form method="POST" action="?/comment" use:enhance class="flex flex-col gap-3">
+		<form
+			method="POST"
+			action="?/comment"
+			use:enhance={withToast({
+				success: {
+					title: 'Сообщение отправлено',
+					description: 'Менеджер ответит в этой переписке'
+				},
+				onSuccess: () => (body = '')
+			})}
+			class="flex flex-col gap-3"
+		>
 			<Textarea
 				name="body"
 				label="Сообщение менеджеру"

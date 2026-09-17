@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
-	import { Button, DataTable, TONE_CLASS, type DataTableColumn } from '$lib/ui';
+	import { Button, DataTable, TONE_CLASS, withToast, type DataTableColumn } from '$lib/ui';
 	import type { StaffMemberDto } from '$lib/types/counterparty';
 	import type { ListQuery } from '$lib/types/list';
 	import { formatDateTime } from '$lib/utils/format';
@@ -51,7 +51,11 @@
 		{:else if column.key === 'actions' && !row.isSelf}
 			<!-- The own row has no actions: the server refuses them too (StaffService.requireOther). -->
 			<div class="flex flex-wrap justify-end gap-2">
-				<form method="POST" action="?/role" use:enhance>
+				<form
+					method="POST"
+					action="?/role"
+					use:enhance={withToast({ success: `Роль изменена: ${row.fullName}` })}
+				>
 					<input type="hidden" name="id" value={row.id} />
 					<input
 						type="hidden"
@@ -65,7 +69,12 @@
 				<form
 					method="POST"
 					action={row.status === 'disabled' ? '?/enable' : '?/disable'}
-					use:enhance
+					use:enhance={withToast({
+						success:
+							row.status === 'disabled'
+								? `Доступ включён: ${row.fullName}`
+								: `Доступ отключён: ${row.fullName}`
+					})}
 				>
 					<input type="hidden" name="id" value={row.id} />
 					<Button

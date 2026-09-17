@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
-	import { Button, Card, ErrorState, Input } from '$lib/ui';
+	import { Button, Card, ErrorState, Input, withToast } from '$lib/ui';
 	import type { ActionData, PageData } from './$types';
 
 	let { data, form }: { data: PageData; form: ActionData } = $props();
@@ -25,7 +25,7 @@
 		</Card.Root>
 	{/if}
 
-	<form method="POST" use:enhance class="flex flex-col gap-4">
+	<form method="POST" use:enhance={withToast()} class="flex flex-col gap-4">
 		{#each fields as field (field.name)}
 			<Input
 				name={field.name}

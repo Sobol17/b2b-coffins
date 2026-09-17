@@ -4,7 +4,7 @@
 	import { profileNavItems } from '$lib/portal/profile-nav';
 	import CounterpartyOverview from '$lib/portal/profile/CounterpartyOverview.svelte';
 	import ProfileNav from '$lib/portal/ProfileNav.svelte';
-	import { Breadcrumbs, Button, Card, Input, toast } from '$lib/ui';
+	import { Breadcrumbs, Button, Card, Input, withToast } from '$lib/ui';
 	import type { PageProps } from './$types';
 
 	let { data, form }: PageProps = $props();
@@ -42,11 +42,7 @@
 					<form
 						method="POST"
 						class="flex max-w-xl flex-col gap-4"
-						use:enhance={() =>
-							async ({ result, update }) => {
-								await update({ reset: false });
-								if (result.type === 'success') toast.success('Данные сохранены');
-							}}
+						use:enhance={withToast({ reset: false, success: 'Данные сохранены' })}
 					>
 						<Input
 							label="Электронная почта"

@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
-	import { Button, Input, Modal, Select } from '$lib/ui';
+	import { Button, Input, Modal, Select, withToast, type ToastSpec } from '$lib/ui';
 	import { ROLE_OPTIONS } from './labels';
 
 	type Field = 'fullName' | 'email' | 'phone' | 'role';
@@ -17,6 +17,23 @@
 
 	let role = $state('cp_employee');
 	let pending = $state(false);
+
+	// The password card on the page carries the details; the toast only says whether mail went out.
+	function created(data: Record<string, unknown> | undefined): ToastSpec {
+		const answer = data?.['created'];
+		const mailSent =
+			typeof answer === 'object' &&
+			answer !== null &&
+			'mailSent' in answer &&
+			answer.mailSent === true;
+		return mailSent
+			? { title: 'Доступ создан', description: 'Письмо с паролем ушло сотруднику' }
+			: {
+					kind: 'warning',
+					title: 'Доступ создан, письмо не ушло',
+					description: 'Передайте временный пароль сотруднику сами'
+				};
+	}
 </script>
 
 <Modal
@@ -29,14 +46,11 @@
 			method="POST"
 			action="?/create"
 			class="flex flex-col gap-4"
-			use:enhance={() => {
-				pending = true;
-				return async ({ result, update }) => {
-					pending = false;
-					await update();
-					if (result.type === 'success') open = false;
-				};
-			}}
+			use:enhance={withToast({
+				pending: (value) => (pending = value),
+				success: created,
+				onSuccess: () => (open = false)
+			})}
 		>
 			<Input
 				name="fullName"

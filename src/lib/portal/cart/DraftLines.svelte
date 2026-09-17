@@ -3,7 +3,7 @@
 	import { resolve } from '$app/paths';
 	import ProductPhoto from '$lib/portal/catalog/ProductPhoto.svelte';
 	import PricePair from '$lib/portal/PricePair.svelte';
-	import { Button, PriceCell } from '$lib/ui';
+	import { Button, PriceCell, withToast } from '$lib/ui';
 	import type { DraftDto } from '$lib/types/request';
 	import { MAX_LINE_QTY } from '$lib/validation/request';
 
@@ -39,7 +39,12 @@
 					</div>
 				</div>
 
-				<form method="POST" action="?/remove" use:enhance class="justify-self-end sm:order-last">
+				<form
+					method="POST"
+					action="?/remove"
+					use:enhance={withToast({ success: `Позиция «${item.productTitle}» удалена` })}
+					class="justify-self-end sm:order-last"
+				>
 					<input type="hidden" name="itemId" value={item.id} />
 					<Button
 						type="submit"
@@ -65,7 +70,7 @@
 					<form
 						method="POST"
 						action="?/qty"
-						use:enhance
+						use:enhance={withToast({ reset: false })}
 						class="flex items-center gap-1 rounded-pill bg-surface-muted p-1"
 					>
 						<input type="hidden" name="itemId" value={item.id} />
@@ -102,7 +107,12 @@
 
 	<div class="flex flex-wrap gap-2.5 pt-5">
 		<Button variant="secondary" href={resolve('/portal/catalog')}>← Продолжить подбор</Button>
-		<form method="POST" action="?/clear" use:enhance class="sm:ml-auto">
+		<form
+			method="POST"
+			action="?/clear"
+			use:enhance={withToast({ success: 'Заявка очищена' })}
+			class="sm:ml-auto"
+		>
 			<Button type="submit" variant="ghost" class="text-fg-muted">Очистить</Button>
 		</form>
 	</div>
