@@ -1,7 +1,8 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
+	import { resolve } from '$app/paths';
 	import PricePair from '$lib/portal/PricePair.svelte';
-	import { Button, Card, NumberInput, Select, toast, type SelectOption } from '$lib/ui';
+	import { Button, Card, NumberInput, Select, withToast, type SelectOption } from '$lib/ui';
 	import type { OptionKind, ProductDto } from '$lib/types/catalog';
 	import type { ContactDto } from '$lib/types/counterparty';
 	import { formatMinor } from '$lib/utils/format';
@@ -111,14 +112,15 @@
 			method="POST"
 			action="?/add"
 			class="flex flex-col gap-5"
-			use:enhance={() => {
-				pending = true;
-				return async ({ result, update }) => {
-					pending = false;
-					await update({ reset: false });
-					if (result.type === 'success') toast.success('Позиция добавлена в заявку');
-				};
-			}}
+			use:enhance={withToast({
+				reset: false,
+				pending: (value) => (pending = value),
+				success: {
+					title: 'Позиция добавлена в заявку',
+					description: product.title,
+					action: { label: 'Перейти в заявку', href: resolve('/portal/cart') }
+				}
+			})}
 		>
 			{#if sizeOptions.length > 0}
 				<Select
@@ -139,14 +141,15 @@
 
 			{#if variant}
 				<input type="hidden" name="variantId" value={variant.id} />
-				<div class="flex items-end gap-3">
+				<!-- Wraps on a narrow phone: the pill button never shrinks below its label. -->
+				<div class="flex flex-wrap items-end gap-3">
 					<div class="w-28">
 						<NumberInput name="qty" label="Количество" min={1} max={999} bind:value={qty} />
 					</div>
 					<Button
 						type="submit"
 						size="lg"
-						class="flex-1"
+						class="min-w-48 flex-1"
 						loading={pending}
 						data-testid="add-to-draft"
 					>

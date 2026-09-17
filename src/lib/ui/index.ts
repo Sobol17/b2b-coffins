@@ -38,8 +38,10 @@ export { default as Modal } from './Modal.svelte';
 export { default as Drawer } from './Drawer.svelte';
 export { default as ConfirmDialog } from './ConfirmDialog.svelte';
 
-export { toast } from './toast.svelte';
-export type { Toast, ToastKind } from './toast.svelte';
+export { toast, TOAST_KINDS } from './toast.svelte';
+export type { Toast, ToastAction, ToastKind, ToastOptions } from './toast.svelte';
+export { FORM_TOAST_TEXT, toastForResult, withToast } from './form-toast';
+export type { FormToastOptions, ToastSpec } from './form-toast';
 export { default as Toaster } from './Toaster.svelte';
 
 export { default as StatusBadge } from './StatusBadge.svelte';

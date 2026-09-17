@@ -10,3 +10,4 @@ export * from './pricing';
 export * from './request';
 export * from './roles';
 export * from './stream';
+export * from './notifications';

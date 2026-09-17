@@ -26,7 +26,7 @@
 
 <section id="steps" class="mx-auto max-w-shell px-4 pt-12 sm:px-6">
 	<h2 class="mb-5 px-2 text-3xl sm:text-4xl">Как мы работаем</h2>
-	<div class="grid gap-6 md:grid-cols-3">
+	<div class="grid grid-cols-1 gap-6 md:grid-cols-3">
 		{#each steps as step (step.number)}
 			<div class="rounded-card bg-surface-raised p-8">
 				<div class="mb-2 font-heading text-4xl font-semibold text-brand-400">{step.number}</div>
@@ -39,7 +39,7 @@
 
 <section class="mx-auto max-w-shell px-4 pt-12 pb-10 sm:px-6">
 	<div
-		class="grid items-center gap-8 rounded-card bg-surface-raised p-8 sm:p-11 lg:grid-cols-[1fr_auto]"
+		class="grid grid-cols-1 items-center gap-8 rounded-card bg-surface-raised p-8 sm:p-11 lg:grid-cols-[1fr_auto]"
 	>
 		<div>
 			<h3 class="mb-2 text-3xl">Работаем с юридическими лицами и ИП</h3>

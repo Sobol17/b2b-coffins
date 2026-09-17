@@ -42,7 +42,7 @@
 		</div>
 
 		{#if card.discountPercent !== undefined}
-			<div data-testid="counterparty-money" class="grid gap-3 sm:grid-cols-3">
+			<div data-testid="counterparty-money" class="grid grid-cols-1 gap-3 sm:grid-cols-3">
 				<div class="rounded-inset bg-surface-muted p-4">
 					<div class="text-xs tracking-[0.1em] text-fg-faint uppercase">Скидка по договору</div>
 					<div class="font-heading text-3xl font-semibold text-brand">{card.discountPercent} %</div>
@@ -68,7 +68,7 @@
 <Card.Root>
 	<Card.Content>
 		<h2 class="mb-3 text-2xl">Реквизиты</h2>
-		<dl class="grid gap-x-12 sm:grid-cols-2">
+		<dl class="grid grid-cols-1 gap-x-12 sm:grid-cols-2">
 			{#each requisites as [label, value] (label)}
 				<div class="flex justify-between gap-4 border-b border-border py-3">
 					<dt class="text-fg-muted">{label}</dt>
@@ -90,7 +90,7 @@
 				</Button>
 			{/if}
 		</div>
-		<div class="grid gap-3 md:grid-cols-3">
+		<div class="grid grid-cols-1 gap-3 md:grid-cols-3">
 			{#each card.staffPreview as member (member.email)}
 				<div class="rounded-inset bg-surface-muted p-4">
 					<div class="text-xs tracking-[0.1em] text-fg-faint uppercase">

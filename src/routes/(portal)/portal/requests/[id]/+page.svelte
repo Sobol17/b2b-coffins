@@ -3,7 +3,16 @@
 	import { resolve } from '$app/paths';
 	import RequestComposition from '$lib/portal/requests/RequestComposition.svelte';
 	import RequestThread from '$lib/portal/requests/RequestThread.svelte';
-	import { Breadcrumbs, Button, Card, ErrorState, PriceCell, StatusBadge, Stepper } from '$lib/ui';
+	import {
+		Breadcrumbs,
+		Button,
+		Card,
+		ErrorState,
+		PriceCell,
+		StatusBadge,
+		Stepper,
+		withToast
+	} from '$lib/ui';
 	import { formatDate } from '$lib/utils/format';
 	import type { RequestStatus } from '$lib/types/request';
 	import type { PageProps } from './$types';
@@ -51,15 +60,23 @@
 					· ваш номер {request.externalNumber}{/if}
 			</p>
 		</div>
-		<div class="flex gap-3 sm:ml-auto">
-			<form method="POST" action="/portal/cart?/repeat">
+		<div class="flex flex-wrap gap-3 sm:ml-auto">
+			<form
+				method="POST"
+				action="/portal/cart?/repeat"
+				use:enhance={withToast({ success: 'Позиции заявки скопированы в корзину' })}
+			>
 				<input type="hidden" name="requestId" value={request.id} />
 				<Button type="submit" variant="secondary" data-testid="repeat-request">
 					Повторить заявку
 				</Button>
 			</form>
 			{#if canCancel}
-				<form method="POST" action="?/cancel" use:enhance>
+				<form
+					method="POST"
+					action="?/cancel"
+					use:enhance={withToast({ success: `Заявка ${request.number} отменена` })}
+				>
 					<Button type="submit" variant="danger" data-testid="cancel-request">
 						Отменить заявку
 					</Button>
@@ -72,7 +89,7 @@
 		<div data-testid="request-error"><ErrorState title={failure} /></div>
 	{/if}
 
-	<div class="grid gap-6 lg:grid-cols-[2fr_1fr] lg:items-start">
+	<div class="grid grid-cols-1 gap-6 lg:grid-cols-[2fr_1fr] lg:items-start">
 		<div class="flex flex-col gap-6">
 			<Card.Root>
 				<Card.Content class="flex flex-col gap-4">

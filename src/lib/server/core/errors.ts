@@ -72,3 +72,24 @@ export function publicErrorBody(err: unknown): { code: ErrorCode; message: strin
 	if (err instanceof AppError) return { code: err.code, message: err.message };
 	return { code: 'internal', message: 'internal error' };
 }
+
+/**
+ * Text a form or a toast may show. Services write Russian messages for validation and conflicts;
+ * the other codes carry internal action and entity names, so they get a fixed phrase instead.
+ */
+export function userMessage(err: AppError): string {
+	switch (err.code) {
+		case 'forbidden':
+			return 'Недостаточно прав для этого действия';
+		case 'not_found':
+			return 'Не нашли нужные данные. Обновите страницу';
+		case 'rate_limited':
+			return 'Слишком много попыток подряд. Повторите чуть позже';
+		case 'internal':
+			return 'Не удалось выполнить действие';
+		case 'validation_failed':
+			return err.message === 'validation failed' ? 'Проверьте данные формы' : err.message;
+		case 'conflict':
+			return err.message;
+	}
+}

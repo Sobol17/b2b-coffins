@@ -5,6 +5,7 @@ import type { Db } from '../../src/lib/server/db/client';
 import {
 	dictItems,
 	notificationRules,
+	notificationTemplates,
 	numberingSequences,
 	roles,
 	settings
@@ -13,6 +14,7 @@ import {
 	dictFixture,
 	loadFixture,
 	notificationRuleFixture,
+	notificationTemplateFixture,
 	numberingFixture,
 	roleFixture
 } from './schema';
@@ -71,6 +73,15 @@ export function seedNotificationRules(db: Db): number {
 				set: { enabled: row.enabled }
 			})
 			.run();
+	}
+	return rows.length;
+}
+
+export function seedNotificationTemplates(db: Db): number {
+	const rows = loadFixture('notification-templates.json', z.array(notificationTemplateFixture));
+	for (const row of rows) {
+		// Operator-owned after the first run, like settings: C12 edits the texts in the CRM.
+		db.insert(notificationTemplates).values(row).onConflictDoNothing().run();
 	}
 	return rows.length;
 }

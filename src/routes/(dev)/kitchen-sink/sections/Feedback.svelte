@@ -1,15 +1,39 @@
 <script lang="ts">
+	import { resolve } from '$app/paths';
 	import { Button, Card, EmptyState, ErrorState, Skeleton, Spinner, Tabs, toast } from '$lib/ui';
 	import Showcase from '../Showcase.svelte';
 </script>
 
 <Showcase name="Toast">
-	<Button onclick={() => toast.success('Заявка сохранена')} data-testid="toast-success">
+	<Button
+		onclick={() => toast.success('Заявка сохранена', { description: 'Черновик обновлён' })}
+		data-testid="toast-success"
+	>
 		Успех
 	</Button>
 	<Button
+		variant="secondary"
+		onclick={() =>
+			toast.info('Заявка З-2026-00042 отправлена', {
+				description: 'Менеджер примет её в работу',
+				action: { label: 'Открыть каталог', href: resolve('/portal/catalog') }
+			})}
+		data-testid="toast-info"
+	>
+		Информация
+	</Button>
+	<Button
+		variant="secondary"
+		onclick={() =>
+			toast.warning('Письмо не отправилось', { description: 'Передайте пароль сотруднику сами' })}
+		data-testid="toast-warning"
+	>
+		Предупреждение
+	</Button>
+	<Button
 		variant="danger"
-		onclick={() => toast.error('Не удалось сохранить')}
+		onclick={() =>
+			toast.error('Не удалось сохранить', { description: 'Повторите попытку через минуту' })}
 		data-testid="toast-error"
 	>
 		Ошибка

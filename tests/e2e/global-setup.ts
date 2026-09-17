@@ -2,7 +2,14 @@ import { eq, like } from 'drizzle-orm';
 import { migrate } from 'drizzle-orm/better-sqlite3/migrator';
 import { hashPassword } from '../../src/lib/server/auth/password';
 import { createDb, type Db } from '../../src/lib/server/db/client';
-import { rateLimits, roles, sessions, userRoles, users } from '../../src/lib/server/db/schema';
+import {
+	rateLimits,
+	roles,
+	sessions,
+	userNotificationPrefs,
+	userRoles,
+	users
+} from '../../src/lib/server/db/schema';
 import { TEMP_ACCOUNTS } from './fixtures';
 import { seedCatalog, seedStockBalances, seedStockItems } from '../../scripts/seed/catalog';
 import {
@@ -14,6 +21,7 @@ import {
 import {
 	seedDicts,
 	seedNotificationRules,
+	seedNotificationTemplates,
 	seedNumbering,
 	seedRoles,
 	seedSettings
@@ -35,6 +43,7 @@ export default async function globalSetup(): Promise<void> {
 	seedSettings(db);
 	seedNumbering(db);
 	seedNotificationRules(db);
+	seedNotificationTemplates(db);
 	seedStockItems(db);
 	seedCatalog(db);
 	seedStockBalances(db);
@@ -49,6 +58,8 @@ export default async function globalSetup(): Promise<void> {
 	// Counters and sessions survive a run; clearing them keeps a rerun from hitting a lockout.
 	db.delete(rateLimits).run();
 	db.delete(sessions).run();
+	// The notifications spec flips switches; every run starts from the role defaults.
+	db.delete(userNotificationPrefs).run();
 	// Accounts the staff spec creates. They stay in the audit journal, so they are disabled rather
 	// than deleted: a disabled account frees its seat of the staff limit for the next run.
 	db.update(users).set({ isActive: false }).where(like(users.email, 'e2e.%')).run();

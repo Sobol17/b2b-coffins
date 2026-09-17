@@ -13,7 +13,7 @@
 
 <footer class="mx-auto mb-6 w-full max-w-shell px-4 sm:px-6">
 	<div class="rounded-card bg-surface-raised px-6 pt-12 pb-6 sm:px-10">
-		<div class="grid gap-10 md:grid-cols-[1.6fr_1fr_1fr]">
+		<div class="grid grid-cols-1 gap-10 md:grid-cols-[1.6fr_1fr_1fr]">
 			<div>
 				<div class="mb-3 font-heading text-2xl font-semibold tracking-[0.14em]">АНГЕЛ</div>
 				<p class="max-w-xs text-fg-muted">

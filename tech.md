@@ -1,8 +1,8 @@
 # tech.md — ядро проекта
 
 **Проект:** B2B-портал + CRM для столярной мастерской (производство гробов)
-**Версия ядра:** v1.18
-**Дата:** 16.09.2026
+**Версия ядра:** v1.19
+**Дата:** 17.09.2026
 **Владелец файла:** Sobol17 (тимлид и единственный разработчик)
 **Источник требований:** `TZ_B2B_CRM_stolyarka_v06.md`
 
@@ -11,6 +11,7 @@
 | Версия | Изменение |
 |---|---|
 | v1.0 | Первая заморозка ядра: стек, структура, схема БД, контракты очереди и событий, общие типы, UI-примитивы, правила кода, дорожная карта слайсов |
+| v1.19 | Слайс P9. Письма портала: `notification.fanout` разворачивает событие заявки в строки `notifications` для людей контрагента, `notification.dispatch` отправляет строку через `MailDriver` и ставит `sent` или `failed`. Администратор контрагента получает письма по всем заявкам, сотрудник только по своим (`rolesTowardsRequest` в `domain/notification/matrix.ts`), сид добавил правила `cp_employee` на `request.accepted`, `request.ready`, `request.delivered`, `request.rejected`. Роли мастерской получают письма в C12, канал push в C15. Эффекты `emit:request.accepted`, `emit:request.cancelled`, `emit:request.rejected` в §6.2 не добавлены: письма этапа 1 уходят по `request.ready`, `request.delivered`, `request.paid`. Пара «событие, канал» предлагается пользователю, только если правило называет одну из его ролей; правило задаёт значение по умолчанию, личная настройка его перекрывает, сохранение пишет строку на каждую предложенную пару. Повтор fanout не создаёт вторую строку для той же пары «событие, сущность, человек, канал», повтор dispatch не шлёт отправленное. Отказ драйвера пишет `failed`, число попыток и текст ошибки, и отдаёт задачу на ретрай; строка без активного шаблона или с неживым каналом уходит в `dead`. Шаблоны `notification_templates` сидятся из `fixtures/notification-templates.json`, переменные `{{number}}`, `{{status}}`, `{{url}}`, `{{counterparty}}`, `{{externalNumber}}`, неизвестная переменная роняет сид; суммы в письмах не пишутся, поэтому один текст годится ролям с ценами и без. Ключ `settings.notifications.enabled` (boolean) выключает fanout целиком. `MAIL_DRIVER=smtp` включает `nodemailer`, без `SMTP_HOST` и `MAIL_FROM` процесс не стартует. Экран `/portal/profile/notifications` для обеих ролей портала: переключатели писем и журнал отправок без текста ошибки драйвера. В §8 добавлены `NotificationPrefDto`, `NotificationLogItemDto`, `NotificationSettingsDto`, `LIVE_CHANNELS`. `Toast` получил виды `info` и `warning`, заголовок с описанием, ссылку-действие, паузу при наведении, склейку повторов и лимит стопки; хелпер `withToast` из `lib/ui/form-toast.ts` показывает исход любой form action. Форма получает понятный текст отказа через `userMessage`: коды `forbidden`, `not_found`, `rate_limited` больше не выводят внутренние имена действий |
 | v1.18 | Слайс P8. Ключ идемпотентности `charity.recount` стал `charity:{scope}:{requestId}`: часовой ключ терял вторую доставку за тот же час, и счётчик не рос. Хендлер пересобирает строку `charity_totals` целиком из `requests`, поэтому повторный прогон ничего не меняет. Отчисление считается при первом переходе в `delivered` как `roundHalfUp(totalMinor * rate_bp / 10000)`: цена агентства в базу не входит, заявка на склад отчисления не получает. В счётчик попадают заявки с зафиксированным отчислением, кроме заявок на склад, отменённых и отклонённых; год берётся по `deliveredAt` в `org.timezone`, `requestCount` в SSE считается за всё время. Форма `settings.charity.fund`: `{ title, url? }`. В §8 добавлен `CharityBannerDto`, `RequestCardDto` получил `charityAmountMinor`. Правило §8.1 уточнено: ключи с префиксом `public` несут публичные цифры фонда и разрешены любой роли. Личный вклад контрагента и отчисление с заявки получает только роль с ценами: по ним вычисляется объём закупок |
 | v1.17 | Справка по фонду за период убрана из P8. Выгрузки по благотворительности в системе нет: остаются счётчик, баннер и `charity_totals` |
 | v1.16 | Слайс P7 переопределён. Документы и печатные формы выведены из системы: убраны таблицы `documents` и `document_templates`, список `DOCUMENT_KINDS`, топик `document.generate`, значение `document` в `media.ownerScope`, строка `pdfmake` в §3 и папка `server/documents/`, нумерация переехала в `server/numbering/`. Слайс C11 выведен из дорожной карты, его номер не переиспользуется; C5 ищет заявку по номеру без бланка, C6 остался без просмотра накладной, C10 отдаёт ведомость только в XLSX, P8 отдаёт справку по фонду в XLSX. Вместо документов портал получил цены агентства: таблица `counterparty_product_prices`, одна цена на `product`, размер и опции её не меняют. Цена агентства только для показа клиенту: в `requests.total_minor`, скидку по договору, отчисление в фонд и прайс-лист XLSX она не входит. `cp_admin` заполняет её на экране «Мои цены» и видит рядом закупочную, `cp_employee` видит только цену агентства. В §8 добавлены `CategoryDto.agencyMinPriceMinor`, `ProductListItemDto.agencyPriceMinor`, `ProductDto.agencyPriceMinor`, `DraftItemDto.agencyUnitPriceMinor`, `RequestItemDto.agencyUnitPriceMinor`, в матрицу прав `prices.manage`. Сортировка каталога по цене для сотрудника идёт по цене агентства, модель без цены уходит в конец. Правило §8.1 уточнено: ответ роли без цен не содержит закупочных ключей, ключи с префиксом `agency` разрешены |
@@ -788,7 +789,7 @@ export const settings = sqliteTable('settings', {
 
 Ключи `settings`: `org.requisites`, `org.timezone`, `charity.rate_bp`, `charity.fund`, `counterparty.staff_limit_default`, `payroll.week_closing_day`, `notifications.enabled`, `crm.ip_allowlist`.
 
-Форма `charity.rate_bp`: целое число базисных пунктов от 0 до 10000. Форма `charity.fund`: `{ title: string; url?: string }` (v1.18).
+Форма `charity.rate_bp`: целое число базисных пунктов от 0 до 10000. Форма `charity.fund`: `{ title: string; url?: string }` (v1.18). Форма `notifications.enabled`: `boolean`, `false` останавливает разворот любых событий в уведомления (v1.19).
 
 ---
 
@@ -896,6 +897,16 @@ export const EVENT_KEYS = [
 
 Матрица «событие × роль × канал» лежит в `notification_rules` и наполняется сидом. Персональные настройки пользователя перекрывают правило роли.
 
+Правила разворота (v1.19, `lib/domain/notification/matrix.ts`):
+
+- пара «событие, канал» существует для пользователя, только если правило называет одну из его ролей; значение по умолчанию включено, если хотя бы одно такое правило включено;
+- личная настройка из `user_notification_prefs` перекрывает значение по умолчанию; сохранение формы пишет строку на каждую предложенную пару, пару вне предложения сервер отклоняет;
+- к заявке человек портала относится как `cp_admin` всегда и как `cp_employee`, только если он автор заявки; заявка на склад в портал не пишет;
+- до C12 разворачиваются только события заявки и только для людей контрагента, до C15 живой канал один, `email`;
+- `notifications.payload` хранит `{ entityId }`, текст письма собирается в `notification.dispatch` из БД на момент отправки.
+
+Переменные шаблона: `{{number}}`, `{{status}}` (подпись из `lib/ui/status.ts`), `{{url}}` (`ORIGIN` плюс путь карточки), `{{counterparty}}`, `{{externalNumber}}`. Подстановка идёт в один проход, значение с фигурными скобками не раскрывается. Денежных переменных нет.
+
 ### 7.4 SSE
 
 `GET /api/stream/:topic`, топики `charity` (публичный, без ПДн) и `requests` (только CRM, только сводные счётчики). Транспорт делается в каркасе (слайс K5), слайсы только подписываются.
@@ -1000,6 +1011,18 @@ export interface RequestCardDto {
   itemsTotalMinor?: number; discountPercent?: number; discountMinor?: number; totalMinor?: number; paidMinor?: number;
   charityAmountMinor?: number;           // frozen on delivery (P8), role with prices only
 }
+
+// notifications.ts — personal settings and the delivery log of a portal user (P9).
+export const NOTIFICATION_CHANNELS = ['email','push'] as const;
+export const LIVE_CHANNELS = ['email'] as const;          // push joins in C15
+export const NOTIFICATION_STATUSES = ['queued','sent','failed'] as const;
+export interface NotificationPrefDto { eventKey: EventKey; channel: NotificationChannel; enabled: boolean; isDefault: boolean; }
+export interface NotificationLogItemDto {
+  id: number; eventKey: EventKey; channel: NotificationChannel; status: NotificationStatus; attempts: number;
+  requestId: number | null; requestNumber: string | null;   // null when the row points outside the actor's counterparty
+  createdAt: string; sentAt: string | null;                  // the driver error never leaves the server
+}
+export interface NotificationSettingsDto { email: string; prefs: NotificationPrefDto[]; log: Page<NotificationLogItemDto>; }
 
 // charity.ts — donation banner of the portal home (P8). `public` keys are the fund's public figures.
 export interface CharityBannerDto {
@@ -1114,7 +1137,7 @@ export class RequestDtoMapper {
 | `DataTable` | `columns`, `rows`, `total`, `query: ListQuery`, `onQueryChange`, `exportUrl`, серверная пагинация |
 | `FilterBar` | `fields`, `bind:filters`, сохранение в URL |
 | `Modal` / `Drawer` / `ConfirmDialog` | `open`, `title`, `onClose`, `{#snippet body()}` |
-| `Toast` (`toast.success/error`) | глобальный стор на рунах |
+| `Toast` (`toast.success/error/info/warning`) | глобальный стор на рунах; `(title, { description?, durationMs?, action?: { label, href } })`, `durationMs: 0` держит тост до закрытия, наведение и фокус ставят таймер на паузу, повтор того же текста перезапускает тост вместо копии, в стопке не больше четырёх (v1.19). Исход form action показывает `withToast({ success?, reset?, pending?, onSuccess? })` из `lib/ui/form-toast.ts`: успех своим текстом, `formError` сервера текстом ошибки, ошибки полей фразой «Проверьте поля формы», обрыв связи отдельной фразой |
 | `StatusBadge` | `status: RequestStatus`, палитра и подпись из одного словаря |
 | `Card` / `Tabs` / `Breadcrumbs` / `Pagination` | базовые |
 | `EmptyState` / `Skeleton` / `Spinner` / `ErrorState` | `title`, `description`, `action` |
@@ -1215,7 +1238,7 @@ CD нет. Мёрдж в `main` ничего не разворачивает. Do
 - **SQL.** Только Drizzle-построитель. Конкатенация строк в SQL запрещена, сырой SQL только через параметризованный `sql` с плейсхолдерами.
 - **Заголовки.** `hooks.server.ts` ставит CSP без `unsafe-eval`, `X-Content-Type-Options`, `Referrer-Policy`, `X-Frame-Options: DENY`, HSTS.
 - **Аудит.** Все изменяющие действия пишутся в `audit_log` через декоратор сервиса. ПДн в логи не попадают.
-- **Ошибки.** Наружу отдаём код и нейтральный текст. Стек и детали только в лог.
+- **Ошибки.** Наружу отдаём код и нейтральный текст. Стек и детали только в лог. Текст отказа в форме и тосте берётся из `userMessage` (`lib/server/core/errors.ts`): сообщения `ValidationError` и `ConflictError` пишут сервисы по-русски, остальные коды получают фиксированную фразу без внутренних имён действий (v1.19).
 
 ---
 
@@ -1758,11 +1781,12 @@ Payload push-уведомления не содержит цен, персона
 | Корзина | `/portal/cart` | обе | P4, P7 | Черновик заявки: строки с вариантом и опциями, цена и сумма строки для `cp_admin`, количество, удаление, очистка. Отгрузка: адрес из `delivery_addresses` или самовывоз (`isPickup`), комментарий, поле «Ваш номер заявки» (`externalNumber`, в макете нет, добавляется). Итог: позиции, изделия, сумма, скидка по договору, к оплате (только `cp_admin`). Из P7: в строке цена агентства за штуку, суммы строки и итога в ценах агентства не считаются. «Оформить заявку» выполняет `draft -> new` |
 | Мои заявки | `/portal/requests` | обе | P6 | Раскладка профиля с боковым меню, строки-карточки: номер, дата, статус, первая позиция, число позиций и изделий, сумма для `cp_admin`, автор (`createdById`) для администратора. Чипы статусов с числами, поиск по номеру, сортировка. Фильтр периода из DoD P6 добавляется, в макете его нет. «Новая заявка» ведёт в каталог |
 | Заявка (детальная) | `/portal/requests/[id]` | обе | P6, P7, P8 | Показатели: позиции, сумма (`cp_admin`), статус. Состав заявки `DataTable`, комментарий, параметры отгрузки и скидка, «Повторить заявку» (P4), «Отменить заявку» для `new -> cancelled` (P5), карточка менеджера. Из DoD P6 добавляются `Stepper` истории статусов, переписка с менеджером (`comments` без `isInternal`) и вложения, из P7 цена агентства в строке состава, из P8 строка «в фонд с этой заявки» |
+| Уведомления | `/portal/profile/notifications` | обе | P9 | Макета нет, экран собран в раскладке профиля: переключатели писем по событиям, которые предлагает матрица роли, и журнал отправок `DataTable` с событием, номером заявки, каналом и статусом доставки. Текст ошибки драйвера не показывается |
 | Профиль контрагента | `/portal/profile` | обе | K5 аккаунт, P2 карточка | K5: раскладка профиля и блок «Мой аккаунт» с формой ФИО и телефона, эталонная вертикаль. P2: название, реквизиты (`legalName`, `inn`, `kpp`, `address`, `phone`, `email`), договор (`contracts`), показатели скидки, задолженности и закупки за год для `cp_admin`, превью трёх сотрудников, менеджер. Кнопка «Изменить данные» реквизитов не рисуется: реквизиты правит менеджер в C3 |
 | Мои цены | `/portal/prices` | `cp_admin`, у `cp_employee` 403 | P7 | `DataTable` моделей каталога: артикул, название, категория, закупочная цена «от N ₽» серым, поле своей цены на `MoneyInput`. Поиск и фильтр категории через `FilterBar`, серверная пагинация, сохранение страницы одной формой. Пустое поле означает, что цена не задана: сотрудник видит прочерк |
 | Мои сотрудники | `/portal/staff` | `cp_admin`, у `cp_employee` 403 | P2 | `DataTable` с выбором строк: ФИО и email, роль (`cp_admin` «Администратор», `cp_employee` «Сотрудник»), телефон, последний вход (`lastLoginAt`), статус (активен; приглашён при `mustChangePassword` и пустом `lastLoginAt`; отключён при `isActive = false`). Поиск, фильтры роли и статуса, «Добавить сотрудника» с временным паролем письмом, «Сменить роль», «Отключить», счётчик «N из `staffLimit`» |
 
-Навигация шапки портала: «Главная», «Каталог», «Заявки». Пункт «Доставка» из макета не рисуется, экрана под него нет. Боковое меню профиля: «Профиль», «Мои сотрудники» и «Мои цены» только для `cp_admin`, «Мои заявки». Подвал: контакты менеджера и «Выйти», ссылки «Условия поставки» и «Помощь» не рисуются до появления страниц.
+Навигация шапки портала: «Главная», «Каталог», «Заявки». Пункт «Доставка» из макета не рисуется, экрана под него нет. Боковое меню профиля: «Профиль», «Мои сотрудники» и «Мои цены» только для `cp_admin`, «Мои заявки», «Уведомления» (P9). Подвал: контакты менеджера и «Выйти», ссылки «Условия поставки» и «Помощь» не рисуются до появления страниц.
 
 ### 18.6 Разрывы контракта, которые открывают макеты
 

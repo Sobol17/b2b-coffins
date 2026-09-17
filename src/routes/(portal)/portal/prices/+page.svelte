@@ -6,7 +6,16 @@
 	import AgencyPriceTable from '$lib/portal/prices/AgencyPriceTable.svelte';
 	import { profileNavItems } from '$lib/portal/profile-nav';
 	import ProfileNav from '$lib/portal/ProfileNav.svelte';
-	import { Breadcrumbs, Button, Card, ErrorState, FilterBar, type FilterField } from '$lib/ui';
+	import {
+		Breadcrumbs,
+		Button,
+		Card,
+		ErrorState,
+		FilterBar,
+		withToast,
+		type FilterField,
+		type ToastSpec
+	} from '$lib/ui';
 	import type { ListQuery } from '$lib/types/list';
 	import { withListQuery } from '$lib/utils/list-url';
 	import { definedProps } from '$lib/utils/props';
@@ -58,6 +67,15 @@
 		void goto(withListQuery(page.url, next), { keepFocus: true, noScroll: true });
 	}
 
+	function savedToast(data: Record<string, unknown> | undefined): ToastSpec {
+		const counts = data?.['saved'];
+		const { updated = 0, cleared = 0 } =
+			typeof counts === 'object' && counts !== null
+				? (counts as { updated?: number; cleared?: number })
+				: {};
+		return { title: 'Цены сохранены', description: `Задано: ${updated}. Очищено: ${cleared}.` };
+	}
+
 	const saved = $derived(form && 'saved' in form ? form.saved : undefined);
 	const failure = $derived(form && 'formError' in form ? form.formError : undefined);
 </script>
@@ -75,7 +93,7 @@
 		/>
 	</div>
 
-	<div class="grid gap-6 lg:grid-cols-[17.5rem_1fr] lg:items-start">
+	<div class="grid grid-cols-1 gap-6 lg:grid-cols-[17.5rem_1fr] lg:items-start">
 		<ProfileNav
 			title={data.counterparty.name}
 			items={profileNavItems('prices', {
@@ -110,13 +128,11 @@
 					<form
 						method="POST"
 						action="?/save"
-						use:enhance={() => {
-							saving = true;
-							return async ({ update }) => {
-								await update({ reset: false });
-								saving = false;
-							};
-						}}
+						use:enhance={withToast({
+							reset: false,
+							pending: (value) => (saving = value),
+							success: savedToast
+						})}
 					>
 						<AgencyPriceTable
 							rows={data.prices.rows}

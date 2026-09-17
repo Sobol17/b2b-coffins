@@ -1,7 +1,7 @@
 import { fail, redirect } from '@sveltejs/kit';
 import { AuthService } from '$lib/server/auth/auth.service';
-import { AppError } from '$lib/server/core/errors';
-import { fakeMailDriver } from '$lib/server/notifications/drivers/mail';
+import { AppError, userMessage } from '$lib/server/core/errors';
+import { mailDriver } from '$lib/server/notifications/drivers/mail/select';
 import { applyResetSchema, requestResetSchema } from '$lib/validation/auth';
 import type { Actions, PageServerLoad } from './$types';
 
@@ -13,13 +13,13 @@ export const actions = {
 		if (!parsed.success) return fail(422, { errors: parsed.error.flatten().fieldErrors });
 
 		try {
-			await new AuthService(undefined, fakeMailDriver).requestReset(
+			await new AuthService(undefined, mailDriver()).requestReset(
 				parsed.data.email,
 				getClientAddress()
 			);
 		} catch (err) {
 			if (!(err instanceof AppError)) throw err;
-			return fail(429, { formError: err.message });
+			return fail(429, { formError: userMessage(err) });
 		}
 
 		// The same answer whether or not the address exists.
@@ -34,7 +34,7 @@ export const actions = {
 			await new AuthService().applyReset(parsed.data);
 		} catch (err) {
 			if (!(err instanceof AppError)) throw err;
-			return fail(422, { formError: err.message });
+			return fail(422, { formError: userMessage(err) });
 		}
 
 		redirect(303, '/login?reset=1');

@@ -21,7 +21,7 @@
 	);
 </script>
 
-<div class="grid gap-12 rounded-card bg-surface-raised p-6 sm:p-8 md:grid-cols-2">
+<div class="grid grid-cols-1 gap-12 rounded-card bg-surface-raised p-6 sm:p-8 md:grid-cols-2">
 	<div>
 		<h2 class="mb-3.5 text-2xl">Характеристики</h2>
 		<dl data-testid="product-specs">

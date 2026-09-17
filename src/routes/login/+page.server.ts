@@ -2,8 +2,8 @@ import { fail, redirect } from '@sveltejs/kit';
 import { AuthService } from '$lib/server/auth/auth.service';
 import { setSessionCookie } from '$lib/server/auth/cookies';
 import { SESSION_TTL_DAYS } from '$lib/server/auth/session.service';
-import { AppError } from '$lib/server/core/errors';
-import { fakeMailDriver } from '$lib/server/notifications/drivers/mail';
+import { AppError, userMessage } from '$lib/server/core/errors';
+import { mailDriver } from '$lib/server/notifications/drivers/mail/select';
 import { loginSchema } from '$lib/validation/auth';
 import type { Actions, PageServerLoad } from './$types';
 
@@ -17,7 +17,7 @@ export const actions = {
 		const parsed = loginSchema.safeParse(Object.fromEntries(await request.formData()));
 		if (!parsed.success) return fail(422, { errors: parsed.error.flatten().fieldErrors });
 
-		const service = new AuthService(undefined, fakeMailDriver);
+		const service = new AuthService(undefined, mailDriver());
 		let result;
 		try {
 			result = await service.login(parsed.data, {
@@ -27,7 +27,7 @@ export const actions = {
 		} catch (err) {
 			if (!(err instanceof AppError)) throw err;
 			// One message for a wrong password and for an unknown address: no account enumeration.
-			return fail(422, { formError: err.message, email: parsed.data.email });
+			return fail(422, { formError: userMessage(err), email: parsed.data.email });
 		}
 
 		setSessionCookie(

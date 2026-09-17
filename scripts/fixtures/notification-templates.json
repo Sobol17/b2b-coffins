@@ -1,0 +1,50 @@
+[
+	{
+		"eventKey": "request.submitted",
+		"channel": "email",
+		"subject": "Новая заявка {{number}} от {{counterparty}}",
+		"body": "Контрагент {{counterparty}} отправил заявку {{number}}.\nНомер контрагента: {{externalNumber}}.\n\nОткрыть заявку: {{url}}"
+	},
+	{
+		"eventKey": "request.accepted",
+		"channel": "email",
+		"subject": "Заявка {{number}} принята в работу",
+		"body": "Мастерская приняла заявку {{number}} в работу.\nВаш номер заявки: {{externalNumber}}.\nТекущий статус: {{status}}.\n\nОткрыть заявку: {{url}}"
+	},
+	{
+		"eventKey": "request.ready",
+		"channel": "email",
+		"subject": "Заявка {{number}} готова к выдаче",
+		"body": "Изделия по заявке {{number}} готовы и упакованы.\nВаш номер заявки: {{externalNumber}}.\nТекущий статус: {{status}}.\n\nОткрыть заявку: {{url}}"
+	},
+	{
+		"eventKey": "request.delivered",
+		"channel": "email",
+		"subject": "Заявка {{number}} доставлена",
+		"body": "Водитель мастерской передал изделия по заявке {{number}}.\nВаш номер заявки: {{externalNumber}}.\nТекущий статус: {{status}}.\n\nОткрыть заявку: {{url}}"
+	},
+	{
+		"eventKey": "request.cancelled",
+		"channel": "email",
+		"subject": "Заявка {{number}} отменена",
+		"body": "Контрагент {{counterparty}} отменил заявку {{number}}.\n\nОткрыть заявку: {{url}}"
+	},
+	{
+		"eventKey": "request.rejected",
+		"channel": "email",
+		"subject": "Заявка {{number}} отклонена",
+		"body": "Мастерская отклонила заявку {{number}}.\nВаш номер заявки: {{externalNumber}}.\nПричина указана в истории статусов.\n\nОткрыть заявку: {{url}}"
+	},
+	{
+		"eventKey": "request.payment_marked",
+		"channel": "email",
+		"subject": "Оплата по заявке {{number}} получена",
+		"body": "Мастерская отметила оплату по заявке {{number}}.\nВаш номер заявки: {{externalNumber}}.\nТекущий статус: {{status}}.\n\nОткрыть заявку: {{url}}"
+	},
+	{
+		"eventKey": "request.paid",
+		"channel": "email",
+		"subject": "Заявка {{number}} оплачена и закрыта",
+		"body": "Заявка {{number}} полностью оплачена и закрыта.\nВаш номер заявки: {{externalNumber}}.\n\nОткрыть заявку: {{url}}"
+	}
+]

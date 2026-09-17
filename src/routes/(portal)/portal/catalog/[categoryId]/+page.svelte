@@ -76,7 +76,7 @@
 		</span>
 	</div>
 
-	<div class="grid items-start gap-6 lg:grid-cols-[17.5rem_1fr]">
+	<div class="grid grid-cols-1 items-start gap-6 lg:grid-cols-[17.5rem_1fr]">
 		<CatalogFilters
 			facets={data.facets}
 			filters={data.filters}
@@ -119,7 +119,7 @@
 					description="Измените условия или сбросьте фильтры."
 				/>
 			{:else}
-				<div class="grid gap-5 sm:grid-cols-2 xl:grid-cols-4">
+				<div class="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-4">
 					{#each data.products.rows as product (product.id)}
 						<ProductCard {product} />
 					{/each}

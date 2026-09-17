@@ -1,7 +1,7 @@
 import { fail, redirect } from '@sveltejs/kit';
 import { AuthService } from '$lib/server/auth/auth.service';
 import { clearSessionCookie } from '$lib/server/auth/cookies';
-import { AppError } from '$lib/server/core/errors';
+import { AppError, userMessage } from '$lib/server/core/errors';
 import { changePasswordSchema } from '$lib/validation/auth';
 import type { Actions, PageServerLoad } from './$types';
 
@@ -21,7 +21,7 @@ export const actions = {
 			await new AuthService().changePassword(locals.actor.userId, parsed.data);
 		} catch (err) {
 			if (!(err instanceof AppError)) throw err;
-			return fail(422, { formError: err.message });
+			return fail(422, { formError: userMessage(err) });
 		}
 
 		// The change killed every session, this one included: send the user back to the form.

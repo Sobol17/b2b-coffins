@@ -17,7 +17,7 @@
 		<CharityBanner banner={data.charity} />
 	{/if}
 
-	<div class="grid gap-6 md:grid-cols-2">
+	<div class="grid grid-cols-1 gap-6 md:grid-cols-2">
 		<Card.Root>
 			<Card.Content class="flex flex-col gap-3">
 				<h2 class="text-2xl">Собрать заявку</h2>

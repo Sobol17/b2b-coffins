@@ -3,6 +3,7 @@ import { join } from 'node:path';
 import { z } from 'zod';
 import { OPTION_KINDS } from '../../src/lib/types/catalog';
 import { DICT_CODES } from '../../src/lib/types/dicts';
+import { unknownVariables } from '../../src/lib/domain/notification/template';
 import { EVENT_KEYS } from '../../src/lib/types/events';
 import { ROLE_CODES } from '../../src/lib/types/roles';
 
@@ -28,6 +29,19 @@ export const notificationRuleFixture = z.object({
 	roleCode: z.enum(ROLE_CODES),
 	channel: z.enum(['email', 'push']),
 	enabled: z.boolean()
+});
+
+// A placeholder the renderer does not know would fail every send, so the seed refuses it up front.
+const templateText = z
+	.string()
+	.min(1)
+	.refine((text) => unknownVariables(text).length === 0, 'unknown template variable');
+
+export const notificationTemplateFixture = z.object({
+	eventKey: z.enum(EVENT_KEYS),
+	channel: z.enum(['email', 'push']),
+	subject: templateText,
+	body: templateText
 });
 
 const variantFixture = z.object({

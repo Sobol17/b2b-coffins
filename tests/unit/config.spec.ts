@@ -4,7 +4,9 @@ import {
 	ConflictError,
 	ForbiddenError,
 	NotFoundError,
-	ValidationError
+	RateLimitError,
+	ValidationError,
+	userMessage
 } from '../../src/lib/server/core/errors';
 
 describe('AppError to HTTP mapping', () => {
@@ -20,5 +22,26 @@ describe('AppError to HTTP mapping', () => {
 
 		expect(httpStatusFor(new Error('boom'))).toBe(500);
 		expect(body).toEqual({ code: 'internal', message: 'internal error' });
+	});
+});
+
+describe('messages a form may show', () => {
+	it('hides internal action and entity names behind fixed phrases', () => {
+		const shown = [
+			userMessage(new ForbiddenError('request.read.own')),
+			userMessage(new NotFoundError('delivery address')),
+			userMessage(new RateLimitError('request.comment', 60)),
+			userMessage(new ValidationError())
+		];
+
+		for (const text of shown) {
+			expect(text).toMatch(/^[А-ЯЁ]/);
+			expect(text).not.toMatch(/request\.|address|not found|not allowed|too many|validation/);
+		}
+	});
+
+	it('keeps the Russian text a service wrote for a validation or a conflict', () => {
+		expect(userMessage(new ValidationError('Укажите причину'))).toBe('Укажите причину');
+		expect(userMessage(new ConflictError('Заявка уже отправлена'))).toBe('Заявка уже отправлена');
 	});
 });

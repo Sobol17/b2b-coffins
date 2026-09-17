@@ -1,7 +1,7 @@
 import { resolve } from '$app/paths';
 import type { ResolvedPathname } from '$app/types';
 
-export type ProfileSection = 'profile' | 'staff' | 'prices' | 'requests';
+export type ProfileSection = 'profile' | 'staff' | 'prices' | 'requests' | 'notifications';
 
 export interface ProfileNavItem {
 	readonly href: ResolvedPathname;
@@ -14,7 +14,7 @@ export interface ProfileNavRights {
 	readonly prices: boolean;
 }
 
-/** One menu for the profile pages: account, staff, agency prices and the request registry. */
+/** One menu for the profile pages: account, staff, agency prices, requests and notifications. */
 export function profileNavItems(
 	current: ProfileSection,
 	rights: ProfileNavRights
@@ -41,6 +41,11 @@ export function profileNavItems(
 		href: resolve('/portal/requests'),
 		label: 'Мои заявки',
 		active: current === 'requests'
+	});
+	items.push({
+		href: resolve('/portal/profile/notifications'),
+		label: 'Уведомления',
+		active: current === 'notifications'
 	});
 	return items;
 }
