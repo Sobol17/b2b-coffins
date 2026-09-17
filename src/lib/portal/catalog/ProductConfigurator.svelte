@@ -23,13 +23,7 @@
 		formError?: string | undefined;
 	} = $props();
 
-	const KIND_LABEL: Readonly<Record<OptionKind, string>> = {
-		finish: 'Отделка',
-		lacquer: 'Лак',
-		upholstery: 'Обивка',
-		hardware: 'Фурнитура',
-		kit: 'Комплект'
-	};
+	const KIND_LABEL: Readonly<Record<OptionKind, string>> = { color: 'Цвет' };
 
 	let chosen = $state<Partial<Record<OptionKind, string>>>({});
 	let qty = $state(1);

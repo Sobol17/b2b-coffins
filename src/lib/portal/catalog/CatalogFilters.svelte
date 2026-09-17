@@ -62,15 +62,15 @@
 		</fieldset>
 	{/if}
 
-	{#if facets.finishes.length > 0}
+	{#if facets.colors.length > 0}
 		<fieldset class="flex flex-col gap-2.5">
-			<legend class="mb-3 text-xs tracking-[0.14em] text-fg-faint uppercase">Отделка</legend>
-			{#each facets.finishes as finish (finish.id)}
+			<legend class="mb-3 text-xs tracking-[0.14em] text-fg-faint uppercase">Цвет</legend>
+			{#each facets.colors as color (color.id)}
 				<Checkbox
-					name="finish"
-					value={String(finish.id)}
-					label={finish.title}
-					checked={filters.finishOptionIds?.includes(finish.id) ?? false}
+					name="color"
+					value={String(color.id)}
+					label={color.title}
+					checked={filters.colorOptionIds?.includes(color.id) ?? false}
 				/>
 			{/each}
 		</fieldset>

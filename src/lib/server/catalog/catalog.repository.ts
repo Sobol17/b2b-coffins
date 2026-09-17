@@ -206,7 +206,7 @@ export class CatalogRepository extends BaseRepository<typeof products> {
 			filters.lengthToMm === undefined
 				? undefined
 				: lte(productVariants.lengthMm, filters.lengthToMm),
-			filters.finishOptionIds?.length
+			filters.colorOptionIds?.length
 				? exists(
 						this.db()
 							.select({ one: sql`1` })
@@ -214,7 +214,7 @@ export class CatalogRepository extends BaseRepository<typeof products> {
 							.where(
 								and(
 									eq(productOptions.variantId, productVariants.id),
-									inArray(productOptions.optionId, [...filters.finishOptionIds])
+									inArray(productOptions.optionId, [...filters.colorOptionIds])
 								)
 							)
 					)

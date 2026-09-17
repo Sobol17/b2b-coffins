@@ -15,7 +15,7 @@ export type OptionSelectionCheck =
 
 /**
  * A request line carries only options of the compatibility matrix of its variant, each once and at
- * most one of a kind: a coffin has one finish, one upholstery, one set of hardware.
+ * most one of a kind: a coffin has one colour.
  * @returns the option ids sorted, so two identical choices compare equal.
  */
 export function checkOptionSelection(

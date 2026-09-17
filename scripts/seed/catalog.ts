@@ -12,6 +12,7 @@ import {
 	stockMoves
 } from '../../src/lib/server/db/schema';
 import { catalogFixture, loadFixture, stockBalanceFixture, stockItemFixture } from './schema';
+import { retireLegacyOptions } from './legacy-options';
 import { dictIdByCode } from './reference';
 
 export function seedStockItems(db: Db): number {
@@ -122,6 +123,7 @@ function upsertVariantStockItem(db: Db, sku: string, title: string, unitId: numb
 export function seedCatalog(db: Db): { products: number; variants: number } {
 	const fixture = loadFixture('catalog.json', catalogFixture);
 	const pcsUnitId = dictIdByCode(db, 'unit', 'pcs');
+	retireLegacyOptions(db);
 
 	const categoryIds = new Map(
 		fixture.categories.map((c) => [c.code, upsertCategory(db, c.title, c.sortOrder)])

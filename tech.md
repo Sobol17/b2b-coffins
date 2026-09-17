@@ -1,7 +1,7 @@
 # tech.md — ядро проекта
 
 **Проект:** B2B-портал + CRM для столярной мастерской (производство гробов)
-**Версия ядра:** v1.21
+**Версия ядра:** v1.22
 **Дата:** 17.09.2026
 **Статус:** этап 1 (портал, P1–P9) завершён 17.09.2026, этап 2 (CRM) не начат
 **Владелец файла:** Sobol17 (тимлид и единственный разработчик)
@@ -12,6 +12,7 @@
 | Версия | Изменение |
 |---|---|
 | v1.0 | Первая заморозка ядра: стек, структура, схема БД, контракты очереди и событий, общие типы, UI-примитивы, правила кода, дорожная карта слайсов |
+| v1.22 | Опции изделия сведены к цвету: по бизнес-процессу клиент выбирает в карточке товара только размер и цвет. `OPTION_KINDS` и `options.kind` содержат одно значение `color`, виды `finish`, `lacquer`, `upholstery`, `hardware` и `kit` выведены из системы. Цвет не меняет цену: `priceDeltaMinor` остаётся в схеме, в фикстурах равен нулю. Фильтр листинга «Отделка» заменён на «Цвет»: `CatalogFilters.finishOptionIds` стал `colorOptionIds`, `CatalogFacetsDto.finishes` стал `colors`, параметр адреса `finish` стал `color`. Колонка `kind` в SQLite не имеет CHECK, поэтому миграции нет. Строки прежних видов в уже наполненной базе снимает сид: убирает их из матрицы `product_options` и из черновиков, удаляет неиспользованные, а упомянутые в отправленных заявках выключает через `isActive`. Словари `finish`, `fabric` и `hardware` в `DICT_CODES` описывают складские материалы этапа 2 и остаются. §5, §8 и §18 приведены к этому |
 | v1.21 | Поставка на демо-стенд. Приложение собирается в Docker-образ (`Dockerfile`, Node 22 на Debian slim) и запускается через `compose.yml` за Caddy, который выпускает сертификат Let's Encrypt для `APP_DOMAIN`. Контейнер `app` на старте применяет миграции и запускает `node build`, база и файлы лежат в томе `app-data`. `tsx` перенесён в зависимости рантайма: миграции, сид и CLI `pnpm admin` выполняются внутри контейнера. `adapter-node` получает `ADDRESS_HEADER=X-Forwarded-For` и `XFF_DEPTH=1`, чтобы лимиты входа видели IP клиента, и `BODY_SIZE_LIMIT=12M` под вложения до 10 МБ. Ключи стенда описаны в `.env.production.example`, порядок развёртывания, обновления и бэкапа в `docs/deploy.md`. CD по-прежнему нет: обновление запускается вручную. §3, §11, §11.1, §14 C14 и §16 приведены к этому |
 | v1.20 | Этап 1 завершён: слайсы P1–P9 влиты в `main` (P9 в PR #18), портал демонстрируется целиком на локальной сборке. Статус этапов отмечен в шапке, §2 и §14. Контракт не менялся. Этап 2 стартует отдельным решением владельца |
 | v1.19 | Слайс P9. Письма портала: `notification.fanout` разворачивает событие заявки в строки `notifications` для людей контрагента, `notification.dispatch` отправляет строку через `MailDriver` и ставит `sent` или `failed`. Администратор контрагента получает письма по всем заявкам, сотрудник только по своим (`rolesTowardsRequest` в `domain/notification/matrix.ts`), сид добавил правила `cp_employee` на `request.accepted`, `request.ready`, `request.delivered`, `request.rejected`. Роли мастерской получают письма в C12, канал push в C15. Эффекты `emit:request.accepted`, `emit:request.cancelled`, `emit:request.rejected` в §6.2 не добавлены: письма этапа 1 уходят по `request.ready`, `request.delivered`, `request.paid`. Пара «событие, канал» предлагается пользователю, только если правило называет одну из его ролей; правило задаёт значение по умолчанию, личная настройка его перекрывает, сохранение пишет строку на каждую предложенную пару. Повтор fanout не создаёт вторую строку для той же пары «событие, сущность, человек, канал», повтор dispatch не шлёт отправленное. Отказ драйвера пишет `failed`, число попыток и текст ошибки, и отдаёт задачу на ретрай; строка без активного шаблона или с неживым каналом уходит в `dead`. Шаблоны `notification_templates` сидятся из `fixtures/notification-templates.json`, переменные `{{number}}`, `{{status}}`, `{{url}}`, `{{counterparty}}`, `{{externalNumber}}`, неизвестная переменная роняет сид; суммы в письмах не пишутся, поэтому один текст годится ролям с ценами и без. Ключ `settings.notifications.enabled` (boolean) выключает fanout целиком. `MAIL_DRIVER=smtp` включает `nodemailer`, без `SMTP_HOST` и `MAIL_FROM` процесс не стартует. Экран `/portal/profile/notifications` для обеих ролей портала: переключатели писем и журнал отправок без текста ошибки драйвера. В §8 добавлены `NotificationPrefDto`, `NotificationLogItemDto`, `NotificationSettingsDto`, `LIVE_CHANNELS`. `Toast` получил виды `info` и `warning`, заголовок с описанием, ссылку-действие, паузу при наведении, склейку повторов и лимит стопки; хелпер `withToast` из `lib/ui/form-toast.ts` показывает исход любой form action. Форма получает понятный текст отказа через `userMessage`: коды `forbidden`, `not_found`, `rate_limited` больше не выводят внутренние имена действий |
@@ -383,10 +384,10 @@ export const productVariants = sqliteTable('product_variants', {
   createdAt: createdAt(), updatedAt: updatedAt(), deletedAt: ts('deleted_at')
 }, (t) => ({ skuUq: uniqueIndex('variants_sku_uq').on(t.sku), prodIdx: index('variants_product_idx').on(t.productId) }));
 
-// Options: finish, lacquer colour, upholstery, hardware, kit.
+// Options: the colour of the product, the only choice besides the size (v1.22).
 export const options = sqliteTable('options', {
   id: pk(),
-  kind: text('kind', { enum: ['finish', 'lacquer', 'upholstery', 'hardware', 'kit'] }).notNull(),
+  kind: text('kind', { enum: ['color'] }).notNull(),
   title: text('title').notNull(),
   priceDeltaMinor: integer('price_delta_minor').notNull().default(0),
   stockItemId: integer('stock_item_id').references(() => stockItems.id),
@@ -1043,16 +1044,16 @@ export interface ListQuery<F = Record<string, unknown>> {
 export interface Page<T> { rows: T[]; total: number; page: number; perPage: number; }
 
 // catalog.ts — role projections of the catalog (P1). Price keys are optional and never selected for a price-blind role.
-export const OPTION_KINDS = ['finish','lacquer','upholstery','hardware','kit'] as const;
+export const OPTION_KINDS = ['color'] as const;
 export const CATALOG_SORTS = ['sortOrder','title','price'] as const;   // price: personal price; a price-blind role sorts by the agency price, models without one go last
 export interface CatalogFilters {                                        // one variant has to satisfy all filters at once (P3)
-  categoryId?: number; materialIds?: number[]; finishOptionIds?: number[];
+  categoryId?: number; materialIds?: number[]; colorOptionIds?: number[];
   lengthFromMm?: number; lengthToMm?: number; inStock?: boolean;
 }
 export interface CategoryDto { id: number; title: string; parentId: number | null; productCount: number; minPriceMinor?: number; agencyMinPriceMinor?: number; }
 export interface CategoryGroupDto { category: CategoryDto; children: CategoryDto[]; showcase: ProductListItemDto[]; }
 export interface CatalogFacetsDto {
-  materials: { id: number; title: string; productCount: number }[]; finishes: { id: number; title: string }[];
+  materials: { id: number; title: string; productCount: number }[]; colors: { id: number; title: string }[];
   lengthMm: { min: number | null; max: number | null };
 }
 export interface ProductListItemDto {
@@ -1783,8 +1784,8 @@ Payload push-уведомления не содержит цен, персона
 | Лендинг | `/` | гость | K7 | Шапка с чипом телефона и кнопкой «Вход для контрагентов» на `/login`, первый экран, постоянные факты (срок изготовления, регион доставки), товарные группы текстом, «Производство», «Как мы работаем», подвал. Кнопки «Стать контрагентом» и «Запросить условия» открывают `mailto:` и `tel:` из `org.requisites`. Счётчики каталога и остатка гостю не показываются: публичного доступа к данным каталога нет |
 | Главная портала | `/portal` | `cp_admin`, `cp_employee` | P6, блоки дополняют P2, P4, P8 | Заголовок с именем контрагента и договором (P2). Три показателя: заявки в работе с суммой для `cp_admin`, ближайшая готовность по `readyAt`, скидка `discountPercent` (P2). Панели «Собрать заявку» и «Повторить заявку» (P4). Таблица активных заявок `new…awaiting_payment` и закрытых за три месяца (P6). Баннер пожертвований в макете отсутствует, P8 ставит его под показателями |
 | Каталог | `/portal/catalog` | обе | P3, P7 | Группы верхнего уровня `categories` с подкатегориями, число артикулов, «от N ₽» по закупочной цене для `cp_admin` и по цене агентства для `cp_employee` (P7), кнопка «Скачать прайс-лист XLSX» только для `cp_admin` |
-| Листинг товаров | `/portal/catalog/[categoryId]` | обе | P3, P7 | Фильтры: материал (`dict_items` `material`), отделка (`options` `finish`), длина (`lengthMm`), наличие по остатку. Сортировка, число на странице, выбранные фильтры чипами, сетка карточек с артикулом, названием, ценой и остатком. Из P7: карточка показывает цену агентства, у `cp_admin` под ней закупочная серым, сотрудник сортирует по цене агентства |
-| Карточка товара | `/portal/catalog/product/[productId]` | обе | P3 просмотр, P4 добавление, P7 цена | Галерея `media`, характеристики из полей варианта и справочника материалов, описание, выбор размера (`sizeCode` варианта), обивка и тиснение из `options` по матрице `product_options`, цена за штуку, остаток, количество, «Добавить в заявку» (P4), похожие позиции той же категории. Из P7: цена агентства на модель, у `cp_admin` рядом закупочная серым |
+| Листинг товаров | `/portal/catalog/[categoryId]` | обе | P3, P7 | Фильтры: материал (`dict_items` `material`), цвет (`options` `color`), длина (`lengthMm`), наличие по остатку. Сортировка, число на странице, выбранные фильтры чипами, сетка карточек с артикулом, названием, ценой и остатком. Из P7: карточка показывает цену агентства, у `cp_admin` под ней закупочная серым, сотрудник сортирует по цене агентства |
+| Карточка товара | `/portal/catalog/product/[productId]` | обе | P3 просмотр, P4 добавление, P7 цена | Галерея `media`, характеристики из полей варианта и справочника материалов, описание, выбор размера (`sizeCode` варианта) и цвета из `options` по матрице `product_options`, других опций нет (v1.22), цена за штуку, остаток, количество, «Добавить в заявку» (P4), похожие позиции той же категории. Из P7: цена агентства на модель, у `cp_admin` рядом закупочная серым |
 | Корзина | `/portal/cart` | обе | P4, P7 | Черновик заявки: строки с вариантом и опциями, цена и сумма строки для `cp_admin`, количество, удаление, очистка. Отгрузка: адрес из `delivery_addresses` или самовывоз (`isPickup`), комментарий, поле «Ваш номер заявки» (`externalNumber`, в макете нет, добавляется). Итог: позиции, изделия, сумма, скидка по договору, к оплате (только `cp_admin`). Из P7: в строке цена агентства за штуку, суммы строки и итога в ценах агентства не считаются. «Оформить заявку» выполняет `draft -> new` |
 | Мои заявки | `/portal/requests` | обе | P6 | Раскладка профиля с боковым меню, строки-карточки: номер, дата, статус, первая позиция, число позиций и изделий, сумма для `cp_admin`, автор (`createdById`) для администратора. Чипы статусов с числами, поиск по номеру, сортировка. Фильтр периода из DoD P6 добавляется, в макете его нет. «Новая заявка» ведёт в каталог |
 | Заявка (детальная) | `/portal/requests/[id]` | обе | P6, P7, P8 | Показатели: позиции, сумма (`cp_admin`), статус. Состав заявки `DataTable`, комментарий, параметры отгрузки и скидка, «Повторить заявку» (P4), «Отменить заявку» для `new -> cancelled` (P5), карточка менеджера. Из DoD P6 добавляются `Stepper` истории статусов, переписка с менеджером (`comments` без `isInternal`) и вложения, из P7 цена агентства в строке состава, из P8 строка «в фонд с этой заявки» |
@@ -1804,7 +1805,7 @@ Payload push-уведомления не содержит цен, персона
 | 1 | «Мои заявки» как запросы на нестандартное изделие, образцы и изменение условий, статусы «Согласовано» и «Отклонено», срок ответа менеджера | Отдельной сущности запроса нет, §1 оставляет одну сущность «Заявка» | P6 |
 | 2 | Ступени цены «от 50 шт», «от 100 шт» | Таблицы ступеней цены от объёма | P3, P4 |
 | 3 | «Под заказ, срок 4 дня», «Срок производства 3 дня», «Готовность заявки 20 июня» | Срока изготовления варианта и плановой даты готовности заявки | P3, P4, P6 |
-| 4 | Цветные свотчи фильтра и цвет обивки | Значения цвета у `options` | P3 |
+| 4 | Цветные свотчи фильтра и выбора цвета | Значения цвета (hex) у `options` | P3 |
 | 5 | Паспорт изделия, габаритный чертёж, сертификат PDF в карточке товара | Документов в системе нет, `media.ownerScope = 'product'` задуман под фото | P3 |
 | 6 | Позиции вне каталога и услуги в составе заявки («по чертежу», «упаковка усиленная») | `request_items.variantId` обязателен | P4 |
 | 7 | «Добавить по артикулам», «В спецификацию», «Запросить образец», «Отправить запрос» | Сценариев нет в объёме P3 и P4 | P3, P4 |

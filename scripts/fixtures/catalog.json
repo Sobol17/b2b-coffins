@@ -1,58 +1,51 @@
 {
 	"categories": [
-		{ "code": "economy", "title": "Эконом", "sortOrder": 10 },
-		{ "code": "standard", "title": "Стандарт", "sortOrder": 20 },
-		{ "code": "premium", "title": "Премиум", "sortOrder": 30 }
+		{
+			"code": "economy",
+			"title": "Эконом",
+			"sortOrder": 10
+		},
+		{
+			"code": "standard",
+			"title": "Стандарт",
+			"sortOrder": 20
+		},
+		{
+			"code": "premium",
+			"title": "Премиум",
+			"sortOrder": 30
+		}
 	],
 	"options": [
-		{ "code": "finish_matte", "kind": "finish", "title": "Матовая отделка", "priceDeltaMinor": 0 },
 		{
-			"code": "finish_gloss",
-			"kind": "finish",
-			"title": "Глянцевая отделка",
-			"priceDeltaMinor": 120000
-		},
-		{
-			"code": "lacquer_walnut",
-			"kind": "lacquer",
-			"title": "Лак «Орех»",
-			"priceDeltaMinor": 45000
-		},
-		{
-			"code": "lacquer_mahogany",
-			"kind": "lacquer",
-			"title": "Лак «Красное дерево»",
-			"priceDeltaMinor": 60000
-		},
-		{
-			"code": "uph_satin",
-			"kind": "upholstery",
-			"title": "Обивка атлас",
-			"priceDeltaMinor": 80000
-		},
-		{
-			"code": "uph_velvet",
-			"kind": "upholstery",
-			"title": "Обивка бархат",
-			"priceDeltaMinor": 150000
-		},
-		{
-			"code": "hw_standard",
-			"kind": "hardware",
-			"title": "Фурнитура стандарт",
+			"code": "color_walnut",
+			"kind": "color",
+			"title": "Орех",
 			"priceDeltaMinor": 0
 		},
 		{
-			"code": "hw_premium",
-			"kind": "hardware",
-			"title": "Фурнитура премиум",
-			"priceDeltaMinor": 210000
+			"code": "color_mahogany",
+			"kind": "color",
+			"title": "Красное дерево",
+			"priceDeltaMinor": 0
 		},
 		{
-			"code": "kit_basic",
-			"kind": "kit",
-			"title": "Комплект: покрывало и подушка",
-			"priceDeltaMinor": 95000
+			"code": "color_wenge",
+			"kind": "color",
+			"title": "Венге",
+			"priceDeltaMinor": 0
+		},
+		{
+			"code": "color_white",
+			"kind": "color",
+			"title": "Белый",
+			"priceDeltaMinor": 0
+		},
+		{
+			"code": "color_black",
+			"kind": "color",
+			"title": "Чёрный",
+			"priceDeltaMinor": 0
 		}
 	],
 	"products": [
@@ -86,7 +79,7 @@
 					"costPriceMinor": 330000
 				}
 			],
-			"options": ["finish_matte", "uph_satin", "hw_standard"]
+			"options": ["color_walnut", "color_white"]
 		},
 		{
 			"sku": "MDL-102",
@@ -118,14 +111,7 @@
 					"costPriceMinor": 420000
 				}
 			],
-			"options": [
-				"finish_matte",
-				"finish_gloss",
-				"lacquer_walnut",
-				"uph_satin",
-				"hw_standard",
-				"kit_basic"
-			]
+			"options": ["color_walnut", "color_white", "color_wenge"]
 		},
 		{
 			"sku": "MDL-103",
@@ -146,7 +132,7 @@
 					"costPriceMinor": 440000
 				}
 			],
-			"options": ["finish_matte", "lacquer_walnut", "uph_satin", "hw_standard"]
+			"options": ["color_walnut", "color_white"]
 		},
 		{
 			"sku": "MDL-201",
@@ -189,17 +175,7 @@
 					"costPriceMinor": 620000
 				}
 			],
-			"options": [
-				"finish_matte",
-				"finish_gloss",
-				"lacquer_walnut",
-				"lacquer_mahogany",
-				"uph_satin",
-				"uph_velvet",
-				"hw_standard",
-				"hw_premium",
-				"kit_basic"
-			]
+			"options": ["color_walnut", "color_mahogany", "color_wenge", "color_white", "color_black"]
 		},
 		{
 			"sku": "MDL-202",
@@ -231,16 +207,7 @@
 					"costPriceMinor": 640000
 				}
 			],
-			"options": [
-				"finish_matte",
-				"finish_gloss",
-				"lacquer_walnut",
-				"uph_satin",
-				"uph_velvet",
-				"hw_standard",
-				"hw_premium",
-				"kit_basic"
-			]
+			"options": ["color_walnut", "color_wenge", "color_white"]
 		},
 		{
 			"sku": "MDL-203",
@@ -261,14 +228,7 @@
 					"costPriceMinor": 700000
 				}
 			],
-			"options": [
-				"finish_gloss",
-				"lacquer_walnut",
-				"lacquer_mahogany",
-				"uph_velvet",
-				"hw_premium",
-				"kit_basic"
-			]
+			"options": ["color_mahogany", "color_wenge", "color_black"]
 		},
 		{
 			"sku": "MDL-204",
@@ -300,7 +260,7 @@
 					"costPriceMinor": 880000
 				}
 			],
-			"options": ["finish_gloss", "lacquer_mahogany", "uph_velvet", "hw_premium", "kit_basic"]
+			"options": ["color_mahogany", "color_black"]
 		},
 		{
 			"sku": "MDL-301",
@@ -332,7 +292,7 @@
 					"costPriceMinor": 1600000
 				}
 			],
-			"options": ["finish_gloss", "lacquer_mahogany", "uph_velvet", "hw_premium", "kit_basic"]
+			"options": ["color_mahogany", "color_black"]
 		},
 		{
 			"sku": "MDL-302",
@@ -353,7 +313,7 @@
 					"costPriceMinor": 1780000
 				}
 			],
-			"options": ["finish_gloss", "lacquer_mahogany", "uph_velvet", "hw_premium", "kit_basic"]
+			"options": ["color_mahogany", "color_black"]
 		},
 		{
 			"sku": "MDL-303",
@@ -385,14 +345,7 @@
 					"costPriceMinor": 1450000
 				}
 			],
-			"options": [
-				"finish_gloss",
-				"lacquer_walnut",
-				"lacquer_mahogany",
-				"uph_velvet",
-				"hw_premium",
-				"kit_basic"
-			]
+			"options": ["color_walnut", "color_mahogany", "color_black"]
 		}
 	]
 }
