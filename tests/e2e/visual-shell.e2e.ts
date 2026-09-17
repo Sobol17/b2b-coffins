@@ -18,6 +18,7 @@ test.describe('public landing page', () => {
 			'/login'
 		);
 		await expect(page.getByTestId('become-partner')).toHaveAttribute('href', /^tel:\+7\d+$/);
+		await expect(page.getByTestId('home-logo')).toHaveAttribute('href', '/');
 	});
 
 	test('the landing page shows no prices and no catalog data', async ({ page }) => {
@@ -49,6 +50,14 @@ test.describe('portal shell on a desktop', () => {
 		await expect(page.getByTestId('account-chip')).toHaveAttribute('href', '/portal/profile');
 		await expect(page.getByTestId('menu-button')).toBeHidden();
 		await expect(header.getByRole('button', { name: 'Выйти' })).toHaveCount(0);
+	});
+
+	test('takes the user home from the logo', async ({ page }) => {
+		await login(page, 'cp_admin');
+		await page.goto('/portal/catalog');
+
+		await page.getByTestId('portal-header').getByTestId('home-logo').click();
+		await expect(page).toHaveURL('/portal');
 	});
 
 	test('logs out from the side menu of the profile', async ({ page }) => {
@@ -86,6 +95,23 @@ test.describe('portal shell on a phone', () => {
 		await page.goto('/portal/profile');
 		await page.getByTestId('logout').click();
 		await expect(page).toHaveURL('/login');
+	});
+
+	test('lines up each charity figure with its label in one panel', async ({ page }) => {
+		await login(page, 'cp_admin');
+
+		const banner = page.getByTestId('charity-banner');
+		for (const testId of ['charity-total', 'charity-year', 'charity-count']) {
+			const value = banner.getByTestId(testId);
+			const label = value.locator('xpath=preceding-sibling::dt');
+			const [valueBox, labelBox] = [await value.boundingBox(), await label.boundingBox()];
+			if (!valueBox || !labelBox) throw new Error(`${testId} is not rendered`);
+
+			expect(
+				Math.abs(valueBox.y + valueBox.height / 2 - (labelBox.y + labelBox.height / 2))
+			).toBeLessThan(8);
+			expect(valueBox.x).toBeGreaterThan(labelBox.x + labelBox.width);
+		}
 	});
 
 	test('keeps the landing, the portal home and the profile inside the screen width', async ({
