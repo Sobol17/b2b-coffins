@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { login, purchaseMoneyKeys } from './fixtures';
+import { login, logout, purchaseMoneyKeys } from './fixtures';
 
 async function openVolga(page: Page): Promise<string> {
 	await page.goto('/portal/catalog');
@@ -85,7 +85,7 @@ test('the price list answers 403 to the employee and the storefront 403 to the w
 	await page.goto('/portal/catalog');
 	await expect(page.getByTestId('price-list-download')).toHaveCount(0);
 	expect((await page.request.get('/portal/catalog/price-list.xlsx')).status()).toBe(403);
-	await page.click('button:has-text("Выйти")');
+	await logout(page);
 
 	await login(page, 'manager');
 	expect((await page.goto('/portal/catalog'))?.status()).toBe(403);

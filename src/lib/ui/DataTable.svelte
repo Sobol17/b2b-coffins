@@ -67,13 +67,17 @@
 		</div>
 	{/if}
 
-	<div class="overflow-x-auto rounded-card border border-border">
-		<Table.Root>
-			<Table.Header>
-				<Table.Row>
+	<!-- The mockup rows (.trow): no frame and no rules, a row shows itself only on hover. -->
+	<div class="overflow-x-auto">
+		<Table.Root class="border-separate border-spacing-0 text-[14.5px]">
+			<Table.Header class="[&_tr]:border-0">
+				<Table.Row class="border-0 hover:bg-transparent">
 					{#each columns as column (column.key)}
 						<Table.Head
-							class={column.align === 'end' ? 'text-right' : undefined}
+							class={[
+								'h-auto px-2.5 pt-4 pb-2.5 text-xs font-normal tracking-[0.12em] text-fg-faint uppercase first:pl-2 last:pr-2',
+								column.align === 'end' && 'text-right'
+							]}
 							aria-sort={column.sortable && query.sort === column.key
 								? query.dir === 'asc'
 									? 'ascending'
@@ -83,7 +87,7 @@
 							{#if column.sortable}
 								<button
 									type="button"
-									class="inline-flex items-center gap-1 font-medium"
+									class="inline-flex items-center gap-1 uppercase"
 									onclick={() => toggleSort(column)}
 								>
 									{column.label}
@@ -100,9 +104,14 @@
 			</Table.Header>
 			<Table.Body>
 				{#each rows as row (row.id)}
-					<Table.Row data-testid="data-table-row">
+					<Table.Row data-testid="data-table-row" class="border-0 hover:bg-surface-muted">
 						{#each columns as column (column.key)}
-							<Table.Cell class={column.align === 'end' ? 'text-right' : undefined}>
+							<Table.Cell
+								class={[
+									'px-2.5 py-4 first:rounded-l-[12px] first:pl-2 last:rounded-r-[12px] last:pr-2',
+									column.align === 'end' && 'text-right'
+								]}
+							>
 								{@render cell(row, column)}
 							</Table.Cell>
 						{/each}

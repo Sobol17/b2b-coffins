@@ -11,7 +11,6 @@
 	import { resolve } from '$app/paths';
 	import {
 		Button,
-		Input,
 		RadioGroup,
 		Textarea,
 		withToast,
@@ -75,24 +74,14 @@
 		bind:value={() => delivery, (next) => (picked = next)}
 	/>
 
-	<div class="grid grid-cols-1 gap-5 md:grid-cols-2">
-		<Textarea
-			name="comment"
-			label="Комментарий к заявке"
-			placeholder="Введите комментарий"
-			value={draft.comment ?? ''}
-			rows={3}
-			maxlength={1000}
-		/>
-		<Input
-			name="externalNumber"
-			label="Ваш номер заявки"
-			hint="Номер из вашей учётной системы, если он есть"
-			placeholder="Введите номер"
-			value={draft.externalNumber ?? ''}
-			maxlength={40}
-		/>
-	</div>
+	<Textarea
+		name="comment"
+		label="Комментарий к заявке"
+		placeholder="Введите комментарий"
+		value={draft.comment ?? ''}
+		rows={3}
+		maxlength={1000}
+	/>
 
 	{#if formError}
 		<p data-testid="draft-error" class="text-sm text-danger">{formError}</p>

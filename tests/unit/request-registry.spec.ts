@@ -9,7 +9,7 @@ import {
 	seedOrderingWorld,
 	variantId
 } from './helpers/portal-requests';
-import { listQuery, send, sentAt } from './helpers/registry';
+import { listQuery, markExternal, send, sentAt } from './helpers/registry';
 import { assign, move } from './helpers/transitions';
 
 const db = migratedDatabase();
@@ -112,7 +112,8 @@ describe('portal request registry (P6)', () => {
 	});
 
 	it('finds a request by its number and by the number of the counterparty', () => {
-		const numbered = send(adminCtx, VOLGA_180, { externalNumber: 'ЗК-77' });
+		const numbered = send(adminCtx, VOLGA_180);
+		markExternal(numbered, 'ЗК-77');
 		const page = registry().list({ ...listQuery(), search: 'ЗК-77' });
 
 		expect(page.rows.map((row) => row.id)).toEqual([numbered]);
@@ -147,6 +148,18 @@ describe('portal request registry (P6)', () => {
 		const page = registry(employeeCtx).list({ ...listQuery(), sort: 'total', dir: 'desc' });
 
 		expect(page.rows.map((row) => row.id)).toEqual([second, first]);
+	});
+
+	it('gives the home page a short list and the full count of requests in work', () => {
+		send(adminCtx, VOLGA_180);
+		send(adminCtx, VOLGA_180);
+		const accepted = send(adminCtx, VOLGA_180);
+		toWork(accepted);
+
+		const active = registry().active(2);
+
+		expect(active.rows).toHaveLength(2);
+		expect(active.total).toBe(3);
 	});
 
 	it('refuses a workshop actor: the registry is the portal contour', () => {

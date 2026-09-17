@@ -13,7 +13,6 @@ export interface DraftRow {
 	readonly deliveryAddressId: number | null;
 	readonly isPickup: boolean;
 	readonly comment: string | null;
-	readonly externalNumber: string | null;
 	readonly updatedAt: Date;
 }
 
@@ -21,7 +20,6 @@ export interface DraftDetails {
 	readonly deliveryAddressId: number | null;
 	readonly isPickup: boolean;
 	readonly comment: string | null;
-	readonly externalNumber: string | null;
 }
 
 export interface SentRow {
@@ -39,7 +37,6 @@ const DRAFT_COLUMNS = {
 	deliveryAddressId: requests.deliveryAddressId,
 	isPickup: requests.isPickup,
 	comment: requests.comment,
-	externalNumber: requests.externalNumber,
 	updatedAt: requests.updatedAt
 };
 

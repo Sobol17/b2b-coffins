@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { login, purchaseMoneyKeys } from './fixtures';
+import { login, logout, purchaseMoneyKeys } from './fixtures';
 
 const ORIGIN = 'http://localhost:4173';
 const MODEL = 'Модель «Канцлер»';
@@ -31,7 +31,7 @@ test('the administrator sets an agency price and the employee sells by it', asyn
 		PRICE_SHOWN
 	);
 
-	await page.click('button:has-text("Выйти")');
+	await logout(page);
 	await login(page, 'cp_employee');
 	const path = await openModel(page, MODEL);
 	await expect(page.getByTestId('product-page-price')).toContainText(PRICE_SHOWN);

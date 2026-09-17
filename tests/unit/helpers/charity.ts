@@ -9,7 +9,7 @@ import { insertUser } from './db';
 import { crmActor, portalActor, seedOrderingWorld, variantId } from './portal-requests';
 import { assign, move } from './transitions';
 
-const pickup = { deliveryAddressId: null, isPickup: true, comment: null, externalNumber: null };
+const pickup = { deliveryAddressId: null, isPickup: true, comment: null };
 
 /** The ordering world of P4 plus the workshop crew; the seeded rate is 100 bp. */
 export function seedCharityWorld(db: Db) {

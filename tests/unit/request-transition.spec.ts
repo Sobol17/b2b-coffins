@@ -43,7 +43,7 @@ const carpenterCtx = crmActor('carpenter', carpenterId);
 const driverCtx = crmActor('driver', driverId);
 
 const VOLGA_180 = variantId(db, 'MDL-201-180-PIN');
-const pickup = { deliveryAddressId: null, isPickup: true, comment: null, externalNumber: null };
+const pickup = { deliveryAddressId: null, isPickup: true, comment: null };
 
 /** A request in `new`: where every move of tech.md 6.2 starts. */
 function sent(): number {

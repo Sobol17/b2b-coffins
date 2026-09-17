@@ -30,11 +30,17 @@ describe('design tokens (tech.md 9, 18.2)', () => {
 	});
 
 	it('loads fonts from the app itself, never from a font service', () => {
-		const css = readFileSync('src/app.css', 'utf8');
+		const css = readFileSync('static/fonts/fonts.css', 'utf8');
 
+		expect(css).toContain('@font-face');
 		expect(css).not.toMatch(/fonts\.(googleapis|gstatic)\.com/);
 		for (const [, url] of css.matchAll(/url\('([^']+)'\)/g)) {
 			expect(url).toMatch(/^\/fonts\/[\w-]+\.woff2$/);
 		}
+	});
+
+	it('declares the faces once, outside the stylesheet Vite swaps in dev', () => {
+		expect(readFileSync('src/app.css', 'utf8')).not.toContain('@font-face');
+		expect(readFileSync('src/app.html', 'utf8')).toContain('/fonts/fonts.css');
 	});
 });

@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { ACCOUNTS, login } from './fixtures';
+import { ACCOUNTS, login, logout } from './fixtures';
 
 const ORIGIN = 'http://localhost:4173';
 const OWN_PASSWORD = 'Ochen!Nadezhnyi9';
@@ -31,7 +31,7 @@ test('an administrator gives access to an employee who replaces the temporary pa
 		'Приглашён'
 	);
 
-	await page.click('button:has-text("Выйти")');
+	await logout(page);
 	await signIn(page, email, password);
 	await expect(page).toHaveURL('/password/change');
 
@@ -78,7 +78,7 @@ test('the server response of the profile carries money for the administrator onl
 	const adminBody = await (await page.request.get('/portal/profile/__data.json')).text();
 	// Proves the probe can see money keys at all, so the employee check below is not vacuous.
 	expect(adminBody).toContain('debtMinor');
-	await page.click('button:has-text("Выйти")');
+	await logout(page);
 
 	await login(page, 'cp_employee');
 	const response = await page.request.get('/portal/profile/__data.json');

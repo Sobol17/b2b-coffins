@@ -49,6 +49,13 @@ export async function login(page: Page, role: RoleKey): Promise<void> {
 	await page.waitForURL(HOME_BY_SCOPE[account.scope]);
 }
 
+/** The portal logs out from the profile side menu, the CRM from its header. */
+export async function logout(page: Page): Promise<void> {
+	if (new URL(page.url()).pathname.startsWith('/portal')) await page.goto('/portal/profile');
+	await page.click('button:has-text("Выйти")');
+	await page.waitForURL('/login');
+}
+
 /**
  * Money keys of a server answer that a role without prices must never receive (tech.md 8.1).
  * An agency price is the counterparty's own number and the `public` keys are the fund's public

@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { login, purchaseMoneyKeys } from './fixtures';
+import { login, logout, purchaseMoneyKeys } from './fixtures';
 import { openCard, sendRequest } from './portal-flow';
 import { assignCrew, e2eDb, statusOf, transition } from './transitions';
 
@@ -36,7 +36,7 @@ test('a request the actor may not read answers 403 on a direct link', async ({ p
 	const foreign = new URL(page.url()).pathname;
 
 	// The employee reads only the own requests, so the card of the administrator is out of reach.
-	await page.click('button:has-text("Выйти")');
+	await logout(page);
 	await login(page, 'cp_employee');
 	const response = await page.request.get(foreign);
 
@@ -96,4 +96,27 @@ test('the registry filters by status and finds a request by its number', async (
 	await page.getByLabel('Поиск по номеру').fill('нет-такого-номера');
 	await page.getByLabel('Поиск по номеру').press('Enter');
 	await expect(page.getByText('Заявок не найдено')).toBeVisible();
+});
+
+test('the home page lists a fresh request among the active ones with its sum', async ({ page }) => {
+	const number = await sendRequest(page, 'cp_admin');
+
+	await page.goto('/portal');
+
+	const row = page.getByTestId('data-table-row').filter({ hasText: number });
+	await expect(row).toContainText('Заявка');
+	await expect(row).toContainText('₽');
+	await expect(page.getByTestId('active-requests-count')).toContainText('в работе');
+});
+
+test('an employee sees the active requests on the home page without amounts', async ({ page }) => {
+	const number = await sendRequest(page, 'cp_employee');
+
+	await page.goto('/portal');
+
+	const row = page.getByTestId('data-table-row').filter({ hasText: number });
+	await expect(row).toContainText('—');
+	await expect(row).not.toContainText('₽');
+	const body = await (await page.request.get('/portal/__data.json')).text();
+	expect(purchaseMoneyKeys(body)).toEqual([]);
 });
