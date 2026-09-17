@@ -65,7 +65,7 @@ export const productVariants = sqliteTable(
 	(t) => [uniqueIndex('variants_sku_uq').on(t.sku), index('variants_product_idx').on(t.productId)]
 );
 
-/** Options: finish, lacquer colour, upholstery, hardware, kit. */
+/** Options: the colour of the product, the only choice besides the size (v1.22). */
 export const options = sqliteTable('options', {
 	id: pk(),
 	kind: text('kind', { enum: OPTION_KINDS }).notNull(),

@@ -93,11 +93,10 @@ describe('option selection against the compatibility matrix', () => {
 
 	it('refuses the same option twice and two options of one kind', () => {
 		const allowed = [
-			{ id: 1, kind: 'finish' as const },
-			{ id: 2, kind: 'finish' as const },
-			{ id: 3, kind: 'upholstery' as const }
+			{ id: 1, kind: 'color' as const },
+			{ id: 2, kind: 'color' as const }
 		];
-		expect(checkOptionSelection(allowed, [3, 3])).toMatchObject({ ok: false, reason: 'duplicate' });
+		expect(checkOptionSelection(allowed, [2, 2])).toMatchObject({ ok: false, reason: 'duplicate' });
 		expect(checkOptionSelection(allowed, [1, 2])).toMatchObject({
 			ok: false,
 			reason: 'kind_twice'

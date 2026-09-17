@@ -142,7 +142,7 @@ export class CatalogService extends BaseService {
 		const rows = this.facetRows.facets(ids, visibility);
 		return {
 			materials: rows.materials,
-			finishes: rows.finishes,
+			colors: rows.colors,
 			lengthMm: { min: rows.minLengthMm, max: rows.maxLengthMm }
 		};
 	}

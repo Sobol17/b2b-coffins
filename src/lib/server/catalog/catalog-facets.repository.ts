@@ -5,7 +5,7 @@ import { productVisible, variantVisible, type Visibility } from './visibility';
 
 export interface FacetRows {
 	readonly materials: { id: number; title: string; productCount: number }[];
-	readonly finishes: { id: number; title: string }[];
+	readonly colors: { id: number; title: string }[];
 	readonly minLengthMm: number | null;
 	readonly maxLengthMm: number | null;
 }
@@ -37,13 +37,13 @@ export class CatalogFacetsRepository extends BaseRepository<typeof productVarian
 			.orderBy(asc(dictItems.sortOrder))
 			.all();
 
-		const finishes = this.db()
+		const colors = this.db()
 			.selectDistinct({ id: options.id, title: options.title })
 			.from(productVariants)
 			.innerJoin(products, eq(products.id, productVariants.productId))
 			.innerJoin(productOptions, eq(productOptions.variantId, productVariants.id))
 			.innerJoin(options, eq(options.id, productOptions.optionId))
-			.where(and(scope, eq(options.kind, 'finish'), eq(options.isActive, true)))
+			.where(and(scope, eq(options.kind, 'color'), eq(options.isActive, true)))
 			.orderBy(asc(options.title))
 			.all();
 
@@ -59,7 +59,7 @@ export class CatalogFacetsRepository extends BaseRepository<typeof productVarian
 
 		return {
 			materials,
-			finishes,
+			colors,
 			minLengthMm: bounds?.min ?? null,
 			maxLengthMm: bounds?.max ?? null
 		};

@@ -57,6 +57,15 @@ test('the product page quotes the personal price to the administrator', async ({
 	await expect(page.getByTestId('product-page-stock')).toContainText('12 шт');
 });
 
+test('the product page asks for the size and the colour only', async ({ page }) => {
+	await login(page, 'cp_employee');
+	await openVolga(page);
+
+	const form = page.locator('form[action="?/add"]');
+	await expect(form.locator('label')).toHaveText(['Размер', 'Цвет', 'Количество']);
+	await expect(form.locator('input[name="option"]')).toHaveCount(1);
+});
+
 test('the employee sees the same product with a dash and no money in the server answer', async ({
 	page
 }) => {

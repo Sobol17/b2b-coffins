@@ -86,7 +86,7 @@ beforeAll(() => {
 		.all();
 	const [retired] = db
 		.insert(options)
-		.values({ kind: 'kit', title: 'Снятый комплект', isActive: false })
+		.values({ kind: 'color', title: 'Снятый цвет', isActive: false })
 		.returning()
 		.all();
 	const [firstVariant] = db
@@ -171,7 +171,7 @@ describe('publication', () => {
 
 		expect(product.variants.map((v) => v.sku)).not.toContain('MDL-201-DRAFT');
 		const titles = product.variants.flatMap((v) => v.options.map((o) => o.title));
-		expect(titles).not.toContain('Снятый комплект');
+		expect(titles).not.toContain('Снятый цвет');
 	});
 
 	it('lets the manager see drafts, but never deleted positions', () => {

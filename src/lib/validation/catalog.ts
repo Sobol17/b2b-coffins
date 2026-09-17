@@ -9,7 +9,7 @@ const lengthCm = z.coerce.number().int().min(1).max(400);
 export const catalogFiltersSchema = z.object({
 	categoryId: positiveId.optional(),
 	materialIds: z.array(positiveId).max(50).optional(),
-	finishOptionIds: z.array(positiveId).max(50).optional(),
+	colorOptionIds: z.array(positiveId).max(50).optional(),
 	lengthFromMm: z.coerce.number().int().positive().optional(),
 	lengthToMm: z.coerce.number().int().positive().optional(),
 	inStock: z.boolean().optional()
@@ -33,15 +33,15 @@ function millimetresOf(url: URL, key: string): number | undefined {
 }
 
 /**
- * Storefront query string: `material` and `finish` repeat, lengths come in centimetres like the
+ * Storefront query string: `material` and `color` repeat, lengths come in centimetres like the
  * form shows them. A tampered value is dropped instead of turning the page into an error.
  */
 export function catalogFiltersFromUrl(url: URL): CatalogFilters {
 	const materialIds = idsOf(url, 'material').slice(0, 50);
-	const finishOptionIds = idsOf(url, 'finish').slice(0, 50);
+	const colorOptionIds = idsOf(url, 'color').slice(0, 50);
 	return definedProps({
 		materialIds: materialIds.length > 0 ? materialIds : undefined,
-		finishOptionIds: finishOptionIds.length > 0 ? finishOptionIds : undefined,
+		colorOptionIds: colorOptionIds.length > 0 ? colorOptionIds : undefined,
 		lengthFromMm: millimetresOf(url, 'lengthFrom'),
 		lengthToMm: millimetresOf(url, 'lengthTo'),
 		inStock: url.searchParams.get('inStock') === '1' ? true : undefined

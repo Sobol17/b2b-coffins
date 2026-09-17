@@ -1,4 +1,5 @@
-export const OPTION_KINDS = ['finish', 'lacquer', 'upholstery', 'hardware', 'kit'] as const;
+/** The client picks only a size and a colour (v1.22); the size is the variant itself. */
+export const OPTION_KINDS = ['color'] as const;
 export type OptionKind = (typeof OPTION_KINDS)[number];
 
 export const CATALOG_SORTS = ['sortOrder', 'title', 'price'] as const;
@@ -8,7 +9,7 @@ export type CatalogSort = (typeof CATALOG_SORTS)[number];
 export interface CatalogFilters {
 	readonly categoryId?: number | undefined;
 	readonly materialIds?: readonly number[] | undefined;
-	readonly finishOptionIds?: readonly number[] | undefined;
+	readonly colorOptionIds?: readonly number[] | undefined;
 	readonly lengthFromMm?: number | undefined;
 	readonly lengthToMm?: number | undefined;
 	readonly inStock?: boolean | undefined;
@@ -16,7 +17,7 @@ export interface CatalogFilters {
 
 export interface CatalogFacetsDto {
 	readonly materials: readonly { id: number; title: string; productCount: number }[];
-	readonly finishes: readonly { id: number; title: string }[];
+	readonly colors: readonly { id: number; title: string }[];
 	readonly lengthMm: { readonly min: number | null; readonly max: number | null };
 }
 

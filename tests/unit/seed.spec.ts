@@ -24,6 +24,7 @@ import {
 	dictItems,
 	notificationRules,
 	notificationTemplates,
+	options,
 	priceListItems,
 	productOptions,
 	productVariants,
@@ -124,6 +125,16 @@ describe('migrations and seed on a clean database', () => {
 			expect(rows.length).toBeGreaterThan(0);
 			expect(rows.filter((row) => row.isDefault)).toHaveLength(1);
 		}
+	});
+
+	it('offers a colour as the only option and never charges for it (v1.22)', () => {
+		const rows = db
+			.select({ kind: options.kind, priceDeltaMinor: options.priceDeltaMinor })
+			.from(options)
+			.all();
+
+		expect(rows.length).toBeGreaterThan(0);
+		for (const row of rows) expect(row).toEqual({ kind: 'color', priceDeltaMinor: 0 });
 	});
 
 	// Stock and payroll events get their texts with their slices (C8, C10, C12).

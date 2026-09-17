@@ -12,7 +12,7 @@
 		readonly label: string;
 	}
 
-	const FILTER_KEYS = ['material', 'finish', 'lengthFrom', 'lengthTo', 'inStock'] as const;
+	const FILTER_KEYS = ['material', 'color', 'lengthFrom', 'lengthTo', 'inStock'] as const;
 
 	const chips = $derived.by((): Chip[] => [
 		...(filters.materialIds ?? []).map((id) => ({
@@ -20,10 +20,10 @@
 			value: String(id),
 			label: facets.materials.find((material) => material.id === id)?.title ?? 'Материал'
 		})),
-		...(filters.finishOptionIds ?? []).map((id) => ({
-			key: 'finish',
+		...(filters.colorOptionIds ?? []).map((id) => ({
+			key: 'color',
 			value: String(id),
-			label: facets.finishes.find((finish) => finish.id === id)?.title ?? 'Отделка'
+			label: facets.colors.find((color) => color.id === id)?.title ?? 'Цвет'
 		})),
 		...(filters.lengthFromMm === undefined
 			? []

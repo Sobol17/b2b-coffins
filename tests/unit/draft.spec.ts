@@ -18,44 +18,40 @@ const admin = () => new DraftService(portalActor('cp_admin', world.adminId, worl
 const employee = () => new DraftService(portalActor('cp_employee', world.employeeId, world.cpId));
 
 const VOLGA_180 = variantId(db, 'MDL-201-180-PIN');
-const MATTE = optionId(db, 'Матовая отделка');
-const GLOSS = optionId(db, 'Глянцевая отделка');
-const SATIN = optionId(db, 'Обивка атлас');
+const WALNUT = optionId(db, 'Орех');
+const MAHOGANY = optionId(db, 'Красное дерево');
 
 beforeEach(() => resetRequests(db));
 
 describe('the portal draft (P4)', () => {
 	it('opens a numbered draft with the default address on the first line', () => {
-		const draft = admin().addItem({ variantId: VOLGA_180, qty: 2, optionIds: [SATIN, MATTE] });
+		const draft = admin().addItem({ variantId: VOLGA_180, qty: 2, optionIds: [WALNUT] });
 
 		expect(draft.number).toMatch(/^З-\d{4}-\d{5}$/);
 		expect(draft.deliveryAddressId).toBe(world.homeAddressId);
 		expect(draft.items).toHaveLength(1);
-		expect(draft.items[0]?.options.map((option) => option.title).sort()).toEqual([
-			'Матовая отделка',
-			'Обивка атлас'
-		]);
+		expect(draft.items[0]?.options.map((option) => option.title)).toEqual(['Орех']);
 	});
 
-	it('merges the same variant and options into one line and keeps other options apart', () => {
-		admin().addItem({ variantId: VOLGA_180, qty: 2, optionIds: [MATTE, SATIN] });
-		admin().addItem({ variantId: VOLGA_180, qty: 3, optionIds: [SATIN, MATTE] });
-		const draft = admin().addItem({ variantId: VOLGA_180, qty: 1, optionIds: [GLOSS, SATIN] });
+	it('merges the same variant and colour into one line and keeps another colour apart', () => {
+		admin().addItem({ variantId: VOLGA_180, qty: 2, optionIds: [WALNUT] });
+		admin().addItem({ variantId: VOLGA_180, qty: 3, optionIds: [WALNUT] });
+		const draft = admin().addItem({ variantId: VOLGA_180, qty: 1, optionIds: [MAHOGANY] });
 
 		expect(draft.items.map((item) => item.qty)).toEqual([5, 1]);
 		expect(draft.unitCount).toBe(6);
 	});
 
-	it('prices lines at the personal price with surcharges and takes the contract discount off the sum', () => {
-		const draft = admin().addItem({ variantId: VOLGA_180, qty: 5, optionIds: [MATTE, SATIN] });
+	it('prices lines at the personal price, whatever the colour, and takes the discount off the sum', () => {
+		const draft = admin().addItem({ variantId: VOLGA_180, qty: 5, optionIds: [MAHOGANY] });
 
-		// Partner list 8 300 ₽ + satin 800 ₽ + matte 0 ₽ = 9 100 ₽ a piece.
-		expect(draft.items[0]).toMatchObject({ unitPriceMinor: 910_000, lineTotalMinor: 4_550_000 });
+		// Partner list 8 300 ₽ a piece: a colour carries no surcharge (v1.22).
+		expect(draft.items[0]).toMatchObject({ unitPriceMinor: 830_000, lineTotalMinor: 4_150_000 });
 		expect(draft).toMatchObject({
-			itemsTotalMinor: 4_550_000,
+			itemsTotalMinor: 4_150_000,
 			discountPercent: 5,
-			discountMinor: 227_500,
-			totalMinor: 4_322_500
+			discountMinor: 207_500,
+			totalMinor: 3_942_500
 		});
 	});
 
@@ -72,15 +68,14 @@ describe('the portal draft (P4)', () => {
 		expect(row?.total).toBe(Math.round(830_000 * 0.95));
 	});
 
-	it('refuses on the server an option outside the matrix, two of a kind and an unknown variant', () => {
-		const hardwarePremium = optionId(db, 'Фурнитура премиум');
+	it('refuses on the server a colour outside the matrix, two colours and an unknown variant', () => {
 		const economy = variantId(db, 'MDL-101-180-CHB');
 
+		expect(() => admin().addItem({ variantId: economy, qty: 1, optionIds: [MAHOGANY] })).toThrow(
+			ValidationError
+		);
 		expect(() =>
-			admin().addItem({ variantId: economy, qty: 1, optionIds: [hardwarePremium] })
-		).toThrow(ValidationError);
-		expect(() =>
-			admin().addItem({ variantId: VOLGA_180, qty: 1, optionIds: [MATTE, GLOSS] })
+			admin().addItem({ variantId: VOLGA_180, qty: 1, optionIds: [WALNUT, MAHOGANY] })
 		).toThrow(ValidationError);
 		expect(() => admin().addItem({ variantId: 999_999, qty: 1, optionIds: [] })).toThrow(
 			NotFoundError

@@ -68,7 +68,7 @@ const categoryId = (title: string) =>
 	).id;
 const productId = (sku: string) =>
 	one(db.select({ id: products.id }).from(products).where(eq(products.sku, sku)).all(), sku).id;
-const finishId = (title: string) =>
+const colorId = (title: string) =>
 	one(db.select({ id: options.id }).from(options).where(eq(options.title, title)).all(), title).id;
 
 function skus(filters: CatalogFilters, role: RoleCode = 'cp_employee'): string[] {
@@ -88,8 +88,8 @@ describe('storefront filters (P3)', () => {
 		expect(skus({ materialIds: [materialId('pine')], lengthFromMm: 2000 })).toEqual(['MDL-201']);
 	});
 
-	it('filters by finish through the compatibility matrix', () => {
-		expect(skus({ finishOptionIds: [finishId('Матовая отделка')] })).toEqual([
+	it('filters by colour through the compatibility matrix', () => {
+		expect(skus({ colorOptionIds: [colorId('Белый')] })).toEqual([
 			'MDL-101',
 			'MDL-102',
 			'MDL-103',
@@ -234,7 +234,7 @@ describe('storefront cards and prices', () => {
 			{ id: materialId('oak'), title: 'Дуб', productCount: 2 },
 			{ id: materialId('ash'), title: 'Ясень', productCount: 1 }
 		]);
-		expect(facets.finishes.map((finish) => finish.title)).toEqual(['Глянцевая отделка']);
+		expect(facets.colors.map((color) => color.title)).toEqual(['Красное дерево', 'Орех', 'Чёрный']);
 		expect(facets.lengthMm).toEqual({ min: 1900, max: 2000 });
 	});
 
@@ -252,12 +252,12 @@ describe('storefront cards and prices', () => {
 describe('storefront query string', () => {
 	it('reads repeated ids, centimetres and the stock flag', () => {
 		const url = new URL(
-			'https://portal.example/portal/catalog/1?material=2&material=5&finish=7&lengthFrom=180&lengthTo=200&inStock=1'
+			'https://portal.example/portal/catalog/1?material=2&material=5&color=7&lengthFrom=180&lengthTo=200&inStock=1'
 		);
 
 		expect(catalogFiltersFromUrl(url)).toEqual({
 			materialIds: [2, 5],
-			finishOptionIds: [7],
+			colorOptionIds: [7],
 			lengthFromMm: 1800,
 			lengthToMm: 2000,
 			inStock: true
