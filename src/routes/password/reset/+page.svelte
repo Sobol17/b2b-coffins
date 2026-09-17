@@ -21,7 +21,7 @@
 				name="newPassword"
 				type="password"
 				label="Новый пароль"
-				placeholder="Не короче 12 символов"
+				placeholder="Введите новый пароль"
 				autocomplete="new-password"
 				required
 			/>
@@ -29,7 +29,7 @@
 				name="repeatPassword"
 				type="password"
 				label="Повторите пароль"
-				placeholder="Тот же пароль ещё раз"
+				placeholder="Повторите пароль"
 				autocomplete="new-password"
 				required
 			/>

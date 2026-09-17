@@ -31,10 +31,10 @@
 			key: 'search',
 			label: 'Поиск по номеру',
 			type: 'text',
-			placeholder: 'З-2026-00001 или ваш номер'
+			placeholder: 'Введите номер'
 		},
-		{ key: 'from', label: 'Отправлена с', type: 'date', placeholder: 'Любая дата' },
-		{ key: 'to', label: 'по', type: 'date', placeholder: 'Сегодня' }
+		{ key: 'from', label: 'Отправлена с', type: 'date', placeholder: 'Выберите дату' },
+		{ key: 'to', label: 'по', type: 'date', placeholder: 'Выберите дату' }
 	];
 
 	const SORTS = [
@@ -127,7 +127,7 @@
 						<div class="min-w-48">
 							<Select
 								label="Сортировка"
-								placeholder="Порядок заявок"
+								placeholder="Выберите сортировку"
 								options={data.user.canSeePrices ? SORTS : SORTS.slice(0, 2)}
 								bind:value={() => sortValue, changeSort}
 							/>

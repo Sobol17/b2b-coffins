@@ -22,20 +22,20 @@
 			key: 'search',
 			label: 'Поиск по имени или почте',
 			type: 'text',
-			placeholder: 'Например: Иванов или ivanov@'
+			placeholder: 'Введите имя или почту'
 		},
 		{
 			key: 'role',
 			label: 'Роль',
 			type: 'select',
-			placeholder: 'Все роли',
+			placeholder: 'Выберите роль',
 			options: [{ value: '', label: 'Все роли' }, ...ROLE_OPTIONS]
 		},
 		{
 			key: 'status',
 			label: 'Статус',
 			type: 'select',
-			placeholder: 'Все статусы',
+			placeholder: 'Выберите статус',
 			options: [{ value: '', label: 'Все статусы' }, ...STATUS_OPTIONS]
 		}
 	];

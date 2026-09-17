@@ -9,19 +9,19 @@
 		{
 			name: 'currentPassword',
 			label: 'Текущий пароль',
-			placeholder: 'Пароль, с которым вы вошли',
+			placeholder: 'Введите текущий пароль',
 			autocomplete: 'current-password'
 		},
 		{
 			name: 'newPassword',
 			label: 'Новый пароль',
-			placeholder: 'Не короче 12 символов',
+			placeholder: 'Введите новый пароль',
 			autocomplete: 'new-password'
 		},
 		{
 			name: 'repeatPassword',
 			label: 'Повторите новый пароль',
-			placeholder: 'Тот же пароль ещё раз',
+			placeholder: 'Повторите новый пароль',
 			autocomplete: 'new-password'
 		}
 	] as const;

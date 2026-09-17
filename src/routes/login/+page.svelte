@@ -44,7 +44,7 @@
 				name="password"
 				type="password"
 				label="Пароль"
-				placeholder="Ваш пароль"
+				placeholder="Введите пароль"
 				autocomplete="current-password"
 				required
 			/>

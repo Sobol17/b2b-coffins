@@ -19,7 +19,7 @@
 
 <Command.Root>
 	{#if searchable}
-		<Command.Input placeholder="Начните вводить название" />
+		<Command.Input placeholder="Введите название" />
 	{/if}
 	<Command.List>
 		<Command.Empty>Ничего не найдено</Command.Empty>

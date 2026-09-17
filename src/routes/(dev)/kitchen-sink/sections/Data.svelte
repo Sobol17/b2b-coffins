@@ -43,12 +43,12 @@
 	);
 
 	const filterFields: FilterField[] = [
-		{ key: 'search', label: 'Поиск', type: 'text', placeholder: 'Номер или контрагент' },
+		{ key: 'search', label: 'Поиск', type: 'text', placeholder: 'Введите номер' },
 		{
 			key: 'status',
 			label: 'Статус',
 			type: 'select',
-			placeholder: 'Все статусы',
+			placeholder: 'Выберите статус',
 			options: [
 				{ value: '', label: 'Все' },
 				{ value: 'new', label: 'Заявка' }

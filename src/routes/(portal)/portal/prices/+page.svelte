@@ -28,13 +28,13 @@
 			key: 'search',
 			label: 'Поиск по названию или артикулу',
 			type: 'text',
-			placeholder: 'Например: Волга или MDL-201'
+			placeholder: 'Введите название или артикул'
 		},
 		{
 			key: 'categoryId',
 			label: 'Раздел',
 			type: 'select',
-			placeholder: 'Все разделы',
+			placeholder: 'Выберите раздел',
 			options: [
 				{ value: '', label: 'Все разделы' },
 				...data.categories.map((category) => ({

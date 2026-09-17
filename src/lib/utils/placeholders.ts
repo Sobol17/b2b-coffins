@@ -1,6 +1,6 @@
-/** Sample values for contact fields: the same person on every form reads as one convention. */
+/** Contact fields repeat across the portal forms; one wording keeps them alike. */
 export const PLACEHOLDER = {
-	email: 'ivanov@agency.ru',
-	phone: '+7 900 123-45-67',
-	fullName: 'Иван Иванов'
+	email: 'Введите почту',
+	phone: 'Введите телефон',
+	fullName: 'Введите имя и фамилию'
 } as const;

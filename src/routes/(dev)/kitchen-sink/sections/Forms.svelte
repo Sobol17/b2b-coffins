@@ -41,30 +41,30 @@
 	<Input
 		label="Название"
 		hint="Как в договоре"
-		placeholder="ООО «Ритуал-Сервис»"
+		placeholder="Введите название"
 		bind:value={text}
 		required
 	/>
-	<Input label="С ошибкой" error="Поле обязательно" placeholder="Заполните поле" value="" />
+	<Input label="С ошибкой" error="Поле обязательно" placeholder="Введите текст" value="" />
 </Showcase>
 
 <Showcase name="Textarea">
 	<Textarea
 		label="Комментарий"
-		placeholder="Пожелания к заявке"
+		placeholder="Введите комментарий"
 		bind:value={comment}
 		hint="До 500 символов"
 	/>
 </Showcase>
 
 <Showcase name="NumberInput">
-	<NumberInput label="Количество" placeholder="1" bind:value={qty} min={1} />
+	<NumberInput label="Количество" placeholder="Введите количество" bind:value={qty} min={1} />
 </Showcase>
 
 <Showcase name="MoneyInput">
 	<MoneyInput
 		label="Цена"
-		placeholder="0,00"
+		placeholder="Введите сумму"
 		bind:valueMinor={priceMinor}
 		hint="Рубли, хранение в копейках"
 	/>
@@ -83,7 +83,7 @@
 <Showcase name="Combobox">
 	<Combobox
 		label="Материал"
-		placeholder="Найдите материал"
+		placeholder="Выберите материал"
 		options={materials}
 		bind:value={finish}
 	/>

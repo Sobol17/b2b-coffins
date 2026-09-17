@@ -67,7 +67,7 @@
 			<Textarea
 				name="body"
 				label="Сообщение менеджеру"
-				placeholder="Вопрос по составу, срокам или доставке"
+				placeholder="Введите сообщение"
 				bind:value={body}
 				error={formError}
 				rows={3}

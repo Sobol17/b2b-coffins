@@ -145,7 +145,7 @@
 						<NumberInput
 							name="qty"
 							label="Количество"
-							placeholder="1"
+							placeholder="Введите количество"
 							min={1}
 							max={999}
 							bind:value={qty}
