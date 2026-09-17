@@ -67,7 +67,7 @@
 			<meta.icon aria-hidden="true" class={['mt-0.5 size-5 shrink-0', meta.tone]} />
 			<div class="flex min-w-0 flex-1 flex-col gap-1">
 				<p class="font-medium break-words">
-					<span class="sr-only">{meta.label}: </span>{item.title}
+					<span class="sr-only">{`${meta.label}: `}</span>{item.title}
 				</p>
 				{#if item.description}
 					<p data-testid="toast-description" class="text-sm break-words text-fg-muted">

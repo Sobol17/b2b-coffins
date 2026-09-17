@@ -107,6 +107,44 @@ test('the toast shows an error and closes again', async ({ page }) => {
 	await expect(toast).toHaveCount(0);
 });
 
+test('each toast kind reads out its meaning and keeps the stack short', async ({ page }) => {
+	await openKitchenSink(page);
+
+	for (const kind of ['success', 'info', 'warning', 'error'] as const) {
+		await page.getByTestId(`toast-${kind}`).click();
+	}
+	const region = page.getByRole('region', { name: 'Уведомления' });
+	await expect(region.getByTestId('toast')).toHaveCount(4);
+	await expect(region.getByRole('alert')).toContainText('Ошибка: Не удалось сохранить');
+	await expect(region.getByRole('status').first()).toContainText('Готово: Заявка сохранена');
+
+	// A second click on the same button does not stack a copy.
+	await page.getByTestId('toast-error').click();
+	await expect(region.getByTestId('toast')).toHaveCount(4);
+
+	const info = region.locator('[data-kind="info"]');
+	await expect(info.getByTestId('toast-description')).toHaveText('Менеджер примет её в работу');
+	await expect(info.getByRole('link', { name: 'Открыть каталог' })).toHaveAttribute(
+		'href',
+		'/portal/catalog'
+	);
+});
+
+test('a toast under the pointer stays until the pointer leaves', async ({ page }) => {
+	await page.clock.install();
+	await openKitchenSink(page);
+
+	await page.getByTestId('toast-success').click();
+	const toast = page.getByTestId('toast');
+	await toast.hover();
+	await page.clock.runFor(10_000);
+	await expect(toast).toBeVisible();
+
+	await page.mouse.move(0, 0);
+	await page.clock.runFor(10_000);
+	await expect(toast).toHaveCount(0);
+});
+
 test('the registry table pages through the server query', async ({ page }) => {
 	await openKitchenSink(page);
 
