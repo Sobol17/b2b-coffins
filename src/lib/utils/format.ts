@@ -67,6 +67,30 @@ export function formatDateTime(iso: string, timeZone = 'UTC'): string {
 	return `${p.day}.${p.month}.${p.year} ${p.hour}:${p.minute}`;
 }
 
+const DAY_MONTH = new Map<string, Intl.DateTimeFormat>();
+
+/** "16 июня": the short date of lists, where the year is the current one by context. */
+export function formatDayMonth(iso: string, timeZone = 'UTC'): string {
+	let formatter = DAY_MONTH.get(timeZone);
+	if (formatter === undefined) {
+		formatter = new Intl.DateTimeFormat('ru-RU', { timeZone, day: 'numeric', month: 'long' });
+		DAY_MONTH.set(timeZone, formatter);
+	}
+	return formatter.format(new Date(iso));
+}
+
+/** Forms for one, few and many: ['позиция', 'позиции', 'позиций']. */
+export type PluralForms = readonly [string, string, string];
+
+export function pluralRu(count: number, [one, few, many]: PluralForms): string {
+	const tens = Math.abs(count) % 100;
+	const units = tens % 10;
+	if (tens >= 11 && tens <= 14) return many;
+	if (units === 1) return one;
+	if (units >= 2 && units <= 4) return few;
+	return many;
+}
+
 // Sizes are stored in millimetres and grams (tech.md 5.4); the storefront speaks centimetres and kilos.
 function centimetres(mm: number): string {
 	return String(Math.round(mm / 10));
