@@ -116,6 +116,28 @@ describe('the portal draft (P4)', () => {
 		expect(draft.addresses.map((address) => address.id)).toEqual([world.homeAddressId]);
 	});
 
+	it('gives the product page the lines of one model with their variant and options', () => {
+		admin().addItem({ variantId: VOLGA_180, qty: 2, optionIds: [WALNUT] });
+		admin().addItem({ variantId: VOLGA_180, qty: 1, optionIds: [MAHOGANY] });
+		const productId = admin().current()?.items[0]?.productId ?? 0;
+
+		const lines = admin().linesOf(productId);
+
+		expect(lines.map((line) => [line.variantId, line.qty])).toEqual([
+			[VOLGA_180, 2],
+			[VOLGA_180, 1]
+		]);
+		expect(lines[0]?.options.map((option) => option.id)).toEqual([WALNUT]);
+		expect(admin().linesOf(productId + 100_000)).toEqual([]);
+		expect(employee().linesOf(productId)).toEqual([]);
+	});
+
+	it('answers an empty list to a role that cannot order instead of refusing the page', () => {
+		const workshop = new DraftService(portalActor('manager', world.adminId, null));
+
+		expect(workshop.linesOf(1)).toEqual([]);
+	});
+
 	it('ignores an own request number posted with the details: the cart no longer asks for it', () => {
 		const parsed = draftDetailsSchema.parse({
 			delivery: 'pickup',

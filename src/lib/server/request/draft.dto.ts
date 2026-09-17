@@ -45,6 +45,7 @@ export class DraftDtoMapper {
 		return {
 			id: line.id,
 			productId: line.productId,
+			variantId: line.variantId,
 			productTitle: line.productTitle,
 			sku: line.sku,
 			sizeCode: line.sizeCode,

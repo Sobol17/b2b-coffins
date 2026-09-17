@@ -8,7 +8,7 @@ import { DraftWriter } from './draft-writer';
 import { DraftRepository, type DraftRow } from './draft.repository';
 import { PortalRequestService } from './portal-request.service';
 import type { ActorContext } from '$lib/types/actor';
-import type { DraftDto } from '$lib/types/request';
+import type { DraftDto, DraftItemDto } from '$lib/types/request';
 import type { AddDraftItemInput, DraftDetailsInput } from '$lib/validation/request';
 
 /** The portal cart: the actor's own draft request (tech.md 14, P4). */
@@ -33,11 +33,15 @@ export class DraftService extends PortalRequestService {
 
 	/** Pieces in the draft, for the header chip. Zero for a role that cannot order. */
 	unitCount(): number {
-		if (!PolicyService.can(this.ctx, 'request.create') || this.ctx.counterpartyId === null) {
-			return 0;
-		}
+		if (!this.canOrder()) return 0;
 		const draft = this.drafts.findDraft(this.ctx);
 		return draft ? this.lines.lines(draft.id).reduce((sum, line) => sum + line.qty, 0) : 0;
+	}
+
+	/** Draft lines of one model, for the product page counter. Empty for a role that cannot order. */
+	linesOf(productId: number): DraftItemDto[] {
+		if (!this.canOrder()) return [];
+		return (this.current()?.items ?? []).filter((item) => item.productId === productId);
 	}
 
 	/**
@@ -105,6 +109,15 @@ export class DraftService extends PortalRequestService {
 			return { result: undefined, entityId: draft.id, after: { isPickup: details.isPickup } };
 		});
 		return this.projectedDraft();
+	}
+
+	// A read for a page that shows to other roles too: no draft is an answer, not an error.
+	private canOrder(): boolean {
+		return (
+			PolicyService.can(this.ctx, 'request.create') &&
+			this.ctx.scope === 'portal' &&
+			this.ctx.counterpartyId !== null
+		);
 	}
 
 	private requireDraft(tx?: Tx): DraftRow {
