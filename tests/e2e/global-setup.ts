@@ -14,6 +14,7 @@ import {
 import {
 	seedDicts,
 	seedNotificationRules,
+	seedNotificationTemplates,
 	seedNumbering,
 	seedRoles,
 	seedSettings
@@ -35,6 +36,7 @@ export default async function globalSetup(): Promise<void> {
 	seedSettings(db);
 	seedNumbering(db);
 	seedNotificationRules(db);
+	seedNotificationTemplates(db);
 	seedStockItems(db);
 	seedCatalog(db);
 	seedStockBalances(db);

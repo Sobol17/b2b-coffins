@@ -5,6 +5,7 @@ import { seedCounterparties, seedCrmUsers, seedPriceLists, seedStaff } from './s
 import {
 	seedDicts,
 	seedNotificationRules,
+	seedNotificationTemplates,
 	seedNumbering,
 	seedRoles,
 	seedSettings
@@ -20,6 +21,7 @@ async function main(): Promise<void> {
 		settings: seedSettings(db),
 		numbering: seedNumbering(db),
 		notificationRules: seedNotificationRules(db),
+		notificationTemplates: seedNotificationTemplates(db),
 		stockItems: seedStockItems(db),
 		catalog: seedCatalog(db),
 		stockBalances: seedStockBalances(db),

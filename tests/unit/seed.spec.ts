@@ -14,6 +14,7 @@ import {
 import {
 	seedDicts,
 	seedNotificationRules,
+	seedNotificationTemplates,
 	seedNumbering,
 	seedRoles,
 	seedSettings
@@ -21,6 +22,8 @@ import {
 import {
 	counterparties,
 	dictItems,
+	notificationRules,
+	notificationTemplates,
 	priceListItems,
 	productOptions,
 	productVariants,
@@ -41,6 +44,8 @@ const COUNTED_TABLES = {
 	counterparties,
 	users,
 	userRoles,
+	notificationRules,
+	notificationTemplates,
 	// Opening balances are append-only moves: a rerun must not post them twice.
 	stockMoves
 };
@@ -60,6 +65,7 @@ async function runSeed(db: Db): Promise<void> {
 	seedSettings(db);
 	seedNumbering(db);
 	seedNotificationRules(db);
+	seedNotificationTemplates(db);
 	seedStockItems(db);
 	seedCatalog(db);
 	seedStockBalances(db);
@@ -118,6 +124,24 @@ describe('migrations and seed on a clean database', () => {
 			expect(rows.length).toBeGreaterThan(0);
 			expect(rows.filter((row) => row.isDefault)).toHaveLength(1);
 		}
+	});
+
+	// Stock and payroll events get their texts with their slices (C8, C10, C12).
+	it('gives every email rule of a request event a text to send', () => {
+		const rules = db.select().from(notificationRules).all();
+		const texts = new Set(
+			db
+				.select()
+				.from(notificationTemplates)
+				.all()
+				.map((row) => `${row.eventKey}:${row.channel}`)
+		);
+
+		const email = rules.filter(
+			(rule) => rule.channel === 'email' && rule.eventKey.startsWith('request.')
+		);
+		expect(email.length).toBeGreaterThan(0);
+		for (const rule of email) expect(texts).toContain(`${rule.eventKey}:email`);
 	});
 
 	it('keeps dictionary codes unique inside a dictionary', () => {
