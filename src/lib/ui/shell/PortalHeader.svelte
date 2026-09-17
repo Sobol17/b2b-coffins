@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
 	import ClipboardListIcon from '@lucide/svelte/icons/clipboard-list';
 	import MenuIcon from '@lucide/svelte/icons/menu';
@@ -44,12 +45,16 @@
 		data-testid="portal-header"
 		class="mx-auto flex h-16 max-w-shell items-center gap-4 rounded-card bg-surface-raised pr-3 pl-5 sm:h-20 sm:gap-8 sm:pr-5 sm:pl-7"
 	>
-		<span class="flex items-baseline gap-2.5">
+		<a
+			href={resolve('/portal')}
+			data-testid="home-logo"
+			class="flex items-baseline gap-2.5 rounded-sm hover:text-link"
+		>
 			<span class="font-heading text-2xl font-semibold tracking-[0.14em]">АНГЕЛ</span>
 			<span class="hidden text-[0.6875rem] tracking-[0.1em] text-fg-faint uppercase sm:inline">
 				{title}
 			</span>
-		</span>
+		</a>
 
 		<nav aria-label="Основная навигация" class="mx-auto hidden gap-1 md:flex">
 			{#each links as link (link.href)}
