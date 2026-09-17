@@ -1,5 +1,5 @@
-import type { EventKey } from '$lib/types/events';
-import type { NotificationChannel } from '$lib/types/notifications';
+import { EVENT_KEYS, type EventKey } from '$lib/types/events';
+import { NOTIFICATION_CHANNELS, type NotificationChannel } from '$lib/types/notifications';
 import type { RoleCode } from '$lib/types/roles';
 
 export interface RoleRule {
@@ -45,10 +45,20 @@ export function channelChoices(
 	}
 
 	const personal = new Map(prefs.map((pref) => [pairKey(pref.eventKey, pref.channel), pref]));
-	return [...defaults.entries()].map(([key, choice]) => {
-		const pref = personal.get(key);
-		return pref ? { ...choice, enabled: pref.enabled, isDefault: false } : choice;
-	});
+	return [...defaults.entries()]
+		.map(([key, choice]) => {
+			const pref = personal.get(key);
+			return pref ? { ...choice, enabled: pref.enabled, isDefault: false } : choice;
+		})
+		.sort(byFlowOrder);
+}
+
+// The settings page lists events in the order a request lives through them.
+function byFlowOrder(a: ChannelChoice, b: ChannelChoice): number {
+	return (
+		EVENT_KEYS.indexOf(a.eventKey) - EVENT_KEYS.indexOf(b.eventKey) ||
+		NOTIFICATION_CHANNELS.indexOf(a.channel) - NOTIFICATION_CHANNELS.indexOf(b.channel)
+	);
 }
 
 /** Whether one event reaches the user over one channel. */
@@ -75,6 +85,14 @@ export function prefsFromSelection(
 		channel: choice.channel,
 		enabled: selected.has(prefKey(choice.eventKey, choice.channel))
 	}));
+}
+
+/**
+ * Roles a portal person holds towards one request. The administrator hears about the whole
+ * counterparty, an employee only about the requests they wrote: the same fence as the registry (P6).
+ */
+export function rolesTowardsRequest(roles: readonly RoleCode[], isAuthor: boolean): RoleCode[] {
+	return roles.filter((role) => role === 'cp_admin' || (role === 'cp_employee' && isAuthor));
 }
 
 /** Form value of one switch: `request.ready:email`. */

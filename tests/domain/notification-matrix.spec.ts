@@ -5,6 +5,7 @@ import {
 	prefKey,
 	prefsFromSelection,
 	receives,
+	rolesTowardsRequest,
 	type PersonalPref,
 	type RoleRule
 } from '../../src/lib/domain/notification/matrix';
@@ -116,6 +117,26 @@ describe('notification matrix (P9)', () => {
 					}
 				}
 			)
+		);
+	});
+
+	it('lists the pairs in the order a request lives through its events', () => {
+		fc.assert(
+			fc.property(rules, roles, prefs, channels, (rs, rl, ps, ch) => {
+				const order = channelChoices(rs, rl, ps, ch).map((c) => EVENT_KEYS.indexOf(c.eventKey));
+				expect(order).toEqual([...order].sort((a, b) => a - b));
+			})
+		);
+	});
+
+	it('hears about a request as administrator always and as employee only as its author', () => {
+		fc.assert(
+			fc.property(roles, fc.boolean(), (rl, isAuthor) => {
+				const towards = rolesTowardsRequest(rl, isAuthor);
+				expect(towards.includes('cp_admin')).toBe(rl.includes('cp_admin'));
+				expect(towards.includes('cp_employee')).toBe(rl.includes('cp_employee') && isAuthor);
+				expect(towards.every((role) => role === 'cp_admin' || role === 'cp_employee')).toBe(true);
+			})
 		);
 	});
 
