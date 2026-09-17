@@ -17,10 +17,10 @@
 
 	const columns: DataTableColumn[] = [
 		{ key: 'number', label: 'Заявка' },
+		{ key: 'status', label: 'Статус' },
 		{ key: 'composition', label: 'Состав' },
 		{ key: 'total', label: 'Сумма' },
-		{ key: 'readiness', label: 'Готовность' },
-		{ key: 'status', label: 'Статус' }
+		{ key: 'readiness', label: 'Готовность' }
 	];
 
 	// The home shows a short list and sends the reader to the registry for the rest: no paging here.
