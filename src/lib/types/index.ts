@@ -9,5 +9,6 @@ export * from './money';
 export * from './pricing';
 export * from './request';
 export * from './roles';
+export * from './search';
 export * from './stream';
 export * from './notifications';

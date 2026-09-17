@@ -3,6 +3,7 @@ import { dirname, resolve } from 'node:path';
 import Database from 'better-sqlite3';
 import { drizzle } from 'drizzle-orm/better-sqlite3';
 import { config } from '../config';
+import { UNICODE_LOWER } from '../core/search';
 import * as schema from './schema';
 
 export function openSqlite(databasePath: string): Database.Database {
@@ -15,6 +16,9 @@ export function openSqlite(databasePath: string): Database.Database {
 	sqlite.pragma('busy_timeout = 5000');
 	sqlite.pragma('foreign_keys = ON');
 	sqlite.pragma('synchronous = NORMAL');
+	sqlite.function(UNICODE_LOWER, { deterministic: true }, (value: unknown) =>
+		typeof value === 'string' ? value.toLowerCase() : value
+	);
 	return sqlite;
 }
 

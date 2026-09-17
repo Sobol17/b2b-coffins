@@ -1,7 +1,7 @@
 # tech.md — ядро проекта
 
 **Проект:** B2B-портал + CRM для столярной мастерской (производство гробов)
-**Версия ядра:** v1.29
+**Версия ядра:** v1.30
 **Дата:** 17.09.2026
 **Статус:** этап 1 (портал, P1–P9) завершён 17.09.2026, этап 2 (CRM) не начат
 **Владелец файла:** Sobol17 (тимлид и единственный разработчик)
@@ -12,6 +12,7 @@
 | Версия | Изменение |
 |---|---|
 | v1.0 | Первая заморозка ядра: стек, структура, схема БД, контракты очереди и событий, общие типы, UI-примитивы, правила кода, дорожная карта слайсов |
+| v1.30 | Поиск в шапке портала. Поле «Поиск» (на телефоне лупа) и Ctrl/Cmd+K открывают палитру команд с тремя группами: разделы портала из меню роли, группы каталога и до шести моделей. Разделы подбираются в браузере по началу слова в названии и синонимах, группы и модели отдаёт роут `GET /portal/search?q=` (`SiteSearchService`, право `catalog.read`, `q` от 2 до 64 символов). Ответ `SiteSearchDto` не несёт ценовых ключей ни для одной роли. `ContourShell` и шапка портала получили сниппет `search`: кит не импортирует код портала. Панель грузится на первое открытие, как `Combobox`. Поиск каталога стал регистронезависимым и для кириллицы: приложение регистрирует в SQLite функцию `unicode_lower`, `containsText` из `lib/server/core/search.ts` экранирует `%` и `_` во вводе. Шапка на телефоне уносит чип профиля в меню, до 1024 px прячет имя, до 1280 px подпись контура. Логотип ведёт на главную контура. Баннер пожертвований на телефоне складывает цифры строками в одну панель |
 | v1.29 | Палитра «Ангел» переведена на пять цветов заказчика: midnight blue `#1c2b48` (акцент и основной текст), Baby Blue Eyes `#a7c7e7` (основа поля страницы: поле `#d0e2f5` светлее, но насыщеннее, небесный оттенок различим и на слабом экране), Platinum `#e8ecef` (чипы), light blue grey `#c4d8e5` и Cool Cerulean `#8eb1d1` (заливки). Светлые цвета текстом не бывают: на белом они дают контраст 1.5–2.2. Второстепенный текст, подписи и ссылки затемнены, чтобы держать AA на небесном поле. Акцент и текст совпали по цвету, поэтому добавлены токены `--color-link` и `--color-link-hover`: ими красятся ссылки, активный пункт навигации, ghost-кнопка и акцентные цифры, `text-brand` остался только на светлых заливках. Тона статусов идут по шкале: заявка светлее, в работе средний, готов к выдаче насыщенный. Цвета манифеста §17 взяты из новой палитры. Юнит `visual-tokens` проверяет контраст текстовых пар по WCAG AA. §17 и §18.2 приведены к этому |
 | v1.28 | Страница товара показывает счётчик вместо «Добавить в заявку», если в черновике уже есть строка того же варианта с теми же опциями. «−» на одной штуке удаляет строку. `DraftItemDto` получил `variantId`, `DraftService.linesOf(productId)` отдаёт строки модели и пустой список роли, которая не заказывает. Страница товара получила действия `?/qty` и `?/remove` поверх `setQty` и `removeItem`. Основное фото галереи ограничено по высоте |
 | v1.27 | Поле «Ваш номер заявки» убрано из корзины: `draftDetailsSchema` и `DraftDto` больше не несут `externalNumber`, сохранение черновика и отправка его не пишут. Колонка `requests.external_number` остаётся: по ней ищет реестр, её показывает карточка, ею помечает свои заявки `pnpm seed:demo` |
@@ -208,6 +209,7 @@ src/
       +layout.server.ts           guard: только роли портала
       portal/
         catalog/ , cart/ , requests/ , prices/ , profile/ , staff/ , charity/
+        search/                   GET +server.ts: подсказки поиска в шапке (v1.30)
     (crm)/                        контур мастерской, адреса /crm/*
       +layout.server.ts           guard: только роли CRM
       crm/
@@ -1037,6 +1039,13 @@ export interface NotificationLogItemDto {
 }
 export interface NotificationSettingsDto { email: string; prefs: NotificationPrefDto[]; log: Page<NotificationLogItemDto>; }
 
+// search.ts — hints of the portal header search (v1.30). No price key for any role: a hint only leads to a page.
+export const SITE_SEARCH_LIMITS = { categories: 5, products: 6 } as const;
+export interface SiteSearchDto {
+  categories: { id: number; title: string }[];
+  products: { id: number; sku: string; title: string }[];
+}
+
 // charity.ts — donation banner of the portal home (P8). `public` keys are the fund's public figures.
 export interface CharityBannerDto {
   fundTitle: string; fundUrl: string | null;
@@ -1159,6 +1168,7 @@ export class RequestDtoMapper {
 | `PhotoGallery` / `PhotoUploader` | `mediaIds`, `editable` |
 | `PriceCell` | `valueMinor?`, рисует прочерк, когда значение не пришло |
 | `Stepper` | история статусов заявки |
+| `ContourShell` | `variant: 'crm'\|'portal'`, `title`, `userName`, `roles`, `links`, `accountHref`, `cart`, `footerCaption`, `search?: Snippet` (поиск в шапке портала, v1.30) |
 
 Токены: цвета, радиусы, тени и шкала отступов в `src/app.css` как CSS-переменные. Хардкод цвета в компоненте слайса — повод для отката.
 
@@ -1793,6 +1803,7 @@ Payload push-уведомления не содержит цен, персона
 | Модалки создания и подтверждения | `Modal`, `Drawer`, `ConfirmDialog` | |
 | Карточка модели в сетке, конфигуратор позиции | витринные компоненты портала в `src/lib/portal/` (§9) | Собираются из `Card`, `PriceCell`, `Button` |
 | Шапка, подвал, боковое меню профиля | `ContourShell` в варианте портала | Слайс K7 |
+| Поиск в шапке | `Command.Dialog` в `src/lib/portal/search/`, передаётся в `ContourShell` сниппетом `search` | Грузится на первое открытие. Разделы из меню роли, группы и модели с `GET /portal/search`. Без цен (v1.30) |
 
 ### 18.5 Экраны, роуты и слайсы
 
