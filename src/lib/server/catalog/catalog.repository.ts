@@ -1,18 +1,6 @@
-import {
-	and,
-	asc,
-	desc,
-	eq,
-	exists,
-	gte,
-	inArray,
-	like,
-	lte,
-	or,
-	sql,
-	type SQL
-} from 'drizzle-orm';
+import { and, asc, desc, eq, exists, gte, inArray, lte, or, sql, type SQL } from 'drizzle-orm';
 import { countExpression, offsetFor } from '../core/list';
+import { containsText } from '../core/search';
 import { BaseRepository } from '../core/repository';
 import {
 	categories,
@@ -173,16 +161,15 @@ export class CatalogRepository extends BaseRepository<typeof products> {
 	}
 
 	private matching(match: ProductMatch, visibility: Visibility): SQL | undefined {
-		// Bound parameters, never string-built SQL: the search text is user input.
-		const pattern = match.search === undefined ? undefined : `%${match.search}%`;
+		const search = match.search;
 		return and(
 			productVisible(visibility),
 			match.categoryIds === undefined
 				? undefined
 				: inArray(products.categoryId, [...match.categoryIds]),
-			pattern === undefined
+			search === undefined
 				? undefined
-				: or(like(products.title, pattern), like(products.sku, pattern)),
+				: or(containsText(products.title, search), containsText(products.sku, search)),
 			this.variantMatch(match.filters, visibility)
 		);
 	}
