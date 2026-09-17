@@ -5,7 +5,9 @@
 	import { Button, Card, NumberInput, Select, withToast, type SelectOption } from '$lib/ui';
 	import type { OptionKind, ProductDto } from '$lib/types/catalog';
 	import type { ContactDto } from '$lib/types/counterparty';
+	import type { DraftItemDto } from '$lib/types/request';
 	import { formatMinor } from '$lib/utils/format';
+	import DraftLineCounter from './DraftLineCounter.svelte';
 
 	/*
 	 * Choice of size and options by the compatibility matrix, sent to the draft request. The page
@@ -15,11 +17,13 @@
 		product,
 		selectedId = $bindable(null),
 		manager,
+		draftLines,
 		formError
 	}: {
 		product: ProductDto;
 		selectedId?: number | null;
 		manager: ContactDto | null;
+		draftLines: readonly DraftItemDto[];
 		formError?: string | undefined;
 	} = $props();
 
@@ -59,6 +63,19 @@
 		});
 	});
 	const inStock = $derived((variant?.stockQty ?? 0) > 0);
+	// The line of exactly this size and these options, matched the way the draft merges lines.
+	const line = $derived.by(() => {
+		const picked = groups.map((group) => Number(valueOf(group))).sort((a, b) => a - b);
+		return draftLines.find(
+			(item) =>
+				item.variantId === variant?.id &&
+				item.options.length === picked.length &&
+				item.options
+					.map((option) => option.id)
+					.sort((a, b) => a - b)
+					.every((id, index) => id === picked[index])
+		);
+	});
 
 	function valueOf(group: {
 		kind: OptionKind;
@@ -137,7 +154,7 @@
 				<input type="hidden" name="option" value={valueOf(group)} />
 			{/each}
 
-			{#if variant}
+			{#if variant && !line}
 				<input type="hidden" name="variantId" value={variant.id} />
 				<!-- Wraps on a narrow phone: the pill button never shrinks below its label. -->
 				<div class="flex flex-wrap items-end gap-3">
@@ -167,6 +184,10 @@
 				<p data-testid="add-error" class="text-sm text-danger">{formError}</p>
 			{/if}
 		</form>
+
+		{#if line}
+			<DraftLineCounter {line} />
+		{/if}
 
 		{#if manager}
 			<p class="border-t border-border pt-4 text-sm text-fg-muted">

@@ -39,6 +39,7 @@
 			product={data.product}
 			bind:selectedId
 			manager={data.counterparty.manager}
+			draftLines={data.draftLines}
 			formError={form?.formError}
 		/>
 	</div>
