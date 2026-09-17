@@ -108,10 +108,6 @@
 				<span data-testid="actor-name" class="text-sm">{userName}</span>
 			{/if}
 
-			<form method="POST" action="/logout" class="hidden md:block">
-				<Button type="submit" variant="secondary" size="sm">Выйти</Button>
-			</form>
-
 			<Button
 				variant="secondary"
 				class="w-11 px-0 md:hidden"
@@ -139,9 +135,6 @@
 					{link.label}
 				</Button>
 			{/each}
-			<form method="POST" action="/logout" class="mt-4">
-				<Button type="submit" variant="secondary" class="w-full">Выйти</Button>
-			</form>
 		</nav>
 	{/snippet}
 </Drawer>
