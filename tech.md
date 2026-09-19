@@ -1,9 +1,9 @@
 # tech.md — ядро проекта
 
 **Проект:** B2B-портал + CRM для столярной мастерской (производство гробов)
-**Версия ядра:** v1.32
-**Дата:** 17.09.2026
-**Статус:** этап 1 (портал, P1–P9) завершён 17.09.2026, этап 2 (CRM) не начат
+**Версия ядра:** v1.33
+**Дата:** 19.09.2026
+**Статус:** этап 1 (портал, P1–P9) завершён 17.09.2026, слайсы правок P10–P13 не начаты, этап 2 (CRM) не начат
 **Владелец файла:** Sobol17 (тимлид и единственный разработчик)
 **Источник требований:** `TZ_B2B_CRM_stolyarka_v06.md`
 
@@ -12,6 +12,7 @@
 | Версия | Изменение |
 |---|---|
 | v1.0 | Первая заморозка ядра: стек, структура, схема БД, контракты очереди и событий, общие типы, UI-примитивы, правила кода, дорожная карта слайсов |
+| v1.33 | Шесть правок бизнеса от 19.09.2026, решения записаны в `docs/superpowers/specs/2026-09-19-portal-edits-design.md`. Самовывоз выведен из системы: колонка `requests.is_pickup` удалена, адрес доставки обязателен у любой заявки контрагента. В `requests` добавлены `delivery_at` (жёсткий срок доставки, замораживается на `draft -> new` вместе с ценами и дальше не двигается) и `deceased_name` (ФИО умершего, ПДн третьего лица, видно всем, кто видит заявку). Обязательность держит новый guard `deliveryFilled` на переходе `draft -> new`: заявка на склад его не требует, поэтому колонки остаются nullable. В уведомления добавлен канал `max` (бот в МАКС) во все enum-ы каналов, матрицу и форму настроек; в `LIVE_CHANNELS` он не входит, драйвер делает слайс C16 после C15. Уведомления в приложении сделаны таблицей `notification_feed`, а не каналом: `notification.fanout` пишет одну строку на пару «пользователь, событие» независимо от каналов, выключить фид нельзя, уникальный индекс `(user_id, event_key, entity_id)` даёт идемпотентность джоба. В шапке портала появился колокольчик: `ContourShell` получил проп `bell`, счётчик считается в `+layout.server.ts` и обновляется на переходе между страницами, персонального SSE-топика не заводим. Лендинг получил примеры работ и блок благотворительного проекта: роут `GET /api/public/works/[id]` отдаёт гостю обложку опубликованной модели мимо `catalog.read`, `/api/files/[id]` остаётся строгим, блок фонда показывает название, ссылку и ставку отчисления без собранных сумм. Из профиля контрагента убраны карточка «Реквизиты» и плитка «Скидка по договору», `CounterpartyCardDto` потерял `legalName`, `inn`, `kpp`, `address`, `phone`, `email`, `settlementScheme` и `discountPercent`; в корзине и в карточке заявки строка скидки осталась. В дорожную карту добавлены слайсы P10–P13 и C16 |
 | v1.32 | Суммы на экранах и в XLSX показываются в целых рублях, без копеек. Хранение и расчёты не меняются: деньги остаются в целых копейках, скидки и суммы считаются до копейки. `formatMinor` округляет до рубля по `roundHalfUp`, поэтому итог на экране может разойтись со слагаемыми на рубль. `MoneyInput` принимает только целые рубли, `agencyPriceEntrySchema` отклоняет цену с копейками. Прайс-лист XLSX пишет цену целым числом с форматом `#,##0` |
 | v1.31 | Поиск сотрудников (P2) и реестра заявок (P6) переведён на `containsText`: имя, почта, номер заявки и номер контрагента находятся без учёта регистра и для кириллицы, «анна» находит «Анна», «з-2026» находит «З-2026-00001». Введённые `%` и `_` ищутся как обычные символы. Весь текстовый поиск приложения идёт через `containsText` из `lib/server/core/search.ts`, `like` напрямую в репозиториях не используется. Тег «Готов к выдаче» стал насыщенно-зелёным (`#b9dcae`, текст `#1f3d1b`), чтобы заявку, которую можно забрать, было видно сразу; «Оплачено» остаётся бледно-зелёным |
 | v1.30 | Поиск в шапке портала. Поле «Поиск» (на телефоне лупа) и Ctrl/Cmd+K открывают палитру команд с тремя группами: разделы портала из меню роли, группы каталога и до шести моделей. Разделы подбираются в браузере по началу слова в названии и синонимах, группы и модели отдаёт роут `GET /portal/search?q=` (`SiteSearchService`, право `catalog.read`, `q` от 2 до 64 символов). Ответ `SiteSearchDto` не несёт ценовых ключей ни для одной роли. `ContourShell` и шапка портала получили сниппет `search`: кит не импортирует код портала. Панель грузится на первое открытие, как `Combobox`. Поиск каталога стал регистронезависимым и для кириллицы: приложение регистрирует в SQLite функцию `unicode_lower`, `containsText` из `lib/server/core/search.ts` экранирует `%` и `_` во вводе. Шапка на телефоне уносит чип профиля в меню, до 1024 px прячет имя, до 1280 px подпись контура. Логотип ведёт на главную контура. Баннер пожертвований на телефоне складывает цифры строками в одну панель |
@@ -487,7 +488,8 @@ export const requests = sqliteTable('requests', {
   status: text('status', { enum: REQUEST_STATUSES }).notNull().default('draft'),
   priority: text('priority', { enum: ['normal', 'urgent'] }).notNull().default('normal'),
   deliveryAddressId: integer('delivery_address_id').references(() => deliveryAddresses.id),
-  isPickup: integer('is_pickup', { mode: 'boolean' }).notNull().default(false),
+  deliveryAt: ts('delivery_at'),                          // hard deadline, frozen at draft -> new
+  deceasedName: text('deceased_name'),                    // personal data of a third party
   externalNumber: text('external_number'),                // counterparty own order number
   comment: text('comment'),
   itemsTotalMinor: money('items_total_minor'),
@@ -561,6 +563,8 @@ export const comments = sqliteTable('comments', {
   createdAt: createdAt()
 }, (t) => ({ reqIdx: index('comments_request_idx').on(t.requestId, t.createdAt) }));
 ```
+
+Отгрузка заявки контрагента: адрес, срок и ФИО умершего обязательны, самовывоза в системе нет (v1.33). Три колонки остаются nullable, потому что у заявки на склад (`isStockRequest = true`) нет ни контрагента, ни адреса, ни умершего, а фиктивные значения ради `notNull` были бы ложью в данных. Обязательность держит guard `deliveryFilled` на переходе `draft -> new` (§6.2) и Zod на форме корзины.
 
 ### 5.7 Склад
 
@@ -729,7 +733,7 @@ export const numberingSequences = sqliteTable('numbering_sequences', {
 export const notificationTemplates = sqliteTable('notification_templates', {
   id: pk(),
   eventKey: text('event_key', { enum: EVENT_KEYS }).notNull(),
-  channel: text('channel', { enum: ['email', 'push'] }).notNull(),
+  channel: text('channel', { enum: ['email', 'push', 'max'] }).notNull(),
   subject: text('subject'), body: text('body').notNull(),
   isActive: integer('is_active', { mode: 'boolean' }).notNull().default(true)
 }, (t) => ({ uq: uniqueIndex('nt_uq').on(t.eventKey, t.channel) }));
@@ -737,14 +741,14 @@ export const notificationTemplates = sqliteTable('notification_templates', {
 export const notificationRules = sqliteTable('notification_rules', {
   eventKey: text('event_key', { enum: EVENT_KEYS }).notNull(),
   roleCode: text('role_code', { enum: ROLE_CODES }).notNull(),
-  channel: text('channel', { enum: ['email', 'push'] }).notNull(),
+  channel: text('channel', { enum: ['email', 'push', 'max'] }).notNull(),
   enabled: integer('enabled', { mode: 'boolean' }).notNull().default(true)
 }, (t) => ({ pkUq: primaryKey({ columns: [t.eventKey, t.roleCode, t.channel] }) }));
 
 export const userNotificationPrefs = sqliteTable('user_notification_prefs', {
   userId: integer('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
   eventKey: text('event_key', { enum: EVENT_KEYS }).notNull(),
-  channel: text('channel', { enum: ['email', 'push'] }).notNull(),
+  channel: text('channel', { enum: ['email', 'push', 'max'] }).notNull(),
   enabled: integer('enabled', { mode: 'boolean' }).notNull()
 }, (t) => ({ pkUq: primaryKey({ columns: [t.userId, t.eventKey, t.channel] }) }));
 
@@ -752,13 +756,27 @@ export const notifications = sqliteTable('notifications', {
   id: pk(),
   eventKey: text('event_key', { enum: EVENT_KEYS }).notNull(),
   userId: integer('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
-  channel: text('channel', { enum: ['email', 'push'] }).notNull(),
+  channel: text('channel', { enum: ['email', 'push', 'max'] }).notNull(),
   payload: text('payload', { mode: 'json' }).$type<Record<string, unknown>>().notNull(),
   status: text('status', { enum: ['queued', 'sent', 'failed'] }).notNull().default('queued'),
   attempts: integer('attempts').notNull().default(0),
   error: text('error'),
   sentAt: ts('sent_at'), createdAt: createdAt()
 }, (t) => ({ userIdx: index('notifications_user_idx').on(t.userId, t.createdAt) }));
+
+// The in-app feed of the bell. One row per (user, event), whatever channels the matrix picked:
+// a channel row would show the same event twice. The unique index makes the fanout job idempotent.
+export const notificationFeed = sqliteTable('notification_feed', {
+  id: pk(),
+  userId: integer('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  eventKey: text('event_key', { enum: EVENT_KEYS }).notNull(),
+  entityId: integer('entity_id').notNull(),
+  readAt: ts('read_at'),
+  createdAt: createdAt()
+}, (t) => ({
+  userIdx: index('feed_user_idx').on(t.userId, t.createdAt),
+  uq: uniqueIndex('feed_uq').on(t.userId, t.eventKey, t.entityId)
+}));
 
 export const pushSubscriptions = sqliteTable('push_subscriptions', {
   id: pk(),
@@ -834,7 +852,8 @@ export const settings = sqliteTable('settings', {
 
 ```ts
 export const TRANSITIONS: readonly Transition[] = [
-  { from: 'draft',  to: 'new',       roles: ['cp_admin','cp_employee','manager','owner'], ownOnly: true },
+  { from: 'draft',  to: 'new',       roles: ['cp_admin','cp_employee','manager','owner'], ownOnly: true,
+    guards: ['deliveryFilled'] },
   { from: 'new',    to: 'in_work',   roles: ['manager','owner'], guards: ['hasAssignee','pricesFixed'], effects: ['audit'] },
   { from: 'new',    to: 'cancelled', roles: ['cp_admin','cp_employee','manager','owner'], ownOnly: true },
   { from: 'new',    to: 'rejected',  roles: ['manager','owner'], requiresReason: true },
@@ -857,6 +876,9 @@ export const TRANSITIONS: readonly Transition[] = [
 5. Переход в `in_work` и `ready` невозможен без назначенного исполнителя.
 6. Заявка на склад (`isStockRequest = true`) не порождает благотворительное отчисление и не имеет контрагента.
 7. Автоматический шаг берётся в транзакции действия, которое открыло ему дорогу, и только если его guard-ы прошли. Действие — либо ручной переход, либо отметка оплаты из C7. Человек автоматический шаг не инициирует: роль `system` недоступна ни одному пользователю. Шаги идут цепочкой, пока очередной guard не остановит её, поэтому доставка с принятыми наличными доходит до `paid` одним действием водителя, а доставка с оплатой по счёту останавливается на `awaiting_payment` до отметки.
+8. Заявка контрагента уходит из `draft` только с заполненными `deliveryAddressId`, `deliveryAt` и `deceasedName`: это guard `deliveryFilled`. Заявка на склад (`isStockRequest = true`) его не требует. `deliveryAt` замораживается на этом переходе вместе с ценами и дальше не меняется ни одним переходом: срок сдвигается только отменой и новой заявкой.
+
+Коды guard-ов: `hasAssignee`, `pricesFixed`, `fullyPaid`, `deliveryFilled` (`GUARD_CODES` в `lib/types/request.ts`).
 
 ### 6.3 Компенсация вместо удаления
 
@@ -890,7 +912,7 @@ export interface JobHandler<T> {
 | Топик | Payload | Ключ идемпотентности | Эффект |
 |---|---|---|---|
 | `notification.dispatch` | `{ notificationId: number }` | `notification:{id}` | Отправка одного уведомления в один канал, отметка `sent`/`failed` |
-| `notification.fanout` | `{ eventKey: EventKey, entityId: number }` | `fanout:{eventKey}:{entityId}` | Разворачивает событие в строки `notifications` по матрице ролей и личным настройкам |
+| `notification.fanout` | `{ eventKey: EventKey, entityId: number }` | `fanout:{eventKey}:{entityId}` | Разворачивает событие в строки `notifications` по матрице ролей и личным настройкам и в строки `notification_feed` по одной на адресата |
 | `charity.recount` | `{ scope: string }` | `charity:{scope}:{requestId}` | Пересборка `charity_totals`, публикация в SSE-топик `charity` |
 | `stock.threshold.check` | `{ stockItemId: number }` | `threshold:{id}:{yyyymmdd}` | Сравнение остатка с порогом, событие `stock.below_threshold` |
 | `import.bom` | `{ mediaId: number, actorId: number }` | `import-bom:{mediaId}` | Разбор XLSX/CSV, создание `bom_versions` + `bom_norms` |
@@ -919,7 +941,8 @@ export const EVENT_KEYS = [
 - пара «событие, канал» существует для пользователя, только если правило называет одну из его ролей; значение по умолчанию включено, если хотя бы одно такое правило включено;
 - личная настройка из `user_notification_prefs` перекрывает значение по умолчанию; сохранение формы пишет строку на каждую предложенную пару, пару вне предложения сервер отклоняет;
 - к заявке человек портала относится как `cp_admin` всегда и как `cp_employee`, только если он автор заявки; заявка на склад в портал не пишет;
-- до C12 разворачиваются только события заявки и только для людей контрагента, до C15 живой канал один, `email`;
+- до C12 разворачиваются только события заявки и только для людей контрагента; живой канал один, `email`: `push` оживает в C15, `max` в C16;
+- строка `notification_feed` пишется каждому адресату события в той же транзакции, что и строки `notifications`. Адресат считается той же матрицей ролей, но без учёта каналов и личных настроек: фид в приложении выключить нельзя, настройки управляют почтой и МАКС (v1.33);
 - `notifications.payload` хранит `{ entityId }`, текст письма собирается в `notification.dispatch` из БД на момент отправки.
 
 Переменные шаблона: `{{number}}`, `{{status}}` (подпись из `lib/ui/status.ts`), `{{url}}` (`ORIGIN` плюс путь карточки), `{{counterparty}}`, `{{externalNumber}}`. Подстановка идёт в один проход, значение с фигурными скобками не раскрывается. Денежных переменных нет.
@@ -989,7 +1012,7 @@ export interface DraftItemDto {
 }
 export interface DraftDto {
   id: number; number: string; items: DraftItemDto[]; unitCount: number;
-  isPickup: boolean; deliveryAddressId: number | null; comment: string | null;
+  deliveryAddressId: number | null; deliveryAt: string | null; deceasedName: string | null; comment: string | null;
   addresses: DeliveryAddressDto[]; updatedAt: string;
   itemsTotalMinor?: number; discountPercent?: number; discountMinor?: number; totalMinor?: number;
 }
@@ -1021,7 +1044,7 @@ export interface RequestAttachmentDto { id: number; name: string; mime: string; 
 export interface RequestCardDto {
   id: number; number: string; status: RequestStatus; priority: 'normal' | 'urgent';
   createdAt: string; submittedAt: string | null; externalNumber: string | null; comment: string | null;
-  authorName: string | null; isPickup: boolean; deliveryAddress: string | null;
+  authorName: string | null; deliveryAddress: string | null; deliveryAt: string | null; deceasedName: string | null;
   items: RequestItemDto[]; unitCount: number;
   history: RequestHistoryStepDto[]; comments: RequestCommentDto[]; attachments: RequestAttachmentDto[];
   targets: RequestStatus[];              // moves the actor may ask for, guards aside (tech.md 6.2)
@@ -1030,8 +1053,8 @@ export interface RequestCardDto {
 }
 
 // notifications.ts — personal settings and the delivery log of a portal user (P9).
-export const NOTIFICATION_CHANNELS = ['email','push'] as const;
-export const LIVE_CHANNELS = ['email'] as const;          // push joins in C15
+export const NOTIFICATION_CHANNELS = ['email','push','max'] as const;
+export const LIVE_CHANNELS = ['email'] as const;          // push joins in C15, max in C16
 export const NOTIFICATION_STATUSES = ['queued','sent','failed'] as const;
 export interface NotificationPrefDto { eventKey: EventKey; channel: NotificationChannel; enabled: boolean; isDefault: boolean; }
 export interface NotificationLogItemDto {
@@ -1040,6 +1063,12 @@ export interface NotificationLogItemDto {
   createdAt: string; sentAt: string | null;                  // the driver error never leaves the server
 }
 export interface NotificationSettingsDto { email: string; prefs: NotificationPrefDto[]; log: Page<NotificationLogItemDto>; }
+// The bell of the portal header (v1.33). The feed is not a channel: a user cannot switch it off.
+export interface NotificationFeedItemDto {
+  id: number; eventKey: EventKey; requestId: number | null; requestNumber: string | null;
+  isRead: boolean; createdAt: string;
+}
+export interface NotificationBellDto { unread: number; items: NotificationFeedItemDto[]; }
 
 // search.ts — hints of the portal header search (v1.30). No price key for any role: a hint only leads to a page.
 export const SITE_SEARCH_LIMITS = { categories: 5, products: 6 } as const;
@@ -1100,12 +1129,12 @@ export interface ProductDto {
 export const STAFF_STATUSES = ['active','invited','disabled'] as const;   // derived, never stored
 export interface ContactDto { fullName: string; phone: string | null; email: string; }
 export interface CounterpartySummaryDto { name: string; manager: ContactDto | null; }
+// Requisites and the contract discount left the portal card in v1.33: the CRM card (C3) keeps them.
 export interface CounterpartyCardDto {
-  id: number; name: string; legalName: string | null; inn: string | null; kpp: string | null;
-  address: string | null; phone: string | null; email: string | null; settlementScheme: SettlementScheme;
+  id: number; name: string;
   contract: { number: string; signedAt: string | null; validUntil: string | null } | null;
   manager: ContactDto | null; staffPreview: (ContactDto & { role: PortalRole })[]; staffCount: number; staffLimit: number;
-  discountPercent?: number; debtMinor?: number; yearPurchasesMinor?: number; yearDeliveries?: number;
+  debtMinor?: number; yearPurchasesMinor?: number; yearDeliveries?: number;
 }
 export interface StaffMemberDto {
   id: number; fullName: string; email: string; phone: string | null; role: PortalRole;
@@ -1170,7 +1199,7 @@ export class RequestDtoMapper {
 | `PhotoGallery` / `PhotoUploader` | `mediaIds`, `editable` |
 | `PriceCell` | `valueMinor?`, рисует прочерк, когда значение не пришло |
 | `Stepper` | история статусов заявки |
-| `ContourShell` | `variant: 'crm'\|'portal'`, `title`, `userName`, `roles`, `links`, `accountHref`, `cart`, `footerCaption`, `search?: Snippet` (поиск в шапке портала, v1.30) |
+| `ContourShell` | `variant: 'crm'\|'portal'`, `title`, `userName`, `roles`, `links`, `accountHref`, `cart`, `bell?: { href, unread }` (колокольчик уведомлений портала, v1.33), `footerCaption`, `search?: Snippet` (поиск в шапке портала, v1.30) |
 
 Токены: цвета, радиусы, тени и шкала отступов в `src/app.css` как CSS-переменные. Хардкод цвета в компоненте слайса — повод для отката.
 
@@ -1257,6 +1286,8 @@ CD нет. Мёрдж в `main` ничего не разворачивает, с
 - **Права.** Проверка на сервере на каждое действие и каждый переход статуса, а не только на отрисовку экрана. Единая точка: `PolicyService.can(actor, action, subject)`. Скрытие кнопки в UI защитой не считается.
 - **Row-level.** Каждый репозиторий портального домена принимает `counterpartyId` из `ActorContext` и подмешивает его в `where`. Метод без этого фильтра не проходит ревью. Исполнитель видит только назначенные ему заявки.
 - **Цены.** Роль `cp_employee` не получает ценовые поля из БД. Проверяется e2e-тестом на теле ответа, а не глазами.
+- **ПДн третьего лица.** `requests.deceased_name` видно всем, кому видна заявка, но не подставляется в шаблоны уведомлений и не уходит в SSE (v1.33).
+- **Публичная поверхность.** Гостю без сессии отвечает только `GET /api/public/works/[id]`: обложка опубликованной модели, 404 на скрытую, черновую и удалённую. Остальные файлы идут через `/api/files/[id]` с правом `catalog.read` (v1.33).
 - **Валидация.** Весь вход через Zod на сервере, включая `FormData`, query-параметры и содержимое импортируемых XLSX. Клиентская валидация только для UX.
 - **CSRF.** Form actions SvelteKit проверяют origin. Мутации через `+server.ts` требуют заголовка `x-requested-with` и совпадения origin.
 - **Rate limiting.** Логин, восстановление пароля, создание сотрудника контрагента, отправка заявки, загрузка файла. Счётчики в `rate_limits`, окно и лимит в конфиге.
@@ -1418,7 +1449,7 @@ CONTRACT GAP
 
 ### Этап 1. Клиентская часть (B2B-портал)
 
-**Статус: завершён 17.09.2026.** Слайсы P1–P9 влиты в `main`, сценарий DoD P9 показан на `node build`. Открытым остался один пункт: переходы §6.2 не публикуют `request.accepted`, `request.cancelled` и `request.rejected`, поэтому письма по ним не уходят (v1.19).
+**Статус: P1–P9 завершены 17.09.2026, P10–P13 не начаты.** Слайсы P1–P9 влиты в `main`, сценарий DoD P9 показан на `node build`. Открытым остался один пункт: переходы §6.2 не публикуют `request.accepted`, `request.cancelled` и `request.rejected`, поэтому письма по ним не уходят (v1.19). Слайсы P10–P13 закрывают правки бизнеса от 19.09.2026 и идут до C1 в жёстком порядке (v1.33).
 
 Экраны этапа собираются по макетам из `ui/`. Какой макет относится к какому слайсу, что из макета берётся и что нет, записано в §18.5 и §18.6.
 
@@ -1448,6 +1479,18 @@ CONTRACT GAP
 
 **P9. Уведомления портала и стабилизация этапа.** Драйвер email на реальных ключах, шаблоны, матрица «событие × роль × канал», личные настройки пользователя, лог доставки и ретраи. Канал push появляется в C15. Далее: сквозные e2e по портальным ролям, адаптив, a11y, аудит утечки цен и прямых ссылок, инструкция контрагенту.
 **DoD:** контрагент получает письмо по своим событиям, отправки видны в логе, этап 1 демонстрируется целиком на локальной сборке.
+
+**P10. Профиль контрагента: чистка карточки.** Из `/portal/profile` убираются карточка «Реквизиты» и плитка «Скидка по договору». Ряд показателей остаётся двумя плитками, «Задолженность» и «Закупка за год». `CounterpartyCardDto` теряет `legalName`, `inn`, `kpp`, `address`, `phone`, `email`, `settlementScheme` и `discountPercent`, репозиторий перестаёт их выбирать, из подсказок поиска уходит слово «реквизиты». Поля остаются в `counterparties` и в карточке CRM (C3).
+**DoD:** тело ответа `/portal/profile` не содержит ни одного убранного ключа, проверено контрактным тестом, а не глазами; строка скидки в корзине и в карточке заявки на месте.
+
+**P11. Заявка: обязательная отгрузка.** Самовывоз выведен из системы, `is_pickup` удалён. Адрес доставки, срок (`deliveryAt`) и ФИО умершего (`deceasedName`) обязательны у заявки контрагента и проверяются guard-ом `deliveryFilled` на `draft -> new`. Панель отгрузки в корзине, срок на `DatePicker` плюс поле времени в зоне `org.timezone`, показ полей в карточке заявки. Срок замораживается при отправке и дальше не двигается.
+**DoD:** заявка без любого из трёх полей не уходит из черновика, отказ приходит от сервера, а не только от разметки; заявка на склад проходит переход без них; property-based тесты по парам §6.2 зелёные.
+
+**P12. Уведомления в приложении и канал МАКС.** Таблица `notification_feed`, запись строки фида в `notification.fanout`, колокольчик в шапке портала на пропе `bell` у `ContourShell`, список последних десяти событий со ссылкой на заявку, отметка прочтения при открытии списка. Канал `max` входит в `NOTIFICATION_CHANNELS`, в матрицу и в форму личных настроек, в `LIVE_CHANNELS` не входит. Живого обновления счётчика по SSE нет: персонального топика §7.4 не заводим.
+**DoD:** контрагент видит событие в колокольчике без письма, счётчик непрочитанного обнуляется при открытии списка, повторный прогон `notification.fanout` с тем же payload оставляет одну строку фида.
+
+**P13. Лендинг: примеры работ и благотворительный проект.** Роут `GET /api/public/works/[id]` отдаёт гостю обложку опубликованной модели, `LandingService.works(limit)` собирает до девяти пар «обложка, название» без артикулов, цен и остатков. Секция примеров работ между «Ассортиментом» и «Производством», секция фонда после «Как мы работаем»: название и ссылка из `charity.fund`, ставка из `charity.rate_bp` процентом, собранных сумм гостю нет.
+**DoD:** гость видит примеры работ и блок фонда, прямая ссылка на фото скрытой модели отвечает 404, `/api/files/[id]` остаётся закрытым для гостя.
 
 ### Этап 2. Административная часть (CRM)
 
@@ -1495,14 +1538,18 @@ CONTRACT GAP
 **C15. PWA и Web Push** (бывший K6, перенесён в v1.8). `manifest.webmanifest` с иконками и shortcuts, регистрация push-only service worker по §17, обработчики `push` и `notificationclick`, кнопка установки и инструкция для iOS. Реальный драйвер Web Push на VAPID-ключах, подписки в `push_subscriptions`, канал push в матрице уведомлений портала и CRM, push водителю при переходе в `ready`, отзыв протухших подписок джобом `session.cleanup`. Кеширование, офлайн-фолбэк и фоновая синхронизация не делаются.
 **DoD:** приложение ставится на домашний экран Android и iOS и открывается в standalone-режиме, водитель получает push в момент готовности и открывает карточку заявки из уведомления, Cache Storage пуст.
 
+**C16. Бот МАКС.** Драйвер канала `max` на Bot API: привязка чата к пользователю, отправка по матрице §7.3, лог доставки и ретраи тем же `notification.dispatch`. Привязка чата открывает разрыв контракта и поднимается блоком CONTRACT GAP в начале слайса. Канал становится живым, то есть входит в `LIVE_CHANNELS`.
+**DoD:** пользователь привязывает чат один раз и получает событие ботом, отказ бота виден в логе доставки и уходит в ретрай, повторная отправка того же уведомления второго сообщения не создаёт.
+
 ### Соответствие релизам исходного ТЗ
 
 | Релиз | Слайсы |
 |---|---|
 | R1. Приём заявок | K1–K5, K7, P1–P7 |
 | R2. Портал целиком | P8, P9 |
+| R2+. Правки бизнеса от 19.09.2026 | P10–P13 |
 | R3. Производство и доставка | C1–C7 |
-| R4. Склад, выплаты, отчётность, PWA | C8–C10, C12–C15 |
+| R4. Склад, выплаты, отчётность, PWA | C8–C10, C12–C16 |
 
 ---
 
@@ -1812,20 +1859,20 @@ Payload push-уведомления не содержит цен, персона
 
 | Макет | Роут | Роли | Слайс | Что берём из макета |
 |---|---|---|---|---|
-| Лендинг | `/` | гость | K7 | Шапка с чипом телефона и кнопкой «Вход для контрагентов» на `/login`, первый экран, постоянные факты (срок изготовления, регион доставки), товарные группы текстом, «Производство», «Как мы работаем», подвал. Кнопки «Стать контрагентом» и «Запросить условия» открывают `mailto:` и `tel:` из `org.requisites`. Счётчики каталога и остатка гостю не показываются: публичного доступа к данным каталога нет |
+| Лендинг | `/` | гость | K7 | Шапка с чипом телефона и кнопкой «Вход для контрагентов» на `/login`, первый экран, постоянные факты (срок изготовления, регион доставки), товарные группы текстом, «Производство», «Как мы работаем», подвал. Кнопки «Стать контрагентом» и «Запросить условия» открывают `mailto:` и `tel:` из `org.requisites`. Примеры работ: до девяти обложек опубликованных моделей с названием через `GET /api/public/works/[id]` (P13). Блок благотворительного проекта: название фонда, ссылка и ставка отчисления процентом, собранных сумм гостю нет (P13). Счётчики каталога и остатка гостю не показываются: кроме обложек и названий, данные каталога наружу не отдаются (v1.33) |
 | Главная портала | `/portal` | `cp_admin`, `cp_employee` | P6, блоки дополняют P2, P4, P8 | Заголовок с именем контрагента и договором (P2). Три показателя: заявки в работе с суммой для `cp_admin`, ближайшая готовность по `readyAt`, скидка `discountPercent` (P2). Панели «Собрать заявку» и «Повторить заявку» (P4). Таблица активных заявок `new…awaiting_payment` и закрытых за три месяца (P6). Баннер пожертвований в макете отсутствует, P8 ставит его под показателями |
 | Каталог | `/portal/catalog` | обе | P3, P7 | Группы верхнего уровня `categories` с подкатегориями, число артикулов, «от N ₽» по закупочной цене для `cp_admin` и по цене агентства для `cp_employee` (P7), кнопка «Скачать прайс-лист XLSX» только для `cp_admin` |
 | Листинг товаров | `/portal/catalog/[categoryId]` | обе | P3, P7 | Фильтры: материал (`dict_items` `material`), цвет (`options` `color`), длина (`lengthMm`), наличие по остатку. Сортировка, число на странице, выбранные фильтры чипами, сетка карточек с артикулом, названием, ценой и остатком. Из P7: карточка показывает цену агентства, у `cp_admin` под ней закупочная серым, сотрудник сортирует по цене агентства |
 | Карточка товара | `/portal/catalog/product/[productId]` | обе | P3 просмотр, P4 добавление, P7 цена | Галерея `media`, характеристики из полей варианта и справочника материалов, описание, выбор размера (`sizeCode` варианта) и цвета из `options` по матрице `product_options`, других опций нет (v1.22), цена за штуку, остаток, количество, «Добавить в заявку» (P4), похожие позиции той же категории. Из P7: цена агентства на модель, у `cp_admin` рядом закупочная серым |
-| Корзина | `/portal/cart` | обе | P4, P7 | Черновик заявки: строки с вариантом и опциями, цена и сумма строки для `cp_admin`, количество, удаление, очистка. Отгрузка: адрес из `delivery_addresses` или самовывоз (`isPickup`), комментарий. Поле «Ваш номер заявки» не рисуется (v1.27). Итог: позиции, изделия, сумма, скидка по договору, к оплате (только `cp_admin`). Из P7: в строке цена агентства за штуку, суммы строки и итога в ценах агентства не считаются. «Оформить заявку» выполняет `draft -> new` |
+| Корзина | `/portal/cart` | обе | P4, P7 | Черновик заявки: строки с вариантом и опциями, цена и сумма строки для `cp_admin`, количество, удаление, очистка. Отгрузка (P11): адрес из `delivery_addresses`, дата и время доставки, ФИО умершего, все четыре поля обязательны; самовывоза нет. Комментарий необязателен. Поле «Ваш номер заявки» не рисуется (v1.27). Итог: позиции, изделия, сумма, скидка по договору, к оплате (только `cp_admin`). Из P7: в строке цена агентства за штуку, суммы строки и итога в ценах агентства не считаются. «Оформить заявку» выполняет `draft -> new` |
 | Мои заявки | `/portal/requests` | обе | P6 | Раскладка профиля с боковым меню, строки-карточки: номер, дата, статус, первая позиция, число позиций и изделий, сумма для `cp_admin`, автор (`createdById`) для администратора. Чипы статусов с числами, поиск по номеру, сортировка. Фильтр периода из DoD P6 добавляется, в макете его нет. «Новая заявка» ведёт в каталог |
-| Заявка (детальная) | `/portal/requests/[id]` | обе | P6, P7, P8 | Показатели: позиции, сумма (`cp_admin`), статус. Состав заявки `DataTable`, комментарий, параметры отгрузки и скидка, «Повторить заявку» (P4), «Отменить заявку» для `new -> cancelled` (P5), карточка менеджера. Из DoD P6 добавляются `Stepper` истории статусов, переписка с менеджером (`comments` без `isInternal`) и вложения, из P7 цена агентства в строке состава, из P8 строка «в фонд с этой заявки» |
-| Уведомления | `/portal/profile/notifications` | обе | P9 | Макета нет, экран собран в раскладке профиля: переключатели писем по событиям, которые предлагает матрица роли, и журнал отправок `DataTable` с событием, номером заявки, каналом и статусом доставки. Текст ошибки драйвера не показывается |
-| Профиль контрагента | `/portal/profile` | обе | K5 аккаунт, P2 карточка | K5: раскладка профиля и блок «Мой аккаунт» с формой ФИО и телефона, эталонная вертикаль. P2: название, реквизиты (`legalName`, `inn`, `kpp`, `address`, `phone`, `email`), договор (`contracts`), показатели скидки, задолженности и закупки за год для `cp_admin`, превью трёх сотрудников, менеджер. Кнопка «Изменить данные» реквизитов не рисуется: реквизиты правит менеджер в C3 |
+| Заявка (детальная) | `/portal/requests/[id]` | обе | P6, P7, P8 | Показатели: позиции, сумма (`cp_admin`), статус. Состав заявки `DataTable`, комментарий, параметры отгрузки (адрес, срок, ФИО умершего, P11) и скидка, «Повторить заявку» (P4), «Отменить заявку» для `new -> cancelled` (P5), карточка менеджера. Из DoD P6 добавляются `Stepper` истории статусов, переписка с менеджером (`comments` без `isInternal`) и вложения, из P7 цена агентства в строке состава, из P8 строка «в фонд с этой заявки» |
+| Уведомления | `/portal/profile/notifications` | обе | P9 | Макета нет, экран собран в раскладке профиля: переключатели уведомлений по парам «событие, канал», которые предлагает матрица роли, и журнал отправок `DataTable` с событием, номером заявки, каналом и статусом доставки. Текст ошибки драйвера не показывается. Из P12: канал `max` в списке переключателей, полный список фида и отметка прочтения; фид выключить нельзя, поэтому переключателя у него нет |
+| Профиль контрагента | `/portal/profile` | обе | K5 аккаунт, P2 карточка | K5: раскладка профиля и блок «Мой аккаунт» с формой ФИО и телефона, эталонная вертикаль. P2: название, договор (`contracts`), показатели задолженности и закупки за год для `cp_admin`, превью трёх сотрудников, менеджер. Реквизиты и плитка скидки из профиля убраны в P10: реквизиты ведёт менеджер в C3, скидка осталась в корзине и в карточке заявки |
 | Мои цены | `/portal/prices` | `cp_admin`, у `cp_employee` 403 | P7 | `DataTable` моделей каталога: артикул, название, категория, закупочная цена «от N ₽» серым, поле своей цены на `MoneyInput`. Поиск и фильтр категории через `FilterBar`, серверная пагинация, сохранение страницы одной формой. Пустое поле означает, что цена не задана: сотрудник видит прочерк |
 | Мои сотрудники | `/portal/staff` | `cp_admin`, у `cp_employee` 403 | P2 | `DataTable` с выбором строк: ФИО и email, роль (`cp_admin` «Администратор», `cp_employee` «Сотрудник»), телефон, последний вход (`lastLoginAt`), статус (активен; приглашён при `mustChangePassword` и пустом `lastLoginAt`; отключён при `isActive = false`). Поиск, фильтры роли и статуса, «Добавить сотрудника» с временным паролем письмом, «Сменить роль», «Отключить», счётчик «N из `staffLimit`» |
 
-Навигация шапки портала: «Главная», «Каталог», «Заявки». Пункт «Доставка» из макета не рисуется, экрана под него нет. Боковое меню профиля: «Профиль», «Мои сотрудники» и «Мои цены» только для `cp_admin`, «Мои заявки», «Уведомления» (P9), под ними отдельной строкой «Выйти». В шапке и мобильном меню портала кнопки выхода нет. Подвал: контакты менеджера, ссылки «Условия поставки» и «Помощь» не рисуются до появления страниц.
+Навигация шапки портала: «Главная», «Каталог», «Заявки», колокольчик уведомлений со счётчиком непрочитанного (P12). Пункт «Доставка» из макета не рисуется, экрана под него нет. Боковое меню профиля: «Профиль», «Мои сотрудники» и «Мои цены» только для `cp_admin`, «Мои заявки», «Уведомления» (P9), под ними отдельной строкой «Выйти». В шапке и мобильном меню портала кнопки выхода нет. Подвал: контакты менеджера, ссылки «Условия поставки» и «Помощь» не рисуются до появления страниц.
 
 ### 18.6 Разрывы контракта, которые открывают макеты
 
