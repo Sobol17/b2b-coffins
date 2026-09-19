@@ -1,7 +1,7 @@
-import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { describe, expect, it } from 'vitest';
+import { afterAll, describe, expect, it } from 'vitest';
 import { PolicyService } from '../../src/lib/server/auth/policy';
 import { ForbiddenError, NotFoundError } from '../../src/lib/server/core/errors';
 import { media, products } from '../../src/lib/server/db/schema';
@@ -13,6 +13,7 @@ import { migratedDatabase } from './helpers/db';
 
 const db = migratedDatabase();
 const root = mkdtempSync(join(tmpdir(), 'b2b-files-'));
+afterAll(() => rmSync(root, { recursive: true, force: true }));
 mkdirSync(join(root, 'products'));
 const photo = Buffer.from([0xff, 0xd8, 0xff, 0xe0, 1, 2, 3]);
 writeFileSync(join(root, 'products', 'cover.jpg'), photo);

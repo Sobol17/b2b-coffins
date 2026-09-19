@@ -1,8 +1,8 @@
-import { mkdtempSync } from 'node:fs';
+import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { eq } from 'drizzle-orm';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { afterAll, beforeEach, describe, expect, it } from 'vitest';
 import { auditLog, comments } from '../../src/lib/server/db/schema';
 import { FileAccessService } from '../../src/lib/server/files/file-access.service';
 import { RequestAttachmentService } from '../../src/lib/server/request/request-attachment.service';
@@ -27,6 +27,7 @@ const managerId = insertUser({ email: 'mgr@shop.example', role: 'manager', count
 
 const VOLGA_180 = variantId(db, 'MDL-201-180-PIN');
 const FILES_ROOT = mkdtempSync(join(tmpdir(), 'b2b-files-'));
+afterAll(() => rmSync(FILES_ROOT, { recursive: true, force: true }));
 
 const DRAWING = {
 	name: 'Эскиз тиснения.pdf',
