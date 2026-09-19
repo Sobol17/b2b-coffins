@@ -27,6 +27,36 @@ test.describe('public landing page', () => {
 		await expect(page.locator('body')).not.toContainText('₽');
 	});
 
+	test('the landing page carries the sky layer behind its content', async ({ page }) => {
+		await page.goto('/');
+
+		const sky = page.getByTestId('landing-sky');
+		await expect(sky).toBeVisible();
+
+		const viewport = page.viewportSize();
+		const box = await sky.boundingBox();
+		if (!viewport || !box) throw new Error('the sky layer is not rendered');
+		expect(box.width).toBeGreaterThanOrEqual(viewport.width);
+		expect(box.height).toBeGreaterThanOrEqual(viewport.height);
+
+		// The layer decorates: it must not swallow a click meant for the heading above it.
+		const heading = page.getByRole('heading', { level: 1 });
+		const headingBox = await heading.boundingBox();
+		if (!headingBox) throw new Error('the heading is not rendered');
+		const headingOnTop = await page.evaluate(
+			([x, y]) => document.elementFromPoint(x ?? 0, y ?? 0)?.closest('h1') !== null,
+			[headingBox.x + headingBox.width / 2, headingBox.y + headingBox.height / 2]
+		);
+		expect(headingOnTop).toBe(true);
+	});
+
+	test('the portal keeps the flat field and gets no sky layer', async ({ page }) => {
+		await login(page, 'cp_admin');
+		await page.goto('/portal');
+
+		await expect(page.getByTestId('landing-sky')).toHaveCount(0);
+	});
+
 	test('a signed-in user on the root goes to the own contour, not to the landing', async ({
 		page
 	}) => {

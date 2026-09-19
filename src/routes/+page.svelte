@@ -3,6 +3,7 @@
 	import LandingFooter from '$lib/portal/landing/LandingFooter.svelte';
 	import LandingHeader from '$lib/portal/landing/LandingHeader.svelte';
 	import LandingHero from '$lib/portal/landing/LandingHero.svelte';
+	import LandingSky from '$lib/portal/landing/LandingSky.svelte';
 	import LandingSteps from '$lib/portal/landing/LandingSteps.svelte';
 	import type { PageProps } from './$types';
 
@@ -21,6 +22,8 @@
 		content="Столярная мастерская: оптовые поставки гробов и крестов ритуальным агентствам по договору."
 	/>
 </svelte:head>
+
+<LandingSky />
 
 <div class="flex min-h-screen flex-col">
 	<LandingHeader phone={data.contacts.phone} {telHref} />
