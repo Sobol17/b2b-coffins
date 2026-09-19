@@ -153,7 +153,12 @@ describe('marking the feed read (P12)', () => {
 		const unread = service.markRead(before.items.map((item) => item.id));
 
 		expect(unread).toBe(before.unread - before.items.length);
-		expect(service.bell().items.slice(0, before.items.length).every((i) => i.isRead)).toBe(true);
+		expect(
+			service
+				.bell()
+				.items.slice(0, before.items.length)
+				.every((i) => i.isRead)
+		).toBe(true);
 	});
 
 	it('refuses to touch a row of another person', async () => {

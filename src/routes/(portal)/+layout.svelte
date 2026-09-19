@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { resolve } from '$app/paths';
+	import NotificationBell from '$lib/portal/notifications/NotificationBell.svelte';
 	import HeaderSearch from '$lib/portal/search/HeaderSearch.svelte';
 	import ContourShell from '$lib/ui/ContourShell.svelte';
 	import type { LayoutProps } from './$types';
@@ -33,6 +34,9 @@
 >
 	{#snippet search()}
 		<HeaderSearch rights={{ staff: data.canManageStaff, prices: data.canManagePrices }} />
+	{/snippet}
+	{#snippet bell()}
+		<NotificationBell bell={data.bell} timeZone={data.timezone} />
 	{/snippet}
 	{@render children()}
 </ContourShell>
