@@ -1,6 +1,11 @@
+import type { FeedRow } from './notification-feed.repository';
 import type { LogRow } from './notification.repository';
 import type { ChannelChoice } from '$lib/domain/notification/matrix';
-import type { NotificationLogItemDto, NotificationPrefDto } from '$lib/types/notifications';
+import type {
+	NotificationFeedItemDto,
+	NotificationLogItemDto,
+	NotificationPrefDto
+} from '$lib/types/notifications';
 
 export class NotificationDtoMapper {
 	static toPref(choice: ChannelChoice): NotificationPrefDto {
@@ -24,6 +29,18 @@ export class NotificationDtoMapper {
 			requestNumber: row.requestNumber,
 			createdAt: row.createdAt.toISOString(),
 			sentAt: row.sentAt?.toISOString() ?? null
+		};
+	}
+
+	/** One line of the bell. The event carries no money and no personal data of the deceased. */
+	static toFeedItem(row: FeedRow): NotificationFeedItemDto {
+		return {
+			id: row.id,
+			eventKey: row.eventKey,
+			requestId: row.requestId,
+			requestNumber: row.requestNumber,
+			isRead: row.readAt !== null,
+			createdAt: row.createdAt.toISOString()
 		};
 	}
 }
