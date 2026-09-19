@@ -17,7 +17,7 @@ export type RequestStatus = (typeof REQUEST_STATUSES)[number];
 export const REQUEST_PRIORITIES = ['normal', 'urgent'] as const;
 export type RequestPriority = (typeof REQUEST_PRIORITIES)[number];
 
-export const GUARD_CODES = ['hasAssignee', 'pricesFixed', 'fullyPaid'] as const;
+export const GUARD_CODES = ['hasAssignee', 'pricesFixed', 'fullyPaid', 'deliveryFilled'] as const;
 export type GuardCode = (typeof GUARD_CODES)[number];
 
 export const EFFECT_CODES = [
