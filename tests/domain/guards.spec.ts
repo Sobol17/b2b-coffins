@@ -1,6 +1,15 @@
 import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
+import type { DeliveryFacts } from '../../src/lib/domain/request/delivery';
 import { evaluateGuards, fullyPaid, pricesFixed } from '../../src/lib/domain/request/guards';
+
+/** Delivery is a story of its own (delivery-guard.spec.ts); here it must never hold a move back. */
+const STOCK_DELIVERY: DeliveryFacts = {
+	isStockRequest: true,
+	deliveryAddressId: null,
+	deliveryAt: null,
+	deceasedName: null
+};
 import { GUARD_CODES } from '../../src/lib/types/request';
 
 const minor = fc.integer({ min: 0, max: 5_000_00 });
@@ -62,7 +71,8 @@ describe('transition guards of tech.md 6.2', () => {
 						assigneeCount,
 						unitPricesMinor,
 						totalMinor,
-						paymentMarksMinor
+						paymentMarksMinor,
+						delivery: STOCK_DELIVERY
 					});
 					return GUARD_CODES.every((code) => typeof guards[code] === 'boolean');
 				}
@@ -71,7 +81,12 @@ describe('transition guards of tech.md 6.2', () => {
 	});
 
 	it('reads an assignee count of zero as no assignee', () => {
-		const facts = { unitPricesMinor: [100], totalMinor: 100, paymentMarksMinor: [] };
+		const facts = {
+			unitPricesMinor: [100],
+			totalMinor: 100,
+			paymentMarksMinor: [],
+			delivery: STOCK_DELIVERY
+		};
 
 		expect([
 			evaluateGuards({ ...facts, assigneeCount: 0 }).hasAssignee,

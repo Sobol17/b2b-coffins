@@ -22,6 +22,20 @@
       "when": 1789559906840,
       "tag": "0002_unique_scarlet_spider",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1789798359736,
+      "tag": "0003_cheerful_groot",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1789798374999,
+      "tag": "0004_windy_shaman",
+      "breakpoints": true
     }
   ]
 }

@@ -16,8 +16,11 @@ export interface DemoScenario {
 	readonly mark: string;
 	readonly author: 'admin' | 'employee';
 	readonly lines: readonly { sku: string; color: string; qty: number }[];
-	/** Title of a delivery address of the counterparty, or pickup. */
-	readonly delivery: string | 'pickup';
+	/** Title of a delivery address of the counterparty. Pickup left the system in v1.33. */
+	readonly delivery: string;
+	/** Days from the seed moment to the delivery deadline. */
+	readonly deliveryInDays: number;
+	readonly deceasedName: string;
 	readonly comment: string | null;
 	readonly stage: DemoStage;
 }
@@ -32,6 +35,8 @@ export const DEMO_SCENARIOS: readonly DemoScenario[] = [
 			{ sku: 'MDL-101-190-CHB', color: 'Белый', qty: 2 }
 		],
 		delivery: 'Основной склад',
+		deliveryInDays: 3,
+		deceasedName: 'Соколов Николай Петрович',
 		comment: 'Разгрузка после 10:00',
 		stage: 'new'
 	},
@@ -40,6 +45,8 @@ export const DEMO_SCENARIOS: readonly DemoScenario[] = [
 		author: 'employee',
 		lines: [{ sku: 'MDL-203-190-PIN', color: 'Венге', qty: 1 }],
 		delivery: 'Филиал Химки',
+		deliveryInDays: 4,
+		deceasedName: 'Зайцева Вера Ивановна',
 		comment: null,
 		stage: 'in_work'
 	},
@@ -48,6 +55,8 @@ export const DEMO_SCENARIOS: readonly DemoScenario[] = [
 		author: 'admin',
 		lines: [{ sku: 'MDL-301-200-OAK', color: 'Красное дерево', qty: 2 }],
 		delivery: 'Основной склад',
+		deliveryInDays: 2,
+		deceasedName: 'Морозов Игорь Степанович',
 		comment: null,
 		stage: 'ready'
 	},
@@ -59,6 +68,8 @@ export const DEMO_SCENARIOS: readonly DemoScenario[] = [
 			{ sku: 'MDL-202-190-BIR', color: 'Орех', qty: 2 }
 		],
 		delivery: 'Филиал Химки',
+		deliveryInDays: 5,
+		deceasedName: 'Кравцова Нина Андреевна',
 		comment: 'Позвонить за час до приезда',
 		stage: 'awaiting_payment'
 	},
@@ -66,7 +77,9 @@ export const DEMO_SCENARIOS: readonly DemoScenario[] = [
 		mark: `${DEMO_MARK}5`,
 		author: 'admin',
 		lines: [{ sku: 'MDL-204-190-ASH', color: 'Чёрный', qty: 2 }],
-		delivery: 'pickup',
+		delivery: 'Основной склад',
+		deliveryInDays: 6,
+		deceasedName: 'Белов Юрий Тимофеевич',
 		comment: null,
 		stage: 'paid'
 	},
@@ -74,7 +87,9 @@ export const DEMO_SCENARIOS: readonly DemoScenario[] = [
 		mark: `${DEMO_MARK}6`,
 		author: 'employee',
 		lines: [{ sku: 'MDL-103-180-BIR', color: 'Орех', qty: 1 }],
-		delivery: 'pickup',
+		delivery: 'Филиал Химки',
+		deliveryInDays: 3,
+		deceasedName: 'Гусева Раиса Павловна',
 		comment: 'Отменяем: клиент выбрал другую модель',
 		stage: 'cancelled'
 	},
@@ -83,6 +98,8 @@ export const DEMO_SCENARIOS: readonly DemoScenario[] = [
 		author: 'admin',
 		lines: [{ sku: 'MDL-303-200-ASH', color: 'Чёрный', qty: 10 }],
 		delivery: 'Основной склад',
+		deliveryInDays: 7,
+		deceasedName: 'Лапин Сергей Олегович',
 		comment: null,
 		stage: 'rejected'
 	}

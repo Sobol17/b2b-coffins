@@ -10,7 +10,8 @@ export const TRANSITIONS: readonly Transition[] = [
 		from: 'draft',
 		to: 'new',
 		roles: ['cp_admin', 'cp_employee', 'manager', 'owner'],
-		ownOnly: true
+		ownOnly: true,
+		guards: ['deliveryFilled']
 	},
 	{
 		from: 'new',

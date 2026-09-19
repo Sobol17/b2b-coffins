@@ -102,18 +102,38 @@ describe('the portal draft (P4)', () => {
 		expect(() =>
 			admin().saveDetails({
 				deliveryAddressId: world.foreignAddressId,
-				isPickup: false,
+				deliveryAt: null,
+				deceasedName: null,
 				comment: null
 			})
 		).toThrow(NotFoundError);
 		const draft = admin().saveDetails({
-			deliveryAddressId: null,
-			isPickup: true,
+			deliveryAddressId: world.homeAddressId,
+			deliveryAt: new Date('2026-12-01T10:00:00.000Z'),
+			deceasedName: 'Иванов Иван Иванович',
 			comment: 'После 14:00'
 		});
-		expect(draft).toMatchObject({ isPickup: true, comment: 'После 14:00' });
+		expect(draft).toMatchObject({
+			deliveryAddressId: world.homeAddressId,
+			deliveryAt: '2026-12-01T10:00:00.000Z',
+			deceasedName: 'Иванов Иван Иванович',
+			comment: 'После 14:00'
+		});
 		expect(draft).not.toHaveProperty('externalNumber');
 		expect(draft.addresses.map((address) => address.id)).toEqual([world.homeAddressId]);
+	});
+
+	it('keeps a half-filled draft: the server blocks the send, not the saving', () => {
+		admin().addItem({ variantId: VOLGA_180, qty: 1, optionIds: [] });
+
+		const draft = admin().saveDetails({
+			deliveryAddressId: null,
+			deliveryAt: null,
+			deceasedName: null,
+			comment: null
+		});
+
+		expect(draft).toMatchObject({ deliveryAddressId: null, deliveryAt: null, deceasedName: null });
 	});
 
 	it('gives the product page the lines of one model with their variant and options', () => {

@@ -13,7 +13,7 @@
 		Stepper,
 		withToast
 	} from '$lib/ui';
-	import { formatDate } from '$lib/utils/format';
+	import { formatDate, formatDateTime } from '$lib/utils/format';
 	import type { RequestStatus } from '$lib/types/request';
 	import type { PageProps } from './$types';
 
@@ -143,11 +143,22 @@
 			<Card.Root>
 				<Card.Content class="flex flex-col gap-3">
 					<h2 class="text-2xl">Параметры заявки</h2>
-					<p class="text-fg-muted">
-						Отгрузка: {request.isPickup
-							? 'самовывоз со склада мастерской'
-							: (request.deliveryAddress ?? 'адрес не указан')}
-					</p>
+					<dl data-testid="request-shipment" class="flex flex-col gap-2">
+						<div class="flex justify-between gap-4">
+							<dt class="text-fg-muted">Адрес доставки</dt>
+							<dd class="text-right">{request.deliveryAddress ?? '—'}</dd>
+						</div>
+						<div class="flex justify-between gap-4">
+							<dt class="text-fg-muted">Срок доставки</dt>
+							<dd class="text-right">
+								{request.deliveryAt ? formatDateTime(request.deliveryAt, data.timezone) : '—'}
+							</dd>
+						</div>
+						<div class="flex justify-between gap-4">
+							<dt class="text-fg-muted">ФИО умершего</dt>
+							<dd class="text-right">{request.deceasedName ?? '—'}</dd>
+						</div>
+					</dl>
 					{#if request.comment}
 						<p data-testid="request-comment">Комментарий: {request.comment}</p>
 					{/if}

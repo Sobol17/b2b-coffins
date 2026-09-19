@@ -34,12 +34,14 @@ const outsiderCtx = portalActor('cp_admin', world.outsiderId, world.otherCpId);
 
 const VOLGA_180 = variantId(db, 'MDL-201-180-PIN');
 const LADA_180 = variantId(db, 'MDL-101-180-CHB');
-const pickup = { deliveryAddressId: null, isPickup: true, comment: null };
-const toHome = () => ({
+/** Delivery of a counterparty request: address, deadline and the deceased are all required. */
+const filled = () => ({
 	deliveryAddressId: world.homeAddressId,
-	isPickup: false,
-	comment: 'Разгрузка после 14:00'
+	deliveryAt: new Date('2026-12-01T10:00:00.000Z'),
+	deceasedName: 'Иванов Иван Иванович',
+	comment: null
 });
+const toHome = () => ({ ...filled(), comment: 'Разгрузка после 14:00' });
 
 function row(id: number) {
 	return db.select().from(requests).where(eq(requests.id, id)).all()[0];
@@ -79,24 +81,48 @@ describe('sending a request (P4)', () => {
 		expect(new DraftService(adminCtx).current()).toBeNull();
 	});
 
-	it('refuses to send without a delivery choice and leaves the draft as it was', () => {
+	it('refuses to send without the address, the deadline or the deceased', () => {
 		const draft = new DraftService(adminCtx).addItem({
 			variantId: VOLGA_180,
 			qty: 1,
 			optionIds: []
 		});
 
-		expect(() => new RequestSubmitService(adminCtx).submit({ ...pickup, isPickup: false })).toThrow(
-			ValidationError
-		);
+		const half = [
+			{ deliveryAddressId: null },
+			{ deliveryAt: null },
+			{ deceasedName: null },
+			{ deceasedName: '   ' }
+		];
+		for (const missing of half) {
+			expect(() => new RequestSubmitService(adminCtx).submit({ ...filled(), ...missing })).toThrow(
+				ValidationError
+			);
+		}
 		expect(row(draft.id)?.status).toBe('draft');
 		expect(db.select().from(jobQueue).all()).toHaveLength(0);
+	});
+
+	it('writes the deadline and the deceased with the request', () => {
+		const draft = new DraftService(adminCtx).addItem({
+			variantId: VOLGA_180,
+			qty: 1,
+			optionIds: []
+		});
+
+		new RequestSubmitService(adminCtx).submit(filled());
+
+		expect(row(draft.id)).toMatchObject({
+			deliveryAddressId: world.homeAddressId,
+			deliveryAt: new Date('2026-12-01T10:00:00.000Z'),
+			deceasedName: 'Иванов Иван Иванович'
+		});
 	});
 
 	it('refuses an empty draft, an address of another counterparty and a second send', () => {
 		new DraftService(adminCtx).addItem({ variantId: VOLGA_180, qty: 1, optionIds: [] });
 		new DraftService(adminCtx).clear();
-		expect(() => new RequestSubmitService(adminCtx).submit(pickup)).toThrow(ConflictError);
+		expect(() => new RequestSubmitService(adminCtx).submit(filled())).toThrow(ConflictError);
 
 		new DraftService(adminCtx).addItem({ variantId: VOLGA_180, qty: 1, optionIds: [] });
 		expect(() =>
@@ -106,8 +132,8 @@ describe('sending a request (P4)', () => {
 			})
 		).toThrow(NotFoundError);
 
-		new RequestSubmitService(adminCtx).submit(pickup);
-		expect(() => new RequestSubmitService(adminCtx).submit(pickup)).toThrow(ConflictError);
+		new RequestSubmitService(adminCtx).submit(filled());
+		expect(() => new RequestSubmitService(adminCtx).submit(filled())).toThrow(ConflictError);
 	});
 
 	it('refuses a position that left the storefront after it was added', () => {
@@ -117,7 +143,7 @@ describe('sending a request (P4)', () => {
 			.where(eq(productVariants.id, VOLGA_180))
 			.run();
 		try {
-			expect(() => new RequestSubmitService(adminCtx).submit(pickup)).toThrow(ValidationError);
+			expect(() => new RequestSubmitService(adminCtx).submit(filled())).toThrow(ValidationError);
 		} finally {
 			db.update(productVariants)
 				.set({ isPublished: true })
@@ -138,7 +164,7 @@ describe('sending a request (P4)', () => {
 		);
 		db.update(priceListItems).set({ priceMinor: 800_000 }).where(entry).run();
 		try {
-			new RequestSubmitService(adminCtx).submit(pickup);
+			new RequestSubmitService(adminCtx).submit(filled());
 			expect(row(draft.id)).toMatchObject({
 				itemsTotalMinor: 800_000,
 				discountMinor: 40_000,
@@ -158,7 +184,7 @@ describe('sending a request (P4)', () => {
 			.values({ key: `request.submit:${world.adminId}`, hits: 30, windowStart: new Date() })
 			.run();
 
-		expect(() => new RequestSubmitService(adminCtx).submit(pickup)).toThrow(RateLimitError);
+		expect(() => new RequestSubmitService(adminCtx).submit(filled())).toThrow(RateLimitError);
 	});
 });
 
@@ -166,7 +192,7 @@ describe('repeating a sent request (P4)', () => {
 	function sentByAdmin(): number {
 		new DraftService(adminCtx).addItem({ variantId: VOLGA_180, qty: 3, optionIds: [] });
 		new DraftService(adminCtx).addItem({ variantId: LADA_180, qty: 2, optionIds: [] });
-		return new RequestSubmitService(adminCtx).submit(pickup).id;
+		return new RequestSubmitService(adminCtx).submit(filled()).id;
 	}
 
 	it('copies the lines into a new draft and skips what the storefront no longer offers', () => {

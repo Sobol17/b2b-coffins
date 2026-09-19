@@ -11,14 +11,16 @@ export interface DraftRow {
 	readonly number: string;
 	readonly createdById: number;
 	readonly deliveryAddressId: number | null;
-	readonly isPickup: boolean;
+	readonly deliveryAt: Date | null;
+	readonly deceasedName: string | null;
 	readonly comment: string | null;
 	readonly updatedAt: Date;
 }
 
 export interface DraftDetails {
 	readonly deliveryAddressId: number | null;
-	readonly isPickup: boolean;
+	readonly deliveryAt: Date | null;
+	readonly deceasedName: string | null;
 	readonly comment: string | null;
 }
 
@@ -35,7 +37,8 @@ const DRAFT_COLUMNS = {
 	number: requests.number,
 	createdById: requests.createdById,
 	deliveryAddressId: requests.deliveryAddressId,
-	isPickup: requests.isPickup,
+	deliveryAt: requests.deliveryAt,
+	deceasedName: requests.deceasedName,
 	comment: requests.comment,
 	updatedAt: requests.updatedAt
 };

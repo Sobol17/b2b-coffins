@@ -78,15 +78,17 @@ describe('portal request card (P6)', () => {
 		expect(dto.discountPercent).toBeUndefined();
 	});
 
-	it('shows the shipment: an address for a delivery and nothing for a pickup', () => {
-		const pickup = send(adminCtx, VOLGA_180);
+	it('shows the shipment: the address, the deadline and the deceased', () => {
 		const delivery = send(adminCtx, VOLGA_180, {
-			isPickup: false,
-			deliveryAddressId: world.homeAddressId
+			deliveryAddressId: world.homeAddressId,
+			deliveryAt: new Date('2026-12-01T10:00:00.000Z'),
+			deceasedName: 'Иванов Иван Иванович'
 		});
 
-		expect(card(pickup).isPickup).toBe(true);
-		expect(card(pickup).deliveryAddress).toBeNull();
+		expect(card(delivery)).toMatchObject({
+			deliveryAt: '2026-12-01T10:00:00.000Z',
+			deceasedName: 'Иванов Иван Иванович'
+		});
 		expect(card(delivery).deliveryAddress).toContain('Полевая');
 	});
 

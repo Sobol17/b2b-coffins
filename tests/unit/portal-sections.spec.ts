@@ -21,6 +21,10 @@ describe('header search sections', () => {
 		expect(labels('прайс')).toEqual(['Мои цены']);
 	});
 
+	it('no longer offers the profile for the requisites that left it (v1.33)', () => {
+		expect(labels('реквизиты')).toEqual([]);
+	});
+
 	it('matches the start of a word, not any fragment inside it', () => {
 		expect(labels('мо')).not.toContain('Главная');
 		expect(labels('мо')).toContain('Мои цены');

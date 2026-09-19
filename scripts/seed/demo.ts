@@ -110,11 +110,11 @@ function submit(db: Db, people: People, counterpartyId: number, scenario: DemoSc
 	}
 	// The portal no longer asks for an own number; the mark still tells demo requests apart.
 	db.update(requests).set({ externalNumber: scenario.mark }).where(eq(requests.id, draftId)).run();
-	const deliveryAddressId =
-		scenario.delivery === 'pickup' ? null : addressIdOf(db, counterpartyId, scenario.delivery);
+	const day = 24 * 60 * 60 * 1000;
 	return new RequestSubmitService(author).submit({
-		deliveryAddressId,
-		isPickup: deliveryAddressId === null,
+		deliveryAddressId: addressIdOf(db, counterpartyId, scenario.delivery),
+		deliveryAt: new Date(Date.now() + scenario.deliveryInDays * day),
+		deceasedName: scenario.deceasedName,
 		comment: scenario.comment
 	}).id;
 }

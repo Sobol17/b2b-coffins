@@ -8,7 +8,12 @@ import {
 	type ActorRole,
 	type TransitionInput
 } from '../../src/lib/domain/request/state-machine';
-import { REQUEST_STATUSES, type RequestStatus } from '../../src/lib/types/request';
+import {
+	GUARD_CODES,
+	REQUEST_STATUSES,
+	type GuardCode,
+	type RequestStatus
+} from '../../src/lib/types/request';
 import { ROLE_CODES } from '../../src/lib/types/roles';
 
 const MAIN_FLOW: readonly RequestStatus[] = [
@@ -24,6 +29,12 @@ const MAIN_FLOW: readonly RequestStatus[] = [
 const status = fc.constantFrom(...REQUEST_STATUSES);
 const actorRole = fc.constantFrom<ActorRole>(...ROLE_CODES, 'system');
 
+/** Every guard up, built from the list so a new guard code cannot quietly slip past this suite. */
+const ALL_GUARDS_UP = Object.fromEntries(GUARD_CODES.map((code) => [code, true])) as Record<
+	GuardCode,
+	boolean
+>;
+
 /** Passes every gate the transition can ask for, so only the table itself decides. */
 function permissive(from: RequestStatus, to: RequestStatus, roles: readonly ActorRole[]) {
 	return {
@@ -33,7 +44,7 @@ function permissive(from: RequestStatus, to: RequestStatus, roles: readonly Acto
 		isOwnRequest: true,
 		isAssigned: true,
 		hasReason: true,
-		guards: { hasAssignee: true, pricesFixed: true, fullyPaid: true }
+		guards: ALL_GUARDS_UP
 	} satisfies TransitionInput;
 }
 
