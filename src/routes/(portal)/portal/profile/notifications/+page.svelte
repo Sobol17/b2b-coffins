@@ -73,7 +73,7 @@
 				</p>
 			</div>
 
-			<Card.Root>
+			<Card.Root data-testid="notification-feed">
 				<Card.Content>
 					<FeedList
 						rows={feed.rows}
@@ -92,7 +92,7 @@
 				</p>
 			</div>
 
-			<Card.Root>
+			<Card.Root data-testid="delivery-log">
 				<Card.Content>
 					<DeliveryLog
 						rows={settings.log.rows}

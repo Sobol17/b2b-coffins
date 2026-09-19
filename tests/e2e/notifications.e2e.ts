@@ -14,14 +14,16 @@ function toReady(number: string): void {
 	expect(transition(number, 'ready', 'carpenter').ok).toBe(true);
 }
 
+/** The page carries the event feed too, so every assertion here looks inside the delivery log. */
+function logRows(page: Page) {
+	return page.getByTestId('delivery-log').getByTestId('data-table-row');
+}
+
 /** The worker sends in the background, so the log is read again until the row turns up sent. */
 async function expectSentInLog(page: Page, number: string, event: string): Promise<void> {
 	await expect(async () => {
 		await page.goto(SETTINGS);
-		const row = page
-			.getByTestId('data-table-row')
-			.filter({ hasText: number })
-			.filter({ hasText: event });
+		const row = logRows(page).filter({ hasText: number }).filter({ hasText: event });
 		await expect(row.getByTestId('delivery-status')).toHaveText('Отправлено', { timeout: 500 });
 	}).toPass({ timeout: QUEUE_TIMEOUT });
 }
@@ -37,10 +39,7 @@ test('the author and the administrator get a letter when the request is ready', 
 	toReady(number);
 
 	await expectSentInLog(page, number, 'Заявка готова к выдаче');
-	const link = page
-		.getByTestId('data-table-row')
-		.filter({ hasText: number })
-		.getByRole('link', { name: number });
+	const link = logRows(page).filter({ hasText: number }).getByRole('link', { name: number });
 	await expect(link).toHaveAttribute('href', /\/portal\/requests\/\d+$/);
 
 	await signOut(page);
@@ -56,7 +55,7 @@ test('an employee hears nothing about a request someone else wrote', async ({ pa
 	await signOut(page);
 	await login(page, 'cp_employee');
 	await page.goto(SETTINGS);
-	await expect(page.getByTestId('data-table-row').filter({ hasText: number })).toHaveCount(0);
+	await expect(logRows(page).filter({ hasText: number })).toHaveCount(0);
 });
 
 test('a switched-off event stops the letters and the choice survives a reload', async ({
@@ -71,7 +70,8 @@ test('a switched-off event stops the letters and the choice survives a reload', 
 	await page.getByTestId('save-notifications').click();
 	const toast = page.getByTestId('toast').filter({ hasText: 'Настройки сохранены' });
 	await expect(toast).toBeVisible();
-	await expect(toast.getByTestId('toast-description')).toHaveText('Писем включено: 5 из 6');
+	// Six events on e-mail plus the same six on MAX, which waits for its driver in C16.
+	await expect(toast.getByTestId('toast-description')).toHaveText('Включено: 5 из 12');
 
 	await page.reload();
 	await expect(ready).not.toBeChecked();
@@ -83,10 +83,7 @@ test('a switched-off event stops the letters and the choice survives a reload', 
 	expect(transition(number, 'delivered', 'driver').ok).toBe(true);
 	await expectSentInLog(page, number, 'Заявка доставлена');
 	await expect(
-		page
-			.getByTestId('data-table-row')
-			.filter({ hasText: number })
-			.filter({ hasText: 'готова к выдаче' })
+		logRows(page).filter({ hasText: number }).filter({ hasText: 'готова к выдаче' })
 	).toHaveCount(0);
 
 	await ready.check();
@@ -104,6 +101,8 @@ test('turning every letter off warns where the status still shows', async ({ pag
 	const toast = page.getByTestId('toast').filter({ hasText: 'Письма отключены' });
 	await expect(toast).toHaveAttribute('data-kind', 'warning');
 	await expect(toast).toContainText('«Мои заявки»');
+	// The feed stays: it is a mirror of events, not a channel (v1.33).
+	await expect(page.getByRole('checkbox', { name: /лент/i })).toHaveCount(0);
 
 	for (const box of await boxes.all()) await box.check();
 	await page.getByTestId('save-notifications').click();
@@ -113,8 +112,11 @@ test('turning every letter off warns where the status still shows', async ({ pag
 test('the employee cannot switch on an event its role is not offered', async ({ page }) => {
 	await login(page, 'cp_employee');
 	await page.goto(SETTINGS);
-	await expect(page.getByTestId('notification-pref')).toHaveCount(4);
+	await expect(page.getByTestId('notification-pref')).toHaveCount(8);
 	await expect(page.getByRole('checkbox', { name: /оплачена/ })).toHaveCount(0);
+	await expect(
+		page.getByRole('checkbox', { name: 'Заявка готова к выдаче: бот в макс' })
+	).toHaveCount(1);
 
 	// A crafted switch the page never offered: the server refuses it and says so in a toast.
 	await page.evaluate(() => {
