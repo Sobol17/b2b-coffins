@@ -15,7 +15,7 @@ import {
 } from '$lib/domain/notification/matrix';
 import type { ActorContext } from '$lib/types/actor';
 import type { ListQuery } from '$lib/types/list';
-import { LIVE_CHANNELS, type NotificationSettingsDto } from '$lib/types/notifications';
+import { NOTIFICATION_CHANNELS, type NotificationSettingsDto } from '$lib/types/notifications';
 import type { NotificationPrefsInput } from '$lib/validation/notifications';
 
 /** Personal notification settings and the delivery log of a portal user (P9). */
@@ -69,12 +69,17 @@ export class NotificationSettingsService extends BaseService {
 		});
 	}
 
+	/**
+	 * Every channel the matrix names for the roles of the user, not only the ones a driver sends
+	 * over today: MAX is chosen here before C16 wires its bot (v1.33). The fanout still sends over
+	 * `LIVE_CHANNELS` alone, so a switch ahead of its driver promises nothing.
+	 */
 	private offered(tx?: Tx): ChannelChoice[] {
 		return channelChoices(
 			this.rules.rules(undefined, tx),
 			this.ctx.roles,
 			this.rules.prefsOf(this.ctx.userId, tx),
-			LIVE_CHANNELS
+			NOTIFICATION_CHANNELS
 		);
 	}
 }

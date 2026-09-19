@@ -3,6 +3,7 @@
 	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
 	import DeliveryLog from '$lib/portal/notifications/DeliveryLog.svelte';
+	import FeedList from '$lib/portal/notifications/FeedList.svelte';
 	import NotificationPrefsForm from '$lib/portal/notifications/NotificationPrefsForm.svelte';
 	import { profileNavItems } from '$lib/portal/profile-nav';
 	import ProfileNav from '$lib/portal/ProfileNav.svelte';
@@ -16,12 +17,14 @@
 	const settings = $derived(data.settings);
 	// After a save the action answers with the stored switches; they win over the loaded ones.
 	const prefs = $derived(form && 'prefs' in form && form.prefs ? form.prefs : settings.prefs);
+	const feed = $derived(data.feed);
 	const query = $derived<ListQuery>({ page: settings.log.page, perPage: settings.log.perPage });
+	const feedQuery = $derived<ListQuery>({ page: feed.page, perPage: feed.perPage });
 
-	function changeQuery(next: ListQuery): void {
+	function changeQuery(next: ListQuery, prefix = ''): void {
 		// Same page with a rewritten query string, so there is no route pattern to resolve.
 		// eslint-disable-next-line svelte/no-navigation-without-resolve
-		void goto(withListQuery(page.url, next), { keepFocus: true, noScroll: true });
+		void goto(withListQuery(page.url, next, prefix), { keepFocus: true, noScroll: true });
 	}
 </script>
 
@@ -63,6 +66,26 @@
 			</Card.Root>
 
 			<div class="px-2">
+				<h2 class="mb-2 text-3xl">Лента событий</h2>
+				<p class="max-w-2xl text-fg-muted">
+					Всё, что произошло по вашим заявкам. Лента приходит в приложение всегда, выключить её
+					нельзя: переключатели выше управляют только письмами и ботом.
+				</p>
+			</div>
+
+			<Card.Root>
+				<Card.Content>
+					<FeedList
+						rows={feed.rows}
+						total={feed.total}
+						query={feedQuery}
+						onQueryChange={(next) => changeQuery(next, 'feed')}
+						timeZone={data.timezone}
+					/>
+				</Card.Content>
+			</Card.Root>
+
+			<div class="px-2">
 				<h2 class="mb-2 text-3xl">Журнал отправок</h2>
 				<p class="max-w-2xl text-fg-muted">
 					Письма, которые портал отправил вам. Если отправка не удалась, портал повторит её сам.
@@ -75,7 +98,7 @@
 						rows={settings.log.rows}
 						total={settings.log.total}
 						{query}
-						onQueryChange={changeQuery}
+						onQueryChange={(next) => changeQuery(next)}
 						timeZone={data.timezone}
 					/>
 				</Card.Content>
