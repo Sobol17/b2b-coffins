@@ -61,6 +61,19 @@ function byFlowOrder(a: ChannelChoice, b: ChannelChoice): number {
 	);
 }
 
+/**
+ * Whether the event concerns the user at all (v1.33). The in-app feed asks this instead of
+ * `receives`: it is a mirror of events, not a channel, so neither a switched-off rule nor a
+ * personal choice keeps a row out of it.
+ */
+export function isAddressed(
+	rules: readonly RoleRule[],
+	roles: readonly RoleCode[],
+	eventKey: EventKey
+): boolean {
+	return rules.some((rule) => rule.eventKey === eventKey && roles.includes(rule.roleCode));
+}
+
 /** Whether one event reaches the user over one channel. */
 export function receives(
 	choices: readonly ChannelChoice[],

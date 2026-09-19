@@ -22,7 +22,8 @@ export const EVENT_LABEL: Readonly<Record<EventKey, EventLabel>> = {
 
 export const CHANNEL_LABEL: Readonly<Record<NotificationChannel, string>> = {
 	email: 'Почта',
-	push: 'Push'
+	push: 'Push',
+	max: 'Бот в МАКС'
 };
 
 export const DELIVERY_LABEL: Readonly<Record<NotificationStatus, string>> = {

@@ -16,7 +16,8 @@
 		links,
 		accountHref,
 		cart,
-		search
+		search,
+		bell
 	}: {
 		title: string;
 		userName: string;
@@ -25,6 +26,7 @@
 		accountHref?: ResolvedPathname | undefined;
 		cart?: CartLink | undefined;
 		search?: Snippet | undefined;
+		bell?: Snippet | undefined;
 	} = $props();
 
 	let menuOpen = $state(false);
@@ -92,6 +94,7 @@
 		<div class="ml-auto flex items-center gap-1.5 sm:gap-2 md:ml-0">
 			<span data-testid="actor-roles" class="sr-only">{roles.join(', ')}</span>
 			{@render search?.()}
+			{@render bell?.()}
 			{#if cart}
 				<Button
 					variant={isCurrent(cart.href) ? 'primary' : 'secondary'}

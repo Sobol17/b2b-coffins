@@ -67,11 +67,11 @@ describe('notification settings form contract (P9)', () => {
 });
 
 describe('NotificationSettingsService', () => {
-	it('offers the administrator the email events of its role, all on by default', () => {
+	it('offers the administrator the events of its role on every channel of the matrix', () => {
 		const { prefs, email } = new NotificationSettingsService(admin).settings();
 
 		expect(email).toBe('admin@rs.example');
-		expect(prefs.map((p) => p.eventKey)).toEqual([
+		expect(prefs.filter((p) => p.channel === 'email').map((p) => p.eventKey)).toEqual([
 			'request.accepted',
 			'request.ready',
 			'request.delivered',
@@ -79,26 +79,35 @@ describe('NotificationSettingsService', () => {
 			'request.payment_marked',
 			'request.paid'
 		]);
-		expect(prefs.every((p) => p.channel === 'email' && p.enabled && p.isDefault)).toBe(true);
+		expect(prefs.every((p) => p.isDefault)).toBe(true);
+		expect(prefs.filter((p) => p.channel === 'email').every((p) => p.enabled)).toBe(true);
+		// MAX is offered before its driver: the switch waits switched off until C16.
+		expect(prefs.filter((p) => p.channel === 'max')).toHaveLength(6);
+		expect(prefs.some((p) => p.channel === 'max' && p.enabled)).toBe(false);
+		expect(prefs.some((p) => p.channel === 'push')).toBe(false);
 	});
 
 	it('offers an employee only the events of its own role', () => {
 		const { prefs } = new NotificationSettingsService(employee).settings();
 
-		expect(prefs.map((p) => p.eventKey)).toEqual([
+		expect(prefs.filter((p) => p.channel === 'email').map((p) => p.eventKey)).toEqual([
 			'request.accepted',
 			'request.ready',
 			'request.delivered',
 			'request.rejected'
 		]);
+		expect(prefs).toHaveLength(8);
 	});
 
 	it('stores the switches, reads them back and writes the audit row', () => {
 		const service = new NotificationSettingsService(admin);
 
-		const saved = service.save({ enabled: ['request.paid:email'] });
+		const saved = service.save({ enabled: ['request.paid:email', 'request.ready:max'] });
 
-		expect(saved.filter((p) => p.enabled).map((p) => p.eventKey)).toEqual(['request.paid']);
+		expect(saved.filter((p) => p.enabled).map((p) => `${p.eventKey}:${p.channel}`)).toEqual([
+			'request.ready:max',
+			'request.paid:email'
+		]);
 		expect(saved.every((p) => !p.isDefault)).toBe(true);
 		expect(service.settings().prefs).toEqual(saved);
 		const [audit] = db
@@ -117,6 +126,7 @@ describe('NotificationSettingsService', () => {
 		const service = new NotificationSettingsService(employee);
 
 		expect(() => service.save({ enabled: ['request.paid:email'] })).toThrow(ValidationError);
+		expect(() => service.save({ enabled: ['request.ready:push'] })).toThrow(ValidationError);
 		expect(db.select().from(userNotificationPrefs).all()).toHaveLength(0);
 		expect(db.select().from(auditLog).all()).toHaveLength(0);
 	});

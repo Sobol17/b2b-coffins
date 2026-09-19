@@ -5,6 +5,7 @@ import { OPTION_KINDS } from '../../src/lib/types/catalog';
 import { DICT_CODES } from '../../src/lib/types/dicts';
 import { unknownVariables } from '../../src/lib/domain/notification/template';
 import { EVENT_KEYS } from '../../src/lib/types/events';
+import { NOTIFICATION_CHANNELS } from '../../src/lib/types/notifications';
 import { ROLE_CODES } from '../../src/lib/types/roles';
 
 const FIXTURES_DIR = join(import.meta.dirname, '..', 'fixtures');
@@ -27,7 +28,7 @@ export const numberingFixture = z.object({
 export const notificationRuleFixture = z.object({
 	eventKey: z.enum(EVENT_KEYS),
 	roleCode: z.enum(ROLE_CODES),
-	channel: z.enum(['email', 'push']),
+	channel: z.enum(NOTIFICATION_CHANNELS),
 	enabled: z.boolean()
 });
 
@@ -39,7 +40,7 @@ const templateText = z
 
 export const notificationTemplateFixture = z.object({
 	eventKey: z.enum(EVENT_KEYS),
-	channel: z.enum(['email', 'push']),
+	channel: z.enum(NOTIFICATION_CHANNELS),
 	subject: templateText,
 	body: templateText
 });

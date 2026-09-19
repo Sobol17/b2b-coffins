@@ -1,6 +1,7 @@
 import { asc, desc, sql, type SQL } from 'drizzle-orm';
 import type { SQLiteColumn } from 'drizzle-orm/sqlite-core';
 import type { ListQuery } from '$lib/types/list';
+import { listQueryKey } from '$lib/utils/list-url';
 
 export const DEFAULT_PER_PAGE = 25;
 const MAX_PER_PAGE = 200;
@@ -22,13 +23,18 @@ export function normalizeListQuery<F>(query: Partial<ListQuery<F>>): ListQuery<F
 	};
 }
 
-export function parseListQuery<F>(url: URL, filters?: F): ListQuery<F> {
-	const dir = url.searchParams.get('dir');
-	const search = url.searchParams.get('search');
-	const sort = url.searchParams.get('sort');
+/**
+ * `prefix` gives a second registry on the same page its own keys (`feedPage`), so paging one table
+ * does not move the other (P12).
+ */
+export function parseListQuery<F>(url: URL, filters?: F, prefix = ''): ListQuery<F> {
+	const key = listQueryKey(prefix);
+	const dir = url.searchParams.get(key('dir'));
+	const search = url.searchParams.get(key('search'));
+	const sort = url.searchParams.get(key('sort'));
 	return normalizeListQuery<F>({
-		page: Number(url.searchParams.get('page') ?? 1),
-		perPage: Number(url.searchParams.get('perPage') ?? DEFAULT_PER_PAGE),
+		page: Number(url.searchParams.get(key('page')) ?? 1),
+		perPage: Number(url.searchParams.get(key('perPage')) ?? DEFAULT_PER_PAGE),
 		...(sort === null ? {} : { sort }),
 		...(dir === 'asc' || dir === 'desc' ? { dir } : {}),
 		...(search === null || search === '' ? {} : { search }),

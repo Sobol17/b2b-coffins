@@ -8,6 +8,7 @@ import {
 } from 'drizzle-orm/sqlite-core';
 import { JOB_TOPICS } from '$lib/types/dicts';
 import { EVENT_KEYS } from '$lib/types/events';
+import { NOTIFICATION_CHANNELS } from '$lib/types/notifications';
 import { ROLE_CODES } from '$lib/types/roles';
 import { bool, createdAt, money, pk, ts, updatedAt } from './_shared';
 import { users } from './users';
@@ -47,7 +48,7 @@ export const notificationTemplates = sqliteTable(
 	{
 		id: pk(),
 		eventKey: text('event_key', { enum: EVENT_KEYS }).notNull(),
-		channel: text('channel', { enum: ['email', 'push'] }).notNull(),
+		channel: text('channel', { enum: NOTIFICATION_CHANNELS }).notNull(),
 		subject: text('subject'),
 		body: text('body').notNull(),
 		isActive: bool('is_active').notNull().default(true)
@@ -60,7 +61,7 @@ export const notificationRules = sqliteTable(
 	{
 		eventKey: text('event_key', { enum: EVENT_KEYS }).notNull(),
 		roleCode: text('role_code', { enum: ROLE_CODES }).notNull(),
-		channel: text('channel', { enum: ['email', 'push'] }).notNull(),
+		channel: text('channel', { enum: NOTIFICATION_CHANNELS }).notNull(),
 		enabled: bool('enabled').notNull().default(true)
 	},
 	(t) => [primaryKey({ columns: [t.eventKey, t.roleCode, t.channel] })]
@@ -73,7 +74,7 @@ export const userNotificationPrefs = sqliteTable(
 			.notNull()
 			.references(() => users.id, { onDelete: 'cascade' }),
 		eventKey: text('event_key', { enum: EVENT_KEYS }).notNull(),
-		channel: text('channel', { enum: ['email', 'push'] }).notNull(),
+		channel: text('channel', { enum: NOTIFICATION_CHANNELS }).notNull(),
 		enabled: bool('enabled').notNull()
 	},
 	(t) => [primaryKey({ columns: [t.userId, t.eventKey, t.channel] })]
@@ -87,7 +88,7 @@ export const notifications = sqliteTable(
 		userId: integer('user_id')
 			.notNull()
 			.references(() => users.id, { onDelete: 'cascade' }),
-		channel: text('channel', { enum: ['email', 'push'] }).notNull(),
+		channel: text('channel', { enum: NOTIFICATION_CHANNELS }).notNull(),
 		payload: text('payload', { mode: 'json' }).$type<Record<string, unknown>>().notNull(),
 		status: text('status', { enum: ['queued', 'sent', 'failed'] })
 			.notNull()
@@ -98,6 +99,28 @@ export const notifications = sqliteTable(
 		createdAt: createdAt()
 	},
 	(t) => [index('notifications_user_idx').on(t.userId, t.createdAt)]
+);
+
+/**
+ * The in-app feed of the bell. One row per (user, event), whatever channels the matrix picked:
+ * a channel row would show the same event twice. The unique index makes the fanout job idempotent.
+ */
+export const notificationFeed = sqliteTable(
+	'notification_feed',
+	{
+		id: pk(),
+		userId: integer('user_id')
+			.notNull()
+			.references(() => users.id, { onDelete: 'cascade' }),
+		eventKey: text('event_key', { enum: EVENT_KEYS }).notNull(),
+		entityId: integer('entity_id').notNull(),
+		readAt: ts('read_at'),
+		createdAt: createdAt()
+	},
+	(t) => [
+		index('feed_user_idx').on(t.userId, t.createdAt),
+		uniqueIndex('feed_uq').on(t.userId, t.eventKey, t.entityId)
+	]
 );
 
 export const pushSubscriptions = sqliteTable(

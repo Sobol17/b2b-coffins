@@ -50,6 +50,7 @@ export { REQUEST_STATUS_FLOW, REQUEST_STATUS_META, TONE_CLASS } from './status';
 export type { StatusMeta, StatusTone } from './status';
 
 export * as Card from './base/card/index.js';
+export * as Popover from './base/popover/index.js';
 export * as Tabs from './base/tabs/index.js';
 export { Skeleton } from './base/skeleton/index.js';
 export { Spinner } from './base/spinner/index.js';

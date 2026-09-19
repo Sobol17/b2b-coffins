@@ -146,6 +146,18 @@ describe('notification.fanout and notification.dispatch (P9)', () => {
 		expect(mailTo('admin@rs.example')).toHaveLength(0);
 	});
 
+	it('sends nothing over MAX while its driver is still to come in C16', async () => {
+		db.insert(userNotificationPrefs)
+			.values({ userId: world.adminId, eventKey: 'request.ready', channel: 'max', enabled: true })
+			.run();
+		const id = sent(actors.admin);
+		drive(id, 'ready');
+
+		await worker().drain();
+
+		expect(rowsOf('request.ready').map((row) => row.channel)).toEqual(['email']);
+	});
+
 	it('skips a disabled account', async () => {
 		db.update(users).set({ isActive: false }).where(eq(users.id, world.adminId)).run();
 		const id = sent(actors.employee);

@@ -20,6 +20,7 @@
 		cart,
 		footerCaption = 'Портал контрагента столярной мастерской',
 		search,
+		bell,
 		children
 	}: {
 		title: string;
@@ -32,13 +33,15 @@
 		footerCaption?: string;
 		/** Portal header search. The kit takes it as a snippet so it never imports portal code. */
 		search?: Snippet | undefined;
+		/** Portal notification bell, a snippet for the same reason: its texts belong to the portal. */
+		bell?: Snippet | undefined;
 		children: Snippet;
 	} = $props();
 </script>
 
 {#if variant === 'portal'}
 	<div class="flex min-h-screen flex-col">
-		<PortalHeader {title} {userName} {roles} {links} {accountHref} {cart} {search} />
+		<PortalHeader {title} {userName} {roles} {links} {accountHref} {cart} {search} {bell} />
 		<main class="mx-auto w-full max-w-shell flex-1 px-4 pt-4 pb-10 sm:px-6">
 			{@render children()}
 		</main>

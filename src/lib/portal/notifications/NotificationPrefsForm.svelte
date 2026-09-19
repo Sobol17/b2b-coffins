@@ -6,8 +6,8 @@
 	import { CHANNEL_LABEL, EVENT_LABEL } from './labels';
 
 	/*
-	 * One switch per event the role is offered. Unchecked boxes send nothing, so the server reads the
-	 * whole selection from the checked values and stores a row for every offered pair.
+	 * One switch per pair «event, channel» the role is offered. Unchecked boxes send nothing, so the
+	 * server reads the whole selection from the checked values and stores a row for every pair.
 	 */
 	let { prefs, email }: { prefs: readonly NotificationPrefDto[]; email: string } = $props();
 
@@ -20,16 +20,19 @@
 			? {
 					kind: 'warning',
 					title: 'Письма отключены',
-					description: 'Статус заявок можно отслеживать в разделе «Мои заявки»'
+					description: 'События остаются в ленте уведомлений и в разделе «Мои заявки»'
 				}
-			: { title: 'Настройки сохранены', description: `Писем включено: ${on} из ${stored.length}` };
+			: {
+					title: 'Настройки сохранены',
+					description: `Включено: ${on} из ${stored.length}`
+				};
 	}
 </script>
 
 {#if prefs.length === 0}
 	<EmptyState
 		title="Для вашей роли писем нет"
-		description="Статус заявок видно в разделе «Мои заявки»."
+		description="События по заявкам видно в ленте уведомлений и в разделе «Мои заявки»."
 	/>
 {:else}
 	<form
@@ -43,10 +46,11 @@
 		})}
 	>
 		<p class="text-fg-muted">
-			Письма приходят на <span class="text-fg">{email}</span>. Адрес меняет менеджер мастерской.
+			Письма приходят на <span class="text-fg">{email}</span>. Адрес меняет менеджер мастерской. Бот
+			в МАКС заработает позже: выбор сохранится и включится вместе с ним.
 		</p>
 		<fieldset class="flex flex-col divide-y divide-border">
-			<legend class="sr-only">Письма о событиях заявки</legend>
+			<legend class="sr-only">Уведомления о событиях заявки</legend>
 			{#each prefs as pref (prefKey(pref.eventKey, pref.channel))}
 				<div
 					data-testid="notification-pref"

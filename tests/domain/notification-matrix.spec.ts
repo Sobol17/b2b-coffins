@@ -2,6 +2,7 @@ import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 import {
 	channelChoices,
+	isAddressed,
 	prefKey,
 	prefsFromSelection,
 	receives,
@@ -156,5 +157,46 @@ describe('notification matrix (P9)', () => {
 		];
 
 		expect(channelChoices(matrix, ['cp_admin'], [], ['email'])).toEqual([]);
+	});
+
+	it('keeps push closed until the channel goes live', () => {
+		const matrix: RoleRule[] = [
+			{ eventKey: 'request.ready', roleCode: 'cp_admin', channel: 'push', enabled: true }
+		];
+
+		expect(channelChoices(matrix, ['cp_admin'], [], ['email'])).toEqual([]);
+	});
+});
+
+describe('who the in-app feed reaches (P12)', () => {
+	it('addresses everyone a rule of the event names, whatever the channel says', () => {
+		fc.assert(
+			fc.property(rules, roles, eventKey, (rs, rl, key) => {
+				expect(isAddressed(rs, rl, key)).toBe(
+					rs.some((r) => r.eventKey === key && rl.includes(r.roleCode))
+				);
+			})
+		);
+	});
+
+	it('reaches at least everyone the channels reach: the feed cannot be switched off', () => {
+		fc.assert(
+			fc.property(rules, roles, prefs, channels, eventKey, (rs, rl, ps, ch, key) => {
+				const offered = channelChoices(rs, rl, ps, ch).some((c) => c.eventKey === key);
+				if (offered) expect(isAddressed(rs, rl, key)).toBe(true);
+			})
+		);
+	});
+
+	it('addresses a user whose only rule is switched off or answers another channel', () => {
+		const matrix: RoleRule[] = [
+			{ eventKey: 'request.ready', roleCode: 'cp_admin', channel: 'email', enabled: false },
+			{ eventKey: 'request.paid', roleCode: 'cp_admin', channel: 'max', enabled: true }
+		];
+
+		expect(isAddressed(matrix, ['cp_admin'], 'request.ready')).toBe(true);
+		expect(isAddressed(matrix, ['cp_admin'], 'request.paid')).toBe(true);
+		expect(isAddressed(matrix, ['cp_employee'], 'request.ready')).toBe(false);
+		expect(isAddressed(matrix, ['cp_admin'], 'request.delivered')).toBe(false);
 	});
 });

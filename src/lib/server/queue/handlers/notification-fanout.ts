@@ -1,5 +1,6 @@
 import { withTransaction } from '../../core/tx';
 import type { Tx } from '../../db/client';
+import { NotificationFeedRepository } from '../../notifications/notification-feed.repository';
 import { NotificationRuleRepository } from '../../notifications/notification-rule.repository';
 import {
 	NotificationRepository,
@@ -12,6 +13,7 @@ import { Queue } from '../queue';
 import { JOB_PAYLOAD_SCHEMAS, jobKey } from '../topics';
 import {
 	channelChoices,
+	isAddressed,
 	receives,
 	rolesTowardsRequest,
 	type RoleRule
@@ -24,6 +26,7 @@ export interface FanoutDeps {
 	readonly rules: NotificationRuleRepository;
 	readonly notifications: NotificationRepository;
 	readonly isEnabled: () => boolean;
+	readonly feed?: NotificationFeedRepository;
 }
 
 /** Request events of tech.md 7.3. Stock and payroll events find their people in C8, C10 and C12. */
@@ -33,10 +36,12 @@ function isRequestEvent(eventKey: EventKey): boolean {
 
 /**
  * `notification.fanout` of tech.md 7.2: turns one event into `notifications` rows by the role
- * matrix and personal settings, and queues one dispatch per row in the same transaction. P9 finds
- * the portal people of the request; the workshop roles join in C12.
+ * matrix and personal settings, writes the in-app feed row of every addressee, and queues one
+ * dispatch per channel row in the same transaction. P9 finds the portal people of the request;
+ * the workshop roles join in C12.
  */
 export function createNotificationFanoutHandler(deps: FanoutDeps) {
+	const feed = deps.feed ?? new NotificationFeedRepository();
 	return defineHandler({
 		topic: 'notification.fanout',
 		schema: JOB_PAYLOAD_SCHEMAS['notification.fanout'],
@@ -70,6 +75,10 @@ export function createNotificationFanoutHandler(deps: FanoutDeps) {
 		tx: Tx
 	): number {
 		const roles = rolesTowardsRequest(person.roles, request.createdById === person.userId);
+		// The feed is a mirror of events, not a channel: personal switches do not reach it (v1.33).
+		if (isAddressed(rules, roles, eventKey)) {
+			feed.insert({ userId: person.userId, eventKey, entityId: request.id }, tx);
+		}
 		const choices = channelChoices(
 			rules,
 			roles,

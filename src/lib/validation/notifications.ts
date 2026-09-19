@@ -22,3 +22,13 @@ export const notificationPrefsSchema = z.object({
 });
 
 export type NotificationPrefsInput = z.infer<typeof notificationPrefsSchema>;
+
+/**
+ * What the bell marks read when its panel opens: the ids it has just shown. A longer list than one
+ * panel cannot come from the page, so the server stops it here.
+ */
+export const feedReadSchema = z.object({
+	ids: z.array(z.number().int().positive()).min(1).max(50)
+});
+
+export type FeedReadInput = z.infer<typeof feedReadSchema>;

@@ -19,9 +19,21 @@
 	},
 	{
 		"eventKey": "request.accepted",
+		"roleCode": "cp_admin",
+		"channel": "max",
+		"enabled": false
+	},
+	{
+		"eventKey": "request.accepted",
 		"roleCode": "cp_employee",
 		"channel": "email",
 		"enabled": true
+	},
+	{
+		"eventKey": "request.accepted",
+		"roleCode": "cp_employee",
+		"channel": "max",
+		"enabled": false
 	},
 	{
 		"eventKey": "request.ready",
@@ -43,9 +55,21 @@
 	},
 	{
 		"eventKey": "request.ready",
+		"roleCode": "cp_admin",
+		"channel": "max",
+		"enabled": false
+	},
+	{
+		"eventKey": "request.ready",
 		"roleCode": "cp_employee",
 		"channel": "email",
 		"enabled": true
+	},
+	{
+		"eventKey": "request.ready",
+		"roleCode": "cp_employee",
+		"channel": "max",
+		"enabled": false
 	},
 	{
 		"eventKey": "request.delivered",
@@ -61,9 +85,21 @@
 	},
 	{
 		"eventKey": "request.delivered",
+		"roleCode": "cp_admin",
+		"channel": "max",
+		"enabled": false
+	},
+	{
+		"eventKey": "request.delivered",
 		"roleCode": "cp_employee",
 		"channel": "email",
 		"enabled": true
+	},
+	{
+		"eventKey": "request.delivered",
+		"roleCode": "cp_employee",
+		"channel": "max",
+		"enabled": false
 	},
 	{
 		"eventKey": "request.cancelled",
@@ -79,15 +115,33 @@
 	},
 	{
 		"eventKey": "request.rejected",
+		"roleCode": "cp_admin",
+		"channel": "max",
+		"enabled": false
+	},
+	{
+		"eventKey": "request.rejected",
 		"roleCode": "cp_employee",
 		"channel": "email",
 		"enabled": true
+	},
+	{
+		"eventKey": "request.rejected",
+		"roleCode": "cp_employee",
+		"channel": "max",
+		"enabled": false
 	},
 	{
 		"eventKey": "request.payment_marked",
 		"roleCode": "cp_admin",
 		"channel": "email",
 		"enabled": true
+	},
+	{
+		"eventKey": "request.payment_marked",
+		"roleCode": "cp_admin",
+		"channel": "max",
+		"enabled": false
 	},
 	{
 		"eventKey": "request.paid",
@@ -100,6 +154,12 @@
 		"roleCode": "cp_admin",
 		"channel": "email",
 		"enabled": true
+	},
+	{
+		"eventKey": "request.paid",
+		"roleCode": "cp_admin",
+		"channel": "max",
+		"enabled": false
 	},
 	{
 		"eventKey": "stock.below_threshold",

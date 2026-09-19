@@ -2,9 +2,9 @@ import type { EventKey } from './events';
 import type { Page } from './list';
 
 // notifications.ts — personal settings and the delivery log of a portal user (P9).
-export const NOTIFICATION_CHANNELS = ['email', 'push'] as const;
+export const NOTIFICATION_CHANNELS = ['email', 'push', 'max'] as const;
 export type NotificationChannel = (typeof NOTIFICATION_CHANNELS)[number];
-/** Channels a user can switch today. Push joins in C15 together with the service worker. */
+/** Channels a driver sends over today. Push joins in C15, the MAX bot in C16. */
 export const LIVE_CHANNELS = ['email'] as const satisfies readonly NotificationChannel[];
 export const NOTIFICATION_STATUSES = ['queued', 'sent', 'failed'] as const;
 export type NotificationStatus = (typeof NOTIFICATION_STATUSES)[number];
@@ -30,4 +30,18 @@ export interface NotificationSettingsDto {
 	email: string;
 	prefs: NotificationPrefDto[];
 	log: Page<NotificationLogItemDto>;
+}
+
+// The bell of the portal header (v1.33). The feed is not a channel: a user cannot switch it off.
+export interface NotificationFeedItemDto {
+	id: number;
+	eventKey: EventKey;
+	requestId: number | null;
+	requestNumber: string | null; // null when the row points outside the actor's counterparty
+	isRead: boolean;
+	createdAt: string;
+}
+export interface NotificationBellDto {
+	unread: number;
+	items: NotificationFeedItemDto[];
 }
