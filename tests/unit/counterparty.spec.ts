@@ -130,18 +130,28 @@ function actor(role: RoleCode, userId: number, counterpartyId: number | null): A
 	};
 }
 
+// Requisites and the contract discount left the portal card in v1.33; the CRM card (C3) keeps them.
+const CARD_FORBIDDEN_KEYS = [
+	'legalName',
+	'inn',
+	'kpp',
+	'address',
+	'phone',
+	'email',
+	'settlementScheme',
+	'discountPercent'
+] as const;
+
 describe('counterparty card', () => {
-	it('gives the administrator requisites, the latest contract, the manager and the money figures', () => {
+	it('gives the administrator the latest contract, the manager and the money figures', () => {
 		const card = new CounterpartyService(actor('cp_admin', adminId, ownId)).card(now);
 
 		expect(card).toMatchObject({
 			name: 'Ритуал-Сервис',
-			inn: '7702345678',
 			contract: { number: '201-О' },
 			manager: { fullName: 'Марина Круглова', phone: '+7 495 000-00-01' },
 			staffCount: 2,
 			staffLimit: 10,
-			discountPercent: 4,
 			// Unpaid rest of what was handed over: 70 000 + 50 000.
 			debtMinor: 120_000,
 			// Handed over this year, paid or not: 100 000 + 50 000 + 20 000.
@@ -154,13 +164,24 @@ describe('counterparty card', () => {
 		]);
 	});
 
-	it('gives the employee the same card without the discount and without any money', () => {
+	it('gives the employee the same card without any money', () => {
 		const card = new CounterpartyService(actor('cp_employee', employeeId, ownId)).card(now);
 
 		expect(card.name).toBe('Ритуал-Сервис');
 		expect(JSON.stringify(card)).not.toContain('Minor');
-		expect(card).not.toHaveProperty('discountPercent');
 		expect(card).not.toHaveProperty('yearDeliveries');
+	});
+
+	it('gives neither role the requisites nor the contract discount', () => {
+		for (const ctx of [
+			actor('cp_admin', adminId, ownId),
+			actor('cp_employee', employeeId, ownId)
+		]) {
+			const keys = Object.keys(new CounterpartyService(ctx).card(now));
+			for (const forbidden of CARD_FORBIDDEN_KEYS) {
+				expect(keys).not.toContain(forbidden);
+			}
+		}
 	});
 
 	it('never mixes in another counterparty', () => {
