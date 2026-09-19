@@ -1,6 +1,6 @@
 import { eq } from 'drizzle-orm';
 import { database } from '../../../src/lib/server/db/client';
-import { requests } from '../../../src/lib/server/db/schema';
+import { deliveryAddresses, requests } from '../../../src/lib/server/db/schema';
 import { DraftService } from '../../../src/lib/server/request/draft.service';
 import { RequestSubmitService } from '../../../src/lib/server/request/request-submit.service';
 import { normalizeListQuery } from '../../../src/lib/server/core/list';
@@ -9,11 +9,20 @@ import type { ListQuery } from '../../../src/lib/types/list';
 import type { RequestFilters } from '../../../src/lib/types/request';
 import type { DraftDetailsInput } from '../../../src/lib/validation/request';
 
-const PICKUP: DraftDetailsInput = {
-	deliveryAddressId: null,
-	isPickup: true,
-	comment: null
-};
+/** A filled delivery: since v1.33 a counterparty request does not leave the draft without it. */
+function shipmentFor(ctx: ActorContext): DraftDetailsInput {
+	const [row] = database
+		.select({ id: deliveryAddresses.id })
+		.from(deliveryAddresses)
+		.where(eq(deliveryAddresses.counterpartyId, ctx.counterpartyId ?? 0))
+		.all();
+	return {
+		deliveryAddressId: row?.id ?? null,
+		deliveryAt: new Date('2026-12-01T10:00:00.000Z'),
+		deceasedName: 'Иванов Иван Иванович',
+		comment: null
+	};
+}
 
 /** One sent request of the actor: the registry only ever lists requests that left the cart. */
 export function send(
@@ -23,7 +32,7 @@ export function send(
 	qty = 2
 ): number {
 	new DraftService(ctx).addItem({ variantId, qty, optionIds: [] });
-	return new RequestSubmitService(ctx).submit({ ...PICKUP, ...shipment }).id;
+	return new RequestSubmitService(ctx).submit({ ...shipmentFor(ctx), ...shipment }).id;
 }
 
 /** The own number of the counterparty comes from data written before the field left the cart. */

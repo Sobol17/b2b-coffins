@@ -11,7 +11,9 @@
 	import { resolve } from '$app/paths';
 	import {
 		Button,
-		RadioGroup,
+		DatePicker,
+		Input,
+		Select,
 		Textarea,
 		withToast,
 		type SelectOption,
@@ -21,15 +23,24 @@
 
 	let { draft, formError }: { draft: DraftDto; formError?: string | undefined } = $props();
 
-	let picked = $state<string | null>(null);
+	/*
+	 * A draft may hold half of the form: the send is what the server blocks, not the saving.
+	 * Only the two controls that own their value need state; the plain inputs submit their own.
+	 */
+	let pickedAddress = $state<string | null>(null);
+	let pickedDate = $state<string | null>(null);
 
-	const options = $derived<SelectOption[]>([
-		...draft.addresses.map((address) => ({
-			value: `address:${address.id}`,
-			label: `${address.title}: ${address.address}`
-		})),
-		{ value: 'pickup', label: 'Самовывоз со склада мастерской' }
-	]);
+	const address = $derived(
+		pickedAddress ?? (draft.deliveryAddressId === null ? '' : String(draft.deliveryAddressId))
+	);
+	const date = $derived(pickedDate ?? draft.deliveryAt?.slice(0, 10) ?? '');
+
+	const options = $derived<SelectOption[]>(
+		draft.addresses.map((item) => ({
+			value: String(item.id),
+			label: `${item.title}: ${item.address}`
+		}))
+	);
 	function isSubmitted(value: unknown): value is SubmittedRequestDto {
 		return typeof value === 'object' && value !== null && 'number' in value && 'id' in value;
 	}
@@ -47,15 +58,6 @@
 			}
 		};
 	}
-
-	const delivery = $derived(
-		picked ??
-			(draft.isPickup
-				? 'pickup'
-				: draft.deliveryAddressId !== null
-					? `address:${draft.deliveryAddressId}`
-					: '')
-	);
 </script>
 
 <form
@@ -67,11 +69,44 @@
 >
 	<h2 class="text-2xl">Отгрузка</h2>
 
-	<RadioGroup
-		name="delivery"
-		label="Куда доставить"
-		{options}
-		bind:value={() => delivery, (next) => (picked = next)}
+	<!-- The kit draws the trigger as a button, which no <label for> can point at: hence the hooks. -->
+	<div data-testid="delivery-address">
+		<Select
+			name="deliveryAddressId"
+			label="Адрес доставки"
+			placeholder="Выберите адрес"
+			{options}
+			bind:value={() => address, (next) => (pickedAddress = next)}
+			required
+		/>
+	</div>
+
+	<div class="grid grid-cols-1 gap-5 sm:grid-cols-2">
+		<div data-testid="delivery-date">
+			<DatePicker
+				name="deliveryDate"
+				label="Дата доставки"
+				bind:value={() => date, (next) => (pickedDate = next)}
+				required
+			/>
+		</div>
+		<Input
+			name="deliveryTime"
+			type="time"
+			label="Время доставки"
+			placeholder="Введите время"
+			value={draft.deliveryAt?.slice(11, 16) ?? ''}
+			required
+		/>
+	</div>
+
+	<Input
+		name="deceasedName"
+		label="ФИО умершего"
+		placeholder="Введите ФИО"
+		value={draft.deceasedName ?? ''}
+		maxlength={200}
+		required
 	/>
 
 	<Textarea

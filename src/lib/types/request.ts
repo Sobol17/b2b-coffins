@@ -106,8 +106,9 @@ export interface DraftDto {
 	readonly number: string;
 	readonly items: readonly DraftItemDto[];
 	readonly unitCount: number;
-	readonly isPickup: boolean;
 	readonly deliveryAddressId: number | null;
+	readonly deliveryAt: string | null;
+	readonly deceasedName: string | null;
 	readonly comment: string | null;
 	readonly addresses: readonly DeliveryAddressDto[];
 	readonly updatedAt: string;
@@ -204,8 +205,9 @@ export interface RequestCardDto {
 	readonly externalNumber: string | null;
 	readonly comment: string | null;
 	readonly authorName: string | null;
-	readonly isPickup: boolean;
 	readonly deliveryAddress: string | null;
+	readonly deliveryAt: string | null;
+	readonly deceasedName: string | null;
 	readonly items: readonly RequestItemDto[];
 	readonly unitCount: number;
 	readonly history: readonly RequestHistoryStepDto[];

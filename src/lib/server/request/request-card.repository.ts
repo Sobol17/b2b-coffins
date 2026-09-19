@@ -26,8 +26,9 @@ export interface CardRow {
 	readonly externalNumber: string | null;
 	readonly comment: string | null;
 	readonly authorName: string | null;
-	readonly isPickup: boolean;
 	readonly deliveryAddress: string | null;
+	readonly deliveryAt: Date | null;
+	readonly deceasedName: string | null;
 	readonly itemsTotalMinor?: number;
 	readonly discountMinor?: number;
 	readonly totalMinor?: number;
@@ -71,8 +72,9 @@ const CARD_COLUMNS = {
 	externalNumber: requests.externalNumber,
 	comment: requests.comment,
 	authorName: author.fullName,
-	isPickup: requests.isPickup,
-	deliveryAddress: deliveryAddresses.address
+	deliveryAddress: deliveryAddresses.address,
+	deliveryAt: requests.deliveryAt,
+	deceasedName: requests.deceasedName
 };
 
 const MONEY_COLUMNS = {

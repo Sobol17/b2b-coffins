@@ -106,7 +106,11 @@ export class DraftService extends PortalRequestService {
 				throw new NotFoundError('delivery address');
 			}
 			this.drafts.saveDetails(draft.id, details, tx);
-			return { result: undefined, entityId: draft.id, after: { isPickup: details.isPickup } };
+			return {
+				result: undefined,
+				entityId: draft.id,
+				after: { deliveryAddressId: details.deliveryAddressId }
+			};
 		});
 		return this.projectedDraft();
 	}

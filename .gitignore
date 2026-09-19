@@ -30,3 +30,6 @@ blob-report
 # Runtime data: database file and uploads live outside the repository
 /data
 coverage
+
+# Agent tooling scratch space: worktrees and local state, never project source
+.claude/

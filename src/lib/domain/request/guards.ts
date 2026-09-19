@@ -1,3 +1,4 @@
+import { isDeliveryFilled, type DeliveryFacts } from './delivery';
 import type { GuardCode } from '$lib/types/request';
 
 /** What the server knows about a request before it asks the state machine. */
@@ -7,6 +8,7 @@ export interface GuardFacts {
 	readonly unitPricesMinor: readonly number[];
 	readonly totalMinor: number;
 	readonly paymentMarksMinor: readonly number[];
+	readonly delivery: DeliveryFacts;
 }
 
 /** A request is priced when it has lines and none of them is left at zero. */
@@ -24,6 +26,7 @@ export function evaluateGuards(facts: GuardFacts): Record<GuardCode, boolean> {
 	return {
 		hasAssignee: facts.assigneeCount > 0,
 		pricesFixed: pricesFixed(facts.unitPricesMinor),
-		fullyPaid: fullyPaid(facts.totalMinor, facts.paymentMarksMinor)
+		fullyPaid: fullyPaid(facts.totalMinor, facts.paymentMarksMinor),
+		deliveryFilled: isDeliveryFilled(facts.delivery)
 	};
 }

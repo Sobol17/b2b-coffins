@@ -42,23 +42,40 @@ export const draftItemQtySchema = z.object({ itemId: id, qty });
 export const draftItemSchema = z.object({ itemId: id });
 export const repeatRequestSchema = z.object({ requestId: id });
 
-/** Delivery and comment, saved with the draft and at submit. */
+/** Empty, absent or null all mean "no reference", so a form without the field validates. */
+const optionalId = z
+	.union([z.literal(''), z.null(), id])
+	.optional()
+	.transform((value) => (typeof value === 'number' ? value : null));
+
+const deliveryDate = z.union([z.literal(''), z.string().regex(/^\d{4}-\d{2}-\d{2}$/)]).optional();
+const deliveryTime = z.union([z.literal(''), z.string().regex(/^\d{2}:\d{2}$/)]).optional();
+
+/**
+ * Delivery and comment, saved with the draft and at submit. A draft may hold a half-filled form:
+ * the send is what the server blocks, so a counterparty collects the request in several visits.
+ */
 export const draftDetailsSchema = z
 	.object({
-		delivery: z
-			.union([z.literal('pickup'), z.string().regex(/^address:\d+$/)], {
-				error: 'Выберите адрес доставки или самовывоз'
-			})
-			.optional(),
+		deliveryAddressId: optionalId,
+		deliveryDate,
+		deliveryTime,
+		deceasedName: optionalText(200, 'ФИО умершего не длиннее 200 символов'),
 		comment: optionalText(1000, 'Комментарий не длиннее 1000 символов')
 	})
 	.transform((value) => ({
-		deliveryAddressId: value.delivery?.startsWith('address:')
-			? Number(value.delivery.slice('address:'.length))
-			: null,
-		isPickup: value.delivery === 'pickup',
+		deliveryAddressId: value.deliveryAddressId,
+		deliveryAt: localMoment(value.deliveryDate, value.deliveryTime),
+		deceasedName: value.deceasedName,
 		comment: value.comment
 	}));
+
+/** Both halves come from the form; either one missing means the deadline is not set yet. */
+function localMoment(date: string | undefined, time: string | undefined): Date | null {
+	if (!date || !time) return null;
+	const moment = new Date(`${date}T${time}:00`);
+	return Number.isNaN(moment.getTime()) ? null : moment;
+}
 
 export type AddDraftItemInput = z.infer<typeof addDraftItemSchema>;
 export type DraftDetailsInput = z.infer<typeof draftDetailsSchema>;
@@ -67,12 +84,6 @@ export type DraftDetailsInput = z.infer<typeof draftDetailsSchema>;
 export function draftItemForm(form: FormData): Record<string, unknown> {
 	return { ...Object.fromEntries(form), optionIds: form.getAll('option') };
 }
-
-/** Empty, absent or null all mean "no reference", so a form without the field validates. */
-const optionalId = z
-	.union([z.literal(''), z.null(), id])
-	.optional()
-	.transform((value) => (typeof value === 'number' ? value : null));
 
 /** A status move of a sent request. The state machine decides whether the pair is allowed. */
 export const requestTransitionSchema = z.object({

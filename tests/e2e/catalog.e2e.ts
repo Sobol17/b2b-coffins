@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import { login, logout, purchaseMoneyKeys } from './fixtures';
+import { emptyCart } from './portal-flow';
 
 async function openVolga(page: Page): Promise<string> {
 	await page.goto('/portal/catalog');
@@ -59,6 +60,8 @@ test('the product page quotes the personal price to the administrator', async ({
 
 test('the product page asks for the size and the colour only', async ({ page }) => {
 	await login(page, 'cp_employee');
+	// A draft left by another spec swaps the quantity field for a counter.
+	await emptyCart(page);
 	await openVolga(page);
 
 	const form = page.locator('form[action="?/add"]');
