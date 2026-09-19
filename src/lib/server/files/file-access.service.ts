@@ -5,13 +5,10 @@ import { ForbiddenError, NotFoundError } from '../core/errors';
 import { BaseService } from '../core/service';
 import { RequestCardRepository } from '../request/request-card.repository';
 import { MediaRepository, type MediaRow } from './media.repository';
-import { readStoredFile } from './storage';
+import { readStoredFile, type FileContent } from './storage';
 import type { ActorContext } from '$lib/types/actor';
 
-export interface FileContent {
-	readonly mime: string;
-	readonly bytes: Buffer;
-}
+export type { FileContent };
 
 /** The only way a stored file leaves the server: `/api/files/[id]` after this check (tech.md 11). */
 export class FileAccessService extends BaseService {
