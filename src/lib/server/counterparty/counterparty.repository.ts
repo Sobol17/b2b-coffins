@@ -3,20 +3,13 @@ import { countExpression } from '../core/list';
 import { BaseRepository } from '../core/repository';
 import { contracts, counterparties, requests, roles, userRoles, users } from '../db/schema';
 import type { ActorContext } from '$lib/types/actor';
-import type { SettlementScheme } from '$lib/types/counterparty';
 import type { RequestStatus } from '$lib/types/request';
 import type { RoleCode } from '$lib/types/roles';
 
 export interface CounterpartyRow {
 	readonly id: number;
 	readonly name: string;
-	readonly legalName: string | null;
-	readonly inn: string | null;
-	readonly kpp: string | null;
-	readonly address: string | null;
-	readonly phone: string | null;
-	readonly email: string | null;
-	readonly settlementScheme: SettlementScheme;
+	/** Not shown in the portal since v1.33; the draft calculator still prices with it. */
 	readonly discountPercent: number;
 	readonly staffLimit: number;
 	readonly managerId: number | null;
@@ -55,13 +48,6 @@ export class CounterpartyRepository extends BaseRepository<typeof counterparties
 			.select({
 				id: counterparties.id,
 				name: counterparties.name,
-				legalName: counterparties.legalName,
-				inn: counterparties.inn,
-				kpp: counterparties.kpp,
-				address: counterparties.address,
-				phone: counterparties.phone,
-				email: counterparties.email,
-				settlementScheme: counterparties.settlementScheme,
 				discountPercent: counterparties.discountPercent,
 				staffLimit: counterparties.staffLimit,
 				managerId: counterparties.managerId

@@ -35,13 +35,6 @@ export class CounterpartyDtoMapper {
 		return {
 			id: row.id,
 			name: row.name,
-			legalName: row.legalName,
-			inn: row.inn,
-			kpp: row.kpp,
-			address: row.address,
-			phone: row.phone,
-			email: row.email,
-			settlementScheme: row.settlementScheme,
 			contract: parts.contract
 				? {
 						number: parts.contract.number,
@@ -57,7 +50,6 @@ export class CounterpartyDtoMapper {
 			staffCount: parts.staff.total,
 			staffLimit: row.staffLimit,
 			...definedProps({
-				discountPercent: parts.money === undefined ? undefined : row.discountPercent,
 				debtMinor: parts.money?.debtMinor,
 				yearPurchasesMinor: parts.money?.yearPurchasesMinor,
 				yearDeliveries: parts.money?.yearDeliveries

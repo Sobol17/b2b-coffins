@@ -30,23 +30,18 @@ export interface CounterpartySummaryDto {
 	readonly manager: ContactDto | null;
 }
 
-/** Counterparty card of the portal profile. Money and the discount go to a role with prices only. */
+/**
+ * Counterparty card of the portal profile. Money goes to a role with prices only. Requisites and
+ * the contract discount left the card in v1.33: the manager keeps them in the CRM card (C3).
+ */
 export interface CounterpartyCardDto {
 	readonly id: number;
 	readonly name: string;
-	readonly legalName: string | null;
-	readonly inn: string | null;
-	readonly kpp: string | null;
-	readonly address: string | null;
-	readonly phone: string | null;
-	readonly email: string | null;
-	readonly settlementScheme: SettlementScheme;
 	readonly contract: ContractDto | null;
 	readonly manager: ContactDto | null;
 	readonly staffPreview: readonly StaffPreviewDto[];
 	readonly staffCount: number;
 	readonly staffLimit: number;
-	readonly discountPercent?: number;
 	readonly debtMinor?: number;
 	readonly yearPurchasesMinor?: number;
 	readonly yearDeliveries?: number;

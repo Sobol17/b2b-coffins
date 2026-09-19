@@ -60,3 +60,13 @@ test('a CRM role gets 403 on the page and on the action', async ({ page }) => {
 	});
 	expect(response.status()).toBe(403);
 });
+
+test('the profile shows neither the requisites nor the contract discount', async ({ page }) => {
+	await login(page, 'cp_admin');
+	await page.goto('/portal/profile');
+
+	await expect(page.getByRole('heading', { name: 'Реквизиты' })).toHaveCount(0);
+	await expect(page.getByText('Скидка по договору')).toHaveCount(0);
+	await expect(page.getByTestId('counterparty-money')).toContainText('Задолженность');
+	await expect(page.getByTestId('counterparty-money')).toContainText('Закупка за год');
+});
