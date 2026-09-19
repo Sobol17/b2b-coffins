@@ -9,7 +9,12 @@ import { insertUser } from './db';
 import { crmActor, portalActor, seedOrderingWorld, variantId } from './portal-requests';
 import { assign, move } from './transitions';
 
-const pickup = { deliveryAddressId: null, isPickup: true, comment: null };
+/** A filled delivery: since v1.33 a counterparty request does not leave the draft without it. */
+const shipment = {
+	deliveryAt: new Date('2026-12-01T10:00:00.000Z'),
+	deceasedName: 'Иванов Иван Иванович',
+	comment: null
+};
 
 /** The ordering world of P4 plus the workshop crew; the seeded rate is 100 bp. */
 export function seedCharityWorld(db: Db) {
@@ -29,9 +34,15 @@ export function seedCharityWorld(db: Db) {
 	};
 	const variant = variantId(db, 'MDL-201-180-PIN');
 
+	/** Each counterparty orders to its own address: a foreign one is refused on send. */
+	function addressFor(by: ActorContext): number {
+		return by.counterpartyId === world.otherCpId ? world.foreignAddressId : world.homeAddressId;
+	}
+
 	function sent(by: ActorContext = actors.admin, qty = 2): number {
 		new DraftService(by).addItem({ variantId: variant, qty, optionIds: [] });
-		return new RequestSubmitService(by).submit(pickup).id;
+		return new RequestSubmitService(by).submit({ ...shipment, deliveryAddressId: addressFor(by) })
+			.id;
 	}
 
 	/** Walks a sent request forward to `upTo` the way P5 allows it. */

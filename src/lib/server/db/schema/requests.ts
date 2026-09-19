@@ -28,7 +28,8 @@ export const requests = sqliteTable(
 			.notNull()
 			.default('normal'),
 		deliveryAddressId: integer('delivery_address_id').references(() => deliveryAddresses.id),
-		isPickup: bool('is_pickup').notNull().default(false),
+		deliveryAt: ts('delivery_at'), // hard deadline, frozen at draft -> new
+		deceasedName: text('deceased_name'), // personal data of a third party
 		externalNumber: text('external_number'), // counterparty own order number
 		comment: text('comment'),
 		itemsTotalMinor: money('items_total_minor'),

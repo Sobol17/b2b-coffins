@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import { login, purchaseMoneyKeys } from './fixtures';
+import { emptyCart, fillDelivery } from './portal-flow';
 
 const ORIGIN = 'http://localhost:4173';
 
@@ -11,13 +12,14 @@ async function openVolga(page: Page): Promise<string> {
 }
 
 async function addVolga(page: Page, qty: string): Promise<void> {
+	await emptyCart(page);
 	await openVolga(page);
 	await page.getByLabel('Количество').fill(qty);
 	await page.getByTestId('add-to-draft').click();
 	await expect(page.getByTestId('cart-count')).toBeVisible();
 }
 
-test('an employee builds a request from the catalog and sends it for pickup', async ({ page }) => {
+test('an employee builds a request from the catalog and sends it', async ({ page }) => {
 	await login(page, 'cp_employee');
 	await addVolga(page, '2');
 
@@ -30,11 +32,29 @@ test('an employee builds a request from the catalog and sends it for pickup', as
 	const body = await (await page.request.get('/portal/cart/__data.json')).text();
 	expect(purchaseMoneyKeys(body)).toEqual([]);
 
-	await page.getByText('Самовывоз со склада мастерской').click();
+	await fillDelivery(page);
 	await page.getByTestId('submit-draft').click();
 
 	await expect(page.getByTestId('request-submitted')).toContainText(/З-\d{4}-\d{5}/);
 	await expect(page.getByTestId('cart-count')).toHaveCount(0);
+});
+
+test('the server refuses a send while the delivery fields are empty', async ({ page }) => {
+	await login(page, 'cp_employee');
+	await addVolga(page, '1');
+
+	// The markup marks the fields required, and markup is not a defence: the check that counts is
+	// posted straight to the action, the way a forged request would arrive.
+	const response = await page.request.post('/portal/cart?/submit', {
+		headers: { origin: ORIGIN, accept: 'application/json' },
+		form: { deliveryAddressId: '', deliveryDate: '', deliveryTime: '', deceasedName: '' }
+	});
+
+	expect(await response.json()).toMatchObject({ type: 'failure' });
+	await page.goto('/portal/cart');
+	// The draft is untouched: a refused send leaves the cart exactly as it was.
+	await expect(page.getByTestId('cart-count')).toBeVisible();
+	await expect(page.getByTestId('draft-line').first()).toBeVisible();
 });
 
 test('the administrator sees the personal total with the contract discount', async ({ page }) => {
@@ -46,14 +66,11 @@ test('the administrator sees the personal total with the contract discount', asy
 	// Whole rubles on screen (v1.32): a digit is there, a kopeck separator is not.
 	await expect(page.getByTestId('draft-total')).toContainText(/\d/);
 	await expect(page.getByTestId('draft-total')).not.toContainText(',');
-
-	// Leave the seed account without a draft for the next run.
-	await page.getByRole('button', { name: 'Очистить' }).click();
-	await expect(page.getByText('В заявке пока пусто')).toBeVisible();
 });
 
 test('the server refuses an option outside the compatibility matrix', async ({ page }) => {
 	await login(page, 'cp_admin');
+	await emptyCart(page);
 	const path = await openVolga(page);
 
 	// An action posted as JSON answers HTTP 200 and carries the failure status in the body.
@@ -73,7 +90,7 @@ test('a workshop role gets 403 on the cart page and on its actions', async ({ pa
 	expect((await page.goto('/portal/cart'))?.status()).toBe(403);
 	const response = await page.request.post('/portal/cart?/submit', {
 		headers: { origin: ORIGIN },
-		form: { delivery: 'pickup' }
+		form: { deliveryAddressId: '', deliveryDate: '', deliveryTime: '', deceasedName: '' }
 	});
 	expect(response.status()).toBe(403);
 });

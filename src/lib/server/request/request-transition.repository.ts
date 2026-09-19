@@ -79,8 +79,14 @@ export class RequestTransitionRepository extends BaseRepository<typeof requests>
 
 	guardFacts(requestId: number, tx?: Tx): GuardFacts {
 		const db = this.db(tx);
-		const [total] = db
-			.select({ totalMinor: requests.totalMinor })
+		const [row] = db
+			.select({
+				totalMinor: requests.totalMinor,
+				isStockRequest: requests.isStockRequest,
+				deliveryAddressId: requests.deliveryAddressId,
+				deliveryAt: requests.deliveryAt,
+				deceasedName: requests.deceasedName
+			})
 			.from(requests)
 			.where(eq(requests.id, requestId))
 			.all();
@@ -96,13 +102,19 @@ export class RequestTransitionRepository extends BaseRepository<typeof requests>
 				.where(eq(requestItems.requestId, requestId))
 				.all()
 				.map((line) => line.price),
-			totalMinor: total?.totalMinor ?? 0,
+			totalMinor: row?.totalMinor ?? 0,
 			paymentMarksMinor: db
 				.select({ amount: paymentMarks.amountMinor })
 				.from(paymentMarks)
 				.where(eq(paymentMarks.requestId, requestId))
 				.all()
-				.map((mark) => mark.amount)
+				.map((mark) => mark.amount),
+			delivery: {
+				isStockRequest: row?.isStockRequest ?? false,
+				deliveryAddressId: row?.deliveryAddressId ?? null,
+				deliveryAt: row?.deliveryAt ?? null,
+				deceasedName: row?.deceasedName ?? null
+			}
 		};
 	}
 

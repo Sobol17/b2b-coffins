@@ -7,6 +7,7 @@ import { DraftCalculator } from './draft-calculator';
 import { DraftItemRepository } from './draft-item.repository';
 import { DraftRepository, type DraftRow } from './draft.repository';
 import { PortalRequestService } from './portal-request.service';
+import { isDeliveryFilled } from '$lib/domain/request/delivery';
 import { checkTransition } from '$lib/domain/request/state-machine';
 import type { ActorContext } from '$lib/types/actor';
 import type { SubmittedRequestDto } from '$lib/types/request';
@@ -39,7 +40,7 @@ export class RequestSubmitService extends PortalRequestService {
 			if (!draft) throw new ConflictError('Черновика нет: заявка уже отправлена');
 			this.assertDelivery(details, tx);
 			this.assertOrderable(draft.id, tx);
-			this.assertTransition(draft);
+			this.assertTransition(draft, details);
 
 			this.drafts.saveDetails(draft.id, details, tx);
 			this.calculator.recalculate(draft.id, tx);
@@ -61,10 +62,16 @@ export class RequestSubmitService extends PortalRequestService {
 		});
 	}
 
+	/** The guard of tech.md 6.2 says yes or no; these messages say which field to go back to. */
 	private assertDelivery(details: DraftDetailsInput, tx: Tx): void {
-		if (details.isPickup) return;
 		if (details.deliveryAddressId === null) {
-			throw new ValidationError('Выберите адрес доставки или самовывоз', { field: 'delivery' });
+			throw new ValidationError('Выберите адрес доставки', { field: 'deliveryAddressId' });
+		}
+		if (details.deliveryAt === null) {
+			throw new ValidationError('Укажите дату и время доставки', { field: 'deliveryDate' });
+		}
+		if ((details.deceasedName ?? '').trim() === '') {
+			throw new ValidationError('Укажите ФИО умершего', { field: 'deceasedName' });
 		}
 		if (!this.addresses.findOwn(this.ctx, details.deliveryAddressId, tx)) {
 			throw new NotFoundError('delivery address');
@@ -83,7 +90,7 @@ export class RequestSubmitService extends PortalRequestService {
 	}
 
 	/** The state machine decides, not this service (tech.md 6). */
-	private assertTransition(draft: DraftRow): void {
+	private assertTransition(draft: DraftRow, details: DraftDetailsInput): void {
 		const check = checkTransition({
 			from: 'draft',
 			to: 'new',
@@ -91,7 +98,15 @@ export class RequestSubmitService extends PortalRequestService {
 			isOwnRequest: draft.createdById === this.ctx.userId,
 			isAssigned: false,
 			hasReason: false,
-			guards: {}
+			// The details are not written yet, so the guard reads what is about to be written.
+			guards: {
+				deliveryFilled: isDeliveryFilled({
+					isStockRequest: false,
+					deliveryAddressId: details.deliveryAddressId,
+					deliveryAt: details.deliveryAt,
+					deceasedName: details.deceasedName
+				})
+			}
 		});
 		if (!check.ok) throw new ForbiddenError('request.submit', { denial: check.denial.code });
 	}

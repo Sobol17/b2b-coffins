@@ -43,12 +43,18 @@ const carpenterCtx = crmActor('carpenter', carpenterId);
 const driverCtx = crmActor('driver', driverId);
 
 const VOLGA_180 = variantId(db, 'MDL-201-180-PIN');
-const pickup = { deliveryAddressId: null, isPickup: true, comment: null };
+/** A filled delivery: since v1.33 a counterparty request does not leave the draft without it. */
+const shipment = {
+	deliveryAddressId: world.homeAddressId,
+	deliveryAt: new Date('2026-12-01T10:00:00.000Z'),
+	deceasedName: 'Иванов Иван Иванович',
+	comment: null
+};
 
 /** A request in `new`: where every move of tech.md 6.2 starts. */
 function sent(): number {
 	new DraftService(adminCtx).addItem({ variantId: VOLGA_180, qty: 2, optionIds: [] });
-	return new RequestSubmitService(adminCtx).submit(pickup).id;
+	return new RequestSubmitService(adminCtx).submit(shipment).id;
 }
 
 /**
