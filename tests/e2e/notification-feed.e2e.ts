@@ -97,7 +97,7 @@ test('a workshop role cannot mark a portal feed read', async ({ page }) => {
 	await login(page, 'manager');
 
 	const response = await page.request.post('/portal/notifications/read', {
-		headers: { origin: ORIGIN, 'content-type': 'application/json' },
+		headers: { origin: ORIGIN, 'content-type': 'application/json', 'x-requested-with': 'fetch' },
 		data: { ids: [1] }
 	});
 
@@ -108,7 +108,7 @@ test('the read endpoint refuses a payload that is not a list of ids', async ({ p
 	await login(page, 'cp_admin');
 
 	const response = await page.request.post('/portal/notifications/read', {
-		headers: { origin: ORIGIN, 'content-type': 'application/json' },
+		headers: { origin: ORIGIN, 'content-type': 'application/json', 'x-requested-with': 'fetch' },
 		data: { ids: ['all'] }
 	});
 
@@ -117,11 +117,22 @@ test('the read endpoint refuses a payload that is not a list of ids', async ({ p
 
 test('a guest is sent to the login form', async ({ page }) => {
 	const response = await page.request.post('/portal/notifications/read', {
-		headers: { origin: ORIGIN, 'content-type': 'application/json' },
+		headers: { origin: ORIGIN, 'content-type': 'application/json', 'x-requested-with': 'fetch' },
 		data: { ids: [1] },
 		maxRedirects: 0
 	});
 
 	expect(response.status()).toBe(303);
 	expect(response.headers()['location']).toContain('/login');
+});
+
+test('a post without the fetch header is refused', async ({ page }) => {
+	await login(page, 'cp_admin');
+
+	const response = await page.request.post('/portal/notifications/read', {
+		headers: { origin: ORIGIN, 'content-type': 'application/json' },
+		data: { ids: [1] }
+	});
+
+	expect(response.status()).toBe(403);
 });

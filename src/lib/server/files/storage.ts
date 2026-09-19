@@ -2,6 +2,12 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname, isAbsolute, relative, resolve } from 'node:path';
 import { config } from '../config';
 
+/** Bytes of a stored file plus the media type the route answers with. */
+export interface FileContent {
+	readonly mime: string;
+	readonly bytes: Buffer;
+}
+
 /**
  * Absolute path of a stored file, or null when the relative path climbs out of the files root.
  * `media.path` is written by the server, so this guards against a corrupted row, not a user.

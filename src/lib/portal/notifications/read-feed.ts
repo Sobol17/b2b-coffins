@@ -9,7 +9,7 @@ export async function markFeedRead(ids: readonly number[]): Promise<number | nul
 	try {
 		const response = await fetch(resolve('/portal/notifications/read'), {
 			method: 'POST',
-			headers: { 'content-type': 'application/json' },
+			headers: { 'content-type': 'application/json', 'x-requested-with': 'fetch' },
 			body: JSON.stringify({ ids })
 		});
 		if (!response.ok) return null;

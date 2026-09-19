@@ -7,6 +7,10 @@ import type { RequestHandler } from './$types';
 
 // The portal layout does not run for an endpoint, so the contour is checked here.
 export const POST: RequestHandler = async ({ locals, request, url }) => {
+	// A mutation over `+server.ts` carries the header of tech.md 12: a form post cannot forge it.
+	if (request.headers.get('x-requested-with') !== 'fetch') {
+		error(403, { code: 'forbidden', message: 'Доступ запрещён' });
+	}
 	const actor = requireAction(requireScope(locals.actor, 'portal', url.pathname), 'portal.access');
 	const body = feedReadSchema.safeParse(await request.json().catch(() => null));
 	if (!body.success) error(400, { code: 'validation_failed', message: 'Неизвестные уведомления' });

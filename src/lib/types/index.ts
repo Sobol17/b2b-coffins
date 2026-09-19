@@ -4,6 +4,7 @@ export * from './charity';
 export * from './counterparty';
 export * from './dicts';
 export * from './events';
+export * from './landing';
 export * from './list';
 export * from './money';
 export * from './pricing';

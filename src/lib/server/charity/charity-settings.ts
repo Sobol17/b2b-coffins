@@ -12,9 +12,15 @@ export class CharitySettings {
 	 * @throws Error when `charity.rate_bp` is not a valid rate.
 	 */
 	rateBp(tx?: Tx): number {
+		const rateBp = this.findRateBp(tx);
+		if (rateBp === null) throw new Error('settings charity.rate_bp is missing or invalid');
+		return rateBp;
+	}
+
+	/** The same rate for a reader that shows it rather than freezes it: the landing (P13). */
+	findRateBp(tx?: Tx): number | null {
 		const parsed = charityRateSchema.safeParse(this.repo.findValue('charity.rate_bp', tx));
-		if (!parsed.success) throw new Error('settings charity.rate_bp is missing or invalid');
-		return parsed.data;
+		return parsed.success ? parsed.data : null;
 	}
 
 	/** The fund the banner names, or null when the workshop has not set one yet. */
