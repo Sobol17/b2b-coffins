@@ -53,3 +53,18 @@ export function endOfDayInZone(isoDate: string, timeZone: string): Date | null {
 	const nextStart = startOfDayInZone(nextDay, timeZone);
 	return nextStart === null ? null : new Date(nextStart.getTime() - 1);
 }
+
+/**
+ * The instant a wall clock of the zone shows `HH:MM` on that day, or null for a date or a time the
+ * calendar does not have. The deadline a manager types is local to the workshop, not to the server.
+ */
+export function momentInZone(isoDate: string, clock: string, timeZone: string): Date | null {
+	const match = /^(\d{2}):(\d{2})$/.exec(clock);
+	const wall = wallMidnight(isoDate);
+	if (!match || Number.isNaN(wall)) return null;
+	const [hours, minutes] = [Number(match[1]), Number(match[2])];
+	if (hours > 23 || minutes > 59) return null;
+	const target = wall + (hours * 60 + minutes) * 60_000;
+	const guess = target - zoneOffsetMs(target, timeZone);
+	return new Date(target - zoneOffsetMs(guess, timeZone));
+}
