@@ -72,13 +72,15 @@
 					]}
 				/>
 				{#if kind === 'counterparty'}
-					<Select
-						label="Контрагент"
-						options={counterpartyOptions}
-						placeholder="Выберите контрагента"
-						bind:value={() => counterpartyId, pickCounterparty}
-						required
-					/>
+					<div data-testid="request-counterparty">
+						<Select
+							label="Контрагент"
+							options={counterpartyOptions}
+							placeholder="Выберите контрагента"
+							bind:value={() => counterpartyId, pickCounterparty}
+							required
+						/>
+					</div>
 					<input type="hidden" name="counterpartyId" value={counterpartyId} />
 					<Select
 						label="Адрес доставки"
@@ -90,7 +92,9 @@
 					/>
 					<input type="hidden" name="deliveryAddressId" value={addressId} />
 					<div class="grid gap-4 sm:grid-cols-2">
-						<DatePicker name="deliveryDate" label="Дата доставки" required />
+						<div data-testid="delivery-date">
+							<DatePicker name="deliveryDate" label="Дата доставки" required />
+						</div>
 						<Input
 							name="deliveryTime"
 							type="time"
