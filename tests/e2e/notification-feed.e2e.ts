@@ -1,16 +1,16 @@
 import { expect, test, type Page } from '@playwright/test';
 import { login, logout } from './fixtures';
 import { sendRequest } from './portal-flow';
-import { assignCrew, e2eDb, transition } from './transitions';
+import { e2eDb, stockUp, transition } from './transitions';
 
 const db = e2eDb();
 const ORIGIN = 'http://localhost:4173';
 const QUEUE_TIMEOUT = 15_000;
 
 function toReady(number: string): void {
-	assignCrew(db, number, 'carpenter', 'carpenter');
 	expect(transition(number, 'in_work', 'manager').ok).toBe(true);
-	expect(transition(number, 'ready', 'carpenter').ok).toBe(true);
+	stockUp(db, number);
+	expect(transition(number, 'ready', 'manager').ok).toBe(true);
 }
 
 /** Rows of the event feed; the delivery log below it draws its rows with the same testid. */

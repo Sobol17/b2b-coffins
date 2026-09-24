@@ -1,7 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import { login, logout, purchaseMoneyKeys } from './fixtures';
 import { sendRequest, submitRequest } from './portal-flow';
-import { assignCrew, e2eDb, transition } from './transitions';
+import { assignCrew, e2eDb, stockUp, transition } from './transitions';
 
 const db = e2eDb();
 const ORIGIN = 'http://localhost:4173';
@@ -9,9 +9,9 @@ const SETTINGS = '/portal/profile/notifications';
 const QUEUE_TIMEOUT = 15_000;
 
 function toReady(number: string): void {
-	assignCrew(db, number, 'carpenter', 'carpenter');
 	expect(transition(number, 'in_work', 'manager').ok).toBe(true);
-	expect(transition(number, 'ready', 'carpenter').ok).toBe(true);
+	stockUp(db, number);
+	expect(transition(number, 'ready', 'manager').ok).toBe(true);
 }
 
 /** The page carries the event feed too, so every assertion here looks inside the delivery log. */

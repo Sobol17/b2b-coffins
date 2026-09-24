@@ -6,6 +6,7 @@ import {
 	markPaidInFull,
 	statusChain,
 	statusOf,
+	stockUp,
 	transition
 } from './transitions';
 
@@ -13,11 +14,11 @@ const db = e2eDb();
 
 test('a delivery that collects the cash walks the request to paid', async ({ page }) => {
 	const number = await sendRequest(page, 'cp_employee');
-	assignCrew(db, number, 'carpenter', 'carpenter');
 	assignCrew(db, number, 'driver', 'driver');
 
 	expect(transition(number, 'in_work', 'manager').ok).toBe(true);
-	expect(transition(number, 'ready', 'carpenter').ok).toBe(true);
+	stockUp(db, number);
+	expect(transition(number, 'ready', 'manager').ok).toBe(true);
 	// The cash the driver takes at the door, the way the C6 checkbox will write it.
 	markPaidInFull(db, number, 'driver');
 	expect(transition(number, 'delivered', 'driver').ok).toBe(true);
@@ -36,11 +37,11 @@ test('a delivery that collects the cash walks the request to paid', async ({ pag
 
 test('a delivery billed by invoice stops at awaiting_payment', async ({ page }) => {
 	const number = await sendRequest(page, 'cp_employee');
-	assignCrew(db, number, 'carpenter', 'carpenter');
 	assignCrew(db, number, 'driver', 'driver');
 
 	expect(transition(number, 'in_work', 'manager').ok).toBe(true);
-	expect(transition(number, 'ready', 'carpenter').ok).toBe(true);
+	stockUp(db, number);
+	expect(transition(number, 'ready', 'manager').ok).toBe(true);
 	expect(transition(number, 'delivered', 'driver').ok).toBe(true);
 
 	expect(statusOf(db, number)).toBe('awaiting_payment');
@@ -64,7 +65,6 @@ test('a move the table does not list is refused and changes nothing', async ({ p
 
 test('a role the transition does not grant is refused', async ({ page }) => {
 	const number = await sendRequest(page, 'cp_employee');
-	assignCrew(db, number, 'carpenter', 'carpenter');
 
 	const wrongRole = transition(number, 'in_work', 'carpenter');
 
