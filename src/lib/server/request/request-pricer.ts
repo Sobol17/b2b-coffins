@@ -6,7 +6,8 @@ import { PriceRepository } from '../pricing/price.repository';
 import { DraftItemRepository, type OptionDelta } from './draft-item.repository';
 import { DraftRepository } from './draft.repository';
 import { requestTotalsWithRules } from '$lib/domain/request/discount-rules';
-import { lineTotalMinor } from '$lib/domain/request/pricing';
+import { keepDiscountShare } from '$lib/domain/request/amendment';
+import { lineTotalMinor, type RequestTotals } from '$lib/domain/request/pricing';
 
 export interface LinePrice {
 	/** Personal price of the variant, without options. */
@@ -72,6 +73,51 @@ export class RequestPricer {
 						this.discountRules.activeFor(counterpartyId, new Date(), tx)
 					];
 		this.requests.saveTotals(requestId, requestTotalsWithRules(lineTotals, percent, rules), tx);
+	}
+
+	/**
+	 * Totals after a change of an accepted request (tech.md v1.40): a line that had a price keeps its
+	 * piece price, a line added now (still at zero, `pricesFixed` let no zero through the acceptance)
+	 * takes today's price, and the discount keeps the share it had before the change.
+	 */
+	repriceFrozen(
+		requestId: number,
+		counterpartyId: number | null,
+		before: RequestTotals,
+		tx: Tx
+	): void {
+		const lines = this.lines.lines(requestId, tx);
+		const prices = this.lines.linePrices(lines.map((line) => line.id));
+		const options = this.lines.lineOptions(
+			lines.map((line) => line.id),
+			tx
+		);
+		let itemsTotalMinor = 0;
+		for (const line of lines) {
+			const stored = prices.get(line.id);
+			const own = options.filter((option) => option.itemId === line.id);
+			const fresh =
+				stored === undefined || stored.unitPriceMinor === 0
+					? this.priceLine(
+							counterpartyId,
+							line.variantId,
+							own.map((option) => option.optionId)
+						)
+					: undefined;
+			const unitPriceMinor = fresh?.unitPriceMinor ?? stored?.unitPriceMinor ?? 0;
+			const deltas = fresh?.deltas.map((delta) => delta.priceDeltaMinor) ?? [
+				stored?.optionsMinor ?? 0
+			];
+			const total = lineTotalMinor({ unitPriceMinor, optionDeltasMinor: deltas, qty: line.qty });
+			this.lines.savePrices(
+				line.id,
+				{ unitPriceMinor, lineTotalMinor: total },
+				fresh?.deltas ?? [],
+				tx
+			);
+			itemsTotalMinor += total;
+		}
+		this.requests.saveTotals(requestId, keepDiscountShare(before, itemsTotalMinor), tx);
 	}
 
 	/** Today's price of one line, for a line added to a request whose other prices are frozen. */

@@ -22,7 +22,7 @@ import type { CrmRequestCreateInput } from '$lib/validation/crm-request';
 export class CrmRequestCreateService extends CrmRequestBaseService {
 	constructor(
 		ctx: ActorContext,
-		private readonly repo: CrmRequestRepository = new CrmRequestRepository(),
+		requests: CrmRequestRepository = new CrmRequestRepository(),
 		private readonly choices: CrmRequestChoicesRepository = new CrmRequestChoicesRepository(),
 		private readonly addresses: CounterpartyDetailRepository = new CounterpartyDetailRepository(),
 		private readonly drafts: DraftRepository = new DraftRepository(),
@@ -31,7 +31,7 @@ export class CrmRequestCreateService extends CrmRequestBaseService {
 		private readonly numbering: Numbering = new Numbering(),
 		private readonly timeZone: string = OrgService.timezone()
 	) {
-		super(ctx);
+		super(ctx, requests);
 	}
 
 	/**
@@ -44,7 +44,7 @@ export class CrmRequestCreateService extends CrmRequestBaseService {
 		return this.audited({ action: 'request.create', entity: 'requests' }, (tx) => {
 			const values = this.values(input, tx);
 			this.assertSendable(values);
-			const created = this.repo.insertDraft(values, tx);
+			const created = this.requests.insertDraft(values, tx);
 			this.addLines(created.id, input.lines, tx);
 			this.pricer.reprice(created.id, values.counterpartyId, tx);
 			this.drafts.markSubmitted(created.id, new Date(), tx);

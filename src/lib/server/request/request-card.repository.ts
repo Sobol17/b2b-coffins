@@ -1,4 +1,4 @@
-import { aliasedTable, and, asc, eq, ne, type SQL } from 'drizzle-orm';
+import { aliasedTable, and, asc, eq, isNull, ne, or, type SQL } from 'drizzle-orm';
 import { BaseRepository } from '../core/repository';
 import type { Tx } from '../db/client';
 import {
@@ -115,7 +115,11 @@ export class RequestCardRepository extends BaseRepository<typeof requests> {
 		);
 	}
 
-	history(requestId: number, tx?: Tx): HistoryRow[] {
+	/**
+	 * Moves of the request. A note (`from_status = to_status`, tech.md v1.40) is a workshop change
+	 * without a move: the CRM card reads it, the portal does not.
+	 */
+	history(requestId: number, withNotes = false, tx?: Tx): HistoryRow[] {
 		return this.db(tx)
 			.select({
 				id: requestStatusHistory.id,
@@ -129,7 +133,17 @@ export class RequestCardRepository extends BaseRepository<typeof requests> {
 			.from(requestStatusHistory)
 			.leftJoin(actor, eq(actor.id, requestStatusHistory.actorId))
 			.leftJoin(dictItems, eq(dictItems.id, requestStatusHistory.reasonId))
-			.where(eq(requestStatusHistory.requestId, requestId))
+			.where(
+				and(
+					eq(requestStatusHistory.requestId, requestId),
+					withNotes
+						? undefined
+						: or(
+								isNull(requestStatusHistory.fromStatus),
+								ne(requestStatusHistory.fromStatus, requestStatusHistory.toStatus)
+							)
+				)
+			)
 			.orderBy(asc(requestStatusHistory.id))
 			.all();
 	}
