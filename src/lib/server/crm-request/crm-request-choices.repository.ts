@@ -31,12 +31,7 @@ export class CrmRequestChoicesRepository extends BaseRepository<typeof counterpa
 
 	choices(): CrmRequestChoicesDto {
 		return {
-			counterparties: this.db()
-				.select({ id: counterparties.id, name: counterparties.name })
-				.from(counterparties)
-				.where(and(isNull(counterparties.deletedAt), eq(counterparties.isActive, true)))
-				.orderBy(asc(counterparties.name))
-				.all(),
+			counterparties: this.counterparties(),
 			variants: this.variants(),
 			crew: this.crew(),
 			refusalReasons: this.db()
@@ -46,6 +41,15 @@ export class CrmRequestChoicesRepository extends BaseRepository<typeof counterpa
 				.orderBy(asc(dictItems.sortOrder), asc(dictItems.title))
 				.all()
 		};
+	}
+
+	counterparties(): CrmRequestChoicesDto['counterparties'] {
+		return this.db()
+			.select({ id: counterparties.id, name: counterparties.name })
+			.from(counterparties)
+			.where(and(isNull(counterparties.deletedAt), eq(counterparties.isActive, true)))
+			.orderBy(asc(counterparties.name))
+			.all();
 	}
 
 	/** A live counterparty the workshop may still order for. */

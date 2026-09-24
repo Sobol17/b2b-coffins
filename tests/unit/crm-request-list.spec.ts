@@ -25,7 +25,7 @@ const carpenterId = insertUser({
 const driverId = insertUser({ email: 'drv@ws.example', role: 'driver', counterpartyId: null });
 const manager = crmActor('manager', managerId);
 const service = () =>
-	new CrmRequestListService(manager, undefined, undefined, 'Europe/Moscow', () => now);
+	new CrmRequestListService(manager, undefined, undefined, undefined, 'Europe/Moscow', () => now);
 const daysAgo = (days: number) => new Date(now.getTime() - days * DAY_MS);
 
 beforeEach(() => {
@@ -124,9 +124,14 @@ describe('the registry of the workshop (C4)', () => {
 		expect(byDeadline.rows.map((row) => row.id)).toEqual([soon, late]);
 
 		const blind = { ...manager, canSeePrices: false };
-		const page = new CrmRequestListService(blind, undefined, undefined, 'UTC', () => now).list(
-			crmQuery({}, { sort: 'total', dir: 'asc' })
-		);
+		const page = new CrmRequestListService(
+			blind,
+			undefined,
+			undefined,
+			undefined,
+			'UTC',
+			() => now
+		).list(crmQuery({}, { sort: 'total', dir: 'asc' }));
 		expect(JSON.stringify(page)).not.toMatch(/Minor"/);
 	});
 
@@ -274,7 +279,14 @@ describe('the board of the workshop (C4)', () => {
 
 describe('the registry as XLSX (C4)', () => {
 	async function sheetOf(ctx: typeof manager, filters: Parameters<typeof crmQuery>[0] = {}) {
-		const list = new CrmRequestListService(ctx, undefined, undefined, 'Europe/Moscow', () => now);
+		const list = new CrmRequestListService(
+			ctx,
+			undefined,
+			undefined,
+			undefined,
+			'Europe/Moscow',
+			() => now
+		);
 		const body = await new CrmRequestExportService(ctx, list, 'Europe/Moscow').workbook(
 			crmQuery(filters)
 		);

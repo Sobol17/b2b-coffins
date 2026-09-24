@@ -2,6 +2,7 @@ import { offsetFor } from '../core/list';
 import { RequestRegistryRepository } from '../request/request-registry.repository';
 import { OrgService } from '../settings/org.service';
 import { CrmRequestBaseService } from './crm-request-base.service';
+import { CrmRequestChoicesRepository } from './crm-request-choices.repository';
 import {
 	CrmRequestListRepository,
 	type CrmListRow,
@@ -18,6 +19,7 @@ import {
 	CRM_REQUEST_EXPORT_LIMIT,
 	CRM_REQUEST_SORTS,
 	type CrmBoardDto,
+	type CrmRequestChoicesDto,
 	type CrmRequestFilters,
 	type CrmRequestListItemDto,
 	type CrmRequestSort
@@ -32,10 +34,16 @@ export class CrmRequestListService extends CrmRequestBaseService {
 		ctx: ActorContext,
 		private readonly repo: CrmRequestListRepository = new CrmRequestListRepository(),
 		private readonly registry: RequestRegistryRepository = new RequestRegistryRepository(),
+		private readonly choices: CrmRequestChoicesRepository = new CrmRequestChoicesRepository(),
 		private readonly timeZone: string = OrgService.timezone(),
 		private readonly now: () => Date = () => new Date()
 	) {
 		super(ctx);
+	}
+
+	/** The counterparty filter of the board and the registry. */
+	counterparties(): CrmRequestChoicesDto['counterparties'] {
+		return this.choices.counterparties();
 	}
 
 	list(query: ListQuery<CrmRequestFilters>): Page<CrmRequestListItemDto> {
