@@ -8,7 +8,7 @@ import {
 } from 'drizzle-orm/sqlite-core';
 import { STOCK_MOVE_TYPES } from '$lib/types/dicts';
 import { bool, createdAt, pk, ts, updatedAt } from './_shared';
-import { dictItems, media, productVariants } from './catalog';
+import { dictItems, media, options, productVariants } from './catalog';
 import { requests } from './requests';
 import { users } from './users';
 
@@ -38,6 +38,8 @@ export const stockMoves = sqliteTable(
 		stockItemId: integer('stock_item_id')
 			.notNull()
 			.references(() => stockItems.id),
+		// The colour of a product: two colours of one variant are two positions (tech.md v1.41).
+		optionId: integer('option_id').references(() => options.id),
 		qty: integer('qty').notNull(), // signed: + income, - outcome
 		type: text('type', { enum: STOCK_MOVE_TYPES }).notNull(),
 		requestId: integer('request_id').references(() => requests.id),

@@ -1,0 +1,1 @@
+ALTER TABLE `stock_moves` ADD `option_id` integer REFERENCES options(id);
