@@ -9,6 +9,12 @@
 
 	const links = $derived.by((): ShellLink[] => [
 		{ href: resolve('/crm'), label: 'Главная' },
+		...(data.can.catalog
+			? [
+					{ href: resolve('/crm/catalog'), label: 'Каталог' },
+					{ href: resolve('/crm/prices'), label: 'Прайсы и скидки' }
+				]
+			: []),
 		...(data.can.settings
 			? [
 					{ href: resolve('/crm/settings/users'), label: 'Пользователи' },

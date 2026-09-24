@@ -1,7 +1,7 @@
 import { eq } from 'drizzle-orm';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { ForbiddenError, NotFoundError, ValidationError } from '../../src/lib/server/core/errors';
-import { auditLog, requests } from '../../src/lib/server/db/schema';
+import { auditLog, discountRules, requests } from '../../src/lib/server/db/schema';
 import { DraftService } from '../../src/lib/server/request/draft.service';
 import { draftDetailsSchema } from '../../src/lib/validation/request';
 import { migratedDatabase } from './helpers/db';
@@ -54,6 +54,22 @@ describe('the portal draft (P4)', () => {
 			discountMinor: 207_500,
 			totalMinor: 3_942_500
 		});
+	});
+
+	it('uses a larger active CRM discount rule for the request', () => {
+		db.insert(discountRules)
+			.values({ counterpartyId: world.cpId, categoryId: null, percent: 12 })
+			.run();
+		try {
+			const draft = admin().addItem({ variantId: VOLGA_180, qty: 1, optionIds: [] });
+			expect(draft).toMatchObject({
+				discountPercent: 12,
+				discountMinor: 99_600,
+				totalMinor: 730_400
+			});
+		} finally {
+			db.delete(discountRules).run();
+		}
 	});
 
 	it('stores the totals of an employee draft but sends the employee no money at all', () => {

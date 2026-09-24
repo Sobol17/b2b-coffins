@@ -17,6 +17,7 @@ export const load: LayoutServerLoad = ({ locals, url }) => {
 		timezone: OrgService.timezone(),
 		// Navigation only: every page and action checks its own right on the server again.
 		can: {
+			catalog: PolicyService.can(actor, 'catalog.manage'),
 			settings: PolicyService.can(actor, 'settings.manage'),
 			audit: PolicyService.can(actor, 'audit.read')
 		}

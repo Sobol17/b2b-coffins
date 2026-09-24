@@ -7,3 +7,8 @@ export const attachmentUploadSchema = z.object({
 	requestId: z.coerce.number().int().positive(),
 	file: z.instanceof(File, { error: 'Выберите файл' })
 });
+
+export const productImageUploadSchema = z.object({
+	productId: z.coerce.number().int().positive(),
+	file: z.instanceof(File, { error: 'Выберите фотографию' })
+});
