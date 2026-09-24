@@ -33,8 +33,8 @@
 
 <Select
 	name="managerId"
-	label="Ответственный менеджер"
-	placeholder="Выберите менеджера"
+	label="Ответственный администратор"
+	placeholder="Выберите администратора"
 	options={managers}
 	value={String(values?.managerId ?? '')}
 />

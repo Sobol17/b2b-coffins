@@ -76,7 +76,7 @@ test('the counterparty writes to the manager and cancels the request from the ca
 	const number = await sendRequest(page, 'cp_admin');
 	await openCard(page, number);
 
-	await page.getByLabel('Сообщение менеджеру').fill('Нужна отгрузка одной партией');
+	await page.getByLabel('Сообщение мастерской').fill('Нужна отгрузка одной партией');
 	await page.getByTestId('post-comment').click();
 	await expect(page.getByTestId('comment-thread')).toContainText('Нужна отгрузка одной партией');
 

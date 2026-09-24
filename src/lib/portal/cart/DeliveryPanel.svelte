@@ -51,7 +51,7 @@
 		if (!isSubmitted(sent)) return data?.['saved'] ? { title: 'Черновик сохранён' } : null;
 		return {
 			title: `Заявка ${sent.number} отправлена`,
-			description: 'Менеджер мастерской примет её в работу и подтвердит цены',
+			description: 'Администратор мастерской примет её в работу и подтвердит цены',
 			action: {
 				label: 'Открыть заявку',
 				href: resolve(`/portal/requests/${sent.id}`)

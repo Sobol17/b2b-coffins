@@ -9,7 +9,10 @@ export interface EventLabel {
 
 export const EVENT_LABEL: Readonly<Record<EventKey, EventLabel>> = {
 	'request.submitted': { title: 'Новая заявка', hint: 'Контрагент отправил заявку' },
-	'request.accepted': { title: 'Заявка принята в работу', hint: 'Менеджер зафиксировал состав' },
+	'request.accepted': {
+		title: 'Заявка принята в работу',
+		hint: 'Администратор мастерской зафиксировал состав'
+	},
 	'request.ready': { title: 'Заявка готова к выдаче', hint: 'Изделия готовы и упакованы' },
 	'request.delivered': { title: 'Заявка доставлена', hint: 'Водитель передал изделия' },
 	'request.cancelled': { title: 'Заявка отменена', hint: 'Контрагент отменил заявку' },

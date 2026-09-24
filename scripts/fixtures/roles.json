@@ -1,6 +1,6 @@
 [
 	{ "code": "owner", "title": "Руководитель" },
-	{ "code": "manager", "title": "Менеджер" },
+	{ "code": "manager", "title": "Администратор" },
 	{ "code": "carpenter", "title": "Столяр" },
 	{ "code": "painter", "title": "Маляр" },
 	{ "code": "driver", "title": "Водитель" },

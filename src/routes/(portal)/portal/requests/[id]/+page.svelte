@@ -164,7 +164,7 @@
 					{/if}
 					{#if data.counterparty.manager}
 						<p class="border-t border-border pt-3 text-fg-muted">
-							Менеджер {data.counterparty.manager.fullName}
+							Администратор мастерской {data.counterparty.manager.fullName}
 							{#if data.counterparty.manager.phone}
 								· {data.counterparty.manager.phone}{/if}
 						</p>

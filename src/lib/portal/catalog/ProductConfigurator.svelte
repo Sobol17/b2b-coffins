@@ -191,7 +191,7 @@
 
 		{#if manager}
 			<p class="border-t border-border pt-4 text-sm text-fg-muted">
-				Менеджер мастерской<br />
+				Администратор мастерской<br />
 				<span class="text-fg">{manager.fullName}</span>{#if manager.phone}
 					· {manager.phone}{/if}
 			</p>

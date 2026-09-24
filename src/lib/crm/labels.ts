@@ -8,7 +8,7 @@ import type { RoleCode } from '$lib/types/roles';
 /** Same titles as the `roles` seed: the shell, the forms and the tables speak one language. */
 export const ROLE_TITLE: Readonly<Record<RoleCode, string>> = {
 	owner: 'Руководитель',
-	manager: 'Менеджер',
+	manager: 'Администратор',
 	carpenter: 'Столяр',
 	painter: 'Маляр',
 	driver: 'Водитель',

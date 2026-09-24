@@ -75,7 +75,7 @@
 				data-testid="counterparty-manager"
 				class="border-t border-border pt-4 text-sm text-fg-muted"
 			>
-				Менеджер мастерской: <span class="text-fg">{card.manager.fullName}</span>
+				Администратор мастерской: <span class="text-fg">{card.manager.fullName}</span>
 				{#if card.manager.phone}· {card.manager.phone}{/if} · {card.manager.email}
 			</p>
 		{/if}

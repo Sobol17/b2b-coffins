@@ -15,11 +15,11 @@
 		{ key: 'search', label: 'Поиск', type: 'text', placeholder: 'Название или ИНН' },
 		{
 			key: 'managerId',
-			label: 'Менеджер',
+			label: 'Администратор',
 			type: 'select',
-			placeholder: 'Выберите менеджера',
+			placeholder: 'Выберите администратора',
 			options: [
-				{ value: '', label: 'Все менеджеры' },
+				{ value: '', label: 'Все администраторы' },
 				...data.choices.managers.map((row) => ({ value: String(row.id), label: row.fullName }))
 			]
 		},
