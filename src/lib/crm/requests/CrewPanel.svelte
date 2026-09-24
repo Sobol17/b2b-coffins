@@ -55,7 +55,7 @@
 			<form
 				method="POST"
 				action="?/assign"
-				class="grid gap-3 sm:grid-cols-[10rem_1fr_auto] sm:items-end"
+				class="flex flex-col gap-3"
 				use:enhance={withToast({ success: 'Исполнитель назначен', onSuccess: () => (userId = '') })}
 			>
 				<Select
@@ -72,12 +72,14 @@
 				/>
 				<input type="hidden" name="role" value={role} />
 				<input type="hidden" name="userId" value={userId} />
-				<Button type="submit" variant="secondary" disabled={userId === ''}>Назначить</Button>
+				<Button type="submit" variant="secondary" class="self-start" disabled={userId === ''}>
+					Назначить
+				</Button>
 			</form>
 			<form
 				method="POST"
 				action="?/priority"
-				class="grid gap-3 sm:grid-cols-[1fr_auto] sm:items-end"
+				class="flex flex-col gap-3"
 				use:enhance={withToast({ success: 'Приоритет изменён' })}
 			>
 				<Select
@@ -87,9 +89,14 @@
 					bind:value={priority}
 				/>
 				<input type="hidden" name="priority" value={priority} />
-				<Button type="submit" variant="secondary" disabled={priority === card.priority}
-					>Сохранить</Button
+				<Button
+					type="submit"
+					variant="secondary"
+					class="self-start"
+					disabled={priority === card.priority}
 				>
+					Сохранить
+				</Button>
 			</form>
 		{/if}
 	</Card.Content>
