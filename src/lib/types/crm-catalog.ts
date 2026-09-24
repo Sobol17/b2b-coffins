@@ -85,3 +85,26 @@ export interface CrmDiscountRuleDto {
 	readonly validFrom: string | null;
 	readonly validTo: string | null;
 }
+
+export interface CrmCatalogChoicesDto {
+	readonly materials: readonly { readonly id: number; readonly title: string }[];
+	readonly stockProducts: readonly {
+		readonly id: number;
+		readonly code: string;
+		readonly title: string;
+	}[];
+	readonly stockComponents: readonly {
+		readonly id: number;
+		readonly code: string;
+		readonly title: string;
+	}[];
+	readonly variants: readonly {
+		readonly id: number;
+		readonly sku: string;
+		readonly productTitle: string;
+	}[];
+}
+
+export interface CrmPricingChoicesDto {
+	readonly counterparties: readonly { readonly id: number; readonly name: string }[];
+}

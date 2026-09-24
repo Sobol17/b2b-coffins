@@ -73,6 +73,14 @@ export class DiscountRuleRepository extends BaseRepository<typeof discountRules>
 		);
 	}
 
+	counterpartyChoices() {
+		return this.db()
+			.select({ id: counterparties.id, name: counterparties.name })
+			.from(counterparties)
+			.orderBy(asc(counterparties.name))
+			.all();
+	}
+
 	/** A portal request sees only its own rule and global rules, within their half-open windows. */
 	activeFor(counterpartyId: number, at: Date = new Date(), tx?: Tx): DiscountRule[] {
 		return this.db(tx)

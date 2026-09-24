@@ -1,11 +1,20 @@
 import { ConflictError, NotFoundError, ValidationError } from '../core/errors';
 import type { Tx } from '../db/client';
 import { CrmVariantService } from './variant.service';
-import type { CrmCategoryDto, CrmProductDto, CrmProductListItemDto } from '$lib/types/crm-catalog';
+import type {
+	CrmCatalogChoicesDto,
+	CrmCategoryDto,
+	CrmProductDto,
+	CrmProductListItemDto
+} from '$lib/types/crm-catalog';
 import type { CategoryInput, ProductInput } from '$lib/validation/crm-catalog';
 
 /** Catalog management for the workshop. The portal still reads the existing CatalogService. */
 export class CrmCatalogService extends CrmVariantService {
+	choices(): CrmCatalogChoicesDto {
+		return this.variants.choices();
+	}
+
 	listCategories(): CrmCategoryDto[] {
 		return this.products.categories();
 	}

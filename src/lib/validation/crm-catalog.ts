@@ -123,6 +123,7 @@ export const mediaOrderInputSchema = z
 
 export const entityIdSchema = z.object({ id });
 export const statusInputSchema = z.object({ id, isPublished: checkbox });
+export const optionActiveInputSchema = z.object({ id, isActive: checkbox });
 
 export type CategoryInput = z.infer<typeof categoryInputSchema>;
 export type ProductInput = z.infer<typeof productInputSchema>;

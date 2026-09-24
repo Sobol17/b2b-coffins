@@ -5,7 +5,11 @@ import type { Tx } from '../db/client';
 import { OrgService } from '../settings/org.service';
 import { startOfDayInZone } from '$lib/domain/time/zone';
 import type { ActorContext } from '$lib/types/actor';
-import type { CrmDiscountRuleDto, CrmPriceListDto } from '$lib/types/crm-catalog';
+import type {
+	CrmDiscountRuleDto,
+	CrmPriceListDto,
+	CrmPricingChoicesDto
+} from '$lib/types/crm-catalog';
 import {
 	discountRuleInputSchema,
 	priceListInputSchema,
@@ -27,6 +31,10 @@ export class CrmPricingService extends BaseService {
 	) {
 		super(ctx);
 		this.assert(ctx.scope === 'crm' && PolicyService.can(ctx, 'catalog.manage'), 'catalog.manage');
+	}
+
+	choices(): CrmPricingChoicesDto {
+		return { counterparties: this.rules.counterpartyChoices() };
 	}
 
 	listPriceLists(): CrmPriceListDto[] {

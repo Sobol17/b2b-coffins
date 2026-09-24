@@ -1218,6 +1218,13 @@ export interface CrmDiscountRuleDto {
   id: number; counterpartyId: number | null; categoryId: number | null;
   percent: number; validFrom: string | null; validTo: string | null;
 }
+export interface CrmCatalogChoicesDto {
+  materials: { id: number; title: string }[];
+  stockProducts: { id: number; code: string; title: string }[];
+  stockComponents: { id: number; code: string; title: string }[];
+  variants: { id: number; sku: string; productTitle: string }[];
+}
+export interface CrmPricingChoicesDto { counterparties: { id: number; name: string }[]; }
 
 // money.ts — branded type, blocks accidental mixing with plain numbers
 export type Minor = number & { readonly __brand: 'minor' };

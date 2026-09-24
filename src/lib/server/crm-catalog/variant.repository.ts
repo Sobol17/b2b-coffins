@@ -7,9 +7,10 @@ import {
 	dictItems,
 	productOptions,
 	productVariants,
+	products,
 	stockItems
 } from '../db/schema';
-import type { CrmVariantDto } from '$lib/types/crm-catalog';
+import type { CrmCatalogChoicesDto, CrmVariantDto } from '$lib/types/crm-catalog';
 import type { CompatibilityInput, VariantInput } from '$lib/validation/crm-catalog';
 
 const VARIANT = {
@@ -32,6 +33,39 @@ const VARIANT = {
 export class ManagedVariantRepository extends BaseRepository<typeof productVariants> {
 	constructor() {
 		super(productVariants);
+	}
+
+	choices(): CrmCatalogChoicesDto {
+		const materials = this.db()
+			.select({ id: dictItems.id, title: dictItems.title })
+			.from(dictItems)
+			.where(and(eq(dictItems.dict, 'material'), eq(dictItems.isActive, true)))
+			.orderBy(asc(dictItems.title))
+			.all();
+		const items = this.db()
+			.select({
+				id: stockItems.id,
+				code: stockItems.code,
+				title: stockItems.title,
+				kind: stockItems.kind
+			})
+			.from(stockItems)
+			.where(eq(stockItems.isActive, true))
+			.orderBy(asc(stockItems.title))
+			.all();
+		const variants = this.db()
+			.select({ id: productVariants.id, sku: productVariants.sku, productTitle: products.title })
+			.from(productVariants)
+			.innerJoin(products, eq(products.id, productVariants.productId))
+			.where(and(isNull(productVariants.deletedAt), isNull(products.deletedAt)))
+			.orderBy(asc(products.title), asc(productVariants.sku))
+			.all();
+		return {
+			materials,
+			stockProducts: items.filter((row) => row.kind === 'product'),
+			stockComponents: items.filter((row) => row.kind === 'component'),
+			variants
+		};
 	}
 
 	variants(productId: number, withCost: boolean, tx?: Tx): CrmVariantDto[] {
@@ -74,7 +108,6 @@ export class ManagedVariantRepository extends BaseRepository<typeof productVaria
 			.where(eq(productVariants.id, id))
 			.get();
 	}
-
 	skuTaken(sku: string, exceptId?: number, tx?: Tx): boolean {
 		return (
 			this.db(tx)
@@ -139,11 +172,9 @@ export class ManagedVariantRepository extends BaseRepository<typeof productVaria
 		if (!row) throw new Error('failed to insert variant');
 		return row.id;
 	}
-
 	update(id: number, input: VariantInput, tx: Tx): void {
 		this.db(tx).update(productVariants).set(input).where(eq(productVariants.id, id)).run();
 	}
-
 	setPublished(id: number, isPublished: boolean, tx: Tx): void {
 		this.db(tx)
 			.update(productVariants)
