@@ -15,6 +15,7 @@
 					{ href: resolve('/crm/requests'), label: 'Заявки' }
 				]
 			: []),
+		...(data.can.shop ? [{ href: resolve('/crm/shop'), label: 'Цех' }] : []),
 		...(data.can.catalog
 			? [
 					{ href: resolve('/crm/catalog'), label: 'Каталог' },

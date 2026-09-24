@@ -8,7 +8,8 @@
 	let { card, crew }: { card: CrmRequestCardDto; crew: CrmRequestChoicesDto['crew'] } = $props();
 
 	const open = $derived(isSteerable(card.status));
-	let role = $state('carpenter');
+	// The shop works by position (v1.41): a request needs a driver, the crew picks nobody else.
+	let role = $state('driver');
 	// A person picked for one role means nothing for another: switching the role clears the pick.
 	let userId = $derived.by(() => (role === '' ? '' : ''));
 	let priority = $derived<string>(card.priority);
