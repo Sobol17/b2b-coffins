@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { withListQuery } from '../../src/lib/utils/list-url';
+import { filtersOf, listQueryOf, withListQuery } from '../../src/lib/utils/list-url';
 
 describe('registry query in the url', () => {
 	it('writes paging and sorting and keeps the filters already there', () => {
@@ -29,5 +29,21 @@ describe('registry query in the url', () => {
 		withListQuery(url, { page: 5, perPage: 10 });
 
 		expect(url.search).toBe('');
+	});
+
+	it('reads the sorting back and drops a tampered direction', () => {
+		const url = new URL('https://crm.example/crm/settings/users?sort=fullName&dir=sideways');
+
+		expect(listQueryOf(url, { page: 2, perPage: 25 })).toEqual({
+			page: 2,
+			perPage: 25,
+			sort: 'fullName'
+		});
+	});
+
+	it('reads only the filters of the bar and skips the empty ones', () => {
+		const url = new URL('https://crm.example/crm/settings/audit?action=dict.create&entity=&page=2');
+
+		expect(filtersOf(url, ['action', 'entity', 'actor'])).toEqual({ action: 'dict.create' });
 	});
 });
