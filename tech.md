@@ -1,9 +1,9 @@
 # tech.md — ядро проекта
 
 **Проект:** B2B-портал + CRM для столярной мастерской (производство гробов)
-**Версия ядра:** v1.36
-**Дата:** 19.09.2026
-**Статус:** этап 1 (портал, P1–P14) завершён 19.09.2026, этап 2 (CRM) не начат
+**Версия ядра:** v1.37
+**Дата:** 24.09.2026
+**Статус:** этап 1 (портал, P1–P14) завершён 19.09.2026, этап 2 (CRM) начат слайсом C1
 **Владелец файла:** Sobol17 (тимлид и единственный разработчик)
 **Источник требований:** `TZ_B2B_CRM_stolyarka_v06.md`
 
@@ -12,6 +12,7 @@
 | Версия | Изменение |
 |---|---|
 | v1.0 | Первая заморозка ядра: стек, структура, схема БД, контракты очереди и событий, общие типы, UI-примитивы, правила кода, дорожная карта слайсов |
+| v1.37 | Слайс C1. IP-фильтр входа в CRM выведен из системы: ключ `crm.ip_allowlist` удалён из `settings`, из сида и из описания C1. Формы ключей `org.requisites` и `counterparty.staff_limit_default` зафиксированы в §5.9; `org.requisites` получил `email` (его ждёт `mailto:` лендинга) и проверку ИНН, КПП, БИК и счёта. `counterparty.staff_limit_default` читает `pnpm admin counterparty:create`. Нумерация правится в CRM только для ключа `request`: префикс и период. При сохранении счётчик продолжается от наибольшего уже выданного номера той же формы (`resumeSequence` в `lib/domain/numbering/numbering.ts`), поэтому возврат к старому префиксу не выдаёт занятый номер. В §8 добавлен `lib/types/crm.ts`: `CrmUserDto`, `CrmUserFilters`, `CreatedCrmUserDto`, `DictItemDto`, `DictItemFilters`, `AuditFilters`, `AuditEntryDto`, `NumberingDto`, `CrmSettingsDto`. Пользователями мастерской, справочниками и настройками управляет только `owner` по праву `settings.manage`, журнал аудита читает только `owner` по праву `audit.read`; матрица прав не менялась. Руководитель не может отключить себя, снять с себя роль `owner` и оставить мастерскую без активного руководителя. Письмо с временным паролем уходит через `MailDriver` напрямую, как в P2, и расходует то же ограничение `staff.create`. Экраны CRM живут под `/crm/settings`: «Организация», «Пользователи», «Справочники», «Журнал» |
 | v1.36 | Слайс P13 сделан, этап 1 закрыт. Публичная поверхность каталога это один роут `GET /api/public/works/[id]`: он отдаёт обложку опубликованной модели без актора и отвечает 404 на скрытую, удалённую, чужую по владельцу и неизвестную. Читает её `LandingService` в `lib/server/landing`: сервис без `ActorContext`, потому что у гостя его нет, и с `LandingRepository`, который выбирает только название и идентификатор обложки. Типы гостя живут в `lib/types/landing.ts`: `LandingWorkDto`, `LandingCharityDto` и предел `LANDING_WORKS_LIMIT` = 9. Ставка фонда приходит на лендинг процентом из `charity.rate_bp`, собранных сумм гостю нет; блока нет вовсе, пока не заданы фонд и ставка. `CharitySettings` получил `findRateBp()`: заморозка отчисления по-прежнему падает на кривой ставке, а лендинг просто прячет блок. Секции лендинга разделены на отдельные компоненты (`LandingWorks`, `LandingProduction`, `LandingCharity`, `LandingPartner`), чтобы порядок §18.5 собирался в `+page.svelte`, а не внутри чужого файла |
 | v1.35 | Слайс P12 сделан. Фид уведомлений живёт в `notification_feed`: `notification.fanout` пишет строку каждому адресату события в той же транзакции, что и строки `notifications`, адресата выбирает чистая функция `isAddressed` по матрице ролей без учёта каналов и личных настроек. Колокольчик в шапке портала приходит сниппетом `bell` у `ContourShell`, как поиск: тексты событий и разметка панели принадлежат порталу, кит их не импортирует. Данные колокольчика (`NotificationBellDto`) считает `+layout.server.ts` на каждом переходе. Отметку прочтения делает `POST /portal/notifications/read` со списком показанных идентификаторов, в `audit_log` она не пишется: журнал ведёт изменения в деле, а не открытие панели. Канал `max` входит в `NOTIFICATION_CHANNELS`, в сид матрицы для портальных ролей выключенным и в форму личных настроек: форма предлагает все каналы матрицы, а не только `LIVE_CHANNELS`. На экране уведомлений появилась лента событий выше журнала отправок; вторая таблица на странице берёт свои ключи строки запроса через префикс (`feedPage`) |
 | v1.34 | Лендинг получил небесный фон: слой `LandingSky` рисует градиент поля и облака вектором, поэтому на любом экране он остаётся чётким. Палитра не меняется, слой берёт ступени голубого рампа и `--color-surface-raised`. Слой лежит только под лендингом: портал и CRM остаются на ровной заливке `--color-surface`. Шапка лендинга потеряла непрозрачную заливку и держится на `backdrop-blur`: сплошной фон резал по небу видимый шов. В дорожную карту добавлен слайс P14 |
@@ -828,9 +829,13 @@ export const settings = sqliteTable('settings', {
 });
 ```
 
-Ключи `settings`: `org.requisites`, `org.timezone`, `charity.rate_bp`, `charity.fund`, `counterparty.staff_limit_default`, `payroll.week_closing_day`, `notifications.enabled`, `crm.ip_allowlist`.
+Ключи `settings`: `org.requisites`, `org.timezone`, `charity.rate_bp`, `charity.fund`, `counterparty.staff_limit_default`, `payroll.week_closing_day`, `notifications.enabled`. Ключ `crm.ip_allowlist` выведен в v1.37 вместе с IP-фильтром.
 
 Форма `charity.rate_bp`: целое число базисных пунктов от 0 до 10000. Форма `charity.fund`: `{ title: string; url?: string }` (v1.18). Форма `notifications.enabled`: `boolean`, `false` останавливает разворот любых событий в уведомления (v1.19).
+
+Форма `org.requisites` (v1.37): `{ name: string; inn?: string; kpp?: string; address?: string; phone?: string; email?: string; bank?: string; bik?: string; account?: string }`. ИНН 10 или 12 цифр, КПП и БИК по 9 цифр, расчётный счёт 20 цифр. Гостю из них уходят только телефон, адрес и почта (§18.5). Форма `counterparty.staff_limit_default`: целое от 1 до 1000, лимит нового контрагента при создании (v1.37).
+
+Нумерация в CRM (v1.37): правятся `prefix` (до 10 символов) и `period` ключа `request`. Сохранение пересчитывает `periodKey` на текущий период и ставит `lastValue` равным наибольшему номеру той же формы среди `requests.number`, поэтому возврат к прежнему префиксу или периоду не выдаёт занятый номер. Правило живёт в `resumeSequence` рядом с `nextNumber`.
 
 ---
 
@@ -1153,6 +1158,32 @@ export interface StaffMemberDto {
 }
 export interface StaffPageDto extends Page<StaffMemberDto> { activeCount: number; staffLimit: number; }
 export interface CreatedStaffDto { member: StaffMemberDto; temporaryPassword: string; mailSent: boolean; }
+
+// crm.ts — workshop accounts, dictionaries, settings and the audit journal (C1). Owner only.
+export type CrmRole = (typeof CRM_ROLES)[number];
+export interface CrmUserDto {
+  id: number; fullName: string; email: string; phone: string | null;
+  roles: CrmRole[]; status: StaffStatus; lastLoginAt: string | null; isSelf: boolean;
+}
+export interface CrmUserFilters { role?: CrmRole; status?: StaffStatus; }
+export interface CreatedCrmUserDto { user: CrmUserDto; temporaryPassword: string; mailSent: boolean; }
+export interface DictItemDto { id: number; dict: DictCode; code: string; title: string; sortOrder: number; isActive: boolean; }
+export interface DictItemFilters { dict: DictCode; }
+export interface AuditFilters { actor?: string; action?: string; entity?: string; from?: string; to?: string; }
+export interface AuditEntryDto {
+  id: number; createdAt: string; actorName: string | null; action: string; entity: string; entityId: number | null;
+  before: Record<string, unknown> | null; after: Record<string, unknown> | null; ip: string | null;
+}
+export const NUMBERING_PERIODS = ['none','year','month'] as const;
+export interface NumberingDto { key: 'request'; prefix: string; period: NumberingPeriod; nextPreview: string; }
+export interface OrgRequisitesDto {
+  name: string; inn?: string; kpp?: string; address?: string; phone?: string; email?: string;
+  bank?: string; bik?: string; account?: string;
+}
+export interface CrmSettingsDto {
+  requisites: OrgRequisitesDto | null; timezone: string; numbering: NumberingDto;
+  charityRateBp: number | null; charityFund: { title: string; url?: string } | null; staffLimitDefault: number;
+}
 
 // money.ts — branded type, blocks accidental mixing with plain numbers
 export type Minor = number & { readonly __brand: 'minor' };
@@ -1508,7 +1539,7 @@ CONTRACT GAP
 
 ### Этап 2. Административная часть (CRM)
 
-**C1. Каркас CRM, пользователи, справочники, настройки, аудит.** Layout и навигация CRM, управление сотрудниками мастерской и ролями, справочники `dict_items`, настройки организации и нумерации, ставка отчисления и данные фонда, лимит сотрудников, журнал аудита с фильтрами, опциональный IP-фильтр входа в CRM.
+**C1. Каркас CRM, пользователи, справочники, настройки, аудит.** Layout и навигация CRM, управление сотрудниками мастерской и ролями, справочники `dict_items`, настройки организации и нумерации, ставка отчисления и данные фонда, лимит сотрудников, журнал аудита с фильтрами. IP-фильтр входа выведен из объёма (v1.37).
 **DoD:** руководитель заводит пользователя, справочник и настройку без разработчика, каждое изменение видно в журнале аудита.
 
 **C2. CRM: каталог и цены.** CRUD моделей, вариантов, опций, матрицы совместимости, медиа с обложкой и порядком, прайс-листы и скидки с периодом действия, себестоимость только для руководителя, привязка варианта к учётной позиции склада и к норме, публикация и скрытие в портале.

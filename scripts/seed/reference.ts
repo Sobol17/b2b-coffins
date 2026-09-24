@@ -1,4 +1,4 @@
-import { and, eq } from 'drizzle-orm';
+import { and, eq, inArray } from 'drizzle-orm';
 import { z } from 'zod';
 import type { DictCode } from '../../src/lib/types/dicts';
 import type { Db } from '../../src/lib/server/db/client';
@@ -44,9 +44,13 @@ export function seedDicts(db: Db): number {
 	return rows.length;
 }
 
+// Keys the core dropped: the CRM IP filter left the system in v1.37 (tech.md 5.9).
+const RETIRED_SETTINGS = ['crm.ip_allowlist'];
+
 export function seedSettings(db: Db): number {
 	const rows = loadFixture('settings.json', z.record(z.string(), z.unknown()));
 	const entries = Object.entries(rows);
+	db.delete(settings).where(inArray(settings.key, RETIRED_SETTINGS)).run();
 	for (const [key, value] of entries) {
 		// Settings are operator-owned after the first run: seed inserts, it never overwrites.
 		db.insert(settings).values({ key, value }).onConflictDoNothing().run();
