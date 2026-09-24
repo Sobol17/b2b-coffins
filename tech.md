@@ -1,7 +1,7 @@
 # tech.md — ядро проекта
 
 **Проект:** B2B-портал + CRM для столярной мастерской (производство гробов)
-**Версия ядра:** v1.41
+**Версия ядра:** v1.42
 **Дата:** 24.09.2026
 **Статус:** этап 1 (портал, P1–P14) завершён 19.09.2026, этап 2 (CRM) начат слайсом C1
 **Владелец файла:** Sobol17 (тимлид и единственный разработчик)
@@ -11,6 +11,7 @@
 
 | Версия | Изменение |
 |---|---|
+| v1.42 | Три правки бизнеса от 24.09.2026. Роль `manager` в интерфейсе называется «Администратор»: это один человек, который ходит по складу, следит за работами и ведёт заявки. Код роли `manager` остаётся, потому что на нём стоят матрица прав, правила уведомлений и учётные записи; меняются подпись роли (`roles.title`, `ROLE_TITLE`) и тексты интерфейса, где он назван менеджером. В портале он называется «администратор мастерской», чтобы не путать его с администратором контрагента. Витрина портала не показывает наличие: `ProductListItemDto.stockQty`, `VariantDto.stockQty` и фильтр `CatalogFilters.inStock` выведены, карточка, листинг и фильтры остатка не рисуют, параметр адреса `inStock` игнорируется. Остаток по-прежнему считается для цеха (C5) и склада (C8). Исполнители выведены из системы: каждый работник и так знает свою зону. Таблица `request_assignees` удалена вместе с `ASSIGNEE_ROLES`, `CrmAssigneeDto`, `CrmRequestListItemDto.assigneeNames`, `CrmRequestCardDto.assignees`, `CrmRequestChoicesDto.crew`, формой исполнителей на карточке C4, колонкой «Исполнители» реестра и выгрузки, действиями аудита `request.assign` и `request.unassign`. `ATTENTION_FLAGS` сведён к `payment_overdue`. Из таблицы переходов ушёл признак `assignedOnly`, из `Transition` поле `assignedOnly`, из машины состояний отказ `not_assigned`: `ready -> delivered` делает любой водитель. Работник мастерской без `request.read.any` видит отправленные заявки в тех статусах, из которых его роль делает переход по §6.2 (`reachableStatuses` в `state-machine.ts`): водитель видит заявки в `ready`, у столяра и маляра переходов нет, и заявки им не видны. Приоритет заявки по-прежнему меняется на карточке C4 со строкой истории после запуска |
 | v1.41 | Контракт C5 переопределён решением владельца от 24.09.2026: цех работает по позициям, а не по заявкам. Столяр и маляр в системе не работают: роли `carpenter` и `painter` ушли из таблицы переходов, экранов у них нет, в `ROLE_CODES` роли остаются ради учётных записей и выплат C10. Складская позиция изделия это пара «вариант, цвет»: `stock_moves` получил колонку `option_id` (цвет изделия; `null` у комплектующих и у изделия без цвета), остаток позиции равен сумме движений по паре `(stock_item_id, option_id)`, складскую позицию изделию даёт `product_variants.stock_item_id`. Выпуск отмечают `manager` и `owner` по праву `stock.manage` на экране `/crm/shop` («Цех»): отметка «Сделано N» пишет движение `production` на `+N` без заявки и строку аудита `stock.produce`; вариант без складской позиции и цвет вне матрицы варианта сервер отклоняет, в одной отметке не больше `SHOP_PRODUCE_MAX` штук. Наполнение заявок считает чистая функция `allocateStock` в `lib/domain/stock/allocation.ts`: остаток позиции раздаётся строкам по порядку `fillOrder`: заявки контрагентов в `ready` (изделия лежат на складе до погрузки), затем заявки контрагентов в `in_work` (срочные, ближний `deliveryAt`, заявки без срока в конце, затем по порядку заведения), затем заявки на склад в `in_work`. Заявка на склад в `ready` остаток не держит. Отрицательный остаток позиции ничего не наполняет. Экран «Цех» показывает очередь выпуска `ShopQueueRowDto` (позиции, которых не хватает заявкам в работе, с ближайшим сроком и числом заявок) и наполнение заявок в работе по строкам `ShopRequestDto` с поиском по номеру; цен на экране нет. Переход `in_work -> ready` («Заявка собрана») делают `manager` и `owner` без назначенного исполнителя, по новому guard-у `stockCovered`: каждая строка заявки наполнена целиком. Guard `hasAssignee` выведен: приём `new -> in_work` проверяет только `pricesFixed`, инвариант 5 переписан. Эффекты `consumeComponents` и `produceStockItems` сняты с перехода и выведены из `EFFECT_CODES`: приход на склад даёт отметка выпуска, списание комплектующих по норме C9 подключает к ней же. Флаг `no_assignee` ставится только заявке в `ready` без водителя. Списание со склада при погрузке и запрет доставки при неполной погрузке переходят в C6, описание слайса обновлено; до C6 `ready -> delivered` работает как раньше. Остаток витрины портала (P3) по-прежнему считается по варианту без учёта цвета. В §8 добавлен `lib/types/crm-shop.ts` |
 | v1.40 | Контракт C4. Доску, реестр и карточку заявки мастерской читают `owner` и `manager` по праву `request.read.any`, заводят заявку по `request.create` в контуре CRM, ведут её (исполнители, приоритет, состав) по `request.assign`; матрица прав не менялась, цеху и водителю экраны отвечают 403 до C5 и C6. Экраны: доска `/crm/board`, реестр `/crm/requests` с выгрузкой `/crm/requests/export.xlsx`, заведение `/crm/requests/new`, карточка `/crm/requests/[id]`. Код экранов лежит в `src/lib/crm/requests/`, серверная часть в `server/crm-request/`. Доска рисует шесть колонок основного потока `BOARD_STATUSES`, в колонке не больше `BOARD_COLUMN_LIMIT` карточек и общий счётчик; колонка `paid` берёт заявки, оплаченные за последние `BOARD_PAID_DAYS` дней. Порядок карточек: срочные, затем ближний `deliveryAt`, заявки без срока в конце. Перенос карточки идёт через `RequestTransitionService`: машина состояний решает, отказ по guard-у называет его словами. Фильтры доски и реестра `CrmRequestFilters`: статус (только реестр), контрагент или «на склад», приоритет, флаг внимания, окно дат по `submittedAt`; поиск по номеру, своему номеру контрагента, названию контрагента и ФИО умершего. Сортировки `CRM_REQUEST_SORTS`, сумма только роли с ценами. Флаги внимания считает чистая функция `attentionFlags` в `lib/domain/request/attention.ts`: `no_assignee` у заявки в `new` и `in_work` без исполнителей и у заявки в `ready` без водителя, `payment_overdue` у заявки в `awaiting_payment`, если с `deliveredAt` прошло больше дней, чем даёт схема расчётов контрагента (`PAYMENT_WAIT_DAYS`: по факту 3, раз в неделю 7, раз в месяц 30); заявка на склад долга не ждёт. Выгрузка XLSX синхронная, как прайс-лист: те же фильтры и сортировка, не больше `CRM_REQUEST_EXPORT_LIMIT` строк, суммы в целых рублях только роли с ценами, ФИО умершего в файл не пишется. Заявку контрагента или заявку на склад менеджер заводит одной формой сразу в статус `new`: номер из `numbering_sequences`, строки с цветом по матрице варианта, цены по правилам корзины (персональная цена, договорная скидка и `discount_rules` контрагента; у заявки на склад базовая цена без скидки), переход `draft -> new` проверяет машина состояний с guard-ом `deliveryFilled`, пишутся история, событие `request.submitted` и аудит `request.create`. Срок доставки вводится датой и временем в `org.timezone`. Приём `new -> in_work` цены не пересчитывает: их заморозила отправка (P4) или последняя правка состава в `new`; с приёма цены и скидка зафиксированы. Состав правится в `new` свободно, с пересчётом всей заявки по текущим ценам, и в `in_work` под контролем: комментарий обязателен, прежние строки держат свою цену штуки, новая строка берёт персональную цену на момент правки, скидка сохраняет долю (`keepDiscountShare` в `lib/domain/request/amendment.ts`); в других статусах состав закрыт, последнюю строку не удалить. Исполнители (`request_assignees`, роли `ASSIGNEE_ROLES`) назначаются из активных учётных записей CRM с этой ролью в статусах `new`, `in_work`, `ready`; в `in_work` и `ready` последнего исполнителя не снять. Приоритет меняется в тех же статусах. Правка после запуска (состав, исполнители, приоритет в статусах после `new`) пишет строку `request_status_history` с `from_status = to_status` и комментарием: это не переход, машина состояний её не проверяет, портал её не показывает. Действия в `audit_log`: `request.create`, `request.items_update`, `request.assign`, `request.unassign`, `request.priority`, переходы по-прежнему `request.transition`. `KanbanCard` получил `href` и `tags`, `KanbanBoard` получил `totals`. В §8 добавлен `lib/types/crm-request.ts` |
 | v1.39 | Контракт C3. Контрагентов ведут `owner` и `manager` по праву `counterparty.manage`, матрица прав не менялась. Экраны: реестр `/crm/counterparties` с поиском по названию и ИНН и фильтрами менеджера, схемы расчётов и наличия долга, заведение `/crm/counterparties/new`, карточка `/crm/counterparties/[id]`. Код экранов лежит в `src/lib/crm/counterparties/`, серверная часть в `server/crm-counterparty/`. Контрагент заводится одной транзакцией вместе с первым администратором (`cp_admin`), как в `pnpm admin counterparty:create`; лимит сотрудников нового контрагента берётся из `counterparty.staff_limit_default`. Письмо с временным паролем уходит через `MailDriver` напрямую шаблоном портала, как в P2, и расходует ограничение `staff.create`; пароль один раз показывается на странице. Выдача администратора: новая учётная запись с ролью `cp_admin` в пределах `staff_limit`, перевод активного сотрудника контрагента в `cp_admin`, повторная выдача доступа новым временным паролем с закрытием всех сессий. Отключение и понижение людей контрагента остаётся за `cp_admin` в портале (P2). Ответственный менеджер выбирается среди активных учётных записей CRM с ролью `manager` или `owner`, прайс-лист среди `price_lists` либо не задан. Договоры добавляются, правятся и удаляются, `valid_until` не раньше `signed_at`; портал по-прежнему показывает последний по `signed_at`. Скан договора в C3 не загружается, `contracts.file_id` остаётся пустым. Адрес доставки удаляется мягко (`deleted_at`), потому что на него ссылаются заявки; адрес по умолчанию у контрагента один, выбор нового снимает флаг с прежнего. Архивации контрагента в C3 нет, `is_active` не меняется. Правило долга: долг заявки равен `max(0, total_minor − Σ payment_marks.amount_minor)` для заявок в `delivered` и `awaiting_payment`, долг контрагента равен сумме долгов его заявок, `openCount` считает заявки с положительным долгом. Один запрос `DebtRepository` считает долг и для карточки портала (P2), и для CRM: `requests.paid_minor` для долга не читается, поэтому индикатор сходится с реестром отметок оплаты. Карточка отдаёт историю заявок контрагента без черновиков в `Page<RequestListItemDto>` и реестр отметок оплаты в `Page<CrmPaymentMarkDto>` новыми сверху. Действия в `audit_log`: `counterparty.create`, `counterparty.update`, `counterparty.terms_update`, `counterparty.notes_update`, `counterparty.contract_create`, `counterparty.contract_update`, `counterparty.contract_delete`, `counterparty.address_create`, `counterparty.address_update`, `counterparty.address_delete`, `counterparty.address_default`, `counterparty.admin_issue`, `counterparty.admin_promote`, `counterparty.access_resend`; контакты людей и пароли в журнал не пишутся. В §8 добавлен `lib/types/crm-counterparty.ts` |
@@ -536,13 +537,6 @@ export const requestItemOptions = sqliteTable('request_item_options', {
   priceDeltaMinor: integer('price_delta_minor').notNull().default(0)
 }, (t) => ({ pkUq: primaryKey({ columns: [t.itemId, t.optionId] }) }));
 
-export const requestAssignees = sqliteTable('request_assignees', {
-  requestId: integer('request_id').notNull().references(() => requests.id, { onDelete: 'cascade' }),
-  userId: integer('user_id').notNull().references(() => users.id),
-  role: text('role', { enum: ['carpenter', 'painter', 'driver'] }).notNull(),
-  takenAt: ts('taken_at'), doneAt: ts('done_at')
-}, (t) => ({ pkUq: primaryKey({ columns: [t.requestId, t.userId, t.role] }) }));
-
 export const requestStatusHistory = sqliteTable('request_status_history', {
   id: pk(),
   requestId: integer('request_id').notNull().references(() => requests.id, { onDelete: 'cascade' }),
@@ -575,7 +569,7 @@ export const comments = sqliteTable('comments', {
 }, (t) => ({ reqIdx: index('comments_request_idx').on(t.requestId, t.createdAt) }));
 ```
 
-Правка заявки после запуска в работу (состав, исполнители, приоритет) пишет строку `request_status_history` с `from_status = to_status` и обязательным комментарием (v1.40). Переходом такая строка не считается, в портал не отдаётся.
+Правка заявки после запуска в работу (состав, приоритет) пишет строку `request_status_history` с `from_status = to_status` и обязательным комментарием (v1.40). Переходом такая строка не считается, в портал не отдаётся.
 
 Отгрузка заявки контрагента: адрес, срок и ФИО умершего обязательны, самовывоза в системе нет (v1.33). Три колонки остаются nullable, потому что у заявки на склад (`isStockRequest = true`) нет ни контрагента, ни адреса, ни умершего, а фиктивные значения ради `notNull` были бы ложью в данных. Обязательность держит guard `deliveryFilled` на переходе `draft -> new` (§6.2) и Zod на форме корзины.
 
@@ -877,7 +871,7 @@ export const TRANSITIONS: readonly Transition[] = [
   { from: 'new',    to: 'rejected',  roles: ['manager','owner'], requiresReason: true },
   { from: 'in_work', to: 'ready',    roles: ['manager','owner'],
     guards: ['stockCovered'], effects: ['emit:request.ready'] },
-  { from: 'ready',  to: 'delivered', roles: ['driver','manager','owner'], assignedOnly: true,
+  { from: 'ready',  to: 'delivered', roles: ['driver','manager','owner'],
     effects: ['shipStockItems','freezeCharity','emit:request.delivered'] },
   { from: 'delivered', to: 'awaiting_payment', roles: ['system'], auto: true },
   { from: 'awaiting_payment', to: 'paid', roles: ['system'], auto: true,
@@ -891,7 +885,7 @@ export const TRANSITIONS: readonly Transition[] = [
 2. Каждый переход пишет строку в `request_status_history` в той же транзакции.
 3. `charityAmountMinor` заполняется ровно один раз, в момент первого перехода в `delivered`, и дальше не меняется ни при смене ставки, ни при правке цен.
 4. Складское движение и смена статуса выполняются в одной транзакции. Провал движения откатывает статус.
-5. Переход в `ready` невозможен, пока свободный остаток склада не наполняет каждую строку заявки целиком: это guard `stockCovered`, наполнение считает `allocateStock` (v1.41). Цех работает по позициям, поэтому исполнитель на заявку в работе не назначается; водитель нужен доставке (`assignedOnly` на `ready -> delivered`).
+5. Переход в `ready` невозможен, пока свободный остаток склада не наполняет каждую строку заявки целиком: это guard `stockCovered`, наполнение считает `allocateStock` (v1.41). Исполнителей у заявки нет (v1.42): цех работает по позициям, заявку в `ready` доставляет любой водитель.
 6. Заявка на склад (`isStockRequest = true`) не порождает благотворительное отчисление и не имеет контрагента.
 7. Автоматический шаг берётся в транзакции действия, которое открыло ему дорогу, и только если его guard-ы прошли. Действие — либо ручной переход, либо отметка оплаты из C7. Человек автоматический шаг не инициирует: роль `system` недоступна ни одному пользователю. Шаги идут цепочкой, пока очередной guard не остановит её, поэтому доставка с принятыми наличными доходит до `paid` одним действием водителя, а доставка с оплатой по счёту останавливается на `awaiting_payment` до отметки.
 8. Заявка контрагента уходит из `draft` только с заполненными `deliveryAddressId`, `deliveryAt` и `deceasedName`: это guard `deliveryFilled`. Заявка на склад (`isStockRequest = true`) его не требует. `deliveryAt` замораживается на этом переходе вместе с ценами и дальше не меняется ни одним переходом: срок сдвигается только отменой и новой заявкой.
@@ -985,7 +979,7 @@ type StreamMessage =
 // roles.ts
 export const ROLE_CODES = ['owner','manager','carpenter','painter','driver','cp_admin','cp_employee'] as const;
 export type RoleCode = (typeof ROLE_CODES)[number];
-export const CRM_ROLES = ['owner','manager','carpenter','painter','driver'] as const;
+export const CRM_ROLES = ['owner','manager','carpenter','painter','driver'] as const;   // manager is shown as «Администратор» (v1.42)
 export const PORTAL_ROLES = ['cp_admin','cp_employee'] as const;
 
 // actor.ts — passed into every service, built once in hooks.server.ts
@@ -1006,7 +1000,7 @@ export type RequestStatus = (typeof REQUEST_STATUSES)[number];
 export interface Transition {
   readonly from: RequestStatus; readonly to: RequestStatus;
   readonly roles: readonly (RoleCode | 'system')[];
-  readonly ownOnly?: boolean; readonly assignedOnly?: boolean;
+  readonly ownOnly?: boolean;
   readonly requiresReason?: boolean; readonly auto?: boolean;
   readonly guards?: readonly GuardCode[]; readonly effects?: readonly EffectCode[];
 }
@@ -1119,7 +1113,7 @@ export const OPTION_KINDS = ['color'] as const;
 export const CATALOG_SORTS = ['sortOrder','title','price'] as const;   // price: personal price; a price-blind role sorts by the agency price, models without one go last
 export interface CatalogFilters {                                        // one variant has to satisfy all filters at once (P3)
   categoryId?: number; materialIds?: number[]; colorOptionIds?: number[];
-  lengthFromMm?: number; lengthToMm?: number; inStock?: boolean;
+  lengthFromMm?: number; lengthToMm?: number;   // the storefront shows no stock (v1.42)
 }
 export interface CategoryDto { id: number; title: string; parentId: number | null; productCount: number; minPriceMinor?: number; agencyMinPriceMinor?: number; }
 export interface CategoryGroupDto { category: CategoryDto; children: CategoryDto[]; showcase: ProductListItemDto[]; }
@@ -1129,7 +1123,7 @@ export interface CatalogFacetsDto {
 }
 export interface ProductListItemDto {
   id: number; sku: string; title: string; categoryId: number | null; coverMediaId: number | null; variantCount: number;
-  materialTitles: string[]; lengthsMm: number[]; stockQty: number;   // stock: sum of moves, never below zero
+  materialTitles: string[]; lengthsMm: number[];   // no stock on the storefront (v1.42)
   minPriceMinor?: number;
   agencyPriceMinor?: number;             // price of the counterparty for its own client (P7), one per model
 }
@@ -1138,7 +1132,6 @@ export interface VariantDto {
   id: number; sku: string; sizeCode: string; materialTitle: string;
   lengthMm: number | null; widthMm: number | null; heightMm: number | null; weightG: number | null;
   options: OptionDto[];                  // compatibility matrix of the variant
-  stockQty: number;                      // sum of stock moves, never below zero
   priceMinor?: number;                   // base price in P1, personal price from P2
   costPriceMinor?: number;               // owner only
 }
@@ -1268,10 +1261,8 @@ export interface CreatedCounterpartyDto { counterpartyId: number; access: Create
 export const BOARD_STATUSES = ['new','in_work','ready','delivered','awaiting_payment','paid'] as const;
 export const BOARD_COLUMN_LIMIT = 50;
 export const BOARD_PAID_DAYS = 7;                   // the paid column keeps the last week only
-export const ATTENTION_FLAGS = ['no_assignee','payment_overdue'] as const;
+export const ATTENTION_FLAGS = ['payment_overdue'] as const;   // no_assignee left with the assignees (v1.42)
 export type AttentionFlag = (typeof ATTENTION_FLAGS)[number];
-export const ASSIGNEE_ROLES = ['carpenter','painter','driver'] as const;
-export type AssigneeRole = (typeof ASSIGNEE_ROLES)[number];
 export const CRM_REQUEST_SORTS = ['submittedAt','number','deliveryAt','total'] as const;   // total: role with prices only
 export const CRM_REQUEST_EXPORT_LIMIT = 5000;
 export interface CrmRequestFilters {
@@ -1282,22 +1273,20 @@ export interface CrmRequestFilters {
 }
 export interface CrmRequestListItemDto extends RequestListItemDto {
   counterpartyId: number | null; isStockRequest: boolean; deliveryAt: string | null;
-  assigneeNames: string[]; flags: AttentionFlag[];
+  flags: AttentionFlag[];
 }
 export interface CrmBoardColumnDto { status: RequestStatus; total: number; cards: CrmRequestListItemDto[]; }
 export interface CrmBoardDto { columns: CrmBoardColumnDto[]; }
-export interface CrmAssigneeDto { userId: number; fullName: string; role: AssigneeRole; }
 // free: `new`, the whole request is repriced; controlled: `in_work`, frozen prices and a comment; closed: later.
 export const ITEMS_EDIT_MODES = ['free','controlled','closed'] as const;
 export type ItemsEditMode = (typeof ITEMS_EDIT_MODES)[number];
 export interface CrmRequestCardDto extends Omit<RequestCardDto, 'comments'> {
   counterpartyId: number | null; counterpartyName: string | null; isStockRequest: boolean;
-  assignees: CrmAssigneeDto[]; flags: AttentionFlag[]; itemsEdit: ItemsEditMode;
+  flags: AttentionFlag[]; itemsEdit: ItemsEditMode;
 }
 export interface CrmRequestChoicesDto {
   counterparties: { id: number; name: string }[];
   variants: { id: number; sku: string; productTitle: string; sizeCode: string; materialTitle: string; options: { id: number; title: string }[] }[];
-  crew: { id: number; fullName: string; roles: AssigneeRole[] }[];
   refusalReasons: { id: number; title: string }[];
 }
 export interface CreatedCrmRequestDto { id: number; number: string; }
@@ -1464,7 +1453,7 @@ CD нет. Мёрдж в `main` ничего не разворачивает, с
 
 - **Аутентификация.** Пароли argon2id (`memoryCost >= 19456`, `timeCost >= 2`). Сессия на сервере, в куку кладём случайный идентификатор, в БД его хеш. Кука `httpOnly`, `secure`, `sameSite=lax`, срок 30 дней с продлением. Смена пароля и блокировка убивают все сессии пользователя.
 - **Права.** Проверка на сервере на каждое действие и каждый переход статуса, а не только на отрисовку экрана. Единая точка: `PolicyService.can(actor, action, subject)`. Скрытие кнопки в UI защитой не считается.
-- **Row-level.** Каждый репозиторий портального домена принимает `counterpartyId` из `ActorContext` и подмешивает его в `where`. Метод без этого фильтра не проходит ревью. Исполнитель видит только назначенные ему заявки.
+- **Row-level.** Каждый репозиторий портального домена принимает `counterpartyId` из `ActorContext` и подмешивает его в `where`. Метод без этого фильтра не проходит ревью. Работник мастерской без `request.read.any` видит заявки только в статусах, из которых его роль делает переход (v1.42).
 - **Цены.** Роль `cp_employee` не получает ценовые поля из БД. Проверяется e2e-тестом на теле ответа, а не глазами.
 - **ПДн третьего лица.** `requests.deceased_name` видно всем, кому видна заявка, но не подставляется в шаблоны уведомлений и не уходит в SSE (v1.33).
 - **Публичная поверхность.** Гостю без сессии отвечает только `GET /api/public/works/[id]`: обложка опубликованной модели, 404 на скрытую, черновую и удалённую. Остальные файлы идут через `/api/files/[id]` с правом `catalog.read` (v1.33).
@@ -1639,8 +1628,8 @@ CONTRACT GAP
 **P2. Контрагенты, прайсы, пользователи портала.** Карточка контрагента, адреса доставки, договор, прайс-лист и скидка, вычисление персональной цены, учётные записи портала, CRUD сотрудников на стороне портала, лимит сотрудников, генерация временного пароля и отправка доступа письмом.
 **DoD:** администратор контрагента заводит сотрудника сам, сотрудник входит по временному паролю и меняет его, цены не приходят в ответах сервера для роли сотрудника.
 
-**P3. Портал: витрина каталога.** Дерево категорий, карточка модели, галерея, характеристики, опции, персональные цены для `cp_admin`, признак наличия на складе, поиск, фильтры, сортировка, выгрузка прайса в XLSX для администратора.
-**DoD:** контрагент видит каталог со своими ценами и не видит чужие, сотрудник видит тот же каталог с прочерками вместо цен.
+**P3. Портал: витрина каталога.** Дерево категорий, карточка модели, галерея, характеристики, опции, персональные цены для `cp_admin`, поиск, фильтры, сортировка, выгрузка прайса в XLSX для администратора.
+**DoD:** контрагент видит каталог со своими ценами и не видит чужие, сотрудник видит тот же каталог с прочерками вместо цен. Наличие на складе витрина не показывает (v1.42).
 
 **P4. Портал: черновик и оформление заявки.** Конфигуратор позиции с проверкой матрицы совместимости, черновик со счётом суммы онлайн, адрес доставки или самовывоз, комментарий, вложения, свой номер заказа, валидация минимальной партии, отправка (`draft -> new`), повтор предыдущей заявки, шаблоны комплектов.
 **DoD:** контрагент собирает заявку из каталога и отправляет, недоступная комбинация опций отклоняется сервером, заявка получает номер из `numbering_sequences`.
@@ -1686,13 +1675,13 @@ CONTRACT GAP
 **C3. CRM: контрагенты.** Карточка с реквизитами, договором, адресами, прайсом и схемой расчётов, список пользователей контрагента, выдача администратора, история заявок и оплат, индикатор задолженности, заметки, ответственный менеджер. Контрагент заводится одной транзакцией с первым администратором. Долг считается из `payment_marks` одним запросом для портала и CRM (v1.39). Скан договора и архивация контрагента в объём не входят.
 **DoD:** менеджер заводит контрагента с администратором и отправляет доступ, индикатор долга сходится с реестром отметок оплаты.
 
-**C4. CRM: доска и реестр заявок.** Канбан по шести статусам с фильтрами, реестр с сортировкой, поиском и экспортом XLSX, ручное создание заявки, заявка на склад, приём в работу с фиксацией цен и скидки, назначение исполнителей, приоритет, отклонение, контролируемое изменение состава после запуска, флаги внимания (заявка без исполнителя, долгое ожидание оплаты). Приём цены не пересчитывает, правка состава в `in_work` держит цены строк и долю скидки, правка после запуска пишет строку истории с `from_status = to_status` (v1.40).
-**DoD:** менеджер ведёт заявку от приёма до готовности только из CRM, все изменения после запуска в работу пишутся в историю с комментарием.
+**C4. CRM: доска и реестр заявок.** Канбан по шести статусам с фильтрами, реестр с сортировкой, поиском и экспортом XLSX, ручное создание заявки, заявка на склад, приём в работу с фиксацией цен и скидки, приоритет, отклонение, контролируемое изменение состава после запуска, флаг внимания «долгое ожидание оплаты»; исполнители выведены в v1.42. Приём цены не пересчитывает, правка состава в `in_work` держит цены строк и долю скидки, правка после запуска пишет строку истории с `from_status = to_status` (v1.40).
+**DoD:** администратор ведёт заявку от приёма до готовности только из CRM, все изменения после запуска в работу пишутся в историю с комментарием.
 
 **C5. Цех: выпуск позиций и наполнение заявок** (переопределён в v1.41). Столяр и маляр в системе не работают, цех работает по позициям, а не по заявкам. Экран `/crm/shop` для `manager` и `owner`, на телефоне и на десктопе: очередь выпуска по позициям «вариант, цвет» с числом недостающих штук, ближайшим сроком и срочностью; отметка «Сделано N» с приходом на склад; наполнение заявок в работе по строкам из свободного остатка в порядке приоритета; поиск заявки по номеру; «Заявка собрана» с переходом `in_work -> ready` по guard-у `stockCovered`; крупные тач-цели.
-**DoD:** менеджер отмечает выпуск позиции с телефона, остаток позиции растёт на отмеченное число, срочная заявка наполняется раньше обычной, заявка уходит в `ready` только наполненной целиком, отказ приходит от сервера, а не только от разметки.
+**DoD:** администратор отмечает выпуск позиции с телефона, остаток позиции растёт на отмеченное число, срочная заявка наполняется раньше обычной, заявка уходит в `ready` только наполненной целиком, отказ приходит от сервера, а не только от разметки.
 
-**C6. Водительское рабочее место и доставка.** Список заявок в работе для планирования, список готовых с адресом, контактом и кнопкой навигации, «Доставлено» с переводом в `delivered`, флажок «принял оплату наличными» рядом с ним. Флажок пишет `payment_marks` со способом `cash` на всю сумму заявки в транзакции доставки, дальше цепочка автоматических шагов §6.2 доводит заявку до `paid`. Без флажка заявка останавливается в `awaiting_payment` и ждёт отметки оплаты по счёту из C7. Отказа при доставке в системе нет. Push при переходе в `ready` подключается в C15. Погрузка (v1.41): водитель на складе отмечает по строкам заявки, сколько штук погрузил; отметка пишет движение `shipment` с минусом по позиции «вариант, цвет» и с заявкой, это и есть списание со склада. «Доставлено» недоступно, пока погружено меньше, чем в заявке: хранение отметки и новый guard C6 поднимает блоком CONTRACT GAP в начале слайса, эффект `shipStockItems` с перехода `ready -> delivered` снимается там же.
+**C6. Водительское рабочее место и доставка.** Список заявок в работе для планирования, список готовых с адресом, контактом и кнопкой навигации, «Доставлено» с переводом в `delivered`, флажок «принял оплату наличными» рядом с ним. Флажок пишет `payment_marks` со способом `cash` на всю сумму заявки в транзакции доставки, дальше цепочка автоматических шагов §6.2 доводит заявку до `paid`. Без флажка заявка останавливается в `awaiting_payment` и ждёт отметки оплаты по счёту из C7. Отказа при доставке в системе нет. Push при переходе в `ready` подключается в C15. Погрузка (v1.41): водитель на складе отмечает по строкам заявки, сколько штук погрузил; отметка пишет движение `shipment` с минусом по позиции «вариант, цвет» и с заявкой, это и есть списание со склада. «Доставлено» недоступно, пока погружено меньше, чем в заявке: хранение отметки и новый guard C6 поднимает блоком CONTRACT GAP в начале слайса, эффект `shipStockItems` с перехода `ready -> delivered` снимается там же. Водителя на заявку не назначают (v1.42): любой водитель видит все заявки в `ready`.
 **DoD:** водитель видит заявку в списке готовых сразу после перехода в `ready` и доводит её до `delivered`, доставка с наличными закрывает заявку в `paid` одним действием, доставка без наличных оставляет её в `awaiting_payment`.
 
 **C7. Оплата и закрытие.** Отметки оплаты с датой, суммой, способом и комментарием, частичная оплата с остатком, индикатор задолженности контрагента, флаг долгого ожидания оплаты, аудит правок. Статус заявки менеджер руками не двигает: он ставит отметку оплаты, а `awaiting_payment -> paid` берёт система в транзакции этой отметки, как только отметки покрывают сумму (§6.2, инвариант 7).
@@ -2047,8 +2036,8 @@ Payload push-уведомления не содержит цен, персона
 | Лендинг | `/` | гость | K7 | Шапка с чипом телефона и кнопкой «Вход для контрагентов» на `/login`, первый экран, постоянные факты (срок изготовления, регион доставки), товарные группы текстом, «Производство», «Как мы работаем», подвал. Кнопки «Стать контрагентом» и «Запросить условия» открывают `mailto:` и `tel:` из `org.requisites`. Примеры работ: до девяти обложек опубликованных моделей с названием через `GET /api/public/works/[id]` (P13). Блок благотворительного проекта: название фонда, ссылка и ставка отчисления процентом, собранных сумм гостю нет (P13). Счётчики каталога и остатка гостю не показываются: кроме обложек и названий, данные каталога наружу не отдаются (v1.33). Фон: слой неба с облаками из §18.2, вектор, без анимации (P14) |
 | Главная портала | `/portal` | `cp_admin`, `cp_employee` | P6, блоки дополняют P2, P4, P8 | Заголовок с именем контрагента и договором (P2). Три показателя: заявки в работе с суммой для `cp_admin`, ближайшая готовность по `readyAt`, скидка `discountPercent` (P2). Панели «Собрать заявку» и «Повторить заявку» (P4). Таблица активных заявок `new…awaiting_payment` и закрытых за три месяца (P6). Баннер пожертвований в макете отсутствует, P8 ставит его под показателями |
 | Каталог | `/portal/catalog` | обе | P3, P7 | Группы верхнего уровня `categories` с подкатегориями, число артикулов, «от N ₽» по закупочной цене для `cp_admin` и по цене агентства для `cp_employee` (P7), кнопка «Скачать прайс-лист XLSX» только для `cp_admin` |
-| Листинг товаров | `/portal/catalog/[categoryId]` | обе | P3, P7 | Фильтры: материал (`dict_items` `material`), цвет (`options` `color`), длина (`lengthMm`), наличие по остатку. Сортировка, число на странице, выбранные фильтры чипами, сетка карточек с артикулом, названием, ценой и остатком. Из P7: карточка показывает цену агентства, у `cp_admin` под ней закупочная серым, сотрудник сортирует по цене агентства |
-| Карточка товара | `/portal/catalog/product/[productId]` | обе | P3 просмотр, P4 добавление, P7 цена | Галерея `media`, характеристики из полей варианта и справочника материалов, описание, выбор размера (`sizeCode` варианта) и цвета из `options` по матрице `product_options`, других опций нет (v1.22), цена за штуку, остаток, количество, «Добавить в заявку» (P4), похожие позиции той же категории. Из P7: цена агентства на модель, у `cp_admin` рядом закупочная серым |
+| Листинг товаров | `/portal/catalog/[categoryId]` | обе | P3, P7 | Фильтры: материал (`dict_items` `material`), цвет (`options` `color`), длина (`lengthMm`). Сортировка, число на странице, выбранные фильтры чипами, сетка карточек с артикулом, названием и ценой. Наличие не показывается (v1.42). Из P7: карточка показывает цену агентства, у `cp_admin` под ней закупочная серым, сотрудник сортирует по цене агентства |
+| Карточка товара | `/portal/catalog/product/[productId]` | обе | P3 просмотр, P4 добавление, P7 цена | Галерея `media`, характеристики из полей варианта и справочника материалов, описание, выбор размера (`sizeCode` варианта) и цвета из `options` по матрице `product_options`, других опций нет (v1.22), цена за штуку, количество, «Добавить в заявку» (P4), похожие позиции той же категории. Из P7: цена агентства на модель, у `cp_admin` рядом закупочная серым |
 | Корзина | `/portal/cart` | обе | P4, P7 | Черновик заявки: строки с вариантом и опциями, цена и сумма строки для `cp_admin`, количество, удаление, очистка. Отгрузка (P11): адрес из `delivery_addresses`, дата и время доставки, ФИО умершего, все четыре поля обязательны; самовывоза нет. Комментарий необязателен. Поле «Ваш номер заявки» не рисуется (v1.27). Итог: позиции, изделия, сумма, скидка по договору, к оплате (только `cp_admin`). Из P7: в строке цена агентства за штуку, суммы строки и итога в ценах агентства не считаются. «Оформить заявку» выполняет `draft -> new` |
 | Мои заявки | `/portal/requests` | обе | P6 | Раскладка профиля с боковым меню, строки-карточки: номер, дата, статус, первая позиция, число позиций и изделий, сумма для `cp_admin`, автор (`createdById`) для администратора. Чипы статусов с числами, поиск по номеру, сортировка. Фильтр периода из DoD P6 добавляется, в макете его нет. «Новая заявка» ведёт в каталог |
 | Заявка (детальная) | `/portal/requests/[id]` | обе | P6, P7, P8 | Показатели: позиции, сумма (`cp_admin`), статус. Состав заявки `DataTable`, комментарий, параметры отгрузки (адрес, срок, ФИО умершего, P11) и скидка, «Повторить заявку» (P4), «Отменить заявку» для `new -> cancelled` (P5), карточка менеджера. Из DoD P6 добавляются `Stepper` истории статусов, переписка с менеджером (`comments` без `isInternal`) и вложения, из P7 цена агентства в строке состава, из P8 строка «в фонд с этой заявки» |
