@@ -33,8 +33,9 @@ export interface MoneyTotalsRow {
 	readonly yearDeliveries: number;
 }
 
-// Debt is what was handed over and not yet paid; a purchase is anything handed over.
-const OPEN_DEBT: RequestStatus[] = ['delivered', 'awaiting_payment'];
+export type YearTotalsRow = Omit<MoneyTotalsRow, 'debtMinor'>;
+
+// A purchase is anything handed over; the debt lives in DebtRepository.
 const PURCHASED: RequestStatus[] = ['delivered', 'awaiting_payment', 'paid'];
 
 export class CounterpartyRepository extends BaseRepository<typeof counterparties> {
@@ -115,15 +116,8 @@ export class CounterpartyRepository extends BaseRepository<typeof counterparties
 		return { rows, total: counted?.total ?? 0 };
 	}
 
-	/** Money figures of the card. Called only for a role that may see prices. */
-	moneyTotals(counterpartyId: number, yearStart: Date): MoneyTotalsRow {
-		const [debt] = this.db()
-			.select({
-				value: sql<number>`coalesce(sum(${requests.totalMinor} - ${requests.paidMinor}), 0)`
-			})
-			.from(requests)
-			.where(and(eq(requests.counterpartyId, counterpartyId), inArray(requests.status, OPEN_DEBT)))
-			.all();
+	/** Purchases of the year. Called only for a role that may see prices. */
+	yearTotals(counterpartyId: number, yearStart: Date): YearTotalsRow {
 		const [year] = this.db()
 			.select({
 				value: sql<number>`coalesce(sum(${requests.totalMinor}), 0)`,
@@ -138,10 +132,6 @@ export class CounterpartyRepository extends BaseRepository<typeof counterparties
 				)
 			)
 			.all();
-		return {
-			debtMinor: debt?.value ?? 0,
-			yearPurchasesMinor: year?.value ?? 0,
-			yearDeliveries: year?.count ?? 0
-		};
+		return { yearPurchasesMinor: year?.value ?? 0, yearDeliveries: year?.count ?? 0 };
 	}
 }
