@@ -12,7 +12,6 @@ export interface CatalogFilters {
 	readonly colorOptionIds?: readonly number[] | undefined;
 	readonly lengthFromMm?: number | undefined;
 	readonly lengthToMm?: number | undefined;
-	readonly inStock?: boolean | undefined;
 }
 
 export interface CatalogFacetsDto {
@@ -52,9 +51,8 @@ export interface ProductListItemDto {
 	readonly coverMediaId: number | null;
 	readonly variantCount: number;
 	readonly materialTitles: readonly string[];
+	/** The storefront shows no stock (tech.md v1.42): the shop floor and the warehouse keep it. */
 	readonly lengthsMm: readonly number[];
-	/** Sum of the stock balances of the visible variants, never below zero. */
-	readonly stockQty: number;
 	readonly minPriceMinor?: number;
 	/** Price the counterparty shows its own client (P7). One per model, both portal roles see it. */
 	readonly agencyPriceMinor?: number;
@@ -79,8 +77,6 @@ export interface VariantDto {
 	readonly weightG: number | null;
 	/** Compatibility matrix: the options allowed for this variant. */
 	readonly options: readonly OptionDto[];
-	/** Stock balance: the sum of moves (tech.md 5.7), shown as zero when it runs negative. */
-	readonly stockQty: number;
 	/** Base price in P1; P2 replaces the source with the personal price of the counterparty. */
 	readonly priceMinor?: number;
 	/** Owner only. */

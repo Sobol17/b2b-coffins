@@ -88,11 +88,6 @@
 		{#if hint}<p class="text-xs text-fg-faint">{hint}</p>{/if}
 	</fieldset>
 
-	<fieldset>
-		<legend class="mb-3 text-xs tracking-[0.14em] text-fg-faint uppercase">Наличие</legend>
-		<Checkbox name="inStock" value="1" label="Есть на складе" checked={filters.inStock === true} />
-	</fieldset>
-
 	<div class="flex gap-2">
 		<Button type="submit" class="flex-1">Применить</Button>
 		<Button variant="secondary" href={resolve(`/portal/catalog/${categoryId}`)}>Сброс</Button>

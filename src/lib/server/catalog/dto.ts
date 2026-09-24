@@ -20,7 +20,6 @@ export interface ListItemExtra {
 	readonly mediaIds: readonly number[];
 	readonly materialTitles: readonly string[];
 	readonly lengthsMm: readonly number[];
-	readonly stockQty: number;
 	readonly minPriceMinor: number | undefined;
 	readonly agencyPriceMinor: number | undefined;
 }
@@ -55,7 +54,6 @@ export class CatalogDtoMapper {
 			variantCount: extra.variantCount,
 			materialTitles: extra.materialTitles,
 			lengthsMm: extra.lengthsMm,
-			stockQty: extra.stockQty,
 			...definedProps({
 				minPriceMinor: extra.minPriceMinor,
 				agencyPriceMinor: extra.agencyPriceMinor
@@ -76,8 +74,7 @@ export class CatalogDtoMapper {
 	static toVariant(
 		row: VariantRow,
 		options: readonly OptionDto[],
-		price: VariantPrice | undefined,
-		stockQty: number
+		price: VariantPrice | undefined
 	): VariantDto {
 		return {
 			id: row.id,
@@ -89,7 +86,6 @@ export class CatalogDtoMapper {
 			heightMm: row.heightMm,
 			weightG: row.weightG,
 			options,
-			stockQty,
 			...definedProps({ priceMinor: price?.priceMinor, costPriceMinor: price?.costPriceMinor })
 		};
 	}

@@ -34,12 +34,6 @@
 				prefix={product.agencyPriceMinor === undefined ? 'от ' : undefined}
 			/>
 		</div>
-		<div
-			data-testid="product-stock"
-			class={['text-xs', product.stockQty > 0 ? 'text-link' : 'text-fg-muted']}
-		>
-			{product.stockQty > 0 ? `На складе ${product.stockQty} шт` : 'Нет на складе'}
-		</div>
 		<Button
 			variant="secondary"
 			size="sm"

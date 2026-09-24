@@ -6,8 +6,7 @@ import {
 	options,
 	productOptions,
 	productVariants,
-	products,
-	stockMoves
+	products
 } from '../db/schema';
 import { productVisible, variantVisible, type Visibility } from './visibility';
 import type { OptionKind } from '$lib/types/catalog';
@@ -120,22 +119,6 @@ export class VariantRepository extends BaseRepository<typeof productVariants> {
 				asc(productVariants.sku)
 			)
 			.all();
-	}
-
-	/** Stock balance per variant: the sum of the moves of its stock item (tech.md 5.7). */
-	stockByVariants(variantIds: readonly number[]): Map<number, number> {
-		if (variantIds.length === 0) return new Map();
-		const rows = this.db()
-			.select({
-				id: productVariants.id,
-				qty: sql<number>`coalesce(sum(${stockMoves.qty}), 0)`
-			})
-			.from(productVariants)
-			.leftJoin(stockMoves, eq(stockMoves.stockItemId, productVariants.stockItemId))
-			.where(inArray(productVariants.id, [...variantIds]))
-			.groupBy(productVariants.id)
-			.all();
-		return new Map(rows.map((row) => [row.id, row.qty]));
 	}
 
 	/** Active options allowed per variant, defaults first. */

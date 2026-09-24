@@ -10,7 +10,7 @@ function unique<T>(values: readonly T[]): T[] {
 	return [...new Set(values)];
 }
 
-/** Turns product rows into storefront cards: materials, lengths, stock and the price "from". */
+/** Turns product rows into storefront cards: materials, lengths and the price "from". */
 export class ProductListProjector {
 	constructor(
 		private readonly products: CatalogRepository,
@@ -22,7 +22,6 @@ export class ProductListProjector {
 	project(rows: readonly ProductRow[], visibility: Visibility): ProductListItemDto[] {
 		const ids = rows.map((row) => row.id);
 		const variants = this.variants.findByProducts(ids, visibility);
-		const stock = this.variants.stockByVariants(variants.map((variant) => variant.id));
 		const minPrices = this.pricing.minBy(
 			variants.map((variant) => ({ id: variant.id, key: variant.productId }))
 		);
@@ -38,8 +37,6 @@ export class ProductListProjector {
 				lengthsMm: unique(
 					own.flatMap((variant) => (variant.lengthMm === null ? [] : [variant.lengthMm]))
 				).sort((a, b) => a - b),
-				// A negative balance is a stock error for the workshop (C8), not "minus five coffins".
-				stockQty: own.reduce((sum, variant) => sum + Math.max(0, stock.get(variant.id) ?? 0), 0),
 				minPriceMinor: minPrices?.get(row.id),
 				agencyPriceMinor: agencyPrices?.get(row.id)
 			});

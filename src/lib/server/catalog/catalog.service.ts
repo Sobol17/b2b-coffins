@@ -187,7 +187,6 @@ export class CatalogService extends BaseService {
 		const deltas = this.ctx.canSeePrices
 			? this.variants.optionDeltas([...new Set(optionRows.map((row) => row.id))])
 			: undefined;
-		const stock = this.variants.stockByVariants(variantIds);
 
 		return variants.map((variant) =>
 			CatalogDtoMapper.toVariant(
@@ -195,8 +194,7 @@ export class CatalogService extends BaseService {
 				optionRows
 					.filter((row) => row.variantId === variant.id)
 					.map((row) => CatalogDtoMapper.toOption(row, deltas?.get(row.id))),
-				prices?.get(variant.id),
-				Math.max(0, stock.get(variant.id) ?? 0)
+				prices?.get(variant.id)
 			)
 		);
 	}
