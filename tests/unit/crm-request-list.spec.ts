@@ -1,6 +1,8 @@
 import { eq } from 'drizzle-orm';
+import ExcelJS from 'exceljs';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { ForbiddenError } from '../../src/lib/server/core/errors';
+import { CrmRequestExportService } from '../../src/lib/server/crm-request/crm-request-export.service';
 import { CrmRequestListService } from '../../src/lib/server/crm-request/crm-request-list.service';
 import { counterparties, requests } from '../../src/lib/server/db/schema';
 import { ATTENTION_FLAGS, BOARD_STATUSES } from '../../src/lib/types/crm-request';
@@ -267,5 +269,65 @@ describe('the board of the workshop (C4)', () => {
 			.columns.find((entry) => entry.status === 'in_work');
 		expect(column?.cards).toHaveLength(50);
 		expect(column?.total).toBe(52);
+	});
+});
+
+describe('the registry as XLSX (C4)', () => {
+	async function sheetOf(ctx: typeof manager, filters: Parameters<typeof crmQuery>[0] = {}) {
+		const list = new CrmRequestListService(ctx, undefined, undefined, 'Europe/Moscow', () => now);
+		const body = await new CrmRequestExportService(ctx, list, 'Europe/Moscow').workbook(
+			crmQuery(filters)
+		);
+		const workbook = new ExcelJS.Workbook();
+		await workbook.xlsx.load(body as unknown as ArrayBuffer);
+		const sheet = workbook.getWorksheet('Заявки');
+		if (!sheet) throw new Error('no sheet');
+		return sheet
+			.getSheetValues()
+			.filter(Boolean)
+			.map((row) => (row as unknown[]).slice(1));
+	}
+
+	it('writes the filtered rows with whole rubles and without the name of the deceased', async () => {
+		insertRequest({
+			status: 'new',
+			counterpartyId: world.cpId,
+			createdById: managerId,
+			number: 'З-2026-00100',
+			totalMinor: 12_345_67,
+			deceasedName: 'Сидоров Сидор'
+		});
+		insertRequest({
+			status: 'ready',
+			counterpartyId: null,
+			createdById: managerId,
+			number: 'З-2026-00101'
+		});
+		const rows = await sheetOf(manager, { status: 'new' });
+		expect(rows[0]).toContain('Сумма, ₽');
+		expect(rows).toHaveLength(2);
+		expect(rows[1]).toEqual(
+			expect.arrayContaining(['З-2026-00100', 'Заявка', 'Ритуал-Сервис', 12_346])
+		);
+		expect(JSON.stringify(rows)).not.toContain('Сидоров');
+	});
+
+	it('leaves the money columns out for a role without prices', async () => {
+		insertRequest({
+			status: 'new',
+			counterpartyId: world.cpId,
+			createdById: managerId,
+			totalMinor: 5_00
+		});
+		const rows = await sheetOf({ ...manager, canSeePrices: false });
+		expect(rows[0]).not.toContain('Сумма, ₽');
+		expect(rows[1]).not.toContain(5);
+	});
+
+	it('refuses the crew and the portal', () => {
+		expect(() => new CrmRequestExportService(crmActor('driver', driverId))).toThrow(ForbiddenError);
+		expect(
+			() => new CrmRequestExportService(portalActor('cp_admin', world.adminId, world.cpId))
+		).toThrow(ForbiddenError);
 	});
 });
