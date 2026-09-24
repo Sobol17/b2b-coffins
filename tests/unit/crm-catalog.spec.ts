@@ -2,7 +2,7 @@ import { eq } from 'drizzle-orm';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { PolicyService } from '../../src/lib/server/auth/policy';
 import { CrmCatalogService } from '../../src/lib/server/crm-catalog/crm-catalog.service';
-import { ForbiddenError, ValidationError } from '../../src/lib/server/core/errors';
+import { ConflictError, ForbiddenError, ValidationError } from '../../src/lib/server/core/errors';
 import { auditLog, dictItems, productVariants, products } from '../../src/lib/server/db/schema';
 import { CatalogService } from '../../src/lib/server/catalog/catalog.service';
 import type { ActorContext } from '../../src/lib/types/actor';
@@ -78,6 +78,22 @@ describe('C2 catalog from an empty database', () => {
 		expect(portal.variants[0]?.options[0]?.id).toBe(option.id);
 		expect(portal.variants[0]).not.toHaveProperty('costPriceMinor');
 		expect(service.getProduct(product.id).variants[0]?.costPriceMinor).toBe(50000);
+		expect(() =>
+			service.updateVariant(variant.id, {
+				productId: product.id,
+				sku: variant.sku,
+				sizeCode: variant.sizeCode,
+				materialId,
+				lengthMm: variant.lengthMm,
+				widthMm: variant.widthMm,
+				heightMm: variant.heightMm,
+				weightG: variant.weightG,
+				basePriceMinor: variant.basePriceMinor,
+				costPriceMinor: 50000,
+				stockItemId: null,
+				isPublished: false
+			})
+		).toThrow(ConflictError);
 		service.setProductPublished(product.id, false);
 		expect(() => new CatalogService(actor('cp_admin')).get(product.id)).toThrow();
 		expect(
