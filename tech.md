@@ -833,7 +833,7 @@ export const settings = sqliteTable('settings', {
 
 Форма `charity.rate_bp`: целое число базисных пунктов от 0 до 10000. Форма `charity.fund`: `{ title: string; url?: string }` (v1.18). Форма `notifications.enabled`: `boolean`, `false` останавливает разворот любых событий в уведомления (v1.19).
 
-Форма `org.requisites` (v1.37): `{ name: string; inn?: string; kpp?: string; address?: string; phone?: string; email?: string; bank?: string; bik?: string; account?: string }`. ИНН 10 или 12 цифр, КПП и БИК по 9 цифр, расчётный счёт 20 цифр. Гостю из них уходят только телефон, адрес и почта (§18.5). Форма `counterparty.staff_limit_default`: целое от 1 до 1000, лимит нового контрагента при создании (v1.37).
+Форма `org.requisites` (v1.37): `{ name: string; inn?: string; kpp?: string; address?: string; phone?: string; email?: string; bank?: string; bik?: string; account?: string }`. ИНН 10 или 12 цифр, КПП и БИК по 9 цифр, расчётный счёт 20 цифр. Гостю из них уходят только телефон и адрес (`OrgService.publicContacts`). Форма `counterparty.staff_limit_default`: целое от 1 до 1000, лимит нового контрагента при создании (v1.37).
 
 Нумерация в CRM (v1.37): правятся `prefix` (до 10 символов) и `period` ключа `request`. Сохранение пересчитывает `periodKey` на текущий период и ставит `lastValue` равным наибольшему номеру той же формы среди `requests.number`, поэтому возврат к прежнему префиксу или периоду не выдаёт занятый номер. Правило живёт в `resumeSequence` рядом с `nextNumber`.
 
