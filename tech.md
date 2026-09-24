@@ -1,7 +1,7 @@
 # tech.md — ядро проекта
 
 **Проект:** B2B-портал + CRM для столярной мастерской (производство гробов)
-**Версия ядра:** v1.39
+**Версия ядра:** v1.40
 **Дата:** 24.09.2026
 **Статус:** этап 1 (портал, P1–P14) завершён 19.09.2026, этап 2 (CRM) начат слайсом C1
 **Владелец файла:** Sobol17 (тимлид и единственный разработчик)
@@ -11,6 +11,7 @@
 
 | Версия | Изменение |
 |---|---|
+| v1.40 | Контракт C4. Доску, реестр и карточку заявки мастерской читают `owner` и `manager` по праву `request.read.any`, заводят заявку по `request.create` в контуре CRM, ведут её (исполнители, приоритет, состав) по `request.assign`; матрица прав не менялась, цеху и водителю экраны отвечают 403 до C5 и C6. Экраны: доска `/crm/board`, реестр `/crm/requests` с выгрузкой `/crm/requests/export.xlsx`, заведение `/crm/requests/new`, карточка `/crm/requests/[id]`. Код экранов лежит в `src/lib/crm/requests/`, серверная часть в `server/crm-request/`. Доска рисует шесть колонок основного потока `BOARD_STATUSES`, в колонке не больше `BOARD_COLUMN_LIMIT` карточек и общий счётчик; колонка `paid` берёт заявки, оплаченные за последние `BOARD_PAID_DAYS` дней. Порядок карточек: срочные, затем ближний `deliveryAt`, заявки без срока в конце. Перенос карточки идёт через `RequestTransitionService`: машина состояний решает, отказ по guard-у называет его словами. Фильтры доски и реестра `CrmRequestFilters`: статус (только реестр), контрагент или «на склад», приоритет, флаг внимания, окно дат по `submittedAt`; поиск по номеру, своему номеру контрагента, названию контрагента и ФИО умершего. Сортировки `CRM_REQUEST_SORTS`, сумма только роли с ценами. Флаги внимания считает чистая функция `attentionFlags` в `lib/domain/request/attention.ts`: `no_assignee` у заявки в `new` и `in_work` без исполнителей и у заявки в `ready` без водителя, `payment_overdue` у заявки в `awaiting_payment`, если с `deliveredAt` прошло больше дней, чем даёт схема расчётов контрагента (`PAYMENT_WAIT_DAYS`: по факту 3, раз в неделю 7, раз в месяц 30); заявка на склад долга не ждёт. Выгрузка XLSX синхронная, как прайс-лист: те же фильтры и сортировка, не больше `CRM_REQUEST_EXPORT_LIMIT` строк, суммы в целых рублях только роли с ценами, ФИО умершего в файл не пишется. Заявку контрагента или заявку на склад менеджер заводит одной формой сразу в статус `new`: номер из `numbering_sequences`, строки с цветом по матрице варианта, цены по правилам корзины (персональная цена, договорная скидка и `discount_rules` контрагента; у заявки на склад базовая цена без скидки), переход `draft -> new` проверяет машина состояний с guard-ом `deliveryFilled`, пишутся история, событие `request.submitted` и аудит `request.create`. Срок доставки вводится датой и временем в `org.timezone`. Приём `new -> in_work` цены не пересчитывает: их заморозила отправка (P4) или последняя правка состава в `new`; с приёма цены и скидка зафиксированы. Состав правится в `new` свободно, с пересчётом всей заявки по текущим ценам, и в `in_work` под контролем: комментарий обязателен, прежние строки держат свою цену штуки, новая строка берёт персональную цену на момент правки, скидка сохраняет долю (`keepDiscountShare` в `lib/domain/request/amendment.ts`); в других статусах состав закрыт, последнюю строку не удалить. Исполнители (`request_assignees`, роли `ASSIGNEE_ROLES`) назначаются из активных учётных записей CRM с этой ролью в статусах `new`, `in_work`, `ready`; в `in_work` и `ready` последнего исполнителя не снять. Приоритет меняется в тех же статусах. Правка после запуска (состав, исполнители, приоритет в статусах после `new`) пишет строку `request_status_history` с `from_status = to_status` и комментарием: это не переход, машина состояний её не проверяет, портал её не показывает. Действия в `audit_log`: `request.create`, `request.items_update`, `request.assign`, `request.unassign`, `request.priority`, переходы по-прежнему `request.transition`. `KanbanCard` получил `href` и `tags`, `KanbanBoard` получил `totals`. В §8 добавлен `lib/types/crm-request.ts` |
 | v1.39 | Контракт C3. Контрагентов ведут `owner` и `manager` по праву `counterparty.manage`, матрица прав не менялась. Экраны: реестр `/crm/counterparties` с поиском по названию и ИНН и фильтрами менеджера, схемы расчётов и наличия долга, заведение `/crm/counterparties/new`, карточка `/crm/counterparties/[id]`. Код экранов лежит в `src/lib/crm/counterparties/`, серверная часть в `server/crm-counterparty/`. Контрагент заводится одной транзакцией вместе с первым администратором (`cp_admin`), как в `pnpm admin counterparty:create`; лимит сотрудников нового контрагента берётся из `counterparty.staff_limit_default`. Письмо с временным паролем уходит через `MailDriver` напрямую шаблоном портала, как в P2, и расходует ограничение `staff.create`; пароль один раз показывается на странице. Выдача администратора: новая учётная запись с ролью `cp_admin` в пределах `staff_limit`, перевод активного сотрудника контрагента в `cp_admin`, повторная выдача доступа новым временным паролем с закрытием всех сессий. Отключение и понижение людей контрагента остаётся за `cp_admin` в портале (P2). Ответственный менеджер выбирается среди активных учётных записей CRM с ролью `manager` или `owner`, прайс-лист среди `price_lists` либо не задан. Договоры добавляются, правятся и удаляются, `valid_until` не раньше `signed_at`; портал по-прежнему показывает последний по `signed_at`. Скан договора в C3 не загружается, `contracts.file_id` остаётся пустым. Адрес доставки удаляется мягко (`deleted_at`), потому что на него ссылаются заявки; адрес по умолчанию у контрагента один, выбор нового снимает флаг с прежнего. Архивации контрагента в C3 нет, `is_active` не меняется. Правило долга: долг заявки равен `max(0, total_minor − Σ payment_marks.amount_minor)` для заявок в `delivered` и `awaiting_payment`, долг контрагента равен сумме долгов его заявок, `openCount` считает заявки с положительным долгом. Один запрос `DebtRepository` считает долг и для карточки портала (P2), и для CRM: `requests.paid_minor` для долга не читается, поэтому индикатор сходится с реестром отметок оплаты. Карточка отдаёт историю заявок контрагента без черновиков в `Page<RequestListItemDto>` и реестр отметок оплаты в `Page<CrmPaymentMarkDto>` новыми сверху. Действия в `audit_log`: `counterparty.create`, `counterparty.update`, `counterparty.terms_update`, `counterparty.notes_update`, `counterparty.contract_create`, `counterparty.contract_update`, `counterparty.contract_delete`, `counterparty.address_create`, `counterparty.address_update`, `counterparty.address_delete`, `counterparty.address_default`, `counterparty.admin_issue`, `counterparty.admin_promote`, `counterparty.access_resend`; контакты людей и пароли в журнал не пишутся. В §8 добавлен `lib/types/crm-counterparty.ts` |
 | v1.38 | Контракт C2. CRM управляет категориями, моделями, вариантами, цветами, матрицей совместимости, фото, прайс-листами и правилами скидок. `catalog.manage` даёт запись руководителю и менеджеру; себестоимость читает и меняет только `owner` по `catalog.cost.read`, для прочих ролей её колонка не выбирается. Обложка — первое фото модели по `(sort_order, id)`. На один момент действует не более одного базового прайс-листа; окна действия полуоткрытые `[valid_from, valid_to)`. Для каждой строки заявки скидка равна большему из договорной и подходящих действующих правил `discount_rules`; правила с `counterparty_id = null` общие, с `category_id = null` охватывают все категории, наследование по дереву категорий есть. Суммы строк с одинаковым процентом объединяются до округления скидки, чтобы договорная скидка без правил считалась как раньше. Складскую позицию вариант выбирает из существующих `stock_items.kind = 'product'`; C2 показывает связанные с вариантом нормы активной версии `bom_norms`, создание учётных позиций и норм остаётся в C8 и C9. Для C2 добавлены DTO в §8. Скрытие модели или варианта немедленно закрывает их и фото модели для портала. |
 | v1.0 | Первая заморозка ядра: стек, структура, схема БД, контракты очереди и событий, общие типы, UI-примитивы, правила кода, дорожная карта слайсов |
@@ -572,6 +573,8 @@ export const comments = sqliteTable('comments', {
   createdAt: createdAt()
 }, (t) => ({ reqIdx: index('comments_request_idx').on(t.requestId, t.createdAt) }));
 ```
+
+Правка заявки после запуска в работу (состав, исполнители, приоритет) пишет строку `request_status_history` с `from_status = to_status` и обязательным комментарием (v1.40). Переходом такая строка не считается, в портал не отдаётся.
 
 Отгрузка заявки контрагента: адрес, срок и ФИО умершего обязательны, самовывоза в системе нет (v1.33). Три колонки остаются nullable, потому что у заявки на склад (`isStockRequest = true`) нет ни контрагента, ни адреса, ни умершего, а фиктивные значения ради `notNull` были бы ложью в данных. Обязательность держит guard `deliveryFilled` на переходе `draft -> new` (§6.2) и Zod на форме корзины.
 
@@ -1259,6 +1262,44 @@ export interface CrmCounterpartyChoicesDto {
 export interface CreatedCounterpartyDto { counterpartyId: number; access: CreatedStaffDto; }
 // The request history of the card reuses Page<RequestListItemDto>, drafts excluded.
 
+// crm-request.ts — board, registry and card of the workshop (C4). Money keys only for a role with prices.
+export const BOARD_STATUSES = ['new','in_work','ready','delivered','awaiting_payment','paid'] as const;
+export const BOARD_COLUMN_LIMIT = 50;
+export const BOARD_PAID_DAYS = 7;                   // the paid column keeps the last week only
+export const ATTENTION_FLAGS = ['no_assignee','payment_overdue'] as const;
+export type AttentionFlag = (typeof ATTENTION_FLAGS)[number];
+export const ASSIGNEE_ROLES = ['carpenter','painter','driver'] as const;
+export type AssigneeRole = (typeof ASSIGNEE_ROLES)[number];
+export const CRM_REQUEST_SORTS = ['submittedAt','number','deliveryAt','total'] as const;   // total: role with prices only
+export const CRM_REQUEST_EXPORT_LIMIT = 5000;
+export interface CrmRequestFilters {
+  status?: RequestStatus;                // registry only: the board has a column per status
+  counterpartyId?: number; stockOnly?: boolean;
+  priority?: RequestPriority; flag?: AttentionFlag;
+  from?: string; to?: string;            // ISO dates, closed window over submittedAt in org.timezone
+}
+export interface CrmRequestListItemDto extends RequestListItemDto {
+  counterpartyId: number | null; isStockRequest: boolean; deliveryAt: string | null;
+  assigneeNames: string[]; flags: AttentionFlag[];
+}
+export interface CrmBoardColumnDto { status: RequestStatus; total: number; cards: CrmRequestListItemDto[]; }
+export interface CrmBoardDto { columns: CrmBoardColumnDto[]; }
+export interface CrmAssigneeDto { userId: number; fullName: string; role: AssigneeRole; }
+// free: `new`, the whole request is repriced; controlled: `in_work`, frozen prices and a comment; closed: later.
+export const ITEMS_EDIT_MODES = ['free','controlled','closed'] as const;
+export type ItemsEditMode = (typeof ITEMS_EDIT_MODES)[number];
+export interface CrmRequestCardDto extends Omit<RequestCardDto, 'comments'> {
+  counterpartyId: number | null; counterpartyName: string | null; isStockRequest: boolean;
+  assignees: CrmAssigneeDto[]; flags: AttentionFlag[]; itemsEdit: ItemsEditMode;
+}
+export interface CrmRequestChoicesDto {
+  counterparties: { id: number; name: string }[];
+  variants: { id: number; sku: string; productTitle: string; sizeCode: string; materialTitle: string; options: { id: number; title: string }[] }[];
+  crew: { id: number; fullName: string; roles: AssigneeRole[] }[];
+  refusalReasons: { id: number; title: string }[];
+}
+export interface CreatedCrmRequestDto { id: number; number: string; }
+
 // money.ts — branded type, blocks accidental mixing with plain numbers
 export type Minor = number & { readonly __brand: 'minor' };
 
@@ -1310,7 +1351,7 @@ export class RequestDtoMapper {
 | `StatusBadge` | `status: RequestStatus`, палитра и подпись из одного словаря |
 | `Card` / `Tabs` / `Breadcrumbs` / `Pagination` | базовые |
 | `EmptyState` / `Skeleton` / `Spinner` / `ErrorState` | `title`, `description`, `action` |
-| `KanbanBoard` / `KanbanColumn` / `KanbanCard` | `columns: RequestStatus[]`, `onDrop(id, status)` |
+| `KanbanBoard` / `KanbanColumn` / `KanbanCard` | `columns: RequestStatus[]`, `onDrop(id, status)`, `totals?` (счётчик колонки, когда карточек больше, чем показано); у `KanbanItem` необязательные `href` (карточка открывается ссылкой) и `tags` (короткие метки: срочно, флаги внимания), v1.40 |
 | `AnimatedCounter` | `valueMinor`, анимация досчёта, для баннера пожертвований |
 | `PhotoGallery` / `PhotoUploader` | `mediaIds`, `editable` |
 | `PriceCell` | `valueMinor?`, рисует прочерк, когда значение не пришло |
@@ -1622,7 +1663,7 @@ CONTRACT GAP
 **C3. CRM: контрагенты.** Карточка с реквизитами, договором, адресами, прайсом и схемой расчётов, список пользователей контрагента, выдача администратора, история заявок и оплат, индикатор задолженности, заметки, ответственный менеджер. Контрагент заводится одной транзакцией с первым администратором. Долг считается из `payment_marks` одним запросом для портала и CRM (v1.39). Скан договора и архивация контрагента в объём не входят.
 **DoD:** менеджер заводит контрагента с администратором и отправляет доступ, индикатор долга сходится с реестром отметок оплаты.
 
-**C4. CRM: доска и реестр заявок.** Канбан по шести статусам с фильтрами, реестр с сортировкой, поиском и экспортом XLSX, ручное создание заявки, заявка на склад, приём в работу с фиксацией цен и скидки, назначение исполнителей, приоритет, отклонение, контролируемое изменение состава после запуска, флаги внимания (заявка без исполнителя, долгое ожидание оплаты).
+**C4. CRM: доска и реестр заявок.** Канбан по шести статусам с фильтрами, реестр с сортировкой, поиском и экспортом XLSX, ручное создание заявки, заявка на склад, приём в работу с фиксацией цен и скидки, назначение исполнителей, приоритет, отклонение, контролируемое изменение состава после запуска, флаги внимания (заявка без исполнителя, долгое ожидание оплаты). Приём цены не пересчитывает, правка состава в `in_work` держит цены строк и долю скидки, правка после запуска пишет строку истории с `from_status = to_status` (v1.40).
 **DoD:** менеджер ведёт заявку от приёма до готовности только из CRM, все изменения после запуска в работу пишутся в историю с комментарием.
 
 **C5. Цеховое рабочее место.** Мобильный список «Мои заявки» с учётом приоритета, поиск по номеру заявки, действия «Взял» и «Готово», загрузка фото результата, требования к изделию, перечень комплектующих по норме, цены и контрагент скрыты, крупные тач-цели.
