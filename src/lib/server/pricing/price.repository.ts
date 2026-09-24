@@ -36,6 +36,16 @@ export class PriceRepository extends BaseRepository<typeof priceListItems> {
 		return row;
 	}
 
+	/** The contract rate of a counterparty the caller has already reached by its own rule. */
+	contractDiscount(counterpartyId: number): number {
+		const [row] = this.db()
+			.select({ percent: counterparties.discountPercent })
+			.from(counterparties)
+			.where(eq(counterparties.id, counterpartyId))
+			.all();
+		return row?.percent ?? 0;
+	}
+
 	itemsFor(priceListId: number, variantIds: readonly number[]): Map<number, number> {
 		if (variantIds.length === 0) return new Map();
 		const rows = this.db()

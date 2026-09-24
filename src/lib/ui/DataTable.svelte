@@ -56,8 +56,11 @@
 		<div class="flex justify-end">
 			<!-- The export link carries a query string, so it is a server-built url, not a route pattern. -->
 			<!-- eslint-disable svelte/no-navigation-without-resolve -->
+			<!-- A file, not a page: without these the client router would try to render the url. -->
 			<a
 				href={exportUrl}
+				download
+				data-sveltekit-reload
 				class={buttonVariants({ variant: 'secondary' })}
 				data-testid="data-table-export"
 			>

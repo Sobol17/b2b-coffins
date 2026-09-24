@@ -1,16 +1,12 @@
 import { CatalogRepository } from '../catalog/catalog.repository';
-import { VariantRepository } from '../catalog/variant.repository';
-import { CounterpartyRepository } from '../counterparty/counterparty.repository';
 import { DeliveryAddressRepository } from '../counterparty/delivery-address.repository';
 import type { Tx } from '../db/client';
 import { AgencyPricing } from '../pricing/agency-pricing';
-import { PersonalPriceResolver } from '../pricing/personal-price';
-import { DiscountRuleRepository } from '../crm-pricing/discount-rule.repository';
 import { DraftItemRepository } from './draft-item.repository';
 import { DraftDtoMapper } from './draft.dto';
 import { DraftRepository, type DraftRow } from './draft.repository';
-import { requestTotalsWithRules } from '$lib/domain/request/discount-rules';
-import { discountPercentOf, lineTotalMinor } from '$lib/domain/request/pricing';
+import { RequestPricer } from './request-pricer';
+import { discountPercentOf } from '$lib/domain/request/pricing';
 import type { ActorContext } from '$lib/types/actor';
 import type { DraftDto } from '$lib/types/request';
 
@@ -24,65 +20,15 @@ export class DraftCalculator {
 		private readonly ctx: ActorContext,
 		private readonly drafts: DraftRepository = new DraftRepository(),
 		private readonly lines: DraftItemRepository = new DraftItemRepository(),
-		private readonly variants: VariantRepository = new VariantRepository(),
-		private readonly resolver: PersonalPriceResolver = new PersonalPriceResolver(),
-		private readonly counterparties: CounterpartyRepository = new CounterpartyRepository(),
 		private readonly addresses: DeliveryAddressRepository = new DeliveryAddressRepository(),
 		private readonly catalog: CatalogRepository = new CatalogRepository(),
 		private readonly agency: AgencyPricing = new AgencyPricing(ctx),
-		private readonly discountRules: DiscountRuleRepository = new DiscountRuleRepository()
+		private readonly pricer: RequestPricer = new RequestPricer(lines, drafts)
 	) {}
 
 	/** Stores line prices and request totals at the counterparty's current prices. */
 	recalculate(requestId: number, tx: Tx): void {
-		const lines = this.lines.lines(requestId, tx);
-		const lineOptions = this.lines.lineOptions(
-			lines.map((line) => line.id),
-			tx
-		);
-		const stored = this.variants.findPrices(
-			[...new Set(lines.map((line) => line.variantId))],
-			false
-		);
-		const personal = this.resolver.resolve(
-			this.ctx.counterpartyId,
-			new Map([...stored].map(([id, row]) => [id, row.basePriceMinor]))
-		);
-		const deltas = this.variants.optionDeltas([
-			...new Set(lineOptions.map((option) => option.optionId))
-		]);
-
-		const paths = this.discountRules.pathsForProducts(
-			lines.map((line) => line.productId),
-			tx
-		);
-		const lineTotals = lines.map((line) => {
-			const own = lineOptions
-				.filter((option) => option.itemId === line.id)
-				.map((option) => ({
-					optionId: option.optionId,
-					priceDeltaMinor: deltas.get(option.optionId) ?? 0
-				}));
-			const unitPriceMinor = personal.get(line.variantId) ?? 0;
-			const total = lineTotalMinor({
-				unitPriceMinor,
-				optionDeltasMinor: own.map((option) => option.priceDeltaMinor),
-				qty: line.qty
-			});
-			this.lines.savePrices(line.id, { unitPriceMinor, lineTotalMinor: total }, own, tx);
-			return { totalMinor: total, categoryIds: paths.get(line.productId) ?? [] };
-		});
-
-		const discountPercent = this.counterparties.findOwn(this.ctx)?.discountPercent ?? 0;
-		const rules =
-			this.ctx.counterpartyId === null
-				? []
-				: this.discountRules.activeFor(this.ctx.counterpartyId, new Date(), tx);
-		this.drafts.saveTotals(
-			requestId,
-			requestTotalsWithRules(lineTotals, discountPercent, rules),
-			tx
-		);
+		this.pricer.reprice(requestId, this.ctx.counterpartyId, tx);
 	}
 
 	project(draft: DraftRow): DraftDto {

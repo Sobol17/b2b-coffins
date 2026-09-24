@@ -10,10 +10,13 @@
 	let {
 		columns,
 		items,
+		totals,
 		onDrop
 	}: {
 		columns: readonly RequestStatus[];
 		items: readonly KanbanItem[];
+		/** Cards in a column when the page shows only part of them (v1.40). */
+		totals?: Partial<Record<RequestStatus, number>> | undefined;
 		onDrop: (id: number, status: RequestStatus) => void;
 	} = $props();
 
@@ -30,6 +33,7 @@
 		<KanbanColumn
 			{status}
 			items={items.filter((item) => item.status === status)}
+			total={totals?.[status]}
 			{onDrop}
 			onMove={move}
 		/>
