@@ -22,6 +22,7 @@ import {
 	pay,
 	refused,
 	statusOf,
+	stockUp,
 	totalOf
 } from './helpers/transitions';
 
@@ -62,11 +63,11 @@ function sent(): number {
  * mark written before the delivery move, the way the driver's checkbox will write it in C6.
  */
 function drive(id: number, upTo: RequestStatus): void {
-	assign(id, carpenterId, 'carpenter');
 	assign(id, driverId, 'driver');
 	move(managerCtx, id, 'in_work');
 	if (upTo === 'in_work') return;
-	move(carpenterCtx, id, 'ready');
+	stockUp(id);
+	move(managerCtx, id, 'ready');
 	if (upTo === 'ready') return;
 	if (upTo === 'paid') pay(id, totalOf(id), driverId);
 	move(driverCtx, id, 'delivered');
@@ -129,10 +130,7 @@ describe('request transitions (P5)', () => {
 
 	it('keeps a partly paid delivery in awaiting_payment', () => {
 		const id = sent();
-		assign(id, carpenterId, 'carpenter');
-		assign(id, driverId, 'driver');
-		move(managerCtx, id, 'in_work');
-		move(carpenterCtx, id, 'ready');
+		drive(id, 'ready');
 		pay(id, totalOf(id) - 1, driverId);
 
 		move(driverCtx, id, 'delivered');
@@ -162,11 +160,25 @@ describe('request transitions (P5)', () => {
 		expect(statusOf(id)).toBe('new');
 	});
 
-	it('answers 409 while the request has no assignee', () => {
+	it('accepts a priced request with nobody on it: the shop works by position (v1.41)', () => {
 		const id = sent();
 
-		expect(refused(() => move(managerCtx, id, 'in_work')).status).toBe(409);
-		expect(history(id)).toHaveLength(1);
+		expect(move(managerCtx, id, 'in_work').status).toBe('in_work');
+	});
+
+	it('answers 409 in words until stock fills every line of the request (v1.41)', () => {
+		const id = sent();
+		move(managerCtx, id, 'in_work');
+
+		expect(refused(() => move(managerCtx, id, 'ready'))).toEqual({
+			name: 'ConflictError',
+			status: 409
+		});
+		expect(() => move(managerCtx, id, 'ready')).toThrow('На складе не хватает позиций заявки');
+		expect(statusOf(id)).toBe('in_work');
+
+		stockUp(id);
+		expect(move(managerCtx, id, 'ready').status).toBe('ready');
 	});
 
 	it('answers 403 on a request of another counterparty', () => {
@@ -186,12 +198,14 @@ describe('request transitions (P5)', () => {
 		expect(history(id).at(-1)).toMatchObject({ toStatus: 'cancelled', actorId: world.adminId });
 	});
 
-	it('keeps an unassigned carpenter out of the workshop move', () => {
+	it('keeps the shop crew out of the assembly, assigned or not (v1.41)', () => {
 		const id = sent();
-		assign(id, driverId, 'driver');
+		assign(id, carpenterId, 'carpenter');
 		move(managerCtx, id, 'in_work');
+		stockUp(id);
 
 		expect(refused(() => move(carpenterCtx, id, 'ready')).status).toBe(403);
+		expect(statusOf(id)).toBe('in_work');
 	});
 
 	it('answers 404 for a request that does not exist', () => {
@@ -242,9 +256,9 @@ describe('request transitions (P5)', () => {
 
 	it('keeps money out of the answer given to a price-blind role', () => {
 		const id = sent();
-		drive(id, 'in_work');
+		drive(id, 'ready');
 
-		const moved = move(carpenterCtx, id, 'ready');
+		const moved = move(driverCtx, id, 'delivered');
 
 		expect(Object.keys(moved)).toEqual(['id', 'number', 'status']);
 	});

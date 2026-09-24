@@ -14,7 +14,7 @@
 
 	const FORWARD: Partial<Record<RequestStatus, string>> = {
 		in_work: 'Принять в работу',
-		ready: 'Изделие готово',
+		ready: 'Заявка собрана',
 		delivered: 'Доставлено'
 	};
 

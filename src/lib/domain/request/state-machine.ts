@@ -17,7 +17,7 @@ export const TRANSITIONS: readonly Transition[] = [
 		from: 'new',
 		to: 'in_work',
 		roles: ['manager', 'owner'],
-		guards: ['hasAssignee', 'pricesFixed'],
+		guards: ['pricesFixed'],
 		effects: ['audit']
 	},
 	{
@@ -30,10 +30,10 @@ export const TRANSITIONS: readonly Transition[] = [
 	{
 		from: 'in_work',
 		to: 'ready',
-		roles: ['carpenter', 'painter', 'manager', 'owner'],
-		assignedOnly: true,
-		guards: ['hasAssignee'],
-		effects: ['consumeComponents', 'produceStockItems', 'emit:request.ready']
+		// The shop works by position and the request is assembled from stock (tech.md v1.41).
+		roles: ['manager', 'owner'],
+		guards: ['stockCovered'],
+		effects: ['emit:request.ready']
 	},
 	{
 		from: 'ready',

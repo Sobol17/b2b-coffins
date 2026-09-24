@@ -21,7 +21,7 @@ import type { RequestTransitionInput } from '$lib/validation/request';
 
 /** A refused guard in words, so the board says what to do instead of "not allowed" (v1.40). */
 const GUARD_REFUSAL: Readonly<Record<GuardCode, string>> = {
-	hasAssignee: 'Назначьте исполнителя заявки',
+	stockCovered: 'На складе не хватает позиций заявки',
 	pricesFixed: 'У позиций заявки нет цены',
 	fullyPaid: 'Заявка оплачена не полностью',
 	deliveryFilled: 'Заполните адрес, срок доставки и ФИО умершего'

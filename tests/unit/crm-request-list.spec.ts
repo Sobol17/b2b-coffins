@@ -201,7 +201,8 @@ describe('attention flags: the list and the filter agree (C4)', () => {
 				.sort();
 			expect(found).toEqual(flagged);
 		}
-		expect(all.find((row) => row.id === lonely)?.flags).toEqual(['no_assignee']);
+		// In work without anyone on it is the normal case since v1.41: the shop works by position.
+		expect(all.find((row) => row.id === lonely)?.flags).toEqual([]);
 		expect(all.find((row) => row.id === noDriver)?.flags).toEqual(['no_assignee']);
 		expect(all.find((row) => row.id === overdue)?.flags).toEqual(['payment_overdue']);
 		db.update(counterparties)

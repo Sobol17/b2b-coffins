@@ -19,10 +19,12 @@ function assertProperty(property: fc.IPropertyWithHooks<unknown[]>): void {
 }
 
 describe('the flag of a request without an assignee (C4)', () => {
-	it('raises for a new or accepted request with nobody on it', () => {
-		expect(lacksAssignee('new', [])).toBe(true);
-		expect(lacksAssignee('in_work', [])).toBe(true);
-		expect(lacksAssignee('in_work', ['painter'])).toBe(false);
+	it('stays quiet before the assembly: the shop works by position (v1.41)', () => {
+		assertProperty(
+			fc.property(fc.constantFrom('new', 'in_work' as const), roles, (status, assigned) => {
+				return !lacksAssignee(status, assigned);
+			})
+		);
 	});
 
 	it('asks a finished request for a driver, whoever else is on it', () => {

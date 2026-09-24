@@ -49,7 +49,7 @@ describe('transition flow of tech.md 6.2', () => {
 						isOwnRequest: true,
 						isAssigned: true,
 						hasReason: true,
-						guards: { hasAssignee: true, pricesFixed: true, fullyPaid: true }
+						guards: { stockCovered: true, pricesFixed: true, fullyPaid: true }
 					}).ok === false
 				);
 			})

@@ -31,19 +31,17 @@ const line = fc.record({
 });
 
 const demand = fc.array(line, { maxLength: 25 }).map((rows) =>
-	rows.map(
-		(row, index): DemandLine => ({
-			itemId: index + 1,
-			requestId: row.requestId,
-			variantId: row.variantId,
-			optionId: row.optionId,
-			stockItemId: row.variantId === 3 ? null : 100 + row.variantId,
-			qty: row.qty,
-			tier: row.tier,
-			isUrgent: row.isUrgent,
-			deliveryAt: row.deliveryDay === null ? null : new Date(base + row.deliveryDay * DAY_MS)
-		})
-	)
+	rows.map((row, index): DemandLine => ({
+		itemId: index + 1,
+		requestId: row.requestId,
+		variantId: row.variantId,
+		optionId: row.optionId,
+		stockItemId: row.variantId === 3 ? null : 100 + row.variantId,
+		qty: row.qty,
+		tier: row.tier,
+		isUrgent: row.isUrgent,
+		deliveryAt: row.deliveryDay === null ? null : new Date(base + row.deliveryDay * DAY_MS)
+	}))
 );
 
 const balances = fc
@@ -186,7 +184,15 @@ describe('fill of requests from stock (tech.md v1.41)', () => {
 			[2, 1]
 		]);
 		expect(isCovered([{ itemId: 1, qty: 2 }], filled)).toBe(true);
-		expect(isCovered([{ itemId: 1, qty: 2 }, { itemId: 2, qty: 2 }], filled)).toBe(false);
+		expect(
+			isCovered(
+				[
+					{ itemId: 1, qty: 2 },
+					{ itemId: 2, qty: 2 }
+				],
+				filled
+			)
+		).toBe(false);
 		expect(isCovered([], filled)).toBe(false);
 	});
 

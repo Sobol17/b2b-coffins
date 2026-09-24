@@ -21,7 +21,7 @@ import {
 	seedOrderingWorld,
 	variantId
 } from './helpers/portal-requests';
-import { history, move } from './helpers/transitions';
+import { history, move, stockUp } from './helpers/transitions';
 
 const db = migratedDatabase();
 const world = seedOrderingWorld(db);
@@ -134,6 +134,7 @@ describe('the crew of a request (C4)', () => {
 		expect(totals(id)?.priority).toBe('urgent');
 		expect(notes(id).at(-1)?.comment).toBe('Приоритет: Срочно');
 		crew().assign(id, { userId: driverId, role: 'driver' });
+		stockUp(id);
 		move(manager, id, 'ready');
 		move(manager, id, 'delivered');
 		expect(() => crew().setPriority(id, 'normal')).toThrow(ConflictError);
@@ -210,6 +211,7 @@ describe('the lines after the launch (C4 DoD)', () => {
 
 	it('are closed once the product is made, and closed to the crew', () => {
 		const id = accepted();
+		stockUp(id);
 		move(manager, id, 'ready');
 		const [first] = lines(id);
 		expect(() => items().setQty(id, { itemId: first?.id ?? 0, qty: 1, comment: 'поздно' })).toThrow(

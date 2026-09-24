@@ -1,4 +1,4 @@
-import { and, eq, gte, inArray, lte, ne, not, or, sql, type SQL } from 'drizzle-orm';
+import { and, eq, gte, lte, ne, not, or, sql, type SQL } from 'drizzle-orm';
 import { containsText } from '../core/search';
 import { counterparties, requestAssignees, requests } from '../db/schema';
 import { paymentDueBefore } from '$lib/domain/request/attention';
@@ -18,7 +18,6 @@ export interface CrmRequestCriteria {
 }
 
 // Raw SQL on purpose: drizzle renders the outer column unqualified inside a builder subquery.
-const hasAssignee = sql`exists (select 1 from ${requestAssignees} where ${requestAssignees.requestId} = ${requests.id})`;
 const hasDriver = sql`exists (select 1 from ${requestAssignees} where ${requestAssignees.requestId} = ${requests.id} and ${requestAssignees.role} = ${'driver'})`;
 
 /**
@@ -26,12 +25,7 @@ const hasDriver = sql`exists (select 1 from ${requestAssignees} where ${requestA
  * because a flag the board shows must also be the one the filter finds.
  */
 export function flagWhere(flag: AttentionFlag, now: Date): SQL | undefined {
-	if (flag === 'no_assignee') {
-		return or(
-			and(inArray(requests.status, ['new', 'in_work']), not(hasAssignee)),
-			and(eq(requests.status, 'ready'), not(hasDriver))
-		);
-	}
+	if (flag === 'no_assignee') return and(eq(requests.status, 'ready'), not(hasDriver));
 	return and(
 		eq(requests.status, 'awaiting_payment'),
 		or(

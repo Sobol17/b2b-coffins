@@ -59,7 +59,8 @@ describe('the workshop card of a request (C4)', () => {
 			counterpartyId: world.cpId,
 			counterpartyName: 'Ритуал-Сервис',
 			isStockRequest: false,
-			flags: ['no_assignee'],
+			// The shop works by position (v1.41): a request before assembly needs nobody on it.
+			flags: [],
 			itemsEdit: 'free',
 			assignees: [],
 			totalMinor: 1_577_000,
@@ -87,10 +88,11 @@ describe('the workshop card of a request (C4)', () => {
 		]);
 	});
 
-	it('says which guard stops the acceptance', () => {
+	it('says which guard stops the assembly', () => {
 		const id = newRequest('stock');
-		expect(() => move(manager, id, 'in_work')).toThrow(ConflictError);
-		expect(() => move(manager, id, 'in_work')).toThrow('Назначьте исполнителя заявки');
+		move(manager, id, 'in_work');
+		expect(() => move(manager, id, 'ready')).toThrow(ConflictError);
+		expect(() => move(manager, id, 'ready')).toThrow('На складе не хватает позиций заявки');
 	});
 
 	it('does not open a draft of the cart or an unknown request', () => {

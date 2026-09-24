@@ -22,11 +22,9 @@ export interface AttentionFacts {
 	readonly scheme: SettlementScheme | null;
 }
 
-/** Before the product is made anybody on the crew will do; a finished one needs a driver. */
+/** The shop works by position, not by request (v1.41): only an assembled request needs a driver. */
 export function lacksAssignee(status: RequestStatus, roles: readonly AssigneeRole[]): boolean {
-	if (status === 'new' || status === 'in_work') return roles.length === 0;
-	if (status === 'ready') return !roles.includes('driver');
-	return false;
+	return status === 'ready' && !roles.includes('driver');
 }
 
 /** The last delivery moment that is already overdue for a scheme, as of `now`. */

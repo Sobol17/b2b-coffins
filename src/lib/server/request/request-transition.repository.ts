@@ -1,6 +1,7 @@
 import { and, eq, inArray, ne, type SQL } from 'drizzle-orm';
 import { BaseRepository } from '../core/repository';
 import type { Tx } from '../db/client';
+import { StockFill } from '../stock/stock-fill';
 import {
 	dictItems,
 	paymentMarks,
@@ -33,7 +34,7 @@ export interface HistoryEntry {
 
 /** What a status move reads and writes. Deciding whether the move is allowed is not its job. */
 export class RequestTransitionRepository extends BaseRepository<typeof requests> {
-	constructor() {
+	constructor(private readonly fill: StockFill = new StockFill()) {
 		super(requests);
 	}
 
@@ -91,11 +92,7 @@ export class RequestTransitionRepository extends BaseRepository<typeof requests>
 			.where(eq(requests.id, requestId))
 			.all();
 		return {
-			assigneeCount: db
-				.select({ userId: requestAssignees.userId })
-				.from(requestAssignees)
-				.where(eq(requestAssignees.requestId, requestId))
-				.all().length,
+			stockCovered: this.fill.covers(requestId, tx),
 			unitPricesMinor: db
 				.select({ price: requestItems.unitPriceMinor })
 				.from(requestItems)

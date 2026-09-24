@@ -100,17 +100,29 @@ describe('request state machine, invariants of tech.md 6.2', () => {
 		}
 	});
 
-	it('blocks in_work and ready without an assignee', () => {
-		for (const transition of TRANSITIONS.filter((t) => t.guards?.includes('hasAssignee'))) {
+	it('blocks ready until stock fills the whole request (v1.41)', () => {
+		const guarded = TRANSITIONS.filter((t) => t.guards?.includes('stockCovered'));
+		expect(guarded.map((t) => `${t.from}->${t.to}`)).toEqual(['in_work->ready']);
+		for (const transition of guarded) {
 			const input = {
 				...permissive(transition.from, transition.to, transition.roles),
-				guards: { hasAssignee: false, pricesFixed: true, fullyPaid: true }
+				guards: { stockCovered: false, pricesFixed: true, fullyPaid: true }
 			};
 
 			const result = checkTransition(input);
 
-			expect(result).toEqual({ ok: false, denial: { code: 'guard_failed', guard: 'hasAssignee' } });
+			expect(result).toEqual({
+				ok: false,
+				denial: { code: 'guard_failed', guard: 'stockCovered' }
+			});
 		}
+	});
+
+	it('leaves the shop crew out of every move: the shop works by position (v1.41)', () => {
+		const crew = TRANSITIONS.filter(
+			(t) => t.roles.includes('carpenter') || t.roles.includes('painter')
+		);
+		expect(crew).toEqual([]);
 	});
 
 	it('keeps every automatic step away from humans', () => {

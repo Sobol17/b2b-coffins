@@ -12,7 +12,8 @@ import {
 	options,
 	productVariants,
 	rateLimits,
-	requests
+	requests,
+	stockMoves
 } from '../../../src/lib/server/db/schema';
 import type { ActorContext } from '../../../src/lib/types/actor';
 import type { RoleCode } from '../../../src/lib/types/roles';
@@ -94,6 +95,8 @@ export function seedOrderingWorld(db: Db): OrderingWorld {
 }
 
 export function resetRequests(db: Db): void {
+	// Stock moves point at requests (C6 loads), and the fill of v1.41 reads them: both go together.
+	db.delete(stockMoves).run();
 	db.delete(requests).run();
 	db.delete(jobQueue).run();
 	db.delete(auditLog).run();
