@@ -15,6 +15,9 @@
 					{ href: resolve('/crm/prices'), label: 'Прайсы и скидки' }
 				]
 			: []),
+		...(data.can.counterparties
+			? [{ href: resolve('/crm/counterparties'), label: 'Контрагенты' }]
+			: []),
 		...(data.can.settings
 			? [
 					{ href: resolve('/crm/settings/users'), label: 'Пользователи' },

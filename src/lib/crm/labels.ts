@@ -1,5 +1,6 @@
 import type { SelectOption, StatusTone } from '$lib/ui';
-import type { StaffStatus } from '$lib/types/counterparty';
+import type { SettlementScheme, StaffStatus } from '$lib/types/counterparty';
+import type { PaymentMethod } from '$lib/types/crm-counterparty';
 import type { CrmRole, NumberingPeriod } from '$lib/types/crm';
 import type { DictCode } from '$lib/types/dicts';
 import type { RoleCode } from '$lib/types/roles';
@@ -84,7 +85,21 @@ export const AUDIT_ACTION_TITLE: Readonly<Record<string, string>> = {
 	'request.submit': 'Заявка отправлена',
 	'request.transition': 'Статус заявки изменён',
 	'request.comment': 'Комментарий к заявке',
-	'request.attach': 'Вложение к заявке'
+	'request.attach': 'Вложение к заявке',
+	'counterparty.create': 'Контрагент заведён',
+	'counterparty.update': 'Реквизиты контрагента изменены',
+	'counterparty.terms_update': 'Условия контрагента изменены',
+	'counterparty.notes_update': 'Заметки о контрагенте изменены',
+	'counterparty.contract_create': 'Договор добавлен',
+	'counterparty.contract_update': 'Договор изменён',
+	'counterparty.contract_delete': 'Договор удалён',
+	'counterparty.address_create': 'Адрес доставки добавлен',
+	'counterparty.address_update': 'Адрес доставки изменён',
+	'counterparty.address_delete': 'Адрес доставки удалён',
+	'counterparty.address_default': 'Адрес по умолчанию выбран',
+	'counterparty.admin_issue': 'Администратор контрагента выдан',
+	'counterparty.admin_promote': 'Сотрудник назначен администратором',
+	'counterparty.access_resend': 'Доступ контрагенту выдан повторно'
 };
 
 export const AUDIT_ENTITY_TITLE: Readonly<Record<string, string>> = {
@@ -95,7 +110,23 @@ export const AUDIT_ENTITY_TITLE: Readonly<Record<string, string>> = {
 	requests: 'Заявка',
 	comments: 'Комментарий',
 	media: 'Файл',
-	counterparty_product_price: 'Цена агентства'
+	counterparty_product_price: 'Цена агентства',
+	counterparties: 'Контрагент',
+	contracts: 'Договор',
+	delivery_addresses: 'Адрес доставки'
+};
+
+export const SCHEME_OPTIONS: readonly (SelectOption & { value: SettlementScheme })[] = [
+	{ value: 'on_fact', label: 'По факту' },
+	{ value: 'weekly', label: 'Раз в неделю' },
+	{ value: 'monthly', label: 'Раз в месяц' }
+];
+
+export const PAYMENT_METHOD_TITLE: Readonly<Record<PaymentMethod, string>> = {
+	cash: 'Наличные',
+	bank: 'Банковский перевод',
+	card: 'Карта',
+	offset: 'Взаимозачёт'
 };
 
 /** Zones of Russia: the workshop and its customers live in them. A stored value outside stays listed. */
