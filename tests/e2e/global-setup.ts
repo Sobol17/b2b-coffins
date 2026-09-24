@@ -1,9 +1,12 @@
-import { eq, like } from 'drizzle-orm';
+import { and, eq, isNull, like } from 'drizzle-orm';
 import { migrate } from 'drizzle-orm/better-sqlite3/migrator';
 import { hashPassword } from '../../src/lib/server/auth/password';
 import { createDb, type Db } from '../../src/lib/server/db/client';
 import {
+	categories,
 	dictItems,
+	discountRules,
+	products,
 	rateLimits,
 	roles,
 	sessions,
@@ -38,6 +41,25 @@ const DATABASE_PATH = './data/e2e.db';
 export default async function globalSetup(): Promise<void> {
 	const db = createDb(DATABASE_PATH);
 	migrate(db, { migrationsFolder: './drizzle' });
+	// The CRM catalog spec creates public rows; hide them before other specs read fixture counts.
+	db.update(products).set({ isPublished: false }).where(like(products.sku, 'C2-%')).run();
+	for (const row of db
+		.select({ id: categories.id })
+		.from(categories)
+		.where(like(categories.title, 'Категория C2 %'))
+		.all()) {
+		db.delete(discountRules).where(eq(discountRules.categoryId, row.id)).run();
+	}
+	// Remove the unscoped rule written by earlier C2 test runs.
+	db.delete(discountRules)
+		.where(
+			and(
+				eq(discountRules.percent, 7),
+				isNull(discountRules.categoryId),
+				isNull(discountRules.counterpartyId)
+			)
+		)
+		.run();
 
 	seedRoles(db);
 	seedDicts(db);
