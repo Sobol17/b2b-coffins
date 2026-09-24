@@ -10,7 +10,19 @@
 	let editing = $state<CrmDeliveryAddressDto | null>(null);
 	let modalOpen = $state(false);
 	let removing = $state<CrmDeliveryAddressDto | null>(null);
+	let confirmOpen = $state(false);
 	let deleteForm = $state<DeleteForm>();
+
+	function askRemove(row: NonNullable<typeof removing>): void {
+		removing = row;
+		confirmOpen = true;
+	}
+
+	// The dialog's confirm button does not close it: the panel posts the form and closes it here.
+	function confirmRemove(): void {
+		deleteForm?.submit();
+		confirmOpen = false;
+	}
 
 	function open(address: CrmDeliveryAddressDto | null): void {
 		editing = address;
@@ -56,7 +68,7 @@
 							variant="ghost"
 							size="sm"
 							class="text-danger"
-							onclick={() => (removing = address)}
+							onclick={() => askRemove(address)}
 						>
 							Удалить
 						</Button>
@@ -75,11 +87,10 @@
 	success="Адрес удалён"
 />
 <ConfirmDialog
-	open={removing !== null}
+	bind:open={confirmOpen}
 	title="Удалить адрес?"
 	description="Отправленные заявки сохранят этот адрес, в корзине он больше не появится."
 	confirmLabel="Удалить"
 	danger
-	onConfirm={() => deleteForm?.submit()}
-	onClose={() => (removing = null)}
+	onConfirm={confirmRemove}
 />

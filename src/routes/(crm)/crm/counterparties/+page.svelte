@@ -12,7 +12,7 @@
 	let { data }: PageProps = $props();
 
 	const fields = $derived<FilterField[]>([
-		{ key: 'search', label: 'Поиск', type: 'text', placeholder: 'Введите название или ИНН' },
+		{ key: 'search', label: 'Поиск', type: 'text', placeholder: 'Название или ИНН' },
 		{
 			key: 'managerId',
 			label: 'Менеджер',

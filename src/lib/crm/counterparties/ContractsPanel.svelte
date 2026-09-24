@@ -11,7 +11,19 @@
 	let editing = $state<CrmContractDto | null>(null);
 	let modalOpen = $state(false);
 	let removing = $state<CrmContractDto | null>(null);
+	let confirmOpen = $state(false);
 	let deleteForm = $state<DeleteForm>();
+
+	function askRemove(row: NonNullable<typeof removing>): void {
+		removing = row;
+		confirmOpen = true;
+	}
+
+	// The dialog's confirm button does not close it: the panel posts the form and closes it here.
+	function confirmRemove(): void {
+		deleteForm?.submit();
+		confirmOpen = false;
+	}
 
 	function open(contract: CrmContractDto | null): void {
 		editing = contract;
@@ -48,7 +60,7 @@
 							variant="ghost"
 							size="sm"
 							class="text-danger"
-							onclick={() => (removing = contract)}
+							onclick={() => askRemove(contract)}
 						>
 							Удалить
 						</Button>
@@ -67,13 +79,12 @@
 	success="Договор удалён"
 />
 <ConfirmDialog
-	open={removing !== null}
+	bind:open={confirmOpen}
 	title="Удалить договор?"
 	description={removing
 		? `Договор № ${removing.number} исчезнет из карточки и портала.`
 		: undefined}
 	confirmLabel="Удалить"
 	danger
-	onConfirm={() => deleteForm?.submit()}
-	onClose={() => (removing = null)}
+	onConfirm={confirmRemove}
 />
