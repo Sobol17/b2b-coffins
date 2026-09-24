@@ -62,7 +62,11 @@
 		const body = new FormData();
 		body.append('file', file);
 		for (const [key, value] of Object.entries(fields)) body.append(key, value);
-		const response = await fetch(UPLOAD_URL, { method: 'POST', body });
+		const response = await fetch(UPLOAD_URL, {
+			method: 'POST',
+			headers: { 'x-requested-with': 'XMLHttpRequest' },
+			body
+		});
 		if (!response.ok) throw new Error(`Сервер ответил ${response.status}`);
 		const payload: unknown = await response.json();
 		const mediaId =

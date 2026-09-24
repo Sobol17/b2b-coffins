@@ -52,7 +52,7 @@ test('an attachment is stored on the request and comes back through the files ro
 
 	const uploaded = await page.request.post('/api/files', {
 		// SvelteKit refuses a cross-origin form post, and page.request sends no origin of its own.
-		headers: { origin: ORIGIN },
+		headers: { origin: ORIGIN, 'x-requested-with': 'XMLHttpRequest' },
 		multipart: {
 			requestId,
 			file: {
