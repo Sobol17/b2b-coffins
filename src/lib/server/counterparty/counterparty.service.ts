@@ -2,6 +2,7 @@ import { PolicyService } from '../auth/policy';
 import { NotFoundError } from '../core/errors';
 import { BaseService } from '../core/service';
 import { CounterpartyRepository, type CounterpartyRow } from './counterparty.repository';
+import { DebtRepository } from './debt.repository';
 import { CounterpartyDtoMapper } from './dto';
 import type { ActorContext } from '$lib/types/actor';
 import type { CounterpartyCardDto, CounterpartySummaryDto } from '$lib/types/counterparty';
@@ -12,7 +13,8 @@ const STAFF_PREVIEW_SIZE = 3;
 export class CounterpartyService extends BaseService {
 	constructor(
 		ctx: ActorContext,
-		private readonly repo: CounterpartyRepository = new CounterpartyRepository()
+		private readonly repo: CounterpartyRepository = new CounterpartyRepository(),
+		private readonly debts: DebtRepository = new DebtRepository()
 	) {
 		super(ctx);
 	}
@@ -36,7 +38,12 @@ export class CounterpartyService extends BaseService {
 			manager: row.managerId === null ? undefined : this.repo.findContact(row.managerId),
 			staff: this.repo.activeStaff(row.id, STAFF_PREVIEW_SIZE),
 			// Debt and purchases are money: a price-blind role never triggers the query.
-			money: this.ctx.canSeePrices ? this.repo.moneyTotals(row.id, yearStart) : undefined
+			money: this.ctx.canSeePrices
+				? {
+						debtMinor: this.debts.of(row.id).debtMinor,
+						...this.repo.yearTotals(row.id, yearStart)
+					}
+				: undefined
 		});
 	}
 

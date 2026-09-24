@@ -15,7 +15,7 @@ import {
 import type { ActorContext } from '$lib/types/actor';
 import type { CrmSettingsDto, NumberingDto, OrgRequisitesDto } from '$lib/types/crm';
 import { definedProps } from '$lib/utils/props';
-import { orgRequisitesSchema, staffLimitDefaultSchema } from '$lib/validation/settings';
+import { orgRequisitesSchema } from '$lib/validation/settings';
 import type { CharityForm, NumberingForm, RequisitesForm } from '$lib/validation/settings-form';
 
 /** Keys of tech.md 5.9 the CRM edits in C1. The rest belong to C10 and C12. */
@@ -25,9 +25,6 @@ type EditableKey =
 	| 'charity.rate_bp'
 	| 'charity.fund'
 	| 'counterparty.staff_limit_default';
-
-// Same as the column default of `counterparties.staff_limit`: what a counterparty got before C1.
-const FALLBACK_STAFF_LIMIT = 10;
 
 /**
  * Organisation settings of the CRM (C1). Every save lands in `audit_log` with the old and the new
@@ -49,16 +46,13 @@ export class CrmSettingsService extends BaseService {
 	read(now: Date = new Date()): CrmSettingsDto {
 		const charity = new CharitySettings(this.repo);
 		const fund = charity.fund();
-		const staffLimit = staffLimitDefaultSchema.safeParse(
-			this.repo.findValue('counterparty.staff_limit_default')
-		);
 		return {
 			requisites: this.requisites(),
 			timezone: OrgService.timezone(this.repo),
 			numbering: this.numberingOf(now),
 			charityRateBp: charity.findRateBp(),
 			charityFund: fund && { title: fund.title, ...definedProps({ url: fund.url }) },
-			staffLimitDefault: staffLimit.success ? staffLimit.data : FALLBACK_STAFF_LIMIT
+			staffLimitDefault: OrgService.staffLimitDefault(this.repo)
 		};
 	}
 

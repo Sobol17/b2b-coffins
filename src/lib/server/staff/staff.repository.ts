@@ -105,6 +105,38 @@ export class StaffRepository extends BaseRepository<typeof users> {
 		return row;
 	}
 
+	/** Portal accounts of one counterparty for the workshop card (C3): the id comes from the route. */
+	listOf(counterpartyId: number, tx?: Tx): StaffRow[] {
+		return this.db(tx)
+			.select(COLUMNS)
+			.from(users)
+			.innerJoin(userRoles, eq(userRoles.userId, users.id))
+			.innerJoin(roles, eq(roles.id, userRoles.roleId))
+			.where(this.of(counterpartyId))
+			.orderBy(asc(roles.code), asc(users.fullName), asc(users.id))
+			.all();
+	}
+
+	findOf(counterpartyId: number, id: number, tx?: Tx): StaffRow | undefined {
+		const [row] = this.db(tx)
+			.select(COLUMNS)
+			.from(users)
+			.innerJoin(userRoles, eq(userRoles.userId, users.id))
+			.innerJoin(roles, eq(roles.id, userRoles.roleId))
+			.where(this.of(counterpartyId, eq(users.id, id)))
+			.all();
+		return row;
+	}
+
+	/** A new temporary password also lifts a lockout: the person gets a fresh start. */
+	setTemporaryPassword(id: number, passwordHash: string, tx?: Tx): void {
+		this.db(tx)
+			.update(users)
+			.set({ passwordHash, mustChangePassword: true, failedAttempts: 0, lockedUntil: null })
+			.where(eq(users.id, id))
+			.run();
+	}
+
 	countActive(counterpartyId: number, tx?: Tx): number {
 		const [row] = this.db(tx)
 			.select({ total: countExpression })
@@ -180,6 +212,15 @@ export class StaffRepository extends BaseRepository<typeof users> {
 			.all();
 		if (!row) throw new Error(`role ${role} is missing, run the seed first`);
 		return row.id;
+	}
+
+	private of(counterpartyId: number, extra?: SQL): SQL | undefined {
+		return and(
+			eq(users.counterpartyId, counterpartyId),
+			isNull(users.deletedAt),
+			eq(users.scope, 'portal'),
+			extra
+		);
 	}
 
 	/** Portal accounts of the actor's own counterparty only (tech.md 12, row-level rule). */

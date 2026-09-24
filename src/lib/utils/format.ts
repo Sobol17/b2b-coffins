@@ -111,3 +111,8 @@ export function formatWeightKg(weightG: number | null): string {
 	if (weightG === null) return '—';
 	return `${(weightG / 1000).toLocaleString('ru-RU', { maximumFractionDigits: 1 })} кг`;
 }
+
+/** "2026-01-10": the calendar day of a stored instant in the zone, the value a DatePicker takes. */
+export function isoDay(iso: string, timeZone = 'UTC'): string {
+	return new Date(iso).toLocaleDateString('en-CA', { timeZone });
+}

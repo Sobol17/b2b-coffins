@@ -1,7 +1,7 @@
 # tech.md — ядро проекта
 
 **Проект:** B2B-портал + CRM для столярной мастерской (производство гробов)
-**Версия ядра:** v1.38
+**Версия ядра:** v1.39
 **Дата:** 24.09.2026
 **Статус:** этап 1 (портал, P1–P14) завершён 19.09.2026, этап 2 (CRM) начат слайсом C1
 **Владелец файла:** Sobol17 (тимлид и единственный разработчик)
@@ -11,6 +11,7 @@
 
 | Версия | Изменение |
 |---|---|
+| v1.39 | Контракт C3. Контрагентов ведут `owner` и `manager` по праву `counterparty.manage`, матрица прав не менялась. Экраны: реестр `/crm/counterparties` с поиском по названию и ИНН и фильтрами менеджера, схемы расчётов и наличия долга, заведение `/crm/counterparties/new`, карточка `/crm/counterparties/[id]`. Код экранов лежит в `src/lib/crm/counterparties/`, серверная часть в `server/crm-counterparty/`. Контрагент заводится одной транзакцией вместе с первым администратором (`cp_admin`), как в `pnpm admin counterparty:create`; лимит сотрудников нового контрагента берётся из `counterparty.staff_limit_default`. Письмо с временным паролем уходит через `MailDriver` напрямую шаблоном портала, как в P2, и расходует ограничение `staff.create`; пароль один раз показывается на странице. Выдача администратора: новая учётная запись с ролью `cp_admin` в пределах `staff_limit`, перевод активного сотрудника контрагента в `cp_admin`, повторная выдача доступа новым временным паролем с закрытием всех сессий. Отключение и понижение людей контрагента остаётся за `cp_admin` в портале (P2). Ответственный менеджер выбирается среди активных учётных записей CRM с ролью `manager` или `owner`, прайс-лист среди `price_lists` либо не задан. Договоры добавляются, правятся и удаляются, `valid_until` не раньше `signed_at`; портал по-прежнему показывает последний по `signed_at`. Скан договора в C3 не загружается, `contracts.file_id` остаётся пустым. Адрес доставки удаляется мягко (`deleted_at`), потому что на него ссылаются заявки; адрес по умолчанию у контрагента один, выбор нового снимает флаг с прежнего. Архивации контрагента в C3 нет, `is_active` не меняется. Правило долга: долг заявки равен `max(0, total_minor − Σ payment_marks.amount_minor)` для заявок в `delivered` и `awaiting_payment`, долг контрагента равен сумме долгов его заявок, `openCount` считает заявки с положительным долгом. Один запрос `DebtRepository` считает долг и для карточки портала (P2), и для CRM: `requests.paid_minor` для долга не читается, поэтому индикатор сходится с реестром отметок оплаты. Карточка отдаёт историю заявок контрагента без черновиков в `Page<RequestListItemDto>` и реестр отметок оплаты в `Page<CrmPaymentMarkDto>` новыми сверху. Действия в `audit_log`: `counterparty.create`, `counterparty.update`, `counterparty.terms_update`, `counterparty.notes_update`, `counterparty.contract_create`, `counterparty.contract_update`, `counterparty.contract_delete`, `counterparty.address_create`, `counterparty.address_update`, `counterparty.address_delete`, `counterparty.address_default`, `counterparty.admin_issue`, `counterparty.admin_promote`, `counterparty.access_resend`; контакты людей и пароли в журнал не пишутся. В §8 добавлен `lib/types/crm-counterparty.ts` |
 | v1.38 | Контракт C2. CRM управляет категориями, моделями, вариантами, цветами, матрицей совместимости, фото, прайс-листами и правилами скидок. `catalog.manage` даёт запись руководителю и менеджеру; себестоимость читает и меняет только `owner` по `catalog.cost.read`, для прочих ролей её колонка не выбирается. Обложка — первое фото модели по `(sort_order, id)`. На один момент действует не более одного базового прайс-листа; окна действия полуоткрытые `[valid_from, valid_to)`. Для каждой строки заявки скидка равна большему из договорной и подходящих действующих правил `discount_rules`; правила с `counterparty_id = null` общие, с `category_id = null` охватывают все категории, наследование по дереву категорий есть. Суммы строк с одинаковым процентом объединяются до округления скидки, чтобы договорная скидка без правил считалась как раньше. Складскую позицию вариант выбирает из существующих `stock_items.kind = 'product'`; C2 показывает связанные с вариантом нормы активной версии `bom_norms`, создание учётных позиций и норм остаётся в C8 и C9. Для C2 добавлены DTO в §8. Скрытие модели или варианта немедленно закрывает их и фото модели для портала. |
 | v1.0 | Первая заморозка ядра: стек, структура, схема БД, контракты очереди и событий, общие типы, UI-примитивы, правила кода, дорожная карта слайсов |
 | v1.37 | Слайс C1. IP-фильтр входа в CRM выведен из системы: ключ `crm.ip_allowlist` удалён из `settings`, из сида и из описания C1. Формы ключей `org.requisites` и `counterparty.staff_limit_default` зафиксированы в §5.9; `org.requisites` получил `email` (его ждёт `mailto:` лендинга) и проверку ИНН, КПП, БИК и счёта. `counterparty.staff_limit_default` читает `pnpm admin counterparty:create`. Нумерация правится в CRM только для ключа `request`: префикс и период. При сохранении счётчик продолжается от наибольшего уже выданного номера той же формы (`resumeSequence` в `lib/domain/numbering/numbering.ts`), поэтому возврат к старому префиксу не выдаёт занятый номер. В §8 добавлен `lib/types/crm.ts`: `CrmUserDto`, `CrmUserFilters`, `CreatedCrmUserDto`, `DictItemDto`, `DictItemFilters`, `AuditFilters`, `AuditEntryDto`, `NumberingDto`, `CrmSettingsDto`. Пользователями мастерской, справочниками и настройками управляет только `owner` по праву `settings.manage`, журнал аудита читает только `owner` по праву `audit.read`; матрица прав не менялась. Руководитель не может отключить себя, сбросить себе пароль и снять с себя роль `owner`: права на экран есть только у `owner`, поэтому в мастерской всегда остаётся активный руководитель. Письмо с временным паролем уходит через `MailDriver` напрямую, как в P2, и расходует то же ограничение `staff.create`. Экраны руководителя живут под `/crm/settings`: настройки мастерской, «Пользователи» (`/users`), «Справочники» (`/dicts`), «Журнал» (`/audit`); шапка CRM показывает эти пункты только при праве и называет роли словами. Код экранов лежит в `src/lib/crm/`, серверная часть в `server/crm-user/`, `server/dicts/`, `server/settings/crm-settings.service.ts` и `server/audit/audit-journal.service.ts`. Запись справочника выключается, а не удаляется, код записи после создания не меняется. Настройка пишет в `audit_log` одну строку `settings.update` со старым и новым значением под ключом настройки, нумерация пишет `numbering.update`. Журнал отдаёт записи новыми сверху, фильтры: часть имени автора, действие, объект, окно дат в `org.timezone`; списки действий и объектов берутся из самого журнала. Чтение сортировки и фильтров реестра из адреса вынесено в `listQueryOf` и `filtersOf` (`lib/utils/list-url.ts`) |
@@ -1226,6 +1227,38 @@ export interface CrmCatalogChoicesDto {
 }
 export interface CrmPricingChoicesDto { counterparties: { id: number; name: string }[]; }
 
+// crm-counterparty.ts — the counterparty card of the workshop (C3). Money keys only for a role with prices.
+export const PAYMENT_METHODS = ['cash','bank','card','offset'] as const;
+export type PaymentMethod = (typeof PAYMENT_METHODS)[number];
+export interface CrmCounterpartyFilters { managerId?: number; scheme?: SettlementScheme; hasDebt?: boolean; }
+export interface CrmCounterpartyListItemDto {
+  id: number; name: string; inn: string | null; managerName: string | null;
+  settlementScheme: SettlementScheme; staffCount: number; isActive: boolean;
+  debtMinor?: number;
+}
+// Debt of a request: max(0, totalMinor - sum of its payment marks), statuses delivered and awaiting_payment.
+export interface CrmCounterpartyDebtDto { debtMinor: number; openCount: number; }
+export interface CrmContractDto extends ContractDto { id: number; }
+export interface CrmDeliveryAddressDto extends DeliveryAddressDto { contactName: string | null; contactPhone: string | null; }
+export interface CrmCounterpartyCardDto {
+  id: number; name: string; legalName: string | null; inn: string | null; kpp: string | null;
+  address: string | null; phone: string | null; email: string | null;
+  priceListId: number | null; discountPercent: number; settlementScheme: SettlementScheme;
+  managerId: number | null; staffLimit: number; notes: string | null; isActive: boolean;
+  contracts: CrmContractDto[]; addresses: CrmDeliveryAddressDto[];
+  users: StaffMemberDto[];               // isSelf is always false: a workshop actor has no portal account
+  debt?: CrmCounterpartyDebtDto;
+}
+export interface CrmPaymentMarkDto {
+  id: number; requestId: number; requestNumber: string; amountMinor: number;
+  paidAt: string; method: PaymentMethod; comment: string | null; createdByName: string;
+}
+export interface CrmCounterpartyChoicesDto {
+  managers: { id: number; fullName: string }[]; priceLists: { id: number; title: string }[];
+}
+export interface CreatedCounterpartyDto { counterpartyId: number; access: CreatedStaffDto; }
+// The request history of the card reuses Page<RequestListItemDto>, drafts excluded.
+
 // money.ts — branded type, blocks accidental mixing with plain numbers
 export type Minor = number & { readonly __brand: 'minor' };
 
@@ -1586,7 +1619,7 @@ CONTRACT GAP
 **C2. CRM: каталог и цены.** CRUD категорий, моделей, вариантов, цветовых опций и матрицы совместимости, медиа с обложкой и порядком, прайс-листы и скидки с периодом действия, себестоимость только для руководителя, выбор существующей учётной позиции склада и просмотр норм активной версии для варианта, публикация и скрытие в портале. Категории создаются в CRM, поэтому пустой каталог можно наполнить без сида. Модели и варианты удаляются мягко (`deleted_at`), опции выключаются (`is_active`), категория с потомками или моделями не удаляется. Цена `price_lists` действует в полуоткрытом окне `[valid_from, valid_to)`; базовые прайс-листы не могут одновременно действовать. Для каждой строки заявки берётся максимум договорной скидки и действующих `discount_rules` её категории и предков; строки с одним процентом складываются до округления. `DraftDto.discountPercent` показывает округлённый эффективный процент от общей суммы, `discountMinor` остаётся точным; для одной договорной ставки без правил расчёт не меняется. Раздача медиа продукта использует существующий `/api/files/[id]`.
 **DoD:** каталог наполняется через CRM без сида, себестоимость не приходит в ответах никому кроме руководителя.
 
-**C3. CRM: контрагенты.** Карточка с реквизитами, договором, адресами, прайсом и схемой расчётов, список пользователей контрагента, выдача администратора, история заявок и оплат, индикатор задолженности, заметки, ответственный менеджер.
+**C3. CRM: контрагенты.** Карточка с реквизитами, договором, адресами, прайсом и схемой расчётов, список пользователей контрагента, выдача администратора, история заявок и оплат, индикатор задолженности, заметки, ответственный менеджер. Контрагент заводится одной транзакцией с первым администратором. Долг считается из `payment_marks` одним запросом для портала и CRM (v1.39). Скан договора и архивация контрагента в объём не входят.
 **DoD:** менеджер заводит контрагента с администратором и отправляет доступ, индикатор долга сходится с реестром отметок оплаты.
 
 **C4. CRM: доска и реестр заявок.** Канбан по шести статусам с фильтрами, реестр с сортировкой, поиском и экспортом XLSX, ручное создание заявки, заявка на склад, приём в работу с фиксацией цен и скидки, назначение исполнителей, приоритет, отклонение, контролируемое изменение состава после запуска, флаги внимания (заявка без исполнителя, долгое ожидание оплаты).

@@ -3,7 +3,13 @@ import { describe, expect, it } from 'vitest';
 import { PolicyService } from '../../src/lib/server/auth/policy';
 import { ForbiddenError } from '../../src/lib/server/core/errors';
 import { CounterpartyService } from '../../src/lib/server/counterparty/counterparty.service';
-import { contracts, counterparties, requests, users } from '../../src/lib/server/db/schema';
+import {
+	contracts,
+	counterparties,
+	paymentMarks,
+	requests,
+	users
+} from '../../src/lib/server/db/schema';
 import type { ActorContext } from '../../src/lib/types/actor';
 import type { RoleCode } from '../../src/lib/types/roles';
 import { insertCounterparty, insertUser, migratedDatabase } from './helpers/db';
@@ -76,7 +82,6 @@ db.insert(requests)
 			counterpartyId: ownId,
 			status: 'delivered',
 			totalMinor: 100_000,
-			paidMinor: 30_000,
 			deliveredAt: thisYear
 		},
 		{
@@ -85,6 +90,8 @@ db.insert(requests)
 			counterpartyId: ownId,
 			status: 'awaiting_payment',
 			totalMinor: 50_000,
+			// A stale column must not clear the debt: only payment marks do (tech.md v1.39).
+			paidMinor: 50_000,
 			deliveredAt: thisYear
 		},
 		{
@@ -115,6 +122,17 @@ db.insert(requests)
 			deliveredAt: thisYear
 		}
 	])
+	.run();
+
+const [firstDelivered] = db.select().from(requests).where(eq(requests.number, 'R-1')).all();
+db.insert(paymentMarks)
+	.values({
+		requestId: firstDelivered?.id ?? 0,
+		amountMinor: 30_000,
+		paidAt: thisYear,
+		method: 'bank',
+		createdById: managerId
+	})
 	.run();
 
 function actor(role: RoleCode, userId: number, counterpartyId: number | null): ActorContext {
@@ -152,7 +170,7 @@ describe('counterparty card', () => {
 			manager: { fullName: 'Марина Круглова', phone: '+7 495 000-00-01' },
 			staffCount: 2,
 			staffLimit: 10,
-			// Unpaid rest of what was handed over: 70 000 + 50 000.
+			// Unpaid rest of what was handed over, by the payment marks: 70 000 + 50 000.
 			debtMinor: 120_000,
 			// Handed over this year, paid or not: 100 000 + 50 000 + 20 000.
 			yearPurchasesMinor: 170_000,
