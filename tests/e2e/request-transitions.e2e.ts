@@ -65,6 +65,8 @@ test('a move the table does not list is refused and changes nothing', async ({ p
 
 test('a role the transition does not grant is refused', async ({ page }) => {
 	const number = await sendRequest(page, 'cp_employee');
+	// Assigned, so the request is in reach: the refusal comes from the role, not from row-level.
+	assignCrew(db, number, 'carpenter', 'carpenter');
 
 	const wrongRole = transition(number, 'in_work', 'carpenter');
 

@@ -69,13 +69,14 @@ test('C5: the server refuses to assemble a request the stock does not fill', asy
 	const number = await acceptedRequest(page, 3);
 	const id = new URL(page.url()).pathname.split('/').at(-1) ?? '';
 
-	// A forged post skips the hidden button: the guard of tech.md 6.2 still says no.
+	// A forged post skips the hidden button: the guard of tech.md 6.2 still says no. An action posted
+	// as JSON answers HTTP 200 and carries the failure status in the body.
 	const forged = await page.request.post('/crm/shop?/assemble', {
-		headers: { origin: ORIGIN },
+		headers: { origin: ORIGIN, accept: 'application/json' },
 		form: { requestId: id }
 	});
 
-	expect(forged.status()).toBe(409);
+	expect(await forged.json()).toMatchObject({ type: 'failure', status: 409 });
 	expect(statusOf(e2eDb(), number)).toBe('in_work');
 });
 
