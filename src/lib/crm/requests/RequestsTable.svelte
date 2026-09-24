@@ -30,7 +30,6 @@
 		{ key: 'counterparty', label: 'Контрагент' },
 		{ key: 'deliveryAt', label: 'Срок', sortable: true },
 		{ key: 'submittedAt', label: 'Отправлена', sortable: true },
-		{ key: 'crew', label: 'Исполнители' },
 		...(withMoney
 			? [{ key: 'total', label: 'Сумма, ₽', sortable: true, align: 'end' as const }]
 			: [])
@@ -59,8 +58,6 @@
 			{row.deliveryAt ? formatDateTime(row.deliveryAt, timeZone) : '—'}
 		{:else if column.key === 'submittedAt'}
 			{row.submittedAt ? formatDate(row.submittedAt, timeZone) : '—'}
-		{:else if column.key === 'crew'}
-			{row.assigneeNames.length > 0 ? row.assigneeNames.join(', ') : '—'}
 		{:else if column.key === 'total'}
 			<PriceCell valueMinor={row.totalMinor} />
 		{/if}

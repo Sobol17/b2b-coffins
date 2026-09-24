@@ -1,52 +1,16 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test } from '@playwright/test';
+import { enterRequest } from './crm-flow';
 import { login, purchaseMoneyKeys } from './fixtures';
-
-/** The creation form of the workshop, filled the way a manager takes an order by phone. */
-async function enterRequest(page: Page, deceased: string): Promise<string> {
-	await page.goto('/crm/requests/new');
-	const counterparty = page.getByRole('option', { name: 'Ритуал-Сервис' });
-	// A click before hydration lands on the server markup: repeat until the list opens.
-	await expect(async () => {
-		await page.getByRole('button', { name: 'Контрагент', exact: true }).click();
-		await expect(counterparty).toBeVisible({ timeout: 1000 });
-	}).toPass();
-	await counterparty.click();
-	await expect(page).toHaveURL(/counterpartyId=\d+/);
-	await page.getByTestId('delivery-date').getByRole('button').click();
-	await expect(page.getByRole('grid')).toBeVisible();
-	await page.locator('[data-bits-day]:not([data-disabled])').last().click();
-	await page.getByLabel('Время доставки').fill('10:00');
-	await page.getByLabel('ФИО умершего').fill(deceased);
-
-	await page.getByRole('button', { name: 'Позиция', exact: true }).click();
-	await page.getByPlaceholder('Введите название').fill('Волга');
-	await page.getByRole('option').first().click();
-	await page.getByRole('button', { name: 'Завести заявку' }).click();
-
-	await expect(page).toHaveURL(/\/crm\/requests\/\d+$/);
-	const number = (await page.getByTestId('request-number').innerText()).trim();
-	expect(number).toMatch(/^З-\d{4}-\d{5}$/);
-	return number;
-}
+import { e2eDb, stockUp } from './transitions';
 
 test('C4 DoD: a manager takes a request from entry to ready in the CRM, changes after the launch land in history', async ({
 	page
 }) => {
 	const deceased = `Петров Пётр ${Date.now()}`;
 	await login(page, 'manager');
-	await enterRequest(page, deceased);
-	await expect(page.getByText('Нет исполнителя')).toBeVisible();
+	const number = await enterRequest(page, deceased);
 
-	// The guard answers in words: nobody is on the request yet.
-	await page.getByRole('button', { name: 'Принять в работу' }).click();
-	await expect(page.getByText('Назначьте исполнителя заявки')).toBeVisible();
-
-	const crew = page.locator('form[action="?/assign"]');
-	await crew.locator('[data-slot="select-trigger"]').nth(1).click();
-	await page.getByRole('option', { name: 'Николай Ершов' }).click();
-	await crew.getByRole('button', { name: 'Назначить' }).click();
-	await expect(page.getByTestId('request-crew')).toContainText('Николай Ершов');
-
+	// The shop works by position (v1.41): a priced request goes into work with nobody on it.
 	await page.getByRole('button', { name: 'Принять в работу' }).click();
 	await expect(page.locator('[data-slot="badge"]').filter({ hasText: 'В работе' })).toBeVisible();
 
@@ -59,7 +23,12 @@ test('C4 DoD: a manager takes a request from entry to ready in the CRM, changes 
 	await expect(page.getByTestId('request-history')).toContainText('Клиент попросил ещё два');
 	await expect(page.getByTestId('request-history')).toContainText('→ 3');
 
-	await page.getByRole('button', { name: 'Изделие готово' }).click();
+	// The guard answers in words: the stock does not fill the request yet.
+	await page.getByRole('button', { name: 'Заявка собрана' }).click();
+	await expect(page.getByText('На складе не хватает позиций заявки')).toBeVisible();
+
+	stockUp(e2eDb(), number);
+	await page.getByRole('button', { name: 'Заявка собрана' }).click();
 	await expect(
 		page.locator('[data-slot="badge"]').filter({ hasText: 'Готов к выдаче' })
 	).toBeVisible();
@@ -79,13 +48,15 @@ test('C4: the board shows the request in its column and a dropped card asks the 
 	const board = page.getByTestId('request-board');
 	const card = board.locator('[data-slot="kanban-card"]').filter({ hasText: number });
 	await expect(card).toHaveAttribute('data-status', 'new');
-	await expect(card).toContainText('Нет исполнителя');
 
-	// The arrow key moves the card to «В работе»; the server refuses without an assignee.
+	// The arrow key moves the card to «В работе»; the next step waits for the stock to fill it.
 	await card.getByRole('link').focus();
 	await page.keyboard.press('ArrowRight');
-	await expect(page.getByText('Назначьте исполнителя заявки')).toBeVisible();
-	await expect(card).toHaveAttribute('data-status', 'new');
+	await expect(card).toHaveAttribute('data-status', 'in_work');
+	await card.getByRole('link').focus();
+	await page.keyboard.press('ArrowRight');
+	await expect(page.getByText('На складе не хватает позиций заявки')).toBeVisible();
+	await expect(card).toHaveAttribute('data-status', 'in_work');
 
 	await card.getByRole('link').click();
 	await expect(page.getByTestId('request-number')).toHaveText(number);

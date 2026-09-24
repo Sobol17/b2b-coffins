@@ -34,8 +34,8 @@
 			<Card.Content data-testid="request-submitted" class="flex flex-col gap-3">
 				<h1 class="text-4xl">Заявка {submitted.number} отправлена</h1>
 				<p class="text-fg-muted">
-					Менеджер мастерской получил заявку и примет её в работу. Цены и сроки он подтвердит при
-					приёме.
+					Администратор мастерской получил заявку и примет её в работу. Цены и сроки он подтвердит
+					при приёме.
 				</p>
 				<div class="flex flex-wrap gap-2">
 					<Button href={resolve('/portal/catalog')}>Собрать новую заявку</Button>

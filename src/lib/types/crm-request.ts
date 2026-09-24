@@ -15,11 +15,9 @@ export const BOARD_COLUMN_LIMIT = 50;
 /** The paid column keeps the last week only: a closed request has nothing left to steer. */
 export const BOARD_PAID_DAYS = 7;
 
-export const ATTENTION_FLAGS = ['no_assignee', 'payment_overdue'] as const;
+/** Assignees left the system in v1.42, and with them the flag of a request without one. */
+export const ATTENTION_FLAGS = ['payment_overdue'] as const;
 export type AttentionFlag = (typeof ATTENTION_FLAGS)[number];
-
-export const ASSIGNEE_ROLES = ['carpenter', 'painter', 'driver'] as const;
-export type AssigneeRole = (typeof ASSIGNEE_ROLES)[number];
 
 /** `total` is honoured for a role with prices only, like the portal registry. */
 export const CRM_REQUEST_SORTS = ['submittedAt', 'number', 'deliveryAt', 'total'] as const;
@@ -43,7 +41,6 @@ export interface CrmRequestListItemDto extends RequestListItemDto {
 	readonly counterpartyId: number | null;
 	readonly isStockRequest: boolean;
 	readonly deliveryAt: string | null;
-	readonly assigneeNames: readonly string[];
 	readonly flags: readonly AttentionFlag[];
 }
 
@@ -58,12 +55,6 @@ export interface CrmBoardDto {
 	readonly columns: readonly CrmBoardColumnDto[];
 }
 
-export interface CrmAssigneeDto {
-	readonly userId: number;
-	readonly fullName: string;
-	readonly role: AssigneeRole;
-}
-
 /**
  * `free` in `new`: the whole request is repriced; `controlled` in `in_work`: prices stay frozen and
  * every change needs a comment; `closed` later on.
@@ -75,7 +66,6 @@ export interface CrmRequestCardDto extends Omit<RequestCardDto, 'comments'> {
 	readonly counterpartyId: number | null;
 	readonly counterpartyName: string | null;
 	readonly isStockRequest: boolean;
-	readonly assignees: readonly CrmAssigneeDto[];
 	readonly flags: readonly AttentionFlag[];
 	readonly itemsEdit: ItemsEditMode;
 }
@@ -92,11 +82,6 @@ export interface CrmRequestVariantChoice {
 export interface CrmRequestChoicesDto {
 	readonly counterparties: readonly { readonly id: number; readonly name: string }[];
 	readonly variants: readonly CrmRequestVariantChoice[];
-	readonly crew: readonly {
-		readonly id: number;
-		readonly fullName: string;
-		readonly roles: readonly AssigneeRole[];
-	}[];
 	readonly refusalReasons: readonly { readonly id: number; readonly title: string }[];
 }
 

@@ -67,7 +67,6 @@ describe('the deliveryFilled guard in the state machine', () => {
 				to: 'new',
 				actorRoles: ['cp_admin'],
 				isOwnRequest: true,
-				isAssigned: false,
 				hasReason: false,
 				guards: { deliveryFilled: false }
 			})
@@ -81,7 +80,6 @@ describe('the deliveryFilled guard in the state machine', () => {
 				to: 'new',
 				actorRoles: ['cp_admin'],
 				isOwnRequest: true,
-				isAssigned: false,
 				hasReason: false,
 				guards: { deliveryFilled: true }
 			})

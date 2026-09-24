@@ -2,14 +2,7 @@ import { and, asc, desc, eq, exists, gte, inArray, lte, or, sql, type SQL } from
 import { countExpression, offsetFor } from '../core/list';
 import { containsText } from '../core/search';
 import { BaseRepository } from '../core/repository';
-import {
-	categories,
-	media,
-	productOptions,
-	productVariants,
-	products,
-	stockMoves
-} from '../db/schema';
+import { categories, media, productOptions, productVariants, products } from '../db/schema';
 import { productVisible, variantVisible, type Visibility } from './visibility';
 import type { CatalogFilters } from '$lib/types/catalog';
 
@@ -205,10 +198,6 @@ export class CatalogRepository extends BaseRepository<typeof products> {
 								)
 							)
 					)
-				: undefined,
-			// Balance is the sum of moves (tech.md 5.7): there is no stored figure to read instead.
-			filters.inStock
-				? sql`(select coalesce(sum(${stockMoves.qty}), 0) from ${stockMoves} where ${stockMoves.stockItemId} = ${productVariants.stockItemId}) > 0`
 				: undefined
 		].filter((condition): condition is SQL => condition !== undefined);
 		if (conditions.length === 0) return undefined;

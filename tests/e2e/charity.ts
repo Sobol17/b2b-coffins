@@ -1,14 +1,7 @@
 import { expect } from '@playwright/test';
 import { and, eq, inArray } from 'drizzle-orm';
 import type { Db } from '../../src/lib/server/db/client';
-import {
-	charityTotals,
-	jobQueue,
-	requestAssignees,
-	requests,
-	settings,
-	users
-} from '../../src/lib/server/db/schema';
+import { charityTotals, jobQueue, requests, settings, users } from '../../src/lib/server/db/schema';
 import { ACCOUNTS } from './fixtures';
 
 export function charityAmountOf(db: Db, number: string): number | null {
@@ -84,9 +77,6 @@ export function insertReadyStockRequest(db: Db): string {
 		.returning({ id: requests.id })
 		.all();
 	if (!created) throw new Error('failed to insert a stock request');
-	db.insert(requestAssignees)
-		.values({ requestId: created.id, userId: userId(db, ACCOUNTS.driver.email), role: 'driver' })
-		.run();
 	return number;
 }
 

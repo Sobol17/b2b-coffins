@@ -50,7 +50,7 @@
 							value={profile.email}
 							placeholder={PLACEHOLDER.email}
 							readonly
-							hint="Адрес для входа меняет менеджер мастерской"
+							hint="Адрес для входа меняет администратор мастерской"
 						/>
 						<Input
 							name="fullName"

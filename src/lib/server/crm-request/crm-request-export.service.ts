@@ -39,7 +39,6 @@ export class CrmRequestExportService extends CrmRequestBaseService {
 			{ header: 'Изделий', key: 'units', width: 9 },
 			{ header: 'Срок доставки', key: 'deliveryAt', width: 17 },
 			{ header: 'Отправлена', key: 'submittedAt', width: 17 },
-			{ header: 'Исполнители', key: 'crew', width: 28 },
 			{ header: 'Внимание', key: 'flags', width: 22 },
 			...(money
 				? [
@@ -66,7 +65,6 @@ export class CrmRequestExportService extends CrmRequestBaseService {
 			units: row.unitCount,
 			deliveryAt: when(row.deliveryAt),
 			submittedAt: when(row.submittedAt),
-			crew: row.assigneeNames.join(', '),
 			flags: row.flags.map((flag) => FLAG_TITLE[flag]).join(', '),
 			...(this.ctx.canSeePrices
 				? { total: rubles(row.totalMinor), paid: rubles(row.paidMinor) }

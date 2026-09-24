@@ -4,8 +4,7 @@ import { CardDtoMapper } from '../request/card.dto';
 import { RequestCardRepository } from '../request/request-card.repository';
 import { CrmRequestBaseService } from './crm-request-base.service';
 import { CrmRequestChoicesRepository } from './crm-request-choices.repository';
-import { CrmRequestRepository, type CrewRow, type SteeredRow } from './crm-request.repository';
-import { CrmRequestDtoMapper } from './dto';
+import { CrmRequestRepository, type SteeredRow } from './crm-request.repository';
 import { itemsEditMode } from '$lib/domain/request/amendment';
 import { attentionFlags } from '$lib/domain/request/attention';
 import { targetsForRole } from '$lib/domain/request/state-machine';
@@ -39,7 +38,6 @@ export class CrmRequestCardService extends CrmRequestBaseService {
 		if (!row) throw new Error(`request ${id} vanished between two reads`);
 		const lines = this.lines.lines(request.id);
 		const itemIds = lines.map((line) => line.id);
-		const crew = this.requests.crew(request.id);
 		return {
 			...CardDtoMapper.toCore(row, {
 				lines,
@@ -55,17 +53,15 @@ export class CrmRequestCardService extends CrmRequestBaseService {
 			counterpartyId: request.counterpartyId,
 			counterpartyName: request.counterpartyName,
 			isStockRequest: request.isStockRequest,
-			assignees: crew.map((member) => CrmRequestDtoMapper.toAssignee({ ...member, requestId: id })),
-			flags: this.flags(request, crew),
+			flags: this.flags(request),
 			itemsEdit: itemsEditMode(request.status)
 		};
 	}
 
-	private flags(request: SteeredRow, crew: readonly CrewRow[]): AttentionFlag[] {
+	private flags(request: SteeredRow): AttentionFlag[] {
 		return attentionFlags(
 			{
 				status: request.status,
-				assigneeRoles: crew.map((member) => member.role),
 				deliveredAt: request.deliveredAt,
 				scheme: request.isStockRequest ? null : request.scheme
 			},

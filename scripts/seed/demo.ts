@@ -8,9 +8,9 @@ import {
 	paymentMarks,
 	productOptions,
 	productVariants,
-	requestAssignees,
 	requests
 } from '../../src/lib/server/db/schema';
+import { ShopService } from '../../src/lib/server/crm-shop/shop.service';
 import { FakeMailDriver } from '../../src/lib/server/notifications/drivers/mail';
 import { NotificationRuleRepository } from '../../src/lib/server/notifications/notification-rule.repository';
 import { NotificationRepository } from '../../src/lib/server/notifications/notification.repository';
@@ -82,7 +82,6 @@ function loadPeople(db: Db): People {
 		admin: actorContext(db, DEMO_PEOPLE.admin),
 		employee: actorContext(db, DEMO_PEOPLE.employee),
 		manager: actorContext(db, DEMO_PEOPLE.manager),
-		carpenter: actorContext(db, DEMO_PEOPLE.carpenter),
 		driver: actorContext(db, DEMO_PEOPLE.driver)
 	};
 }
@@ -135,16 +134,15 @@ function advance(db: Db, people: People, id: number, scenario: DemoScenario): vo
 			return;
 	}
 
-	// Assignment is a C4 screen and payment marks are C7: until then they are written directly.
-	db.insert(requestAssignees)
-		.values([
-			{ requestId: id, userId: people.carpenter.userId, role: 'carpenter' },
-			{ requestId: id, userId: people.driver.userId, role: 'driver' }
-		])
-		.run();
 	move(people.manager, 'in_work');
 	if (scenario.stage === 'in_work') return;
-	move(people.carpenter, 'ready');
+	// The shop works by position (tech.md v1.41): the manager marks the pieces made, then assembles.
+	const shop = new ShopService(people.manager);
+	for (const line of scenario.lines) {
+		const variantId = variantIdOf(db, line.sku);
+		shop.produce({ variantId, optionId: colorIdOf(db, variantId, line.color), qty: line.qty });
+	}
+	move(people.manager, 'ready');
 	if (scenario.stage === 'ready') return;
 	if (scenario.stage === 'paid') markPaidInFull(db, id, people.manager.userId);
 	move(people.driver, 'delivered');

@@ -44,7 +44,6 @@ export function denialKind(denial: TransitionDenial): DenialKind {
 			return 'validation';
 		case 'role_not_allowed':
 		case 'not_owner':
-		case 'not_assigned':
 			return 'forbidden';
 	}
 }

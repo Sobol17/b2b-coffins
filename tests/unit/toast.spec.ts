@@ -35,13 +35,13 @@ describe('the toast store', () => {
 
 	it('carries a description and a link when given', () => {
 		toast.info('Заявка З-26-00001 отправлена', {
-			description: 'Менеджер примет её в работу',
+			description: 'Администратор примет её в работу',
 			action: { label: 'Открыть заявку', href: '/portal/requests/1' }
 		});
 
 		expect(toast.items[0]).toMatchObject({
 			kind: 'info',
-			description: 'Менеджер примет её в работу',
+			description: 'Администратор примет её в работу',
 			action: { label: 'Открыть заявку' }
 		});
 	});

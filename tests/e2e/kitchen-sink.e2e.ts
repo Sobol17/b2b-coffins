@@ -123,7 +123,9 @@ test('each toast kind reads out its meaning and keeps the stack short', async ({
 	await expect(region.getByTestId('toast')).toHaveCount(4);
 
 	const info = region.locator('[data-kind="info"]');
-	await expect(info.getByTestId('toast-description')).toHaveText('Менеджер примет её в работу');
+	await expect(info.getByTestId('toast-description')).toHaveText(
+		'Администратор примет её в работу'
+	);
 	await expect(info.getByRole('link', { name: 'Открыть каталог' })).toHaveAttribute(
 		'href',
 		'/portal/catalog'

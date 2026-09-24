@@ -44,7 +44,7 @@ export class FileAccessService extends BaseService {
 		if (!this.catalog.findProduct(row.ownerId, visibility)) throw new NotFoundError('file');
 	}
 
-	/** The workshop side reads every request (C4); the crew gets its own rule in C5. */
+	/** The workshop side reads every request (C4); the shop crew has no screen since v1.41. */
 	private assertAttachment(requestId: number): void {
 		if (this.ctx.scope === 'crm') {
 			this.assert(PolicyService.can(this.ctx, 'request.read.any'), 'request.read.any');

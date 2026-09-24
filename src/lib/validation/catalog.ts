@@ -11,8 +11,7 @@ export const catalogFiltersSchema = z.object({
 	materialIds: z.array(positiveId).max(50).optional(),
 	colorOptionIds: z.array(positiveId).max(50).optional(),
 	lengthFromMm: z.coerce.number().int().positive().optional(),
-	lengthToMm: z.coerce.number().int().positive().optional(),
-	inStock: z.boolean().optional()
+	lengthToMm: z.coerce.number().int().positive().optional()
 });
 
 export const productIdSchema = positiveId;
@@ -43,8 +42,7 @@ export function catalogFiltersFromUrl(url: URL): CatalogFilters {
 		materialIds: materialIds.length > 0 ? materialIds : undefined,
 		colorOptionIds: colorOptionIds.length > 0 ? colorOptionIds : undefined,
 		lengthFromMm: millimetresOf(url, 'lengthFrom'),
-		lengthToMm: millimetresOf(url, 'lengthTo'),
-		inStock: url.searchParams.get('inStock') === '1' ? true : undefined
+		lengthToMm: millimetresOf(url, 'lengthTo')
 	});
 }
 

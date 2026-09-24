@@ -62,13 +62,13 @@ describe('transition guards of tech.md 6.2', () => {
 	it('answers every guard the table can ask about, so none is left undefined', () => {
 		assertProperty(
 			fc.property(
-				fc.integer({ min: 0, max: 5 }),
+				fc.boolean(),
 				prices,
 				minor,
 				fc.array(minor, { maxLength: 5 }),
-				(assigneeCount, unitPricesMinor, totalMinor, paymentMarksMinor) => {
+				(stockCovered, unitPricesMinor, totalMinor, paymentMarksMinor) => {
 					const guards = evaluateGuards({
-						assigneeCount,
+						stockCovered,
 						unitPricesMinor,
 						totalMinor,
 						paymentMarksMinor,
@@ -80,7 +80,7 @@ describe('transition guards of tech.md 6.2', () => {
 		);
 	});
 
-	it('reads an assignee count of zero as no assignee', () => {
+	it('passes the stock fill through as guard stockCovered (v1.41)', () => {
 		const facts = {
 			unitPricesMinor: [100],
 			totalMinor: 100,
@@ -89,8 +89,8 @@ describe('transition guards of tech.md 6.2', () => {
 		};
 
 		expect([
-			evaluateGuards({ ...facts, assigneeCount: 0 }).hasAssignee,
-			evaluateGuards({ ...facts, assigneeCount: 1 }).hasAssignee
+			evaluateGuards({ ...facts, stockCovered: false }).stockCovered,
+			evaluateGuards({ ...facts, stockCovered: true }).stockCovered
 		]).toEqual([false, true]);
 	});
 });

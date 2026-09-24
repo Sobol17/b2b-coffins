@@ -3,10 +3,14 @@ import { database } from '../../../src/lib/server/db/client';
 import {
 	dictItems,
 	jobQueue,
+	options,
 	paymentMarks,
-	requestAssignees,
+	productVariants,
+	requestItemOptions,
+	requestItems,
 	requestStatusHistory,
-	requests
+	requests,
+	stockMoves
 } from '../../../src/lib/server/db/schema';
 import { httpStatusFor } from '../../../src/lib/server/core/errors';
 import { RequestTransitionService } from '../../../src/lib/server/request/request-transition.service';
@@ -45,9 +49,40 @@ export function refused(run: () => unknown): { name: string; status: number } {
 	return { name: 'no refusal', status: 200 };
 }
 
-/** Assignment is a C4 screen and payment marks are C7, so a P5 test writes them as fixtures. */
-export function assign(requestId: number, userId: number, role: 'carpenter' | 'driver'): void {
-	database.insert(requestAssignees).values({ requestId, userId, role }).run();
+/**
+ * Makes every piece of the request on the shop floor (tech.md v1.41): one production move per line,
+ * in the colour of the line, so guard `stockCovered` lets the assembly through.
+ */
+export function stockUp(requestId: number): void {
+	const lines = database
+		.select({
+			itemId: requestItems.id,
+			qty: requestItems.qty,
+			stockItemId: productVariants.stockItemId
+		})
+		.from(requestItems)
+		.innerJoin(productVariants, eq(productVariants.id, requestItems.variantId))
+		.where(eq(requestItems.requestId, requestId))
+		.all();
+	for (const line of lines) {
+		if (line.stockItemId === null) throw new Error(`line ${line.itemId} has no stock item`);
+		const [colour] = database
+			.select({ optionId: options.id })
+			.from(requestItemOptions)
+			.innerJoin(options, eq(options.id, requestItemOptions.optionId))
+			.where(and(eq(requestItemOptions.itemId, line.itemId), eq(options.kind, 'color')))
+			.all();
+		database
+			.insert(stockMoves)
+			.values({
+				stockItemId: line.stockItemId,
+				optionId: colour?.optionId ?? null,
+				qty: line.qty,
+				type: 'production',
+				occurredAt: new Date()
+			})
+			.run();
+	}
 }
 
 export function pay(requestId: number, amountMinor: number, createdById: number): void {

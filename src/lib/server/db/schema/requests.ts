@@ -87,22 +87,6 @@ export const requestItemOptions = sqliteTable(
 	(t) => [primaryKey({ columns: [t.itemId, t.optionId] })]
 );
 
-export const requestAssignees = sqliteTable(
-	'request_assignees',
-	{
-		requestId: integer('request_id')
-			.notNull()
-			.references(() => requests.id, { onDelete: 'cascade' }),
-		userId: integer('user_id')
-			.notNull()
-			.references(() => users.id),
-		role: text('role', { enum: ['carpenter', 'painter', 'driver'] }).notNull(),
-		takenAt: ts('taken_at'),
-		doneAt: ts('done_at')
-	},
-	(t) => [primaryKey({ columns: [t.requestId, t.userId, t.role] })]
-);
-
 export const requestStatusHistory = sqliteTable(
 	'request_status_history',
 	{

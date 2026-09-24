@@ -1,12 +1,13 @@
 import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 import {
-	TRANSITIONS,
+	type ActorRole,
+	targetsForRole,
 	checkTransition,
 	findTransition,
-	targetsForRole,
-	type ActorRole,
-	type TransitionInput
+	reachableStatuses,
+	type TransitionInput,
+	TRANSITIONS
 } from '../../src/lib/domain/request/state-machine';
 import {
 	GUARD_CODES,
@@ -42,7 +43,6 @@ function permissive(from: RequestStatus, to: RequestStatus, roles: readonly Acto
 		to,
 		actorRoles: roles,
 		isOwnRequest: true,
-		isAssigned: true,
 		hasReason: true,
 		guards: ALL_GUARDS_UP
 	} satisfies TransitionInput;
@@ -100,17 +100,46 @@ describe('request state machine, invariants of tech.md 6.2', () => {
 		}
 	});
 
-	it('blocks in_work and ready without an assignee', () => {
-		for (const transition of TRANSITIONS.filter((t) => t.guards?.includes('hasAssignee'))) {
+	it('blocks ready until stock fills the whole request (v1.41)', () => {
+		const guarded = TRANSITIONS.filter((t) => t.guards?.includes('stockCovered'));
+		expect(guarded.map((t) => `${t.from}->${t.to}`)).toEqual(['in_work->ready']);
+		for (const transition of guarded) {
 			const input = {
 				...permissive(transition.from, transition.to, transition.roles),
-				guards: { hasAssignee: false, pricesFixed: true, fullyPaid: true }
+				guards: { stockCovered: false, pricesFixed: true, fullyPaid: true }
 			};
 
 			const result = checkTransition(input);
 
-			expect(result).toEqual({ ok: false, denial: { code: 'guard_failed', guard: 'hasAssignee' } });
+			expect(result).toEqual({
+				ok: false,
+				denial: { code: 'guard_failed', guard: 'stockCovered' }
+			});
 		}
+	});
+
+	it('leaves the shop crew out of every move: the shop works by position (v1.41)', () => {
+		const crew = TRANSITIONS.filter(
+			(t) => t.roles.includes('carpenter') || t.roles.includes('painter')
+		);
+		expect(crew).toEqual([]);
+	});
+
+	it('shows the driver assembled requests and the shop crew nothing (v1.42)', () => {
+		expect(reachableStatuses(['driver'])).toEqual(['ready']);
+		expect(reachableStatuses(['carpenter'])).toEqual([]);
+		expect(reachableStatuses(['painter'])).toEqual([]);
+	});
+
+	it('lets a human reach every status a move of the role starts from, and no other', () => {
+		assertProperty(
+			fc.property(fc.uniqueArray(fc.constantFrom<ActorRole>(...ROLE_CODES)), (roles) => {
+				const reached = new Set(reachableStatuses(roles));
+				const movedFrom = (status: string) =>
+					TRANSITIONS.some((t) => t.from === status && t.roles.some((r) => roles.includes(r)));
+				return TRANSITIONS.every((t) => reached.has(t.from) === movedFrom(t.from));
+			})
+		);
 	});
 
 	it('keeps every automatic step away from humans', () => {

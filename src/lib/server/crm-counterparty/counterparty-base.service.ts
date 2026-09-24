@@ -35,7 +35,7 @@ export abstract class CounterpartyBaseService extends BaseService {
 	/** @throws ValidationError for a manager or price list that is not there. */
 	protected validateTerms(terms: Pick<TermsInput, 'managerId' | 'priceListId'>, tx: Tx): void {
 		if (terms.managerId !== null && !this.counterparties.isManager(terms.managerId, tx)) {
-			throw new ValidationError('Выберите менеджера мастерской', { field: 'managerId' });
+			throw new ValidationError('Выберите администратора мастерской', { field: 'managerId' });
 		}
 		if (terms.priceListId !== null && !this.counterparties.priceListExists(terms.priceListId, tx)) {
 			throw new ValidationError('Прайс-лист не найден', { field: 'priceListId' });

@@ -10,9 +10,7 @@ import {
 	counterparties,
 	dictItems,
 	options,
-	productVariants,
-	products,
-	stockMoves
+	products
 } from '../../src/lib/server/db/schema';
 import type { ActorContext } from '../../src/lib/types/actor';
 import type { CatalogFilters } from '../../src/lib/types/catalog';
@@ -98,17 +96,6 @@ describe('storefront filters (P3)', () => {
 		]);
 	});
 
-	it('keeps only models with stock when asked', () => {
-		expect(skus({ inStock: true })).toEqual([
-			'MDL-101',
-			'MDL-102',
-			'MDL-201',
-			'MDL-202',
-			'MDL-301',
-			'MDL-303'
-		]);
-	});
-
 	it('includes the models of subcategories in a parent category', () => {
 		const economy = categoryId('Эконом');
 		const [child] = db
@@ -145,40 +132,18 @@ describe('storefront cards and prices', () => {
 		expect(card).toMatchObject({
 			materialTitles: ['Сосна'],
 			lengthsMm: [1800, 1900, 2000],
-			stockQty: 20,
 			variantCount: 3
 		});
+		// The storefront shows no stock (tech.md v1.42): not even a zero goes out.
+		expect(card).not.toHaveProperty('stockQty');
 		expect(JSON.stringify(card)).not.toContain('Minor');
 	});
 
-	it('shows a negative balance as zero instead of minus coffins', () => {
-		const variant = one(
-			db
-				.select({ stockItemId: productVariants.stockItemId })
-				.from(productVariants)
-				.where(eq(productVariants.sku, 'MDL-101-180-CHB'))
-				.all(),
-			'variant'
-		);
-		const [move] = db
-			.insert(stockMoves)
-			.values({
-				stockItemId: variant.stockItemId ?? 0,
-				qty: -30,
-				type: 'adjustment',
-				occurredAt: new Date()
-			})
-			.returning()
-			.all();
-		try {
-			const product = new CatalogService(actor('cp_employee')).get(productId('MDL-101'));
-			expect(product.variants.find((v) => v.sku === 'MDL-101-180-CHB')?.stockQty).toBe(0);
-			expect(product.variants.find((v) => v.sku === 'MDL-101-190-CHB')?.stockQty).toBe(10);
-		} finally {
-			db.delete(stockMoves)
-				.where(eq(stockMoves.id, move?.id ?? 0))
-				.run();
-		}
+	it('sends no stock of a variant to the product page (v1.42)', () => {
+		const product = new CatalogService(actor('cp_admin')).get(productId('MDL-101'));
+
+		expect(product.variants.length).toBeGreaterThan(0);
+		for (const variant of product.variants) expect(variant).not.toHaveProperty('stockQty');
 	});
 
 	it('sorts by the personal price for the administrator', () => {
@@ -250,7 +215,7 @@ describe('storefront cards and prices', () => {
 });
 
 describe('storefront query string', () => {
-	it('reads repeated ids, centimetres and the stock flag', () => {
+	it('reads repeated ids and centimetres, and ignores the stock flag of old links', () => {
 		const url = new URL(
 			'https://portal.example/portal/catalog/1?material=2&material=5&color=7&lengthFrom=180&lengthTo=200&inStock=1'
 		);
@@ -259,8 +224,7 @@ describe('storefront query string', () => {
 			materialIds: [2, 5],
 			colorOptionIds: [7],
 			lengthFromMm: 1800,
-			lengthToMm: 2000,
-			inStock: true
+			lengthToMm: 2000
 		});
 	});
 

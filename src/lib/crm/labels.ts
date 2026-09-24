@@ -8,7 +8,7 @@ import type { RoleCode } from '$lib/types/roles';
 /** Same titles as the `roles` seed: the shell, the forms and the tables speak one language. */
 export const ROLE_TITLE: Readonly<Record<RoleCode, string>> = {
 	owner: 'Руководитель',
-	manager: 'Менеджер',
+	manager: 'Администратор',
 	carpenter: 'Столяр',
 	painter: 'Маляр',
 	driver: 'Водитель',
@@ -88,9 +88,11 @@ export const AUDIT_ACTION_TITLE: Readonly<Record<string, string>> = {
 	'request.attach': 'Вложение к заявке',
 	'request.create': 'Заявка заведена в мастерской',
 	'request.items_update': 'Состав заявки изменён',
+	// Assignees left in v1.42; the journal still names the entries written before that.
 	'request.assign': 'Исполнитель назначен',
 	'request.unassign': 'Исполнитель снят',
 	'request.priority': 'Приоритет заявки изменён',
+	'stock.produce': 'Выпуск позиции отмечен',
 	'counterparty.create': 'Контрагент заведён',
 	'counterparty.update': 'Реквизиты контрагента изменены',
 	'counterparty.terms_update': 'Условия контрагента изменены',

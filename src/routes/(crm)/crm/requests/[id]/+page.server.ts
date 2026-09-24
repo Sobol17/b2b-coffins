@@ -2,12 +2,11 @@ import { error } from '@sveltejs/kit';
 import { requireAction, requireScope } from '$lib/server/auth/guard';
 import { formAction, orHttpStatus } from '$lib/server/core/http';
 import { CrmRequestCardService } from '$lib/server/crm-request/crm-request-card.service';
-import { CrmRequestCrewService } from '$lib/server/crm-request/crm-request-crew.service';
+import { CrmRequestPriorityService } from '$lib/server/crm-request/crm-request-priority.service';
 import { CrmRequestItemsService } from '$lib/server/crm-request/crm-request-items.service';
 import { RequestTransitionService } from '$lib/server/request/request-transition.service';
 import {
 	addLineSchema,
-	assigneeSchema,
 	lineQtySchema,
 	prioritySchema,
 	removeLineSchema
@@ -26,7 +25,7 @@ function context(event: RequestEvent) {
 	return {
 		id: parsed.data,
 		request: event.request,
-		crew: () => new CrmRequestCrewService(actor),
+		priorities: () => new CrmRequestPriorityService(actor),
 		items: () => new CrmRequestItemsService(actor),
 		moves: () => new RequestTransitionService(actor),
 		cards: () => new CrmRequestCardService(actor)
@@ -44,18 +43,10 @@ export const actions = {
 		const { id, moves, request } = context(event);
 		return formAction(request, 'move', requestTransitionSchema, (input) => moves().move(id, input));
 	},
-	assign: (event) => {
-		const { id, crew, request } = context(event);
-		return formAction(request, 'assign', assigneeSchema, (input) => crew().assign(id, input));
-	},
-	unassign: (event) => {
-		const { id, crew, request } = context(event);
-		return formAction(request, 'unassign', assigneeSchema, (input) => crew().unassign(id, input));
-	},
 	priority: (event) => {
-		const { id, crew, request } = context(event);
+		const { id, priorities, request } = context(event);
 		return formAction(request, 'priority', prioritySchema, (input) =>
-			crew().setPriority(id, input.priority)
+			priorities().setPriority(id, input.priority)
 		);
 	},
 	addLine: (event) => {

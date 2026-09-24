@@ -15,7 +15,7 @@
 		variant="secondary"
 		onclick={() =>
 			toast.info('Заявка З-2026-00042 отправлена', {
-				description: 'Менеджер примет её в работу',
+				description: 'Администратор примет её в работу',
 				action: { label: 'Открыть каталог', href: resolve('/portal/catalog') }
 			})}
 		data-testid="toast-info"

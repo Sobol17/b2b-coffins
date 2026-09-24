@@ -36,7 +36,7 @@
 
 <Card.Root>
 	<Card.Content class="flex flex-col gap-4">
-		<h2 class="text-2xl">Переписка с менеджером</h2>
+		<h2 class="text-2xl">Переписка с мастерской</h2>
 
 		<ul data-testid="comment-thread" class="flex flex-col gap-3">
 			{#each comments as comment (comment.id)}
@@ -58,7 +58,7 @@
 			use:enhance={withToast({
 				success: {
 					title: 'Сообщение отправлено',
-					description: 'Менеджер ответит в этой переписке'
+					description: 'Администратор мастерской ответит в этой переписке'
 				},
 				onSuccess: () => (body = '')
 			})}
@@ -66,7 +66,7 @@
 		>
 			<Textarea
 				name="body"
-				label="Сообщение менеджеру"
+				label="Сообщение мастерской"
 				placeholder="Введите сообщение"
 				bind:value={body}
 				error={formError}

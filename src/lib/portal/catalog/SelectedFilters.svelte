@@ -12,7 +12,7 @@
 		readonly label: string;
 	}
 
-	const FILTER_KEYS = ['material', 'color', 'lengthFrom', 'lengthTo', 'inStock'] as const;
+	const FILTER_KEYS = ['material', 'color', 'lengthFrom', 'lengthTo'] as const;
 
 	const chips = $derived.by((): Chip[] => [
 		...(filters.materialIds ?? []).map((id) => ({
@@ -30,8 +30,7 @@
 			: [{ key: 'lengthFrom', label: `от ${filters.lengthFromMm / 10} см` }]),
 		...(filters.lengthToMm === undefined
 			? []
-			: [{ key: 'lengthTo', label: `до ${filters.lengthToMm / 10} см` }]),
-		...(filters.inStock ? [{ key: 'inStock', label: 'Есть на складе' }] : [])
+			: [{ key: 'lengthTo', label: `до ${filters.lengthToMm / 10} см` }])
 	]);
 
 	function remove(chip: Chip | null): void {

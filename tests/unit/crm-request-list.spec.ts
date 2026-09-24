@@ -7,7 +7,7 @@ import { CrmRequestListService } from '../../src/lib/server/crm-request/crm-requ
 import { counterparties, requests } from '../../src/lib/server/db/schema';
 import { ATTENTION_FLAGS, BOARD_STATUSES } from '../../src/lib/types/crm-request';
 import type { RoleCode } from '../../src/lib/types/roles';
-import { crew, crmQuery, insertRequest } from './helpers/crm-requests';
+import { crmQuery, insertRequest } from './helpers/crm-requests';
 import { insertUser, migratedDatabase } from './helpers/db';
 import { crmActor, portalActor, seedOrderingWorld } from './helpers/portal-requests';
 
@@ -135,21 +135,16 @@ describe('the registry of the workshop (C4)', () => {
 		expect(JSON.stringify(page)).not.toMatch(/Minor"/);
 	});
 
-	it('shows the paid amount from the payment marks and the crew by name', () => {
+	it('shows the paid amount from the payment marks and no assignees (v1.42)', () => {
 		const id = insertRequest({
 			status: 'in_work',
 			counterpartyId: world.cpId,
 			createdById: managerId,
 			totalMinor: 500_00
 		});
-		crew(id, carpenterId, 'carpenter');
 		const [row] = service().list(crmQuery()).rows;
-		expect(row).toMatchObject({
-			totalMinor: 500_00,
-			paidMinor: 0,
-			assigneeNames: ['Пётр Столяров'],
-			flags: []
-		});
+		expect(row).toMatchObject({ id, totalMinor: 500_00, paidMinor: 0, flags: [] });
+		expect(row).not.toHaveProperty('assigneeNames');
 	});
 });
 
@@ -164,18 +159,11 @@ describe('attention flags: the list and the filter agree (C4)', () => {
 			counterpartyId: world.cpId,
 			createdById: managerId
 		});
-		const noDriver = insertRequest({
+		const assembled = insertRequest({
 			status: 'ready',
 			counterpartyId: world.cpId,
 			createdById: managerId
 		});
-		crew(noDriver, carpenterId, 'carpenter');
-		const withDriver = insertRequest({
-			status: 'ready',
-			counterpartyId: null,
-			createdById: managerId
-		});
-		crew(withDriver, driverId, 'driver');
 		const overdue = insertRequest({
 			status: 'awaiting_payment',
 			counterpartyId: world.cpId,
@@ -201,8 +189,9 @@ describe('attention flags: the list and the filter agree (C4)', () => {
 				.sort();
 			expect(found).toEqual(flagged);
 		}
-		expect(all.find((row) => row.id === lonely)?.flags).toEqual(['no_assignee']);
-		expect(all.find((row) => row.id === noDriver)?.flags).toEqual(['no_assignee']);
+		// Nobody is assigned since v1.42: a request in work or assembled carries no flag for it.
+		expect(all.find((row) => row.id === lonely)?.flags).toEqual([]);
+		expect(all.find((row) => row.id === assembled)?.flags).toEqual([]);
 		expect(all.find((row) => row.id === overdue)?.flags).toEqual(['payment_overdue']);
 		db.update(counterparties)
 			.set({ settlementScheme: 'on_fact' })

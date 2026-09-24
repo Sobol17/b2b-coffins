@@ -6,7 +6,7 @@ const ROLES = Object.keys(ACCOUNTS) as RoleKey[];
 // The CRM header names the role in words (C1); the portal header keeps its own layout.
 const SHOWN_ROLE: Readonly<Record<RoleKey, string>> = {
 	owner: 'Руководитель',
-	manager: 'Менеджер',
+	manager: 'Администратор',
 	carpenter: 'Столяр',
 	painter: 'Маляр',
 	driver: 'Водитель',

@@ -20,7 +20,7 @@
 
 	const columns: DataTableColumn[] = [
 		{ key: 'name', label: 'Контрагент', sortable: true },
-		{ key: 'managerName', label: 'Менеджер' },
+		{ key: 'managerName', label: 'Администратор' },
 		{ key: 'settlementScheme', label: 'Расчёты' },
 		{ key: 'staffCount', label: 'Сотрудников' },
 		{ key: 'debt', label: 'Задолженность' },

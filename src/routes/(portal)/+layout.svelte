@@ -16,7 +16,7 @@
 	const footerCaption = $derived.by(() => {
 		const manager = data.counterparty.manager;
 		if (!manager) return `${data.counterparty.name}: портал контрагента`;
-		return [`Менеджер ${manager.fullName}`, manager.phone, manager.email]
+		return [`Администратор мастерской ${manager.fullName}`, manager.phone, manager.email]
 			.filter((part) => part !== null)
 			.join(' · ');
 	});

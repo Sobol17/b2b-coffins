@@ -26,7 +26,9 @@ test('an administrator sees the groups with prices and downloads the personal pr
 	expect((await response.body()).subarray(0, 2).toString()).toBe('PK');
 });
 
-test('the stock filter narrows a listing and stays in the url', async ({ page }) => {
+test('the storefront shows no stock: no filter, no card line, no key in the page (v1.42)', async ({
+	page
+}) => {
 	await login(page, 'cp_employee');
 	await page.goto('/portal/catalog');
 	await page
@@ -35,18 +37,16 @@ test('the stock filter narrows a listing and stays in the url', async ({ page })
 		.getByRole('link', { name: 'Все модели группы' })
 		.click();
 	await expect(page).toHaveURL(/\/portal\/catalog\/\d+/);
-	const before = await page.getByTestId('product-card').count();
+	await expect(page.getByTestId('product-card').first()).toBeVisible();
 
-	await page.getByTestId('catalog-filters').getByText('Есть на складе').click();
-	await page.getByTestId('catalog-filters').getByRole('button', { name: 'Применить' }).click();
+	await expect(page.getByTestId('catalog-filters')).not.toContainText('Наличие');
+	await expect(page.getByTestId('product-card').first()).not.toContainText('складе');
+	expect(await page.content()).not.toContain('stockQty');
 
-	await expect(page).toHaveURL(/inStock=1/);
-	await expect(page.getByTestId('selected-filters')).toContainText('Есть на складе');
-	const cards = page.getByTestId('product-card');
-	expect(await cards.count()).toBeLessThan(before);
-	for (const stock of await page.getByTestId('product-stock').allTextContents()) {
-		expect(stock).toContain('На складе');
-	}
+	await openVolga(page);
+	await expect(page.getByTestId('product-page-price')).toBeVisible();
+	await expect(page.getByText('На складе')).toHaveCount(0);
+	expect(await page.content()).not.toContain('stockQty');
 });
 
 test('the product page quotes the personal price to the administrator', async ({ page }) => {
@@ -55,7 +55,6 @@ test('the product page quotes the personal price to the administrator', async ({
 
 	// Partner price list of the seed: MDL-201-180-PIN costs 8 300 ₽ instead of the base 8 900 ₽.
 	await expect(page.getByTestId('product-page-price')).toContainText(/8\u00a0300(?![,\d])/);
-	await expect(page.getByTestId('product-page-stock')).toContainText('12 шт');
 });
 
 test('the product page asks for the size and the colour only', async ({ page }) => {

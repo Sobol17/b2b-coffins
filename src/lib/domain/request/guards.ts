@@ -3,7 +3,8 @@ import type { GuardCode } from '$lib/types/request';
 
 /** What the server knows about a request before it asks the state machine. */
 export interface GuardFacts {
-	readonly assigneeCount: number;
+	/** Every line filled from free stock by `allocateStock` (tech.md v1.41). */
+	readonly stockCovered: boolean;
 	/** Frozen unit price of every line of the request. */
 	readonly unitPricesMinor: readonly number[];
 	readonly totalMinor: number;
@@ -24,7 +25,7 @@ export function fullyPaid(totalMinor: number, paymentMarksMinor: readonly number
 /** Every guard of tech.md 6.2 evaluated at once, so no transition sees a guard left undefined. */
 export function evaluateGuards(facts: GuardFacts): Record<GuardCode, boolean> {
 	return {
-		hasAssignee: facts.assigneeCount > 0,
+		stockCovered: facts.stockCovered,
 		pricesFixed: pricesFixed(facts.unitPricesMinor),
 		fullyPaid: fullyPaid(facts.totalMinor, facts.paymentMarksMinor),
 		deliveryFilled: isDeliveryFilled(facts.delivery)

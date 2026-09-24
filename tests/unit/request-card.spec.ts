@@ -9,7 +9,7 @@ import {
 	variantId
 } from './helpers/portal-requests';
 import { send } from './helpers/registry';
-import { assign, move, pay, refused, totalOf } from './helpers/transitions';
+import { move, pay, refused, stockUp, totalOf } from './helpers/transitions';
 
 const db = migratedDatabase();
 const world = seedOrderingWorld(db);
@@ -18,14 +18,8 @@ const employeeCtx = portalActor('cp_employee', world.employeeId, world.cpId);
 const outsiderCtx = portalActor('cp_admin', world.outsiderId, world.otherCpId);
 
 const managerId = insertUser({ email: 'mgr@shop.example', role: 'manager', counterpartyId: null });
-const carpenterId = insertUser({
-	email: 'carp@shop.example',
-	role: 'carpenter',
-	counterpartyId: null
-});
 const driverId = insertUser({ email: 'drv@shop.example', role: 'driver', counterpartyId: null });
 const managerCtx = crmActor('manager', managerId);
-const carpenterCtx = crmActor('carpenter', carpenterId);
 const driverCtx = crmActor('driver', driverId);
 
 const VOLGA_180 = variantId(db, 'MDL-201-180-PIN');
@@ -36,10 +30,9 @@ function card(id: number, ctx = adminCtx) {
 
 /** Drives the request to `paid`, so the card has the full history including the automatic steps. */
 function deliver(id: number): void {
-	assign(id, carpenterId, 'carpenter');
-	assign(id, driverId, 'driver');
 	move(managerCtx, id, 'in_work');
-	move(carpenterCtx, id, 'ready');
+	stockUp(id);
+	move(managerCtx, id, 'ready');
 	pay(id, totalOf(id), driverId);
 	move(driverCtx, id, 'delivered');
 }
@@ -118,7 +111,6 @@ describe('portal request card (P6)', () => {
 
 	it('offers no move once the workshop took the request', () => {
 		const id = send(adminCtx, VOLGA_180);
-		assign(id, carpenterId, 'carpenter');
 		move(managerCtx, id, 'in_work');
 
 		expect(card(id).targets).toEqual([]);

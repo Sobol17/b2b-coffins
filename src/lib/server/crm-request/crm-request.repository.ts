@@ -1,16 +1,9 @@
-import { and, asc, eq, ne } from 'drizzle-orm';
+import { and, eq, ne } from 'drizzle-orm';
 import { BaseRepository } from '../core/repository';
 import type { Tx } from '../db/client';
-import {
-	counterparties,
-	requestAssignees,
-	requestStatusHistory,
-	requests,
-	users
-} from '../db/schema';
+import { counterparties, requestStatusHistory, requests } from '../db/schema';
 import type { RequestTotals } from '$lib/domain/request/pricing';
 import type { SettlementScheme } from '$lib/types/counterparty';
-import type { AssigneeRole } from '$lib/types/crm-request';
 import type { RequestPriority, RequestStatus } from '$lib/types/request';
 
 export interface SteeredRow extends RequestTotals {
@@ -36,13 +29,7 @@ export interface NewRequestValues {
 	readonly comment: string | null;
 }
 
-export interface CrewRow {
-	readonly userId: number;
-	readonly fullName: string;
-	readonly role: AssigneeRole;
-}
-
-/** What the workshop writes on one request besides its status: creation, crew, priority, notes. */
+/** What the workshop writes on one request besides its status: creation, priority, notes. */
 export class CrmRequestRepository extends BaseRepository<typeof requests> {
 	constructor() {
 		super(requests);
@@ -89,47 +76,6 @@ export class CrmRequestRepository extends BaseRepository<typeof requests> {
 
 	setPriority(id: number, priority: RequestPriority, tx: Tx): void {
 		this.db(tx).update(requests).set({ priority }).where(eq(requests.id, id)).run();
-	}
-
-	crew(requestId: number, tx?: Tx): CrewRow[] {
-		return this.db(tx)
-			.select({
-				userId: requestAssignees.userId,
-				fullName: users.fullName,
-				role: requestAssignees.role
-			})
-			.from(requestAssignees)
-			.innerJoin(users, eq(users.id, requestAssignees.userId))
-			.where(eq(requestAssignees.requestId, requestId))
-			.orderBy(asc(requestAssignees.role), asc(users.fullName))
-			.all();
-	}
-
-	/** @returns false when the person already holds that role on the request. */
-	insertAssignee(requestId: number, userId: number, role: AssigneeRole, tx: Tx): boolean {
-		return (
-			this.db(tx)
-				.insert(requestAssignees)
-				.values({ requestId, userId, role })
-				.onConflictDoNothing()
-				.run().changes > 0
-		);
-	}
-
-	/** @returns false when there was no such assignment. */
-	deleteAssignee(requestId: number, userId: number, role: AssigneeRole, tx: Tx): boolean {
-		return (
-			this.db(tx)
-				.delete(requestAssignees)
-				.where(
-					and(
-						eq(requestAssignees.requestId, requestId),
-						eq(requestAssignees.userId, userId),
-						eq(requestAssignees.role, role)
-					)
-				)
-				.run().changes > 0
-		);
 	}
 
 	/**

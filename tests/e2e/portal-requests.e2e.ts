@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
 import { login, logout, purchaseMoneyKeys } from './fixtures';
 import { openCard, sendRequest } from './portal-flow';
-import { assignCrew, e2eDb, statusOf, transition } from './transitions';
+import { e2eDb, statusOf, transition } from './transitions';
 
 const db = e2eDb();
 const ORIGIN = 'http://localhost:4173';
@@ -10,7 +10,6 @@ test('the counterparty follows the status of a request without calling the works
 	page
 }) => {
 	const number = await sendRequest(page, 'cp_admin');
-	assignCrew(db, number, 'carpenter', 'carpenter');
 	expect(transition(number, 'in_work', 'manager').ok).toBe(true);
 
 	await openCard(page, number);
@@ -77,7 +76,7 @@ test('the counterparty writes to the manager and cancels the request from the ca
 	const number = await sendRequest(page, 'cp_admin');
 	await openCard(page, number);
 
-	await page.getByLabel('Сообщение менеджеру').fill('Нужна отгрузка одной партией');
+	await page.getByLabel('Сообщение мастерской').fill('Нужна отгрузка одной партией');
 	await page.getByTestId('post-comment').click();
 	await expect(page.getByTestId('comment-thread')).toContainText('Нужна отгрузка одной партией');
 

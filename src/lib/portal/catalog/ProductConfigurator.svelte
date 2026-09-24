@@ -62,7 +62,6 @@
 			};
 		});
 	});
-	const inStock = $derived((variant?.stockQty ?? 0) > 0);
 	// The line of exactly this size and these options, matched the way the draft merges lines.
 	const line = $derived.by(() => {
 		const picked = groups.map((group) => Number(valueOf(group))).sort((a, b) => a - b);
@@ -112,13 +111,6 @@
 			{#if product.agencyPriceMinor !== undefined || variant?.priceMinor !== undefined}
 				<span class="text-sm text-fg-faint">за штуку</span>
 			{/if}
-		</div>
-
-		<div data-testid="product-page-stock" class="rounded-inset bg-surface-muted p-4">
-			<div class="text-xs text-fg-faint">На складе</div>
-			<div class={['font-heading text-xl font-semibold', inStock && 'text-link']}>
-				{inStock ? `${variant?.stockQty} шт` : 'Нет в наличии'}
-			</div>
 		</div>
 
 		<form
@@ -191,7 +183,7 @@
 
 		{#if manager}
 			<p class="border-t border-border pt-4 text-sm text-fg-muted">
-				Менеджер мастерской<br />
+				Администратор мастерской<br />
 				<span class="text-fg">{manager.fullName}</span>{#if manager.phone}
 					· {manager.phone}{/if}
 			</p>

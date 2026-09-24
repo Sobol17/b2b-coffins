@@ -47,9 +47,8 @@ describe('transition flow of tech.md 6.2', () => {
 						to,
 						actorRoles: roles,
 						isOwnRequest: true,
-						isAssigned: true,
 						hasReason: true,
-						guards: { hasAssignee: true, pricesFixed: true, fullyPaid: true }
+						guards: { stockCovered: true, pricesFixed: true, fullyPaid: true }
 					}).ok === false
 				);
 			})
@@ -73,8 +72,7 @@ describe('transition flow of tech.md 6.2', () => {
 			[{ code: 'guard_failed', guard: 'fullyPaid' }, 'conflict'],
 			[{ code: 'reason_required' }, 'validation'],
 			[{ code: 'role_not_allowed' }, 'forbidden'],
-			[{ code: 'not_owner' }, 'forbidden'],
-			[{ code: 'not_assigned' }, 'forbidden']
+			[{ code: 'not_owner' }, 'forbidden']
 		];
 
 		for (const [denial, kind] of cases) expect(denialKind(denial)).toBe(kind);

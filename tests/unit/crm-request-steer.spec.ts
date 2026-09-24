@@ -7,7 +7,7 @@ import {
 	ValidationError
 } from '../../src/lib/server/core/errors';
 import { CrmRequestCreateService } from '../../src/lib/server/crm-request/crm-request-create.service';
-import { CrmRequestCrewService } from '../../src/lib/server/crm-request/crm-request-crew.service';
+import { CrmRequestPriorityService } from '../../src/lib/server/crm-request/crm-request-priority.service';
 import { CrmRequestItemsService } from '../../src/lib/server/crm-request/crm-request-items.service';
 import { auditLog, requestItems, requests } from '../../src/lib/server/db/schema';
 import { RequestCardService } from '../../src/lib/server/request/request-card.service';
@@ -21,7 +21,7 @@ import {
 	seedOrderingWorld,
 	variantId
 } from './helpers/portal-requests';
-import { history, move } from './helpers/transitions';
+import { history, move, stockUp } from './helpers/transitions';
 
 const db = migratedDatabase();
 const world = seedOrderingWorld(db);
@@ -37,14 +37,8 @@ const carpenterId = insertUser({
 	counterpartyId: null,
 	fullName: 'Пётр Столяров'
 });
-const driverId = insertUser({
-	email: 'drv@ws.example',
-	role: 'driver',
-	counterpartyId: null,
-	fullName: 'Олег Рулёв'
-});
 const manager = crmActor('manager', managerId);
-const crew = () => new CrmRequestCrewService(manager);
+const priorities = () => new CrmRequestPriorityService(manager);
 const items = () => new CrmRequestItemsService(manager);
 
 const VOLGA_180 = variantId(db, 'MDL-201-180-PIN');
@@ -66,7 +60,6 @@ function newRequest(): number {
 
 function accepted(): number {
 	const id = newRequest();
-	crew().assign(id, { userId: carpenterId, role: 'carpenter' });
 	move(manager, id, 'in_work');
 	return id;
 }
@@ -93,57 +86,30 @@ const notes = (id: number) => history(id).filter((row) => row.fromStatus === row
 
 beforeEach(() => resetRequests(db));
 
-describe('the crew of a request (C4)', () => {
-	it('assigns a carpenter before the acceptance without a history line', () => {
+describe('the priority of a request (C4)', () => {
+	it('changes the priority before the acceptance without a history line', () => {
 		const id = newRequest();
-		crew().assign(id, { userId: carpenterId, role: 'carpenter' });
+		priorities().setPriority(id, 'urgent');
+		expect(totals(id)?.priority).toBe('urgent');
 		expect(notes(id)).toEqual([]);
 		expect(
-			db.select().from(auditLog).where(eq(auditLog.action, 'request.assign')).all()
+			db.select().from(auditLog).where(eq(auditLog.action, 'request.priority')).all()
 		).toHaveLength(1);
-	});
-
-	it('refuses a person without the role and a second identical assignment', () => {
-		const id = newRequest();
-		expect(() => crew().assign(id, { userId: driverId, role: 'carpenter' })).toThrow(
-			ValidationError
-		);
-		expect(() => crew().assign(id, { userId: managerId, role: 'driver' })).toThrow(ValidationError);
-		crew().assign(id, { userId: carpenterId, role: 'carpenter' });
-		expect(() => crew().assign(id, { userId: carpenterId, role: 'carpenter' })).toThrow(
-			ConflictError
-		);
-	});
-
-	it('writes every change after the launch into history and keeps the last assignee', () => {
-		const id = accepted();
-		crew().assign(id, { userId: driverId, role: 'driver' });
-		crew().unassign(id, { userId: driverId, role: 'driver' });
-		expect(() => crew().unassign(id, { userId: carpenterId, role: 'carpenter' })).toThrow(
-			ConflictError
-		);
-		expect(notes(id).map((row) => [row.toStatus, row.actorId, row.comment])).toEqual([
-			['in_work', managerId, 'Назначен исполнитель: Водитель, Олег Рулёв'],
-			['in_work', managerId, 'Снят исполнитель: Водитель, Олег Рулёв']
-		]);
 	});
 
 	it('changes the priority and closes steering once the request is delivered', () => {
 		const id = accepted();
-		crew().setPriority(id, 'urgent');
+		priorities().setPriority(id, 'urgent');
 		expect(totals(id)?.priority).toBe('urgent');
 		expect(notes(id).at(-1)?.comment).toBe('Приоритет: Срочно');
-		crew().assign(id, { userId: driverId, role: 'driver' });
+		stockUp(id);
 		move(manager, id, 'ready');
 		move(manager, id, 'delivered');
-		expect(() => crew().setPriority(id, 'normal')).toThrow(ConflictError);
-		expect(() => crew().assign(id, { userId: carpenterId, role: 'painter' })).toThrow(
-			ConflictError
-		);
+		expect(() => priorities().setPriority(id, 'normal')).toThrow(ConflictError);
 	});
 
 	it('answers 404 for an unknown request', () => {
-		expect(() => crew().setPriority(999_999, 'urgent')).toThrow(NotFoundError);
+		expect(() => priorities().setPriority(999_999, 'urgent')).toThrow(NotFoundError);
 	});
 });
 
@@ -210,6 +176,7 @@ describe('the lines after the launch (C4 DoD)', () => {
 
 	it('are closed once the product is made, and closed to the crew', () => {
 		const id = accepted();
+		stockUp(id);
 		move(manager, id, 'ready');
 		const [first] = lines(id);
 		expect(() => items().setQty(id, { itemId: first?.id ?? 0, qty: 1, comment: 'поздно' })).toThrow(
@@ -233,7 +200,7 @@ describe('the lines after the launch (C4 DoD)', () => {
 describe('the notes stay in the workshop (C4)', () => {
 	it('keeps the portal card on the moves of the request only', () => {
 		const id = accepted();
-		crew().setPriority(id, 'urgent');
+		priorities().setPriority(id, 'urgent');
 		const card = new RequestCardService(portalActor('cp_admin', world.adminId, world.cpId)).card(
 			id
 		);

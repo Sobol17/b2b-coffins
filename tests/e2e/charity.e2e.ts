@@ -8,7 +8,7 @@ import {
 } from './charity';
 import { login, purchaseMoneyKeys } from './fixtures';
 import { openCard, sendRequest, submitRequest } from './portal-flow';
-import { assignCrew, e2eDb, statusOf, transition } from './transitions';
+import { e2eDb, statusOf, stockUp, transition } from './transitions';
 import { formatMinor } from '../../src/lib/utils/format';
 
 const db = e2eDb();
@@ -16,10 +16,9 @@ const LIVE_TIMEOUT = 15_000;
 
 /** A sent request, walked by the crew up to the driver's hands. */
 function toReady(number: string): string {
-	assignCrew(db, number, 'carpenter', 'carpenter');
-	assignCrew(db, number, 'driver', 'driver');
 	expect(transition(number, 'in_work', 'manager').ok).toBe(true);
-	expect(transition(number, 'ready', 'carpenter').ok).toBe(true);
+	stockUp(db, number);
+	expect(transition(number, 'ready', 'manager').ok).toBe(true);
 	return number;
 }
 

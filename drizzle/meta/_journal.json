@@ -43,6 +43,20 @@
       "when": 1789818281769,
       "tag": "0005_mysterious_komodo",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1790247181344,
+      "tag": "0006_melodic_king_cobra",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "6",
+      "when": 1790250064455,
+      "tag": "0007_sad_rick_jones",
+      "breakpoints": true
     }
   ]
 }

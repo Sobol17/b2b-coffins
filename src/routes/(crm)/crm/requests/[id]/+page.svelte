@@ -1,9 +1,9 @@
 <script lang="ts">
 	import { resolve } from '$app/paths';
-	import CrewPanel from '$lib/crm/requests/CrewPanel.svelte';
 	import HistoryPanel from '$lib/crm/requests/HistoryPanel.svelte';
 	import ItemsPanel from '$lib/crm/requests/ItemsPanel.svelte';
 	import MovesPanel from '$lib/crm/requests/MovesPanel.svelte';
+	import PriorityPanel from '$lib/crm/requests/PriorityPanel.svelte';
 	import { FLAG_TITLE, PRIORITY_TITLE, STOCK_TITLE } from '$lib/crm/requests/labels';
 	import { Breadcrumbs, Card, PriceCell, StatusBadge, TONE_CLASS } from '$lib/ui';
 	import { formatDateTime } from '$lib/utils/format';
@@ -83,7 +83,7 @@
 					</dl>
 				</Card.Content>
 			</Card.Root>
-			<CrewPanel {card} crew={data.choices.crew} />
+			<PriorityPanel {card} />
 			{#if card.attachments.length > 0}
 				<Card.Root>
 					<Card.Header><Card.Title>Вложения</Card.Title></Card.Header>
