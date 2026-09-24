@@ -3,7 +3,8 @@ import { ConflictError, ForbiddenError, NotFoundError, ValidationError } from '.
 import { BaseService } from '../core/service';
 import type { Tx } from '../db/client';
 import { ProductRepository } from './product.repository';
-import { ManagedOptionRepository, ManagedVariantRepository } from './variant.repository';
+import { ManagedOptionRepository } from './option.repository';
+import { ManagedVariantRepository } from './variant.repository';
 import type { ActorContext } from '$lib/types/actor';
 import type { CrmOptionDto, CrmVariantDto } from '$lib/types/crm-catalog';
 import {

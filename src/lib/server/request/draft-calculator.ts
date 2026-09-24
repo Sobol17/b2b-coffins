@@ -5,10 +5,12 @@ import { DeliveryAddressRepository } from '../counterparty/delivery-address.repo
 import type { Tx } from '../db/client';
 import { AgencyPricing } from '../pricing/agency-pricing';
 import { PersonalPriceResolver } from '../pricing/personal-price';
+import { DiscountRuleRepository } from '../crm-pricing/discount-rule.repository';
 import { DraftItemRepository } from './draft-item.repository';
 import { DraftDtoMapper } from './draft.dto';
 import { DraftRepository, type DraftRow } from './draft.repository';
-import { lineTotalMinor, requestTotals } from '$lib/domain/request/pricing';
+import { requestTotalsWithRules } from '$lib/domain/request/discount-rules';
+import { discountPercentOf, lineTotalMinor } from '$lib/domain/request/pricing';
 import type { ActorContext } from '$lib/types/actor';
 import type { DraftDto } from '$lib/types/request';
 
@@ -27,7 +29,8 @@ export class DraftCalculator {
 		private readonly counterparties: CounterpartyRepository = new CounterpartyRepository(),
 		private readonly addresses: DeliveryAddressRepository = new DeliveryAddressRepository(),
 		private readonly catalog: CatalogRepository = new CatalogRepository(),
-		private readonly agency: AgencyPricing = new AgencyPricing(ctx)
+		private readonly agency: AgencyPricing = new AgencyPricing(ctx),
+		private readonly discountRules: DiscountRuleRepository = new DiscountRuleRepository()
 	) {}
 
 	/** Stores line prices and request totals at the counterparty's current prices. */
@@ -49,6 +52,10 @@ export class DraftCalculator {
 			...new Set(lineOptions.map((option) => option.optionId))
 		]);
 
+		const paths = this.discountRules.pathsForProducts(
+			lines.map((line) => line.productId),
+			tx
+		);
 		const lineTotals = lines.map((line) => {
 			const own = lineOptions
 				.filter((option) => option.itemId === line.id)
@@ -63,16 +70,25 @@ export class DraftCalculator {
 				qty: line.qty
 			});
 			this.lines.savePrices(line.id, { unitPriceMinor, lineTotalMinor: total }, own, tx);
-			return total;
+			return { totalMinor: total, categoryIds: paths.get(line.productId) ?? [] };
 		});
 
 		const discountPercent = this.counterparties.findOwn(this.ctx)?.discountPercent ?? 0;
-		this.drafts.saveTotals(requestId, requestTotals(lineTotals, discountPercent), tx);
+		const rules =
+			this.ctx.counterpartyId === null
+				? []
+				: this.discountRules.activeFor(this.ctx.counterpartyId, new Date(), tx);
+		this.drafts.saveTotals(
+			requestId,
+			requestTotalsWithRules(lineTotals, discountPercent, rules),
+			tx
+		);
 	}
 
 	project(draft: DraftRow): DraftDto {
 		const lines = this.lines.lines(draft.id);
 		const withPrices = this.ctx.canSeePrices;
+		const totals = withPrices ? this.drafts.totals(draft.id) : undefined;
 		return DraftDtoMapper.toDraft(draft, {
 			lines,
 			options: this.lines.lineOptions(lines.map((line) => line.id)),
@@ -80,10 +96,11 @@ export class DraftCalculator {
 			addresses: this.addresses.listOwn(this.ctx),
 			prices: withPrices ? this.lines.linePrices(lines.map((line) => line.id)) : undefined,
 			agencyPrices: this.agency.forProducts(lines.map((line) => line.productId)),
-			totals: withPrices ? this.drafts.totals(draft.id) : undefined,
-			discountPercent: withPrices
-				? this.counterparties.findOwn(this.ctx)?.discountPercent
-				: undefined
+			totals,
+			discountPercent:
+				totals === undefined
+					? undefined
+					: discountPercentOf(totals.itemsTotalMinor, totals.discountMinor)
 		});
 	}
 }
