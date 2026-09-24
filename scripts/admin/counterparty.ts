@@ -7,9 +7,12 @@ import {
 	deliveryAddresses,
 	priceLists,
 	roles,
+	settings,
 	userRoles,
 	users
 } from '../../src/lib/server/db/schema';
+import { staffLimitDefaultSchema } from '../../src/lib/validation/settings';
+import { definedProps } from '../../src/lib/utils/props';
 import { readOptions, STRING_OPTION } from './args';
 
 const schema = z.object({
@@ -25,6 +28,17 @@ const schema = z.object({
 	'admin-name': z.string().min(1),
 	'admin-password': z.string().min(12)
 });
+
+/** The owner sets the seats of a new counterparty in the CRM (C1); the column default is the fallback. */
+function defaultStaffLimit(db: Db): number | undefined {
+	const [row] = db
+		.select({ value: settings.value })
+		.from(settings)
+		.where(eq(settings.key, 'counterparty.staff_limit_default'))
+		.all();
+	const parsed = staffLimitDefaultSchema.safeParse(row?.value);
+	return parsed.success ? parsed.data : undefined;
+}
 
 export async function counterpartyCreate(db: Db, argv: readonly string[]): Promise<void> {
 	const input = readOptions(
@@ -60,6 +74,7 @@ export async function counterpartyCreate(db: Db, argv: readonly string[]): Promi
 	if (!adminRole) throw new Error('role cp_admin is missing, run the seed first');
 
 	const passwordHash = await hashPassword(input['admin-password']);
+	const staffLimit = defaultStaffLimit(db);
 
 	// One transaction: a counterparty without its administrator cannot log in and cannot be fixed
 	// from the portal, so a half-applied command would leave dead data behind.
@@ -74,7 +89,8 @@ export async function counterpartyCreate(db: Db, argv: readonly string[]): Promi
 				email: input.email ?? null,
 				priceListId: priceList.id,
 				discountPercent: input.discount,
-				settlementScheme: input.scheme
+				settlementScheme: input.scheme,
+				...definedProps({ staffLimit })
 			})
 			.returning()
 			.all();

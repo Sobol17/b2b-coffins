@@ -3,6 +3,7 @@ import { migrate } from 'drizzle-orm/better-sqlite3/migrator';
 import { hashPassword } from '../../src/lib/server/auth/password';
 import { createDb, type Db } from '../../src/lib/server/db/client';
 import {
+	dictItems,
 	rateLimits,
 	roles,
 	sessions,
@@ -64,6 +65,8 @@ export default async function globalSetup(): Promise<void> {
 	// than deleted: a disabled account frees its seat of the staff limit for the next run.
 	db.update(users).set({ isActive: false }).where(like(users.email, 'e2e.%')).run();
 	db.update(users).set({ failedAttempts: 0, lockedUntil: null }).run();
+	// Items the CRM admin spec adds: nothing references them, so each run starts without them.
+	db.delete(dictItems).where(like(dictItems.code, 'e2e%')).run();
 }
 
 /** Rewritten on every run: these accounts exist to be changed and locked by the suite. */

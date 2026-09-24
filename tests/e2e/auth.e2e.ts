@@ -3,6 +3,17 @@ import { ACCOUNTS, HOME_BY_SCOPE, login, type RoleKey } from './fixtures';
 
 const ROLES = Object.keys(ACCOUNTS) as RoleKey[];
 
+// The CRM header names the role in words (C1); the portal header keeps its own layout.
+const SHOWN_ROLE: Readonly<Record<RoleKey, string>> = {
+	owner: 'Руководитель',
+	manager: 'Менеджер',
+	carpenter: 'Столяр',
+	painter: 'Маляр',
+	driver: 'Водитель',
+	cp_admin: 'cp_admin',
+	cp_employee: 'cp_employee'
+};
+
 test.describe('login and contour isolation across all seven roles', () => {
 	for (const role of ROLES) {
 		const account = ACCOUNTS[role];
@@ -13,7 +24,7 @@ test.describe('login and contour isolation across all seven roles', () => {
 			await login(page, role);
 
 			await expect(page).toHaveURL(home);
-			await expect(page.getByTestId('actor-roles')).toHaveText(role);
+			await expect(page.getByTestId('actor-roles')).toHaveText(SHOWN_ROLE[role]);
 		});
 
 		test(`${role} gets 403 on a direct link into the other contour`, async ({ page }) => {

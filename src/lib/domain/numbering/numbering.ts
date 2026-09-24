@@ -1,4 +1,6 @@
-export type NumberingPeriod = 'none' | 'year' | 'month';
+import type { NumberingPeriod } from '$lib/types/crm';
+
+export type { NumberingPeriod };
 
 export interface SequenceState {
 	readonly prefix: string;
@@ -35,8 +37,36 @@ export function periodKeyOf(period: NumberingPeriod, at: Date, timeZone: string)
 export function nextNumber(state: SequenceState, at: Date, timeZone: string): NextNumber {
 	const periodKey = periodKeyOf(state.period, at, timeZone);
 	const value = periodKey === state.periodKey ? state.lastValue + 1 : 1;
-	const body = String(value).padStart(DIGITS, '0');
-	const number =
-		periodKey === '' ? `${state.prefix}${body}` : `${state.prefix}${periodKey}-${body}`;
-	return { number, periodKey, value };
+	return {
+		number: `${headOf(state.prefix, periodKey)}${String(value).padStart(DIGITS, '0')}`,
+		periodKey,
+		value
+	};
+}
+
+/** Everything before the counter: the part two numbers of one sequence and period share. */
+export function headOf(prefix: string, periodKey: string): string {
+	return periodKey === '' ? prefix : `${prefix}${periodKey}-`;
+}
+
+/**
+ * State after the owner changes the prefix or the period (C1). The counter goes on after the highest
+ * number already issued in the same form, so a returning prefix never hands out a taken number and
+ * the unique index on `requests.number` never fires.
+ */
+export function resumeSequence(
+	settings: { readonly prefix: string; readonly period: NumberingPeriod },
+	issued: readonly string[],
+	at: Date,
+	timeZone: string
+): SequenceState {
+	const periodKey = periodKeyOf(settings.period, at, timeZone);
+	const head = headOf(settings.prefix, periodKey);
+	let lastValue = 0;
+	for (const number of issued) {
+		if (!number.startsWith(head)) continue;
+		const counter = number.slice(head.length);
+		if (/^\d+$/.test(counter)) lastValue = Math.max(lastValue, Number(counter));
+	}
+	return { ...settings, periodKey, lastValue };
 }

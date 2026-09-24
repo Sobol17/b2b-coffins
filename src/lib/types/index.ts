@@ -2,6 +2,7 @@ export * from './actor';
 export * from './catalog';
 export * from './charity';
 export * from './counterparty';
+export * from './crm';
 export * from './dicts';
 export * from './events';
 export * from './landing';

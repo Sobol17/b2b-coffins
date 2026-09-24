@@ -26,3 +26,24 @@ export function withListQuery(url: URL, query: ListQuery, prefix = ''): URL {
 	}
 	return next;
 }
+
+/**
+ * Query a registry table shows: the server's page and page size plus the sorting in the url.
+ * The server already clamped paging, so only sorting is read back from the query string.
+ */
+export function listQueryOf(url: URL, paging: { page: number; perPage: number }): ListQuery {
+	const sort = url.searchParams.get('sort');
+	const dir = url.searchParams.get('dir');
+	return {
+		page: paging.page,
+		perPage: paging.perPage,
+		...(sort === null ? {} : { sort }),
+		...(dir === 'asc' || dir === 'desc' ? { dir } : {})
+	};
+}
+
+/** Filter values of a FilterBar from the url, without the empty ones. */
+export function filtersOf(url: URL, keys: readonly string[]): Record<string, string> {
+	const entries = keys.map((key) => [key, url.searchParams.get(key) ?? ''] as const);
+	return Object.fromEntries(entries.filter(([, value]) => value !== ''));
+}

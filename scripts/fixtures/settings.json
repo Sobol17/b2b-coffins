@@ -17,6 +17,5 @@
 	},
 	"counterparty.staff_limit_default": 10,
 	"payroll.week_closing_day": 1,
-	"notifications.enabled": true,
-	"crm.ip_allowlist": []
+	"notifications.enabled": true
 }
