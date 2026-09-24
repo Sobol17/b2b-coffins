@@ -43,7 +43,7 @@ const COLUMNS = {
 const SORTABLE = { fullName: users.fullName, lastLoginAt: users.lastLoginAt };
 
 /** SQL twin of `staffStatus` in dto.ts: the filter and the badge must agree on every account. */
-function statusWhere(status: StaffStatus): SQL | undefined {
+export function statusWhere(status: StaffStatus): SQL | undefined {
 	const neverSignedIn = and(eq(users.mustChangePassword, true), isNull(users.lastLoginAt));
 	if (status === 'disabled') return eq(users.isActive, false);
 	if (status === 'invited') return and(eq(users.isActive, true), neverSignedIn);
