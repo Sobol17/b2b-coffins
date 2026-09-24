@@ -17,4 +17,16 @@ export class SettingsRepository extends BaseRepository<typeof settings> {
 			.all();
 		return row?.value;
 	}
+
+	/** Upsert of one key. The caller validated the value against the schema of that key. */
+	save(key: string, value: unknown, updatedById: number, tx?: Tx): void {
+		this.db(tx)
+			.insert(settings)
+			.values({ key, value, updatedById })
+			.onConflictDoUpdate({
+				target: settings.key,
+				set: { value, updatedById, updatedAt: new Date() }
+			})
+			.run();
+	}
 }
