@@ -1,7 +1,7 @@
 import { database } from '../../../src/lib/server/db/client';
-import { requestAssignees, requests } from '../../../src/lib/server/db/schema';
+import { requests } from '../../../src/lib/server/db/schema';
 import { normalizeListQuery } from '../../../src/lib/server/core/list';
-import type { AssigneeRole, CrmRequestFilters } from '../../../src/lib/types/crm-request';
+import type { CrmRequestFilters } from '../../../src/lib/types/crm-request';
 import type { ListQuery } from '../../../src/lib/types/list';
 import type { RequestPriority, RequestStatus } from '../../../src/lib/types/request';
 
@@ -43,10 +43,6 @@ export function insertRequest(fixture: RequestFixture): number {
 		.all();
 	if (!row) throw new Error('failed to insert a request');
 	return row.id;
-}
-
-export function crew(requestId: number, userId: number, role: AssigneeRole): void {
-	database.insert(requestAssignees).values({ requestId, userId, role }).run();
 }
 
 export function crmQuery(

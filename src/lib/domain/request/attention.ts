@@ -1,5 +1,5 @@
 import type { SettlementScheme } from '$lib/types/counterparty';
-import type { AssigneeRole, AttentionFlag } from '$lib/types/crm-request';
+import type { AttentionFlag } from '$lib/types/crm-request';
 import type { RequestStatus } from '$lib/types/request';
 
 const DAY_MS = 86_400_000;
@@ -16,15 +16,9 @@ export const PAYMENT_WAIT_DAYS: Readonly<Record<SettlementScheme, number>> = {
 
 export interface AttentionFacts {
 	readonly status: RequestStatus;
-	readonly assigneeRoles: readonly AssigneeRole[];
 	readonly deliveredAt: Date | null;
 	/** Null for a stock request: nobody owes the workshop for its own stock. */
 	readonly scheme: SettlementScheme | null;
-}
-
-/** The shop works by position, not by request (v1.41): only an assembled request needs a driver. */
-export function lacksAssignee(status: RequestStatus, roles: readonly AssigneeRole[]): boolean {
-	return status === 'ready' && !roles.includes('driver');
 }
 
 /** The last delivery moment that is already overdue for a scheme, as of `now`. */
@@ -41,7 +35,6 @@ export function paymentOverdue(facts: AttentionFacts, now: Date): boolean {
 /** Flags of the board and the registry. The SQL filter of the registry follows the same rules. */
 export function attentionFlags(facts: AttentionFacts, now: Date): AttentionFlag[] {
 	const flags: AttentionFlag[] = [];
-	if (lacksAssignee(facts.status, facts.assigneeRoles)) flags.push('no_assignee');
 	if (paymentOverdue(facts, now)) flags.push('payment_overdue');
 	return flags;
 }

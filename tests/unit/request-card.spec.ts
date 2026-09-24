@@ -9,7 +9,7 @@ import {
 	variantId
 } from './helpers/portal-requests';
 import { send } from './helpers/registry';
-import { assign, move, pay, refused, stockUp, totalOf } from './helpers/transitions';
+import { move, pay, refused, stockUp, totalOf } from './helpers/transitions';
 
 const db = migratedDatabase();
 const world = seedOrderingWorld(db);
@@ -30,7 +30,6 @@ function card(id: number, ctx = adminCtx) {
 
 /** Drives the request to `paid`, so the card has the full history including the automatic steps. */
 function deliver(id: number): void {
-	assign(id, driverId, 'driver');
 	move(managerCtx, id, 'in_work');
 	stockUp(id);
 	move(managerCtx, id, 'ready');

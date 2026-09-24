@@ -96,7 +96,6 @@ export class RequestSubmitService extends PortalRequestService {
 			to: 'new',
 			actorRoles: this.ctx.roles,
 			isOwnRequest: draft.createdById === this.ctx.userId,
-			isAssigned: false,
 			hasReason: false,
 			// The details are not written yet, so the guard reads what is about to be written.
 			guards: {

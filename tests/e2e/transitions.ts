@@ -5,7 +5,6 @@ import {
 	options,
 	paymentMarks,
 	productVariants,
-	requestAssignees,
 	requestItemOptions,
 	requestItems,
 	requestStatusHistory,
@@ -60,14 +59,6 @@ export function transition(
 		const failed = err as { stdout?: string; stderr?: string };
 		return { ok: false, output: `${failed.stdout ?? ''}${failed.stderr ?? ''}` };
 	}
-}
-
-/** The driver is picked on the C4 card and payment marks are C7: the helper writes them as fixtures. */
-export function assignCrew(db: Db, number: string, actor: RoleKey, role: 'carpenter' | 'driver') {
-	db.insert(requestAssignees)
-		.values({ requestId: requestId(db, number), userId: userId(db, actor), role })
-		.onConflictDoNothing()
-		.run();
 }
 
 interface Position {

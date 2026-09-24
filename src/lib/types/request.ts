@@ -35,7 +35,6 @@ export interface Transition {
 	readonly to: RequestStatus;
 	readonly roles: readonly (RoleCode | 'system')[];
 	readonly ownOnly?: boolean;
-	readonly assignedOnly?: boolean;
 	readonly requiresReason?: boolean;
 	readonly auto?: boolean;
 	readonly guards?: readonly GuardCode[];

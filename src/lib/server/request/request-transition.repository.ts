@@ -5,12 +5,12 @@ import { StockFill } from '../stock/stock-fill';
 import {
 	dictItems,
 	paymentMarks,
-	requestAssignees,
 	requestItems,
 	requestStatusHistory,
 	requests
 } from '../db/schema';
 import type { GuardFacts } from '$lib/domain/request/guards';
+import { reachableStatuses } from '$lib/domain/request/state-machine';
 import type { StampField } from '$lib/domain/request/transition-flow';
 import type { ActorContext } from '$lib/types/actor';
 import type { RequestStatus } from '$lib/types/request';
@@ -40,7 +40,7 @@ export class RequestTransitionRepository extends BaseRepository<typeof requests>
 
 	/**
 	 * A sent request the actor can reach: the own counterparty on the portal (only the own requests
-	 * for an employee), any request for a CRM role that reads all, the assigned ones for the crew.
+	 * for an employee), any request for a CRM role that reads all, the ones the crew moves on.
 	 */
 	findVisible(ctx: ActorContext, id: number, scope: VisibilityScope, tx?: Tx) {
 		const [row] = this.db(tx)
@@ -64,16 +64,6 @@ export class RequestTransitionRepository extends BaseRepository<typeof requests>
 				.select({ id: requests.id })
 				.from(requests)
 				.where(and(eq(requests.id, id), ne(requests.status, 'draft')))
-				.all().length > 0
-		);
-	}
-
-	isAssigned(requestId: number, userId: number, tx?: Tx): boolean {
-		return (
-			this.db(tx)
-				.select({ userId: requestAssignees.userId })
-				.from(requestAssignees)
-				.where(and(eq(requestAssignees.requestId, requestId), eq(requestAssignees.userId, userId)))
 				.all().length > 0
 		);
 	}
@@ -153,17 +143,9 @@ export class RequestTransitionRepository extends BaseRepository<typeof requests>
 	}
 
 	private visibleWhere(ctx: ActorContext, scope: VisibilityScope, extra: SQL | undefined) {
-		// Not correlated on purpose: drizzle renders the outer column unqualified inside a subquery.
+		// Nobody is assigned (v1.42): the crew sees the statuses its roles move a request out of.
 		const crew =
-			scope === 'assigned'
-				? inArray(
-						requests.id,
-						this.db()
-							.select({ requestId: requestAssignees.requestId })
-							.from(requestAssignees)
-							.where(eq(requestAssignees.userId, ctx.userId))
-					)
-				: undefined;
+			scope === 'crew' ? inArray(requests.status, reachableStatuses(ctx.roles)) : undefined;
 		const own = scope === 'own' ? eq(requests.createdById, ctx.userId) : undefined;
 		return this.scopedWhere(
 			ctx,
@@ -173,5 +155,5 @@ export class RequestTransitionRepository extends BaseRepository<typeof requests>
 	}
 }
 
-/** `all`: whole counterparty or whole workshop; `own`: created by the actor; `assigned`: crew. */
-export type VisibilityScope = 'all' | 'own' | 'assigned';
+/** `all`: whole counterparty or whole workshop; `own`: created by the actor; `crew`: by status. */
+export type VisibilityScope = 'all' | 'own' | 'crew';

@@ -6,7 +6,6 @@ import {
 	options,
 	paymentMarks,
 	productVariants,
-	requestAssignees,
 	requestItemOptions,
 	requestItems,
 	requestStatusHistory,
@@ -48,11 +47,6 @@ export function refused(run: () => unknown): { name: string; status: number } {
 		};
 	}
 	return { name: 'no refusal', status: 200 };
-}
-
-/** Assignment is a C4 screen and payment marks are C7, so a P5 test writes them as fixtures. */
-export function assign(requestId: number, userId: number, role: 'carpenter' | 'driver'): void {
-	database.insert(requestAssignees).values({ requestId, userId, role }).run();
 }
 
 /**

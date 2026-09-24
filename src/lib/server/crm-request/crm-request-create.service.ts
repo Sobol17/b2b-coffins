@@ -130,7 +130,6 @@ export class CrmRequestCreateService extends CrmRequestBaseService {
 			to: 'new',
 			actorRoles: this.ctx.roles,
 			isOwnRequest: true,
-			isAssigned: false,
 			hasReason: false,
 			guards: {
 				deliveryFilled: isDeliveryFilled({

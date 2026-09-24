@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { ConflictError, ForbiddenError, NotFoundError } from '../../src/lib/server/core/errors';
 import { CrmRequestCardService } from '../../src/lib/server/crm-request/crm-request-card.service';
 import { CrmRequestCreateService } from '../../src/lib/server/crm-request/crm-request-create.service';
-import { CrmRequestCrewService } from '../../src/lib/server/crm-request/crm-request-crew.service';
+import { CrmRequestPriorityService } from '../../src/lib/server/crm-request/crm-request-priority.service';
 import { DraftService } from '../../src/lib/server/request/draft.service';
 import { crmRequestCreateSchema } from '../../src/lib/validation/crm-request';
 import { insertUser, migratedDatabase } from './helpers/db';
@@ -62,7 +62,6 @@ describe('the workshop card of a request (C4)', () => {
 			// The shop works by position (v1.41): a request before assembly needs nobody on it.
 			flags: [],
 			itemsEdit: 'free',
-			assignees: [],
 			totalMinor: 1_577_000,
 			deceasedName: 'Иванов Иван Иванович'
 		});
@@ -71,15 +70,12 @@ describe('the workshop card of a request (C4)', () => {
 		expect(card.items[0]).not.toHaveProperty('agencyUnitPriceMinor');
 	});
 
-	it('lists the crew and the notes of the launched request', () => {
+	it('lists the notes of the launched request and no assignees (v1.42)', () => {
 		const id = newRequest();
-		new CrmRequestCrewService(manager).assign(id, { userId: carpenterId, role: 'carpenter' });
 		move(manager, id, 'in_work');
-		new CrmRequestCrewService(manager).setPriority(id, 'urgent');
+		new CrmRequestPriorityService(manager).setPriority(id, 'urgent');
 		const card = cards().card(id);
-		expect(card.assignees).toEqual([
-			{ userId: carpenterId, fullName: 'Пётр Столяров', role: 'carpenter' }
-		]);
+		expect(card).not.toHaveProperty('assignees');
 		expect(card).toMatchObject({ flags: [], itemsEdit: 'controlled', priority: 'urgent' });
 		expect(card.history.map((step) => [step.fromStatus, step.toStatus, step.comment])).toEqual([
 			['draft', 'new', null],
@@ -114,9 +110,7 @@ describe('the workshop card of a request (C4)', () => {
 		expect(cards().addresses(999_999)).toEqual([]);
 		const choices = cards().choices();
 		expect(choices.counterparties.map((row) => row.name)).toContain('Память');
-		expect(choices.crew).toEqual([
-			{ id: carpenterId, fullName: 'Пётр Столяров', roles: ['carpenter'] }
-		]);
+		expect(choices).not.toHaveProperty('crew');
 		expect(choices.variants.find((row) => row.id === VOLGA_180)?.options.length).toBeGreaterThan(0);
 	});
 

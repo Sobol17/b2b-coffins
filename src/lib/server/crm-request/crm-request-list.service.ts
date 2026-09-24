@@ -107,14 +107,6 @@ export class CrmRequestListService extends CrmRequestBaseService {
 	private project(rows: readonly CrmListRow[], now: Date): CrmRequestListItemDto[] {
 		const ids = rows.map((row) => row.id);
 		const summaries = this.registry.summaries(ids);
-		const crew = this.repo.assignees(ids);
-		return rows.map((row) =>
-			CrmRequestDtoMapper.toListItem(
-				row,
-				summaries.get(row.id),
-				crew.filter((member) => member.requestId === row.id),
-				now
-			)
-		);
+		return rows.map((row) => CrmRequestDtoMapper.toListItem(row, summaries.get(row.id), now));
 	}
 }

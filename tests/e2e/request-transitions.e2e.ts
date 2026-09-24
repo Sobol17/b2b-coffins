@@ -1,20 +1,11 @@
 import { expect, test } from '@playwright/test';
 import { sendRequest } from './portal-flow';
-import {
-	assignCrew,
-	e2eDb,
-	markPaidInFull,
-	statusChain,
-	statusOf,
-	stockUp,
-	transition
-} from './transitions';
+import { e2eDb, markPaidInFull, statusChain, statusOf, stockUp, transition } from './transitions';
 
 const db = e2eDb();
 
 test('a delivery that collects the cash walks the request to paid', async ({ page }) => {
 	const number = await sendRequest(page, 'cp_employee');
-	assignCrew(db, number, 'driver', 'driver');
 
 	expect(transition(number, 'in_work', 'manager').ok).toBe(true);
 	stockUp(db, number);
@@ -37,7 +28,6 @@ test('a delivery that collects the cash walks the request to paid', async ({ pag
 
 test('a delivery billed by invoice stops at awaiting_payment', async ({ page }) => {
 	const number = await sendRequest(page, 'cp_employee');
-	assignCrew(db, number, 'driver', 'driver');
 
 	expect(transition(number, 'in_work', 'manager').ok).toBe(true);
 	stockUp(db, number);
@@ -65,10 +55,8 @@ test('a move the table does not list is refused and changes nothing', async ({ p
 
 test('a role the transition does not grant is refused', async ({ page }) => {
 	const number = await sendRequest(page, 'cp_employee');
-	// Assigned, so the request is in reach: the refusal comes from the role, not from row-level.
-	assignCrew(db, number, 'carpenter', 'carpenter');
-
-	const wrongRole = transition(number, 'in_work', 'carpenter');
+	// The author reaches the own request, so the refusal comes from the role, not from row-level.
+	const wrongRole = transition(number, 'in_work', 'cp_employee');
 
 	expect(wrongRole.ok).toBe(false);
 	expect(wrongRole.output).toContain('not allowed: request.transition');

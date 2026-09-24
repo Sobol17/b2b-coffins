@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { ASSIGNEE_ROLES, ATTENTION_FLAGS } from '$lib/types/crm-request';
+import { ATTENTION_FLAGS } from '$lib/types/crm-request';
 import { REQUEST_PRIORITIES, REQUEST_STATUSES } from '$lib/types/request';
 import { MAX_LINE_QTY, requestTransitionSchema } from './request';
 
@@ -119,11 +119,6 @@ export const addLineSchema = z.object({
 export const lineQtySchema = z.object({ itemId: id, qty, comment: changeCommentSchema });
 export const removeLineSchema = z.object({ itemId: id, comment: changeCommentSchema });
 
-export const assigneeSchema = z.object({
-	userId: id,
-	role: z.enum(ASSIGNEE_ROLES, { error: 'Выберите роль исполнителя' })
-});
-
 export const prioritySchema = z.object({
 	priority: z.enum(REQUEST_PRIORITIES, { error: 'Выберите приоритет' })
 });
@@ -134,4 +129,3 @@ export const boardMoveSchema = requestTransitionSchema.extend({ id });
 export type AddLineInput = z.infer<typeof addLineSchema>;
 export type LineQtyInput = z.infer<typeof lineQtySchema>;
 export type RemoveLineInput = z.infer<typeof removeLineSchema>;
-export type AssigneeInput = z.infer<typeof assigneeSchema>;

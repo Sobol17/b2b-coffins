@@ -10,7 +10,7 @@ import {
 	variantId
 } from './helpers/portal-requests';
 import { listQuery, markExternal, send, sentAt } from './helpers/registry';
-import { assign, move } from './helpers/transitions';
+import { move } from './helpers/transitions';
 
 const db = migratedDatabase();
 const world = seedOrderingWorld(db);
@@ -35,7 +35,6 @@ function registry(ctx = adminCtx) {
 
 /** Accepts the request and finishes it, so the registry has a row outside the sent state. */
 function toWork(id: number): void {
-	assign(id, carpenterId, 'carpenter');
 	move(managerCtx, id, 'in_work');
 }
 

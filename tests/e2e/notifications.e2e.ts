@@ -1,7 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import { login, logout, purchaseMoneyKeys } from './fixtures';
 import { sendRequest, submitRequest } from './portal-flow';
-import { assignCrew, e2eDb, stockUp, transition } from './transitions';
+import { e2eDb, stockUp, transition } from './transitions';
 
 const db = e2eDb();
 const ORIGIN = 'http://localhost:4173';
@@ -79,7 +79,6 @@ test('a switched-off event stops the letters and the choice survives a reload', 
 	const number = await submitRequest(page);
 	toReady(number);
 	// Delivery is the next event; its letter proves the queue ran past the silenced one.
-	assignCrew(db, number, 'driver', 'driver');
 	expect(transition(number, 'delivered', 'driver').ok).toBe(true);
 	await expectSentInLog(page, number, 'Заявка доставлена');
 	await expect(

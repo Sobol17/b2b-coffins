@@ -1,11 +1,11 @@
 import { and, asc, desc, eq, gte, inArray, ne, or, sql, type SQL } from 'drizzle-orm';
 import { countExpression } from '../core/list';
 import { BaseRepository } from '../core/repository';
-import { counterparties, paymentMarks, requestAssignees, requests, users } from '../db/schema';
+import { counterparties, paymentMarks, requests, users } from '../db/schema';
 import type { RegistryRow } from '../request/request-registry.repository';
 import { BOARD_ORDER, criteriaWhere, type CrmRequestCriteria } from './crm-request-query';
 import type { SettlementScheme } from '$lib/types/counterparty';
-import type { AssigneeRole, CrmRequestSort } from '$lib/types/crm-request';
+import type { CrmRequestSort } from '$lib/types/crm-request';
 import type { RequestStatus } from '$lib/types/request';
 
 export interface CrmListRow extends RegistryRow {
@@ -14,13 +14,6 @@ export interface CrmListRow extends RegistryRow {
 	readonly isStockRequest: boolean;
 	readonly deliveryAt: Date | null;
 	readonly scheme: SettlementScheme | null;
-}
-
-export interface AssigneeRow {
-	readonly requestId: number;
-	readonly userId: number;
-	readonly fullName: string;
-	readonly role: AssigneeRole;
 }
 
 export interface ListSlice {
@@ -113,22 +106,6 @@ export class CrmRequestListRepository extends BaseRepository<typeof requests> {
 			.groupBy(requests.status)
 			.all();
 		return new Map(rows.map((row) => [row.status, row.count]));
-	}
-
-	assignees(requestIds: readonly number[]): AssigneeRow[] {
-		if (requestIds.length === 0) return [];
-		return this.db()
-			.select({
-				requestId: requestAssignees.requestId,
-				userId: requestAssignees.userId,
-				fullName: users.fullName,
-				role: requestAssignees.role
-			})
-			.from(requestAssignees)
-			.innerJoin(users, eq(users.id, requestAssignees.userId))
-			.where(inArray(requestAssignees.requestId, [...requestIds]))
-			.orderBy(asc(requestAssignees.role), asc(users.fullName))
-			.all();
 	}
 
 	private rows(where: SQL | undefined, withMoney: boolean) {

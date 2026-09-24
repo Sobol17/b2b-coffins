@@ -8,7 +8,6 @@ import {
 	paymentMarks,
 	productOptions,
 	productVariants,
-	requestAssignees,
 	requests
 } from '../../src/lib/server/db/schema';
 import { ShopService } from '../../src/lib/server/crm-shop/shop.service';
@@ -135,10 +134,6 @@ function advance(db: Db, people: People, id: number, scenario: DemoScenario): vo
 			return;
 	}
 
-	// The driver is picked on the C4 card and payment marks are C7: the seeder writes them directly.
-	db.insert(requestAssignees)
-		.values({ requestId: id, userId: people.driver.userId, role: 'driver' })
-		.run();
 	move(people.manager, 'in_work');
 	if (scenario.stage === 'in_work') return;
 	// The shop works by position (tech.md v1.41): the manager marks the pieces made, then assembles.

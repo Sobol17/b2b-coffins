@@ -14,7 +14,6 @@ import {
 	variantId
 } from './helpers/portal-requests';
 import {
-	assign,
 	dictId,
 	fanouts,
 	history,
@@ -63,7 +62,6 @@ function sent(): number {
  * mark written before the delivery move, the way the driver's checkbox will write it in C6.
  */
 function drive(id: number, upTo: RequestStatus): void {
-	assign(id, driverId, 'driver');
 	move(managerCtx, id, 'in_work');
 	if (upTo === 'in_work') return;
 	stockUp(id);
@@ -198,14 +196,29 @@ describe('request transitions (P5)', () => {
 		expect(history(id).at(-1)).toMatchObject({ toStatus: 'cancelled', actorId: world.adminId });
 	});
 
-	it('keeps the shop crew out of the assembly, assigned or not (v1.41)', () => {
+	it('keeps the shop crew out of the assembly (v1.41)', () => {
 		const id = sent();
-		assign(id, carpenterId, 'carpenter');
 		move(managerCtx, id, 'in_work');
 		stockUp(id);
 
 		expect(refused(() => move(carpenterCtx, id, 'ready')).status).toBe(403);
 		expect(statusOf(id)).toBe('in_work');
+	});
+
+	it('lets any driver deliver an assembled request and shows him nothing earlier (v1.42)', () => {
+		const id = sent();
+		move(managerCtx, id, 'in_work');
+
+		// Nobody is assigned: the driver reaches a request once it is ready, not while it is made.
+		expect(refused(() => move(driverCtx, id, 'delivered'))).toEqual({
+			name: 'ForbiddenError',
+			status: 403
+		});
+		stockUp(id);
+		move(managerCtx, id, 'ready');
+
+		expect(move(driverCtx, id, 'delivered').status).toBe('awaiting_payment');
+		expect(history(id).at(-2)).toMatchObject({ toStatus: 'delivered', actorId: driverId });
 	});
 
 	it('answers 404 for a request that does not exist', () => {

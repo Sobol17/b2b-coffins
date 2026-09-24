@@ -1,4 +1,4 @@
-import { and, asc, eq, inArray, isNull } from 'drizzle-orm';
+import { and, asc, eq, isNull } from 'drizzle-orm';
 import { productVisible, variantVisible } from '../catalog/visibility';
 import { BaseRepository } from '../core/repository';
 import type { Tx } from '../db/client';
@@ -8,22 +8,14 @@ import {
 	options,
 	productOptions,
 	productVariants,
-	products,
-	roles,
-	userRoles,
-	users
+	products
 } from '../db/schema';
-import {
-	ASSIGNEE_ROLES,
-	type AssigneeRole,
-	type CrmRequestChoicesDto,
-	type CrmRequestVariantChoice
-} from '$lib/types/crm-request';
+import type { CrmRequestChoicesDto, CrmRequestVariantChoice } from '$lib/types/crm-request';
 
 // The workshop orders what the storefront offers: a hidden model is hidden for a phone order too.
 const STOREFRONT = { publishedOnly: true } as const;
 
-/** Lists the forms of the workshop pick from: counterparties, positions, crew, refusal reasons. */
+/** Lists the forms of the workshop pick from: counterparties, positions, refusal reasons. */
 export class CrmRequestChoicesRepository extends BaseRepository<typeof counterparties> {
 	constructor() {
 		super(counterparties);
@@ -33,7 +25,6 @@ export class CrmRequestChoicesRepository extends BaseRepository<typeof counterpa
 		return {
 			counterparties: this.counterparties(),
 			variants: this.variants(),
-			crew: this.crew(),
 			refusalReasons: this.db()
 				.select({ id: dictItems.id, title: dictItems.title })
 				.from(dictItems)
@@ -67,51 +58,6 @@ export class CrmRequestChoicesRepository extends BaseRepository<typeof counterpa
 				)
 				.all().length > 0
 		);
-	}
-
-	/** Roles an active workshop account holds among the crew roles. */
-	crewRoles(userId: number, tx?: Tx): AssigneeRole[] {
-		return this.db(tx)
-			.select({ role: roles.code })
-			.from(userRoles)
-			.innerJoin(roles, eq(roles.id, userRoles.roleId))
-			.innerJoin(users, eq(users.id, userRoles.userId))
-			.where(
-				and(
-					eq(userRoles.userId, userId),
-					eq(users.scope, 'crm'),
-					eq(users.isActive, true),
-					isNull(users.deletedAt),
-					inArray(roles.code, [...ASSIGNEE_ROLES])
-				)
-			)
-			.all()
-			.map((row) => row.role as AssigneeRole);
-	}
-
-	private crew(): CrmRequestChoicesDto['crew'] {
-		const rows = this.db()
-			.select({ id: users.id, fullName: users.fullName, role: roles.code })
-			.from(users)
-			.innerJoin(userRoles, eq(userRoles.userId, users.id))
-			.innerJoin(roles, eq(roles.id, userRoles.roleId))
-			.where(
-				and(
-					eq(users.scope, 'crm'),
-					eq(users.isActive, true),
-					isNull(users.deletedAt),
-					inArray(roles.code, [...ASSIGNEE_ROLES])
-				)
-			)
-			.orderBy(asc(users.fullName), asc(users.id))
-			.all();
-		const byUser = new Map<number, { id: number; fullName: string; roles: AssigneeRole[] }>();
-		for (const row of rows) {
-			const entry = byUser.get(row.id) ?? { id: row.id, fullName: row.fullName, roles: [] };
-			entry.roles.push(row.role as AssigneeRole);
-			byUser.set(row.id, entry);
-		}
-		return [...byUser.values()];
 	}
 
 	private variants(): CrmRequestVariantChoice[] {

@@ -7,7 +7,7 @@ import type { ActorContext } from '../../../src/lib/types/actor';
 import type { RequestStatus } from '../../../src/lib/types/request';
 import { insertUser } from './db';
 import { crmActor, portalActor, seedOrderingWorld, variantId } from './portal-requests';
-import { assign, move, stockUp } from './transitions';
+import { move, stockUp } from './transitions';
 
 /** A filled delivery: since v1.33 a counterparty request does not leave the draft without it. */
 const shipment = {
@@ -47,7 +47,6 @@ export function seedCharityWorld(db: Db) {
 
 	/** Walks a sent request forward to `upTo` the way P5 allows it. */
 	function drive(id: number, upTo: Extract<RequestStatus, 'in_work' | 'ready' | 'delivered'>) {
-		assign(id, ids.driver, 'driver');
 		move(actors.manager, id, 'in_work');
 		if (upTo === 'in_work') return;
 		stockUp(id);

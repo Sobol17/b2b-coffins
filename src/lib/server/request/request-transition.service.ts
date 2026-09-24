@@ -71,7 +71,7 @@ export class RequestTransitionService extends BaseService {
 
 	private visibility(): VisibilityScope {
 		if (this.ctx.scope === 'portal') return this.ctx.roles.includes('cp_admin') ? 'all' : 'own';
-		return PolicyService.can(this.ctx, 'request.read.any') ? 'all' : 'assigned';
+		return PolicyService.can(this.ctx, 'request.read.any') ? 'all' : 'crew';
 	}
 
 	private check(request: TransitionRow, input: RequestTransitionInput, tx: Tx): Transition {
@@ -83,10 +83,6 @@ export class RequestTransitionService extends BaseService {
 			to: input.to,
 			actorRoles: this.ctx.roles,
 			isOwnRequest: this.ctx.scope === 'crm' || request.counterpartyId === this.ctx.counterpartyId,
-			// A role that reads every request runs the workshop and stands in for any assignee.
-			isAssigned:
-				PolicyService.can(this.ctx, 'request.read.any') ||
-				this.repo.isAssigned(request.id, this.ctx.userId, tx),
 			hasReason: input.reasonId !== null,
 			guards: evaluateGuards(this.repo.guardFacts(request.id, tx))
 		});
@@ -120,7 +116,6 @@ export class RequestTransitionService extends BaseService {
 			to: candidate.to,
 			actorRoles: ['system'],
 			isOwnRequest: true,
-			isAssigned: true,
 			hasReason: false,
 			guards: evaluateGuards(this.repo.guardFacts(requestId, tx))
 		});

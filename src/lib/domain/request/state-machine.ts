@@ -38,8 +38,8 @@ export const TRANSITIONS: readonly Transition[] = [
 	{
 		from: 'ready',
 		to: 'delivered',
+		// Nobody is assigned since v1.42: any driver takes an assembled request.
 		roles: ['driver', 'manager', 'owner'],
-		assignedOnly: true,
 		effects: ['shipStockItems', 'freezeCharity', 'emit:request.delivered']
 	},
 	{ from: 'delivered', to: 'awaiting_payment', roles: ['system'], auto: true },
@@ -59,7 +59,6 @@ export type TransitionDenial =
 	| { code: 'unknown_transition' }
 	| { code: 'role_not_allowed' }
 	| { code: 'not_owner' }
-	| { code: 'not_assigned' }
 	| { code: 'reason_required' }
 	| { code: 'guard_failed'; guard: GuardCode };
 
@@ -72,7 +71,6 @@ export interface TransitionInput {
 	readonly actorRoles: readonly ActorRole[];
 	/** Portal actor owns the request, or a CRM actor for whom ownOnly does not apply. */
 	readonly isOwnRequest: boolean;
-	readonly isAssigned: boolean;
 	readonly hasReason: boolean;
 	readonly guards: Readonly<Partial<Record<GuardCode, boolean>>>;
 }
@@ -91,9 +89,6 @@ export function checkTransition(input: TransitionInput): TransitionCheck {
 	if (transition.ownOnly && !input.isOwnRequest) {
 		return { ok: false, denial: { code: 'not_owner' } };
 	}
-	if (transition.assignedOnly && !input.isAssigned) {
-		return { ok: false, denial: { code: 'not_assigned' } };
-	}
 	if (transition.requiresReason && !input.hasReason) {
 		return { ok: false, denial: { code: 'reason_required' } };
 	}
@@ -108,6 +103,18 @@ export function targetsForRole(from: RequestStatus, roles: readonly ActorRole[])
 	return TRANSITIONS.filter(
 		(t) => t.from === from && t.roles.some((role) => roles.includes(role))
 	).map((t) => t.to);
+}
+
+/**
+ * Statuses a role moves a request out of. A workshop actor who does not read every request sees
+ * only these (tech.md v1.42): the driver sees assembled requests, the shop crew sees none.
+ */
+export function reachableStatuses(roles: readonly ActorRole[]): RequestStatus[] {
+	return [
+		...new Set(
+			TRANSITIONS.filter((t) => t.roles.some((role) => roles.includes(role))).map((t) => t.from)
+		)
+	];
 }
 
 export const TERMINAL_STATUSES: readonly RequestStatus[] = ['paid', 'cancelled', 'rejected'];
