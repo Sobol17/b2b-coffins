@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { resolve } from '$app/paths';
 	import { DataTable, PriceCell, StatusBadge, type DataTableColumn } from '$lib/ui';
 	import type { ListQuery } from '$lib/types/list';
 	import type { RequestListItemDto } from '$lib/types/request';
@@ -30,7 +31,9 @@
 <DataTable {columns} {rows} {total} {query} {onQueryChange} emptyTitle="Заявок пока нет">
 	{#snippet cell(row: RequestListItemDto, column: DataTableColumn)}
 		{#if column.key === 'number'}
-			<div>{row.number}</div>
+			<a class="text-link hover:text-link-hover" href={resolve(`/crm/requests/${row.id}`)}>
+				{row.number}
+			</a>
 			<div class="text-xs text-fg-faint">{row.firstItemTitle ?? '—'} · {row.unitCount} шт.</div>
 		{:else if column.key === 'submittedAt'}
 			{row.submittedAt ? formatDate(row.submittedAt, timeZone) : '—'}
