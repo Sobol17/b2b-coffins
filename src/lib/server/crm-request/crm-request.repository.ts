@@ -1,13 +1,23 @@
 import { and, asc, eq, ne } from 'drizzle-orm';
 import { BaseRepository } from '../core/repository';
 import type { Tx } from '../db/client';
-import { requestAssignees, requestStatusHistory, requests, users } from '../db/schema';
+import {
+	counterparties,
+	requestAssignees,
+	requestStatusHistory,
+	requests,
+	users
+} from '../db/schema';
 import type { RequestTotals } from '$lib/domain/request/pricing';
+import type { SettlementScheme } from '$lib/types/counterparty';
 import type { AssigneeRole } from '$lib/types/crm-request';
 import type { RequestPriority, RequestStatus } from '$lib/types/request';
 
 export interface SteeredRow extends RequestTotals {
 	readonly id: number;
+	readonly counterpartyName: string | null;
+	readonly scheme: SettlementScheme | null;
+	readonly deliveredAt: Date | null;
 	readonly number: string;
 	readonly status: RequestStatus;
 	readonly priority: RequestPriority;
@@ -48,11 +58,15 @@ export class CrmRequestRepository extends BaseRepository<typeof requests> {
 				priority: requests.priority,
 				counterpartyId: requests.counterpartyId,
 				isStockRequest: requests.isStockRequest,
+				counterpartyName: counterparties.name,
+				scheme: counterparties.settlementScheme,
+				deliveredAt: requests.deliveredAt,
 				itemsTotalMinor: requests.itemsTotalMinor,
 				discountMinor: requests.discountMinor,
 				totalMinor: requests.totalMinor
 			})
 			.from(requests)
+			.leftJoin(counterparties, eq(counterparties.id, requests.counterpartyId))
 			.where(and(eq(requests.id, id), ne(requests.status, 'draft')))
 			.all();
 		return row;

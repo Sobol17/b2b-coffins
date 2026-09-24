@@ -16,8 +16,16 @@ import {
 } from '$lib/domain/request/state-machine';
 import { autoTransition, denialKind, stampFor } from '$lib/domain/request/transition-flow';
 import type { ActorContext } from '$lib/types/actor';
-import type { RequestStatus, SubmittedRequestDto, Transition } from '$lib/types/request';
+import type { GuardCode, RequestStatus, SubmittedRequestDto, Transition } from '$lib/types/request';
 import type { RequestTransitionInput } from '$lib/validation/request';
+
+/** A refused guard in words, so the board says what to do instead of "not allowed" (v1.40). */
+const GUARD_REFUSAL: Readonly<Record<GuardCode, string>> = {
+	hasAssignee: 'Назначьте исполнителя заявки',
+	pricesFixed: 'У позиций заявки нет цены',
+	fullyPaid: 'Заявка оплачена не полностью',
+	deliveryFilled: 'Заполните адрес, срок доставки и ФИО умершего'
+};
 
 /**
  * Moves a sent request through tech.md 6.2. The state machine decides; this service gathers the
@@ -150,7 +158,12 @@ export class RequestTransitionService extends BaseService {
 		const meta = { denial: denial.code, from, to };
 		switch (denialKind(denial)) {
 			case 'conflict':
-				return new ConflictError('Переход недоступен для текущего статуса заявки', meta);
+				return new ConflictError(
+					denial.code === 'guard_failed'
+						? GUARD_REFUSAL[denial.guard]
+						: 'Переход недоступен для текущего статуса заявки',
+					meta
+				);
 			case 'validation':
 				return new ValidationError('Укажите причину', { ...meta, field: 'reasonId' });
 			case 'forbidden':

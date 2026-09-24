@@ -26,9 +26,19 @@ export interface CardParts {
 	readonly viewerId: number;
 }
 
+export type CoreParts = Omit<CardParts, 'comments' | 'viewerId'>;
+
 /** Role projection of the request card (tech.md 8.1). */
 export class CardDtoMapper {
 	static toCard(row: CardRow, parts: CardParts): RequestCardDto {
+		return {
+			...CardDtoMapper.toCore(row, parts),
+			comments: parts.comments.map((comment) => CardDtoMapper.toComment(comment, parts.viewerId))
+		};
+	}
+
+	/** The card without the portal thread: the workshop card of C4 is built on it. */
+	static toCore(row: CardRow, parts: CoreParts): Omit<RequestCardDto, 'comments'> {
 		return {
 			id: row.id,
 			number: row.number,
@@ -45,7 +55,6 @@ export class CardDtoMapper {
 			items: parts.lines.map((line) => CardDtoMapper.toItem(line, parts)),
 			unitCount: parts.lines.reduce((sum, line) => sum + line.qty, 0),
 			history: parts.history.map(CardDtoMapper.toStep),
-			comments: parts.comments.map((comment) => CardDtoMapper.toComment(comment, parts.viewerId)),
 			attachments: parts.attachments.map(CardDtoMapper.toAttachment),
 			targets: [...parts.targets],
 			...definedProps({
@@ -95,7 +104,7 @@ export class CardDtoMapper {
 		};
 	}
 
-	private static toItem(line: DraftLineRow, parts: CardParts): RequestItemDto {
+	private static toItem(line: DraftLineRow, parts: CoreParts): RequestItemDto {
 		const price = parts.prices?.get(line.id);
 		return {
 			id: line.id,
