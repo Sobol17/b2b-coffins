@@ -6,11 +6,13 @@
 	let {
 		status,
 		items,
+		total,
 		onDrop,
 		onMove
 	}: {
 		status: RequestStatus;
 		items: readonly KanbanItem[];
+		total?: number | undefined;
 		onDrop: (id: number, status: RequestStatus) => void;
 		onMove?: ((id: number, direction: -1 | 1) => void) | undefined;
 	} = $props();
@@ -32,7 +34,16 @@
 	ondragover={(event) => event.preventDefault()}
 	ondrop={handleDrop}
 >
-	<h3 class="text-sm font-medium text-fg-muted">{REQUEST_STATUS_META[status].label}</h3>
+	<h3 class="flex items-baseline justify-between gap-2 text-sm font-medium text-fg-muted">
+		<span>{REQUEST_STATUS_META[status].label}</span>
+		<span data-slot="kanban-count" class="text-xs">
+			{#if total !== undefined && total > items.length}
+				{items.length} из {total}
+			{:else}
+				{total ?? items.length}
+			{/if}
+		</span>
+	</h3>
 	<div role="list" class="flex flex-col gap-2">
 		{#each items as item (item.id)}
 			<div role="listitem"><KanbanCard {item} {onMove} /></div>
