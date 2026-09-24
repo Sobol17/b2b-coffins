@@ -1,7 +1,7 @@
 # tech.md — ядро проекта
 
 **Проект:** B2B-портал + CRM для столярной мастерской (производство гробов)
-**Версия ядра:** v1.37
+**Версия ядра:** v1.38
 **Дата:** 24.09.2026
 **Статус:** этап 1 (портал, P1–P14) завершён 19.09.2026, этап 2 (CRM) начат слайсом C1
 **Владелец файла:** Sobol17 (тимлид и единственный разработчик)
@@ -11,6 +11,7 @@
 
 | Версия | Изменение |
 |---|---|
+| v1.38 | Контракт C2. CRM управляет категориями, моделями, вариантами, цветами, матрицей совместимости, фото, прайс-листами и правилами скидок. `catalog.manage` даёт запись руководителю и менеджеру; себестоимость читает и меняет только `owner` по `catalog.cost.read`, для прочих ролей её колонка не выбирается. Обложка — первое фото модели по `(sort_order, id)`. На один момент действует не более одного базового прайс-листа; окна действия полуоткрытые `[valid_from, valid_to)`. Для каждой строки заявки скидка равна большему из договорной и подходящих действующих правил `discount_rules`; правила с `counterparty_id = null` общие, с `category_id = null` охватывают все категории, наследование по дереву категорий есть. Суммы строк с одинаковым процентом объединяются до округления скидки, чтобы договорная скидка без правил считалась как раньше. Складскую позицию вариант выбирает из существующих `stock_items.kind = 'product'`; C2 показывает связанные с вариантом нормы активной версии `bom_norms`, создание учётных позиций и норм остаётся в C8 и C9. Для C2 добавлены DTO в §8. Скрытие модели или варианта немедленно закрывает их и фото модели для портала. |
 | v1.0 | Первая заморозка ядра: стек, структура, схема БД, контракты очереди и событий, общие типы, UI-примитивы, правила кода, дорожная карта слайсов |
 | v1.37 | Слайс C1. IP-фильтр входа в CRM выведен из системы: ключ `crm.ip_allowlist` удалён из `settings`, из сида и из описания C1. Формы ключей `org.requisites` и `counterparty.staff_limit_default` зафиксированы в §5.9; `org.requisites` получил `email` (его ждёт `mailto:` лендинга) и проверку ИНН, КПП, БИК и счёта. `counterparty.staff_limit_default` читает `pnpm admin counterparty:create`. Нумерация правится в CRM только для ключа `request`: префикс и период. При сохранении счётчик продолжается от наибольшего уже выданного номера той же формы (`resumeSequence` в `lib/domain/numbering/numbering.ts`), поэтому возврат к старому префиксу не выдаёт занятый номер. В §8 добавлен `lib/types/crm.ts`: `CrmUserDto`, `CrmUserFilters`, `CreatedCrmUserDto`, `DictItemDto`, `DictItemFilters`, `AuditFilters`, `AuditEntryDto`, `NumberingDto`, `CrmSettingsDto`. Пользователями мастерской, справочниками и настройками управляет только `owner` по праву `settings.manage`, журнал аудита читает только `owner` по праву `audit.read`; матрица прав не менялась. Руководитель не может отключить себя, сбросить себе пароль и снять с себя роль `owner`: права на экран есть только у `owner`, поэтому в мастерской всегда остаётся активный руководитель. Письмо с временным паролем уходит через `MailDriver` напрямую, как в P2, и расходует то же ограничение `staff.create`. Экраны руководителя живут под `/crm/settings`: настройки мастерской, «Пользователи» (`/users`), «Справочники» (`/dicts`), «Журнал» (`/audit`); шапка CRM показывает эти пункты только при праве и называет роли словами. Код экранов лежит в `src/lib/crm/`, серверная часть в `server/crm-user/`, `server/dicts/`, `server/settings/crm-settings.service.ts` и `server/audit/audit-journal.service.ts`. Запись справочника выключается, а не удаляется, код записи после создания не меняется. Настройка пишет в `audit_log` одну строку `settings.update` со старым и новым значением под ключом настройки, нумерация пишет `numbering.update`. Журнал отдаёт записи новыми сверху, фильтры: часть имени автора, действие, объект, окно дат в `org.timezone`; списки действий и объектов берутся из самого журнала. Чтение сортировки и фильтров реестра из адреса вынесено в `listQueryOf` и `filtersOf` (`lib/utils/list-url.ts`) |
 | v1.36 | Слайс P13 сделан, этап 1 закрыт. Публичная поверхность каталога это один роут `GET /api/public/works/[id]`: он отдаёт обложку опубликованной модели без актора и отвечает 404 на скрытую, удалённую, чужую по владельцу и неизвестную. Читает её `LandingService` в `lib/server/landing`: сервис без `ActorContext`, потому что у гостя его нет, и с `LandingRepository`, который выбирает только название и идентификатор обложки. Типы гостя живут в `lib/types/landing.ts`: `LandingWorkDto`, `LandingCharityDto` и предел `LANDING_WORKS_LIMIT` = 9. Ставка фонда приходит на лендинг процентом из `charity.rate_bp`, собранных сумм гостю нет; блока нет вовсе, пока не заданы фонд и ставка. `CharitySettings` получил `findRateBp()`: заморозка отчисления по-прежнему падает на кривой ставке, а лендинг просто прячет блок. Секции лендинга разделены на отдельные компоненты (`LandingWorks`, `LandingProduction`, `LandingCharity`, `LandingPartner`), чтобы порядок §18.5 собирался в `+page.svelte`, а не внутри чужого файла |
@@ -1185,6 +1186,39 @@ export interface CrmSettingsDto {
   charityRateBp: number | null; charityFund: { title: string; url?: string } | null; staffLimitDefault: number;
 }
 
+// crm-catalog.ts — management projections (C2). Dates are ISO strings in server responses.
+export interface CrmCategoryDto { id: number; title: string; parentId: number | null; sortOrder: number; }
+export interface CrmMediaDto { id: number; sortOrder: number; isCover: boolean; }
+export interface CrmOptionDto {
+  id: number; kind: 'color'; title: string; priceDeltaMinor: number;
+  stockItemId: number | null; isActive: boolean;
+}
+export interface CrmVariantDto {
+  id: number; productId: number; sku: string; sizeCode: string; materialId: number;
+  lengthMm: number | null; widthMm: number | null; heightMm: number | null; weightG: number | null;
+  basePriceMinor: number; costPriceMinor?: number; stockItemId: number | null;
+  isPublished: boolean; isDeleted: boolean;
+  options: { optionId: number; isDefault: boolean }[];
+  activeBomNorms: { id: number; componentId: number; qtyPerUnitMilli: number }[];
+}
+export interface CrmProductDto {
+  id: number; sku: string; title: string; categoryId: number | null; description: string | null;
+  isPublished: boolean; isDeleted: boolean; sortOrder: number;
+  media: CrmMediaDto[]; variants: CrmVariantDto[];
+}
+export interface CrmProductListItemDto {
+  id: number; sku: string; title: string; categoryId: number | null;
+  isPublished: boolean; isDeleted: boolean; variantCount: number; coverMediaId: number | null;
+}
+export interface CrmPriceListDto {
+  id: number; title: string; isBase: boolean; validFrom: string | null; validTo: string | null;
+  items: { variantId: number; priceMinor: number }[];
+}
+export interface CrmDiscountRuleDto {
+  id: number; counterpartyId: number | null; categoryId: number | null;
+  percent: number; validFrom: string | null; validTo: string | null;
+}
+
 // money.ts — branded type, blocks accidental mixing with plain numbers
 export type Minor = number & { readonly __brand: 'minor' };
 
@@ -1542,7 +1576,7 @@ CONTRACT GAP
 **C1. Каркас CRM, пользователи, справочники, настройки, аудит.** Layout и навигация CRM, управление сотрудниками мастерской и ролями, справочники `dict_items`, настройки организации и нумерации, ставка отчисления и данные фонда, лимит сотрудников, журнал аудита с фильтрами. IP-фильтр входа выведен из объёма (v1.37).
 **DoD:** руководитель заводит пользователя, справочник и настройку без разработчика, каждое изменение видно в журнале аудита.
 
-**C2. CRM: каталог и цены.** CRUD моделей, вариантов, опций, матрицы совместимости, медиа с обложкой и порядком, прайс-листы и скидки с периодом действия, себестоимость только для руководителя, привязка варианта к учётной позиции склада и к норме, публикация и скрытие в портале.
+**C2. CRM: каталог и цены.** CRUD категорий, моделей, вариантов, цветовых опций и матрицы совместимости, медиа с обложкой и порядком, прайс-листы и скидки с периодом действия, себестоимость только для руководителя, выбор существующей учётной позиции склада и просмотр норм активной версии для варианта, публикация и скрытие в портале. Категории создаются в CRM, поэтому пустой каталог можно наполнить без сида. Модели и варианты удаляются мягко (`deleted_at`), опции выключаются (`is_active`), категория с потомками или моделями не удаляется. Цена `price_lists` действует в полуоткрытом окне `[valid_from, valid_to)`; базовые прайс-листы не могут одновременно действовать. Для каждой строки заявки берётся максимум договорной скидки и действующих `discount_rules` её категории и предков; строки с одним процентом складываются до округления. Раздача медиа продукта использует существующий `/api/files/[id]`.
 **DoD:** каталог наполняется через CRM без сида, себестоимость не приходит в ответах никому кроме руководителя.
 
 **C3. CRM: контрагенты.** Карточка с реквизитами, договором, адресами, прайсом и схемой расчётов, список пользователей контрагента, выдача администратора, история заявок и оплат, индикатор задолженности, заметки, ответственный менеджер.
