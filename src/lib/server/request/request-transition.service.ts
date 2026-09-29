@@ -24,7 +24,8 @@ const GUARD_REFUSAL: Readonly<Record<GuardCode, string>> = {
 	stockCovered: 'На складе не хватает позиций заявки',
 	pricesFixed: 'У позиций заявки нет цены',
 	fullyPaid: 'Заявка оплачена не полностью',
-	deliveryFilled: 'Заполните адрес, срок доставки и ФИО умершего'
+	deliveryFilled: 'Заполните адрес, срок доставки и ФИО умершего',
+	fullyLoaded: 'Погрузите все позиции заявки'
 };
 
 /**

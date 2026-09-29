@@ -1,4 +1,5 @@
 import type { Tx } from '../db/client';
+import { LoadingRepository } from './loading.repository';
 import { StockFillRepository } from './stock-fill.repository';
 import { allocateStock, fillTier, isCovered, type DemandLine } from '$lib/domain/stock/allocation';
 
@@ -15,14 +16,16 @@ export interface StockFillSnapshot {
  * `stockCovered` read it through here, so the screen never promises what the move refuses.
  */
 export class StockFill {
-	constructor(private readonly repo: StockFillRepository = new StockFillRepository()) {}
+	constructor(
+		private readonly repo: StockFillRepository = new StockFillRepository(),
+		private readonly loading: LoadingRepository = new LoadingRepository()
+	) {}
 
 	read(tx?: Tx): StockFillSnapshot {
 		const rows = this.repo.demand(tx);
-		const colours = this.repo.colours(
-			rows.map((row) => row.itemId),
-			tx
-		);
+		const itemIds = rows.map((row) => row.itemId);
+		const colours = this.repo.colours(itemIds, tx);
+		const loaded = this.loading.loadedByItem(itemIds, tx);
 		const lines = rows.flatMap((row): DemandLine[] => {
 			const tier = fillTier(row.status, row.isStockRequest);
 			if (tier === null) return [];
@@ -34,6 +37,7 @@ export class StockFill {
 					optionId: colours.get(row.itemId) ?? null,
 					stockItemId: row.stockItemId,
 					qty: row.qty,
+					loadedQty: loaded.get(row.itemId) ?? 0,
 					tier,
 					isUrgent: row.priority === 'urgent',
 					deliveryAt: row.deliveryAt

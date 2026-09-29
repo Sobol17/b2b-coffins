@@ -1,4 +1,5 @@
 import { isDeliveryFilled, type DeliveryFacts } from './delivery';
+import { isFullyLoaded, type LoadedLine } from './loading';
 import type { GuardCode } from '$lib/types/request';
 
 /** What the server knows about a request before it asks the state machine. */
@@ -10,6 +11,8 @@ export interface GuardFacts {
 	readonly totalMinor: number;
 	readonly paymentMarksMinor: readonly number[];
 	readonly delivery: DeliveryFacts;
+	/** Every line with its loaded pieces (tech.md v1.43). */
+	readonly loadedLines: readonly LoadedLine[];
 }
 
 /** A request is priced when it has lines and none of them is left at zero. */
@@ -28,6 +31,7 @@ export function evaluateGuards(facts: GuardFacts): Record<GuardCode, boolean> {
 		stockCovered: facts.stockCovered,
 		pricesFixed: pricesFixed(facts.unitPricesMinor),
 		fullyPaid: fullyPaid(facts.totalMinor, facts.paymentMarksMinor),
-		deliveryFilled: isDeliveryFilled(facts.delivery)
+		deliveryFilled: isDeliveryFilled(facts.delivery),
+		fullyLoaded: isFullyLoaded(facts.delivery.isStockRequest, facts.loadedLines)
 	};
 }

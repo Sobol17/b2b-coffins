@@ -38,9 +38,11 @@ export const TRANSITIONS: readonly Transition[] = [
 	{
 		from: 'ready',
 		to: 'delivered',
-		// Nobody is assigned since v1.42: any driver takes an assembled request.
+		// Nobody is assigned since v1.42: any driver takes an assembled request. The loading ships the
+		// pieces off the shelf, so the move only checks that everything is on board (v1.43).
 		roles: ['driver', 'manager', 'owner'],
-		effects: ['shipStockItems', 'freezeCharity', 'emit:request.delivered']
+		guards: ['fullyLoaded'],
+		effects: ['freezeCharity', 'emit:request.delivered']
 	},
 	{ from: 'delivered', to: 'awaiting_payment', roles: ['system'], auto: true },
 	{

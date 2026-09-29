@@ -27,10 +27,6 @@ export class OutboxRequestEffects implements RequestEffects {
 				return;
 			case 'freezeCharity':
 				return this.charity.freeze(requestId, tx);
-			// The shipment is wired by the loading of C6 (tech.md v1.41). The table already names it,
-			// so that slice plugs an implementation in here without touching the service.
-			case 'shipStockItems':
-				return;
 		}
 	}
 }

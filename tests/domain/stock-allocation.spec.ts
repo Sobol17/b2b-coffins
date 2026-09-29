@@ -8,6 +8,7 @@ import {
 	isCovered,
 	positionKey,
 	productionNeeds,
+	shelfWant,
 	type DemandLine
 } from '../../src/lib/domain/stock/allocation';
 
@@ -25,6 +26,7 @@ const line = fc.record({
 	variantId: fc.integer({ min: 1, max: 3 }),
 	optionId: fc.constantFrom<number | null>(null, 11),
 	qty: fc.integer({ min: 1, max: 8 }),
+	loaded: fc.integer({ min: 0, max: 8 }),
 	tier: fc.constantFrom(...FILL_TIERS),
 	isUrgent: fc.boolean(),
 	deliveryDay: fc.option(fc.integer({ min: 0, max: 5 }), { nil: null })
@@ -38,6 +40,8 @@ const demand = fc.array(line, { maxLength: 25 }).map((rows) =>
 		optionId: row.optionId,
 		stockItemId: row.variantId === 3 ? null : 100 + row.variantId,
 		qty: row.qty,
+		// Only an assembled request is loaded (tech.md v1.43), and never above its line.
+		loadedQty: row.tier === 'held' ? Math.min(row.loaded, row.qty) : 0,
 		tier: row.tier,
 		isUrgent: row.isUrgent,
 		deliveryAt: row.deliveryDay === null ? null : new Date(base + row.deliveryDay * DAY_MS)
@@ -70,6 +74,7 @@ function lineOf(overrides: Partial<DemandLine> & Pick<DemandLine, 'itemId'>): De
 		optionId: 11,
 		stockItemId: 101,
 		qty: 1,
+		loadedQty: 0,
 		tier: 'work',
 		isUrgent: false,
 		deliveryAt: null,
@@ -78,13 +83,13 @@ function lineOf(overrides: Partial<DemandLine> & Pick<DemandLine, 'itemId'>): De
 }
 
 describe('fill of requests from stock (tech.md v1.41)', () => {
-	it('gives every line between nothing and its quantity', () => {
+	it('gives every line between nothing and the pieces it still wants from the shelf', () => {
 		assertProperty(
 			fc.property(demand, balances, (lines, stock) => {
 				const filled = allocateStock(lines, stock);
 				return lines.every((row) => {
 					const got = filled.get(row.itemId);
-					return got !== undefined && got >= 0 && got <= row.qty;
+					return got !== undefined && got >= 0 && got <= shelfWant(row);
 				});
 			})
 		);
@@ -97,7 +102,7 @@ describe('fill of requests from stock (tech.md v1.41)', () => {
 				return [...stock.entries()].every(([key, balance]) => {
 					const own = lines.filter((row) => keyOf(row) === key);
 					const given = sum(own.map((row) => filled.get(row.itemId) ?? 0));
-					return given === Math.min(Math.max(0, balance), sum(own.map((row) => row.qty)));
+					return given === Math.min(Math.max(0, balance), sum(own.map(shelfWant)));
 				});
 			})
 		);
@@ -109,7 +114,7 @@ describe('fill of requests from stock (tech.md v1.41)', () => {
 				const filled = allocateStock(lines, stock);
 				const ordered = [...lines].sort(fillOrder);
 				return ordered.every((earlier, index) => {
-					if ((filled.get(earlier.itemId) ?? 0) >= earlier.qty) return true;
+					if ((filled.get(earlier.itemId) ?? 0) >= shelfWant(earlier)) return true;
 					return ordered
 						.slice(index + 1)
 						.filter((later) => keyOf(later) !== null && keyOf(later) === keyOf(earlier))
@@ -183,16 +188,17 @@ describe('fill of requests from stock (tech.md v1.41)', () => {
 			[1, 2],
 			[2, 1]
 		]);
-		expect(isCovered([{ itemId: 1, qty: 2 }], filled)).toBe(true);
+		expect(isCovered([{ itemId: 1, qty: 2, loadedQty: 0 }], filled)).toBe(true);
 		expect(
 			isCovered(
 				[
-					{ itemId: 1, qty: 2 },
-					{ itemId: 2, qty: 2 }
+					{ itemId: 1, qty: 2, loadedQty: 0 },
+					{ itemId: 2, qty: 2, loadedQty: 0 }
 				],
 				filled
 			)
 		).toBe(false);
+		expect(isCovered([{ itemId: 2, qty: 2, loadedQty: 1 }], filled)).toBe(true);
 		expect(isCovered([], filled)).toBe(false);
 	});
 
@@ -208,6 +214,51 @@ describe('fill of requests from stock (tech.md v1.41)', () => {
 	});
 });
 
+describe('loading of an assembled request (tech.md v1.43)', () => {
+	it('moves a loaded piece off the shelf without shifting the fill of any other line', () => {
+		assertProperty(
+			fc.property(
+				demand,
+				balances,
+				fc.nat(),
+				fc.integer({ min: 1, max: 8 }),
+				(lines, stock, pick, take) => {
+					const filled = allocateStock(lines, stock);
+					const loadable = lines.filter(
+						(row) => row.tier === 'held' && keyOf(row) !== null && (filled.get(row.itemId) ?? 0) > 0
+					);
+					const target = loadable[pick % Math.max(1, loadable.length)];
+					if (!target) return true;
+					const key = keyOf(target) ?? '';
+					const pieces = Math.min(take, filled.get(target.itemId) ?? 0);
+
+					const after = allocateStock(
+						lines.map((row) =>
+							row.itemId === target.itemId ? { ...row, loadedQty: row.loadedQty + pieces } : row
+						),
+						new Map([...stock].map(([k, v]) => [k, k === key ? v - pieces : v]))
+					);
+
+					return lines.every((row) =>
+						row.itemId === target.itemId
+							? after.get(row.itemId) === (filled.get(row.itemId) ?? 0) - pieces
+							: after.get(row.itemId) === filled.get(row.itemId)
+					);
+				}
+			)
+		);
+	});
+
+	it('wants nothing from the shelf once a line is loaded in full', () => {
+		const stock = new Map([[positionKey(101, 11), 1]]);
+		const loaded = lineOf({ itemId: 1, qty: 2, loadedQty: 2, tier: 'held' });
+
+		const filled = allocateStock([loaded, lineOf({ itemId: 2, qty: 1 })], stock);
+
+		expect([filled.get(1), filled.get(2), isCovered([loaded], filled)]).toEqual([0, 1, true]);
+	});
+});
+
 describe('production queue of the shop (tech.md v1.41)', () => {
 	it('asks for exactly the pieces the requests in work lack', () => {
 		assertProperty(
@@ -216,7 +267,7 @@ describe('production queue of the shop (tech.md v1.41)', () => {
 				const lacking = sum(
 					lines
 						.filter((row) => row.tier !== 'held')
-						.map((row) => row.qty - (filled.get(row.itemId) ?? 0))
+						.map((row) => shelfWant(row) - (filled.get(row.itemId) ?? 0))
 				);
 				return sum(productionNeeds(lines, filled).map((need) => need.neededQty)) === lacking;
 			})

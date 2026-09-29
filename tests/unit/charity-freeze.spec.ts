@@ -5,7 +5,7 @@ import { JOB_PAYLOAD_SCHEMAS } from '../../src/lib/server/queue/topics';
 import { charityOf, recountJobs, seedCharityWorld, setRate } from './helpers/charity';
 import { migratedDatabase } from './helpers/db';
 import { resetRequests } from './helpers/portal-requests';
-import { move, refused, statusOf } from './helpers/transitions';
+import { loadUp, move, refused, statusOf } from './helpers/transitions';
 
 const db = migratedDatabase();
 const { world, actors, sent, drive } = seedCharityWorld(db);
@@ -111,6 +111,7 @@ describe('charity freeze on delivery (P8)', () => {
 	it('refuses the delivery and keeps the status when the rate is broken', () => {
 		const id = sent();
 		drive(id, 'ready');
+		loadUp(id);
 		setRate(db, 'one percent');
 
 		expect(refused(() => move(actors.driver, id, 'delivered')).status).toBe(500);

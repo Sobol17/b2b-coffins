@@ -9,7 +9,7 @@ import {
 	variantId
 } from './helpers/portal-requests';
 import { send } from './helpers/registry';
-import { move, pay, refused, stockUp, totalOf } from './helpers/transitions';
+import { loadUp, move, pay, refused, stockUp, totalOf } from './helpers/transitions';
 
 const db = migratedDatabase();
 const world = seedOrderingWorld(db);
@@ -34,6 +34,7 @@ function deliver(id: number): void {
 	stockUp(id);
 	move(managerCtx, id, 'ready');
 	pay(id, totalOf(id), driverId);
+	loadUp(id);
 	move(driverCtx, id, 'delivered');
 }
 
