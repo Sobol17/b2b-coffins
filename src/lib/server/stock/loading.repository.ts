@@ -56,7 +56,8 @@ export class LoadingRepository extends BaseRepository<typeof stockMoves> {
 			.where(inArray(stockMoves.requestItemId, [...itemIds]))
 			.groupBy(stockMoves.requestItemId)
 			.all();
-		return new Map(rows.flatMap((row) => (row.itemId === null ? [] : [[row.itemId, -row.qty]])));
+		// Subtracting from zero: a line loaded and withdrawn sums to 0, and negation would give -0.
+		return new Map(rows.flatMap((row) => (row.itemId === null ? [] : [[row.itemId, 0 - row.qty]])));
 	}
 
 	/** Every line of one request with its loaded pieces, for guard `fullyLoaded`. */
