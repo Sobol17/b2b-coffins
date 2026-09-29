@@ -9,7 +9,7 @@ import {
 import { STOCK_MOVE_TYPES } from '$lib/types/dicts';
 import { bool, createdAt, pk, ts, updatedAt } from './_shared';
 import { dictItems, media, options, productVariants } from './catalog';
-import { requests } from './requests';
+import { requestItems, requests } from './requests';
 import { users } from './users';
 
 export const stockItems = sqliteTable(
@@ -43,7 +43,9 @@ export const stockMoves = sqliteTable(
 		qty: integer('qty').notNull(), // signed: + income, - outcome
 		type: text('type', { enum: STOCK_MOVE_TYPES }).notNull(),
 		requestId: integer('request_id').references(() => requests.id),
-		// Set when compensating a previous move: a delivery refusal never deletes history.
+		// The request line a loading ships (tech.md v1.43): the loaded pieces are summed from here.
+		requestItemId: integer('request_item_id').references(() => requestItems.id),
+		// Set when compensating a previous move: a wrong move is reversed, never deleted.
 		reversalOfId: integer('reversal_of_id').references((): AnySQLiteColumn => stockMoves.id),
 		reasonId: integer('reason_id').references(() => dictItems.id),
 		comment: text('comment'),
@@ -53,7 +55,8 @@ export const stockMoves = sqliteTable(
 	},
 	(t) => [
 		index('stock_moves_item_idx').on(t.stockItemId, t.occurredAt),
-		index('stock_moves_request_idx').on(t.requestId)
+		index('stock_moves_request_idx').on(t.requestId),
+		index('stock_moves_request_item_idx').on(t.requestItemId)
 	]
 );
 
