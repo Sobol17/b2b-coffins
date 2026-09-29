@@ -5,11 +5,11 @@ import {
 	counterparties,
 	deliveryAddresses,
 	options,
-	paymentMarks,
 	productOptions,
 	productVariants,
 	requests
 } from '../../src/lib/server/db/schema';
+import { DeliveryService } from '../../src/lib/server/crm-delivery/delivery.service';
 import { ShopService } from '../../src/lib/server/crm-shop/shop.service';
 import { FakeMailDriver } from '../../src/lib/server/notifications/drivers/mail';
 import { NotificationRuleRepository } from '../../src/lib/server/notifications/notification-rule.repository';
@@ -144,25 +144,13 @@ function advance(db: Db, people: People, id: number, scenario: DemoScenario): vo
 	}
 	move(people.manager, 'ready');
 	if (scenario.stage === 'ready') return;
-	if (scenario.stage === 'paid') markPaidInFull(db, id, people.manager.userId);
-	move(people.driver, 'delivered');
-}
-
-function markPaidInFull(db: Db, requestId: number, createdById: number): void {
-	const [row] = db
-		.select({ total: requests.totalMinor })
-		.from(requests)
-		.where(eq(requests.id, requestId))
-		.all();
-	db.insert(paymentMarks)
-		.values({
-			requestId,
-			amountMinor: row?.total ?? 0,
-			paidAt: new Date(),
-			method: 'bank',
-			createdById
-		})
-		.run();
+	// The driver loads every line on the delivery screen (tech.md v1.43); the paid scenario is the
+	// one where he takes the cash at the door.
+	const delivery = new DeliveryService(people.driver);
+	for (const line of delivery.overview().ready.find((stop) => stop.id === id)?.lines ?? []) {
+		delivery.load({ itemId: line.itemId, qty: line.qty });
+	}
+	new RequestTransitionService(people.driver).deliver(id, scenario.stage === 'paid');
 }
 
 /** Mail goes to a fake whatever MAIL_DRIVER says: demo data must never reach a real mailbox. */
