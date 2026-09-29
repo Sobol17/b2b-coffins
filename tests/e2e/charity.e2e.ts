@@ -8,7 +8,7 @@ import {
 } from './charity';
 import { login, purchaseMoneyKeys } from './fixtures';
 import { openCard, sendRequest, submitRequest } from './portal-flow';
-import { e2eDb, statusOf, stockUp, transition } from './transitions';
+import { e2eDb, loadUp, statusOf, stockUp, transition } from './transitions';
 import { formatMinor } from '../../src/lib/utils/format';
 
 const db = e2eDb();
@@ -27,6 +27,7 @@ async function readyRequest(page: Page): Promise<string> {
 }
 
 function deliver(number: string): void {
+	loadUp(db, number);
 	expect(transition(number, 'delivered', 'driver').ok).toBe(true);
 }
 
@@ -82,7 +83,8 @@ test('cancelled requests and stock requests stay out of the counter', async ({ p
 	const cancelled = await sendRequest(page, 'cp_admin');
 	expect(transition(cancelled, 'cancelled', 'cp_admin').ok).toBe(true);
 	const stock = insertReadyStockRequest(db);
-	deliver(stock);
+	// A stock request stays on the shelf: it has nothing to load (tech.md v1.43).
+	expect(transition(stock, 'delivered', 'driver').ok).toBe(true);
 
 	expect(statusOf(db, cancelled)).toBe('cancelled');
 	expect(statusOf(db, stock)).toBe('awaiting_payment');

@@ -1,6 +1,14 @@
 import { expect, test } from '@playwright/test';
 import { sendRequest } from './portal-flow';
-import { e2eDb, markPaidInFull, statusChain, statusOf, stockUp, transition } from './transitions';
+import {
+	e2eDb,
+	loadUp,
+	markPaidInFull,
+	statusChain,
+	statusOf,
+	stockUp,
+	transition
+} from './transitions';
 
 const db = e2eDb();
 
@@ -10,8 +18,9 @@ test('a delivery that collects the cash walks the request to paid', async ({ pag
 	expect(transition(number, 'in_work', 'manager').ok).toBe(true);
 	stockUp(db, number);
 	expect(transition(number, 'ready', 'manager').ok).toBe(true);
-	// The cash the driver takes at the door, the way the C6 checkbox will write it.
+	// A payment taken before the move; the C6 screen writes the cash itself (crm-delivery.e2e.ts).
 	markPaidInFull(db, number, 'driver');
+	loadUp(db, number);
 	expect(transition(number, 'delivered', 'driver').ok).toBe(true);
 
 	// Nobody moves the request past delivered: the system chains both automatic steps.
@@ -32,6 +41,7 @@ test('a delivery billed by invoice stops at awaiting_payment', async ({ page }) 
 	expect(transition(number, 'in_work', 'manager').ok).toBe(true);
 	stockUp(db, number);
 	expect(transition(number, 'ready', 'manager').ok).toBe(true);
+	loadUp(db, number);
 	expect(transition(number, 'delivered', 'driver').ok).toBe(true);
 
 	expect(statusOf(db, number)).toBe('awaiting_payment');
