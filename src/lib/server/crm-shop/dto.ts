@@ -1,4 +1,4 @@
-import type { ShopRequestRow, VariantTitleRow } from './shop.repository';
+import type { ShopRepository, ShopRequestRow, VariantTitleRow } from './shop.repository';
 import {
 	isCovered,
 	positionKey,
@@ -21,6 +21,18 @@ export class PositionTitles {
 		private readonly colours: ReadonlyMap<number, string>
 	) {
 		this.variants = new Map(variants.map((row) => [row.id, row]));
+	}
+
+	/** Reads the names of every position in the list at once: one query per kind, not per row. */
+	static read(
+		shop: ShopRepository,
+		positions: readonly Pick<DemandLine, 'variantId' | 'optionId'>[]
+	): PositionTitles {
+		const variantIds = [...new Set(positions.map((row) => row.variantId))];
+		const optionIds = [
+			...new Set(positions.flatMap((row) => (row.optionId === null ? [] : [row.optionId])))
+		];
+		return new PositionTitles(shop.variantTitles(variantIds), shop.optionTitles(optionIds));
 	}
 
 	stockItemOf(variantId: number): number | null {
