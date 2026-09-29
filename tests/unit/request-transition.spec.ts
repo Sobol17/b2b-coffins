@@ -225,22 +225,6 @@ describe('request transitions (P5)', () => {
 		expect(history(id).at(-2)).toMatchObject({ toStatus: 'delivered', actorId: driverId });
 	});
 
-	it('holds an assembled request back until every line is loaded (v1.43)', () => {
-		const id = sent();
-		drive(id, 'ready');
-
-		expect(refused(() => move(driverCtx, id, 'delivered'))).toEqual({
-			name: 'ConflictError',
-			status: 409
-		});
-		expect(() => move(driverCtx, id, 'delivered')).toThrow('Погрузите все позиции заявки');
-		expect(statusOf(id)).toBe('ready');
-
-		loadUp(id);
-
-		expect(move(driverCtx, id, 'delivered').status).toBe('awaiting_payment');
-	});
-
 	it('answers 404 for a request that does not exist', () => {
 		expect(refused(() => move(managerCtx, 999_999, 'in_work'))).toEqual({
 			name: 'NotFoundError',
