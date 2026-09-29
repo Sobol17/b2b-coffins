@@ -147,6 +147,17 @@ export class RequestTransitionRepository extends BaseRepository<typeof requests>
 		this.db(tx).insert(requestStatusHistory).values(entry).run();
 	}
 
+	/** Cash the driver took at the door (tech.md v1.43), dated by the delivery itself. */
+	insertCashMark(
+		mark: { requestId: number; amountMinor: number; createdById: number },
+		tx: Tx
+	): void {
+		this.db(tx)
+			.insert(paymentMarks)
+			.values({ ...mark, method: 'cash', paidAt: new Date() })
+			.run();
+	}
+
 	private visibleWhere(ctx: ActorContext, scope: VisibilityScope, extra: SQL | undefined) {
 		// Nobody is assigned (v1.42): the crew sees the statuses its roles move a request out of.
 		const crew =

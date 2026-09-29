@@ -8,6 +8,7 @@ import {
 	type TransitionRow,
 	type VisibilityScope
 } from './request-transition.repository';
+import { requestDebtMinor } from '$lib/domain/payment/debt';
 import { evaluateGuards } from '$lib/domain/request/guards';
 import {
 	TRANSITIONS,
@@ -47,20 +48,55 @@ export class RequestTransitionService extends BaseService {
 	 * ValidationError for a missing or unknown reason.
 	 */
 	move(requestId: number, input: RequestTransitionInput): SubmittedRequestDto {
+		return this.run(requestId, input, () => ({}));
+	}
+
+	/**
+	 * «Доставлено» of C6 (tech.md v1.43). Cash taken at the door is marked after the move and before
+	 * the automatic steps, so a delivery paid in full closes in `paid` with one action (invariant 7).
+	 * @throws the refusals of `move`, and ValidationError for cash on a stock request.
+	 */
+	deliver(requestId: number, cashCollected: boolean): SubmittedRequestDto {
+		const input = { to: 'delivered', reasonId: null, comment: null } as const;
+		return this.run(requestId, input, (request, tx) => {
+			if (!cashCollected) return { cashCollected };
+			if (request.counterpartyId === null) {
+				throw new ValidationError('Заявку на склад не оплачивают', { field: 'cashCollected' });
+			}
+			return { cashCollected, cashMinor: this.collectCash(request.id, tx) };
+		});
+	}
+
+	private run(
+		requestId: number,
+		input: RequestTransitionInput,
+		afterMove: (request: TransitionRow, tx: Tx) => Record<string, unknown>
+	): SubmittedRequestDto {
 		return this.audited({ action: 'request.transition', entity: 'requests' }, (tx) => {
 			const request = this.reach(requestId, tx);
 			const transition = this.check(request, input, tx);
 
 			this.step(request.id, transition, this.ctx.userId, input, tx);
+			const extra = afterMove(request, tx);
 			const status = this.chainAutoSteps(request.id, transition.to, tx);
 
 			return {
 				result: { id: request.id, number: request.number, status },
 				entityId: request.id,
 				before: { status: request.status },
-				after: { status, reasonId: input.reasonId }
+				after: { status, reasonId: input.reasonId, ...extra }
 			};
 		});
+	}
+
+	/** The rest of the total in cash; nothing is marked when the marks already cover it. */
+	private collectCash(requestId: number, tx: Tx): number {
+		const facts = this.repo.guardFacts(requestId, tx);
+		const amountMinor = requestDebtMinor(facts.totalMinor, facts.paymentMarksMinor);
+		if (amountMinor > 0) {
+			this.repo.insertCashMark({ requestId, amountMinor, createdById: this.ctx.userId }, tx);
+		}
+		return amountMinor;
 	}
 
 	private reach(requestId: number, tx: Tx): TransitionRow {
