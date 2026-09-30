@@ -17,6 +17,7 @@ export const ACTIONS = [
 	'prices.manage',
 	'stock.read',
 	'stock.manage',
+	'delivery.work',
 	'payroll.read',
 	'payroll.manage',
 	'reports.read',
@@ -44,13 +45,15 @@ const GRANTS: Readonly<Record<RoleCode, readonly Action[]>> = {
 		'counterparty.staff.manage',
 		'stock.read',
 		'stock.manage',
+		'delivery.work',
 		'payroll.read',
 		'payroll.manage',
 		'reports.read'
 	],
 	carpenter: ['crm.access', 'catalog.read', 'request.read.own', 'stock.read'],
 	painter: ['crm.access', 'catalog.read', 'request.read.own', 'stock.read'],
-	driver: ['crm.access', 'request.read.own'],
+	// The delivery screen of C6: loading and «Доставлено» (tech.md v1.43).
+	driver: ['crm.access', 'request.read.own', 'delivery.work'],
 	cp_admin: [
 		'portal.access',
 		'catalog.read',

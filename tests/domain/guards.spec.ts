@@ -72,7 +72,8 @@ describe('transition guards of tech.md 6.2', () => {
 						unitPricesMinor,
 						totalMinor,
 						paymentMarksMinor,
-						delivery: STOCK_DELIVERY
+						delivery: STOCK_DELIVERY,
+						loadedLines: []
 					});
 					return GUARD_CODES.every((code) => typeof guards[code] === 'boolean');
 				}
@@ -85,7 +86,8 @@ describe('transition guards of tech.md 6.2', () => {
 			unitPricesMinor: [100],
 			totalMinor: 100,
 			paymentMarksMinor: [],
-			delivery: STOCK_DELIVERY
+			delivery: STOCK_DELIVERY,
+			loadedLines: []
 		};
 
 		expect([

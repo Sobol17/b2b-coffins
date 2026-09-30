@@ -21,7 +21,7 @@ import {
 	seedOrderingWorld,
 	variantId
 } from './helpers/portal-requests';
-import { history, move, stockUp } from './helpers/transitions';
+import { history, loadUp, move, stockUp } from './helpers/transitions';
 
 const db = migratedDatabase();
 const world = seedOrderingWorld(db);
@@ -104,6 +104,7 @@ describe('the priority of a request (C4)', () => {
 		expect(notes(id).at(-1)?.comment).toBe('Приоритет: Срочно');
 		stockUp(id);
 		move(manager, id, 'ready');
+		loadUp(id);
 		move(manager, id, 'delivered');
 		expect(() => priorities().setPriority(id, 'normal')).toThrow(ConflictError);
 	});

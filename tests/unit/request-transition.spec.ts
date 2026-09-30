@@ -17,6 +17,7 @@ import {
 	dictId,
 	fanouts,
 	history,
+	loadUp,
 	move,
 	pay,
 	refused,
@@ -68,6 +69,7 @@ function drive(id: number, upTo: RequestStatus): void {
 	move(managerCtx, id, 'ready');
 	if (upTo === 'ready') return;
 	if (upTo === 'paid') pay(id, totalOf(id), driverId);
+	loadUp(id);
 	move(driverCtx, id, 'delivered');
 }
 
@@ -130,6 +132,7 @@ describe('request transitions (P5)', () => {
 		const id = sent();
 		drive(id, 'ready');
 		pay(id, totalOf(id) - 1, driverId);
+		loadUp(id);
 
 		move(driverCtx, id, 'delivered');
 
@@ -216,6 +219,7 @@ describe('request transitions (P5)', () => {
 		});
 		stockUp(id);
 		move(managerCtx, id, 'ready');
+		loadUp(id);
 
 		expect(move(driverCtx, id, 'delivered').status).toBe('awaiting_payment');
 		expect(history(id).at(-2)).toMatchObject({ toStatus: 'delivered', actorId: driverId });
@@ -270,6 +274,7 @@ describe('request transitions (P5)', () => {
 	it('keeps money out of the answer given to a price-blind role', () => {
 		const id = sent();
 		drive(id, 'ready');
+		loadUp(id);
 
 		const moved = move(driverCtx, id, 'delivered');
 

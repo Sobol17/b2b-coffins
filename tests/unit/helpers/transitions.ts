@@ -66,23 +66,59 @@ export function stockUp(requestId: number): void {
 		.all();
 	for (const line of lines) {
 		if (line.stockItemId === null) throw new Error(`line ${line.itemId} has no stock item`);
-		const [colour] = database
-			.select({ optionId: options.id })
-			.from(requestItemOptions)
-			.innerJoin(options, eq(options.id, requestItemOptions.optionId))
-			.where(and(eq(requestItemOptions.itemId, line.itemId), eq(options.kind, 'color')))
-			.all();
 		database
 			.insert(stockMoves)
 			.values({
 				stockItemId: line.stockItemId,
-				optionId: colour?.optionId ?? null,
+				optionId: colourOf(line.itemId),
 				qty: line.qty,
 				type: 'production',
 				occurredAt: new Date()
 			})
 			.run();
 	}
+}
+
+/**
+ * Loads every line of the request in full for delivery (tech.md v1.43): one shipment move per line,
+ * carrying the line, so guard `fullyLoaded` lets the delivery through.
+ */
+export function loadUp(requestId: number): void {
+	const lines = database
+		.select({
+			itemId: requestItems.id,
+			qty: requestItems.qty,
+			stockItemId: productVariants.stockItemId
+		})
+		.from(requestItems)
+		.innerJoin(productVariants, eq(productVariants.id, requestItems.variantId))
+		.where(eq(requestItems.requestId, requestId))
+		.all();
+	for (const line of lines) {
+		if (line.stockItemId === null) throw new Error(`line ${line.itemId} has no stock item`);
+		database
+			.insert(stockMoves)
+			.values({
+				stockItemId: line.stockItemId,
+				optionId: colourOf(line.itemId),
+				qty: -line.qty,
+				type: 'shipment',
+				requestId,
+				requestItemId: line.itemId,
+				occurredAt: new Date()
+			})
+			.run();
+	}
+}
+
+function colourOf(itemId: number): number | null {
+	const [colour] = database
+		.select({ optionId: options.id })
+		.from(requestItemOptions)
+		.innerJoin(options, eq(options.id, requestItemOptions.optionId))
+		.where(and(eq(requestItemOptions.itemId, itemId), eq(options.kind, 'color')))
+		.all();
+	return colour?.optionId ?? null;
 }
 
 export function pay(requestId: number, amountMinor: number, createdById: number): void {

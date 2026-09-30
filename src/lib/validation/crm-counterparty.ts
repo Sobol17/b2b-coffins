@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import type { SettlementScheme } from '$lib/types/counterparty';
 import { fullNameSchema, phoneSchema } from './contact';
+import { checkbox } from './fields';
 import { orgRequisitesSchema } from './settings';
 
 const SCHEMES = ['on_fact', 'weekly', 'monthly'] as const satisfies readonly SettlementScheme[];
@@ -18,10 +19,6 @@ function blankToNull(value: unknown): unknown {
 const optional = <T extends z.ZodType>(inner: T) => z.preprocess(blankToNull, inner.nullable());
 const text = (max: number) => z.string().max(max, { error: `Не длиннее ${max} символов` });
 const nullableId = optional(id);
-const checkbox = z.preprocess(
-	(value) => value === 'on' || value === 'true' || value === true,
-	z.boolean()
-);
 
 // A calendar date from DatePicker. The round trip rejects the 31st of February.
 function isCalendarDay(value: string): boolean {

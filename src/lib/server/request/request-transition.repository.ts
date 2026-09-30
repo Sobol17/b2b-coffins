@@ -1,6 +1,7 @@
 import { and, eq, inArray, ne, type SQL } from 'drizzle-orm';
 import { BaseRepository } from '../core/repository';
 import type { Tx } from '../db/client';
+import { LoadingRepository } from '../stock/loading.repository';
 import { StockFill } from '../stock/stock-fill';
 import {
 	dictItems,
@@ -34,7 +35,10 @@ export interface HistoryEntry {
 
 /** What a status move reads and writes. Deciding whether the move is allowed is not its job. */
 export class RequestTransitionRepository extends BaseRepository<typeof requests> {
-	constructor(private readonly fill: StockFill = new StockFill()) {
+	constructor(
+		private readonly fill: StockFill = new StockFill(),
+		private readonly loading: LoadingRepository = new LoadingRepository()
+	) {
 		super(requests);
 	}
 
@@ -101,7 +105,8 @@ export class RequestTransitionRepository extends BaseRepository<typeof requests>
 				deliveryAddressId: row?.deliveryAddressId ?? null,
 				deliveryAt: row?.deliveryAt ?? null,
 				deceasedName: row?.deceasedName ?? null
-			}
+			},
+			loadedLines: this.loading.linesOf(requestId, tx)
 		};
 	}
 
@@ -140,6 +145,17 @@ export class RequestTransitionRepository extends BaseRepository<typeof requests>
 
 	insertHistory(entry: HistoryEntry, tx: Tx): void {
 		this.db(tx).insert(requestStatusHistory).values(entry).run();
+	}
+
+	/** Cash the driver took at the door (tech.md v1.43), dated by the delivery itself. */
+	insertCashMark(
+		mark: { requestId: number; amountMinor: number; createdById: number },
+		tx: Tx
+	): void {
+		this.db(tx)
+			.insert(paymentMarks)
+			.values({ ...mark, method: 'cash', paidAt: new Date() })
+			.run();
 	}
 
 	private visibleWhere(ctx: ActorContext, scope: VisibilityScope, extra: SQL | undefined) {

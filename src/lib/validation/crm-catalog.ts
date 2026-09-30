@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { checkbox } from './fields';
 
 const id = z.coerce.number().int().positive();
 const nullableId = z.preprocess(
@@ -14,10 +15,6 @@ const optionalNumber = z.preprocess(
 	z.coerce.number().int().min(0).nullable()
 );
 const money = z.coerce.number().int().min(0).max(1_000_000_000_00).multipleOf(100);
-const checkbox = z.preprocess(
-	(value) => value === true || value === 'true' || value === 'on',
-	z.boolean()
-);
 const sku = z
 	.string()
 	.trim()

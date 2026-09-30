@@ -83,7 +83,10 @@ export function stockUp(db: Db, number: string, leave = 0): void {
 	}
 }
 
-function linesOf(db: Db, requestIds: readonly number[]): (Position & { qty: number })[] {
+function linesOf(
+	db: Db,
+	requestIds: readonly number[]
+): (Position & { itemId: number; qty: number })[] {
 	if (requestIds.length === 0) return [];
 	const rows = db
 		.select({
@@ -102,7 +105,12 @@ function linesOf(db: Db, requestIds: readonly number[]): (Position & { qty: numb
 			.innerJoin(options, eq(options.id, requestItemOptions.optionId))
 			.where(and(eq(requestItemOptions.itemId, row.itemId), eq(options.kind, 'color')))
 			.all();
-		return { stockItemId: row.stockItemId ?? 0, optionId: colour?.optionId ?? null, qty: row.qty };
+		return {
+			itemId: row.itemId,
+			stockItemId: row.stockItemId ?? 0,
+			optionId: colour?.optionId ?? null,
+			qty: row.qty
+		};
 	});
 }
 
@@ -140,6 +148,27 @@ function balanceOf(db: Db, position: Position): number {
 		)
 		.all();
 	return row?.qty ?? 0;
+}
+
+/**
+ * Loads every line of the request for delivery (tech.md v1.43): a shipment move per line, carrying
+ * it, so guard `fullyLoaded` lets the delivery through the CLI.
+ */
+export function loadUp(db: Db, number: string): void {
+	const id = requestId(db, number);
+	for (const line of linesOf(db, [id])) {
+		db.insert(stockMoves)
+			.values({
+				stockItemId: line.stockItemId,
+				optionId: line.optionId,
+				qty: -line.qty,
+				type: 'shipment',
+				requestId: id,
+				requestItemId: line.itemId,
+				occurredAt: new Date()
+			})
+			.run();
+	}
 }
 
 export function markPaidInFull(db: Db, number: string, actor: RoleKey): void {

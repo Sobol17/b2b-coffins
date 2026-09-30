@@ -7,7 +7,7 @@ import type { ActorContext } from '../../../src/lib/types/actor';
 import type { RequestStatus } from '../../../src/lib/types/request';
 import { insertUser } from './db';
 import { crmActor, portalActor, seedOrderingWorld, variantId } from './portal-requests';
-import { move, stockUp } from './transitions';
+import { loadUp, move, stockUp } from './transitions';
 
 /** A filled delivery: since v1.33 a counterparty request does not leave the draft without it. */
 const shipment = {
@@ -52,6 +52,7 @@ export function seedCharityWorld(db: Db) {
 		stockUp(id);
 		move(actors.manager, id, 'ready');
 		if (upTo === 'ready') return;
+		loadUp(id);
 		move(actors.driver, id, 'delivered');
 	}
 

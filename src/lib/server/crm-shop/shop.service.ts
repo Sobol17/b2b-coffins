@@ -4,7 +4,7 @@ import { BaseService } from '../core/service';
 import { StockFill } from '../stock/stock-fill';
 import { PositionTitles, ShopDtoMapper } from './dto';
 import { ShopRepository } from './shop.repository';
-import { productionNeeds, type DemandLine } from '$lib/domain/stock/allocation';
+import { productionNeeds } from '$lib/domain/stock/allocation';
 import type { ActorContext } from '$lib/types/actor';
 import { SHOP_REQUEST_LIMIT, type ShopDto } from '$lib/types/crm-shop';
 import type { ShopProduceInput } from '$lib/validation/crm-shop';
@@ -37,7 +37,7 @@ export class ShopService extends BaseService {
 			.filter((line) => shown.has(line.requestId))
 			.sort((a, b) => a.itemId - b.itemId);
 		const needs = productionNeeds(snapshot.lines, snapshot.filled);
-		const titles = this.titles([...needs, ...lines]);
+		const titles = PositionTitles.read(this.shop, [...needs, ...lines]);
 		return {
 			queue: needs.map((need) => ShopDtoMapper.toQueueRow(need, titles, snapshot.balances)),
 			requests: rows.map((row) =>
@@ -84,16 +84,5 @@ export class ShopService extends BaseService {
 			);
 			return { result: undefined, entityId: moveId, after: { ...input } };
 		});
-	}
-
-	private titles(positions: readonly Pick<DemandLine, 'variantId' | 'optionId'>[]): PositionTitles {
-		const variantIds = [...new Set(positions.map((row) => row.variantId))];
-		const optionIds = [
-			...new Set(positions.flatMap((row) => (row.optionId === null ? [] : [row.optionId])))
-		];
-		return new PositionTitles(
-			this.shop.variantTitles(variantIds),
-			this.shop.optionTitles(optionIds)
-		);
 	}
 }

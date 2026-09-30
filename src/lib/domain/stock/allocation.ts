@@ -17,6 +17,8 @@ export interface DemandLine {
 	/** Null when the variant has no stock item: such a line can never be filled. */
 	readonly stockItemId: number | null;
 	readonly qty: number;
+	/** Pieces already loaded for delivery (tech.md v1.43): they left the shelf with a shipment move. */
+	readonly loadedQty: number;
 	readonly tier: FillTier;
 	readonly isUrgent: boolean;
 	readonly deliveryAt: Date | null;
@@ -34,6 +36,14 @@ export interface ProductionNeed {
 /** The stock position of a product: one stock item in one colour. */
 export function positionKey(stockItemId: number, optionId: number | null): string {
 	return `${stockItemId}:${optionId ?? '-'}`;
+}
+
+/**
+ * Pieces the line still wants from the shelf. A loaded piece already left the balance through its
+ * shipment move, so holding it again would count it twice (tech.md v1.43).
+ */
+export function shelfWant(line: Pick<DemandLine, 'qty' | 'loadedQty'>): number {
+	return Math.max(0, line.qty - line.loadedQty);
 }
 
 /** A stock request in `ready` holds nothing: its pieces are free stock for everyone else. */
@@ -59,8 +69,8 @@ function deadlineRank(at: Date | null): number {
 }
 
 /**
- * Hands the balance of every position out to the lines in `fillOrder`. A negative balance fills
- * nothing. @returns the filled pieces per line id, every line present.
+ * Hands the balance of every position out to the lines in `fillOrder`, each up to `shelfWant`.
+ * A negative balance fills nothing. @returns the filled pieces per line id, every line present.
  */
 export function allocateStock(
 	lines: readonly DemandLine[],
@@ -75,7 +85,7 @@ export function allocateStock(
 		}
 		const key = positionKey(line.stockItemId, line.optionId);
 		const free = left.get(key) ?? Math.max(0, balances.get(key) ?? 0);
-		const take = Math.min(free, Math.max(0, line.qty));
+		const take = Math.min(free, shelfWant(line));
 		left.set(key, free - take);
 		filled.set(line.itemId, take);
 	}
@@ -84,10 +94,12 @@ export function allocateStock(
 
 /** Guard `stockCovered`: a request with lines, every one of them filled to the piece. */
 export function isCovered(
-	lines: readonly Pick<DemandLine, 'itemId' | 'qty'>[],
+	lines: readonly Pick<DemandLine, 'itemId' | 'qty' | 'loadedQty'>[],
 	filled: ReadonlyMap<number, number>
 ): boolean {
-	return lines.length > 0 && lines.every((line) => (filled.get(line.itemId) ?? 0) >= line.qty);
+	return (
+		lines.length > 0 && lines.every((line) => (filled.get(line.itemId) ?? 0) >= shelfWant(line))
+	);
 }
 
 /**
@@ -101,7 +113,7 @@ export function productionNeeds(
 	const needs = new Map<string, ProductionNeed>();
 	const requests = new Map<string, Set<number>>();
 	for (const line of lines) {
-		const missing = line.qty - (filled.get(line.itemId) ?? 0);
+		const missing = shelfWant(line) - (filled.get(line.itemId) ?? 0);
 		if (line.tier === 'held' || missing <= 0) continue;
 		const key = `${line.variantId}:${line.optionId ?? '-'}`;
 		const seen = requests.get(key) ?? new Set<number>();
