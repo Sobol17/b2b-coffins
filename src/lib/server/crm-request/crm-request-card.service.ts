@@ -68,7 +68,7 @@ export class CrmRequestCardService extends CrmRequestBaseService {
 	/** The marks and the rest go out with the sums only, the same rule as every money key. */
 	private payments(
 		request: SteeredRow
-	): Pick<CrmRequestCardDto, 'canMarkPayment' | 'payments' | 'dueMinor'> {
+	): Pick<CrmRequestCardDto, 'canMarkPayment' | 'payments' | 'dueMinor' | 'paidMinor'> {
 		const canMarkPayment =
 			PolicyService.can(this.ctx, 'request.payment.mark') &&
 			acceptsPayment(request.status, request.isStockRequest);
@@ -78,6 +78,8 @@ export class CrmRequestCardService extends CrmRequestBaseService {
 		return {
 			canMarkPayment,
 			payments: rows.map((row) => CrmCounterpartyDtoMapper.toPayment(row)),
+			// Counted from the marks shown beside it, so the card cannot give two answers to one question.
+			paidMinor: paid.reduce((sum, amount) => sum + amount, 0),
 			dueMinor: request.isStockRequest ? 0 : requestDebtMinor(request.totalMinor, paid)
 		};
 	}
