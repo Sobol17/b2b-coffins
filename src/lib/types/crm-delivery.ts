@@ -36,10 +36,8 @@ export interface DeliveryStopDto {
 	readonly lines: readonly DeliveryLineDto[];
 	/** Every line loaded: guard `fullyLoaded` of tech.md 6.2 holds. */
 	readonly canDeliver: boolean;
-	/** `ready` only: the total of the request. */
+	/** `ready` only: the total of the request, what the cash checkbox records (no prepayment, v1.44). */
 	readonly totalMinor?: number;
-	/** `ready` only: the total less the payment marks, what the cash checkbox records. */
-	readonly dueMinor?: number;
 }
 
 export interface DeliveryDto {

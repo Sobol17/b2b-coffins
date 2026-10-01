@@ -94,13 +94,15 @@ export class DeliveryService extends BaseService {
 			.filter((line) => ids.has(line.requestId))
 			.sort((a, b) => a.itemId - b.itemId);
 		const titles = PositionTitles.read(this.shop, lines);
-		const sums = this.repo.sums(rows.filter((row) => row.status === 'ready').map((row) => row.id));
+		const totals = this.repo.totals(
+			rows.filter((row) => row.status === 'ready').map((row) => row.id)
+		);
 		return rows.map((row) =>
 			DeliveryDtoMapper.toStop(row, {
 				lines: lines.filter((line) => line.requestId === row.id),
 				filled: snapshot.filled,
 				titles,
-				sums: sums.get(row.id)
+				totalMinor: totals.get(row.id)
 			})
 		);
 	}

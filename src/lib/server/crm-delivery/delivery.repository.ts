@@ -1,7 +1,7 @@
 import { and, eq, inArray, sql } from 'drizzle-orm';
 import { countExpression } from '../core/list';
 import { BaseRepository } from '../core/repository';
-import { counterparties, deliveryAddresses, paymentMarks, requests } from '../db/schema';
+import { counterparties, deliveryAddresses, requests } from '../db/schema';
 import { BOARD_ORDER } from '../crm-request/crm-request-query';
 import type { RequestPriority } from '$lib/types/request';
 
@@ -22,11 +22,6 @@ export interface StopRow {
 	readonly contactName: string | null;
 	readonly contactPhone: string | null;
 	readonly counterpartyPhone: string | null;
-}
-
-export interface StopSums {
-	readonly totalMinor: number;
-	readonly marksMinor: number;
 }
 
 /**
@@ -75,23 +70,15 @@ export class DeliveryRepository extends BaseRepository<typeof requests> {
 		return row?.count ?? 0;
 	}
 
-	/** The total and the payment marks of each request: the driver collects the difference. */
-	sums(ids: readonly number[]): Map<number, StopSums> {
+	/** The total of each request: the driver takes it whole or not at all (tech.md v1.44). */
+	totals(ids: readonly number[]): Map<number, number> {
 		if (ids.length === 0) return new Map();
 		const rows = this.db()
-			.select({
-				id: requests.id,
-				totalMinor: requests.totalMinor,
-				marksMinor: sql<number>`coalesce(sum(${paymentMarks.amountMinor}), 0)`
-			})
+			.select({ id: requests.id, totalMinor: requests.totalMinor })
 			.from(requests)
-			.leftJoin(paymentMarks, eq(paymentMarks.requestId, requests.id))
 			.where(inArray(requests.id, [...ids]))
-			.groupBy(requests.id)
 			.all();
-		return new Map(
-			rows.map((row) => [row.id, { totalMinor: row.totalMinor, marksMinor: row.marksMinor }])
-		);
+		return new Map(rows.map((row) => [row.id, row.totalMinor]));
 	}
 
 	private onTheWay(status: StopStatus) {

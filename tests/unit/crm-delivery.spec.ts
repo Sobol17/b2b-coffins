@@ -3,10 +3,10 @@ import { ForbiddenError } from '../../src/lib/server/core/errors';
 import { migratedDatabase } from './helpers/db';
 import { seedDeliveryWorld } from './helpers/crm-delivery';
 import { resetRequests } from './helpers/portal-requests';
-import { pay, totalOf } from './helpers/transitions';
+import { totalOf } from './helpers/transitions';
 
 const db = migratedDatabase();
-const { ids, actors, inWork, assembled, delivery, stop, toStock } = seedDeliveryWorld(db);
+const { actors, inWork, assembled, delivery, stop, toStock } = seedDeliveryWorld(db);
 
 /** Every key of a JSON body, nested ones included: the price check reads the body, not the page. */
 function keysOf(value: unknown): string[] {
@@ -62,14 +62,10 @@ describe('the lists of the driver (C6 DoD)', () => {
 		expect(keysOf(planned).filter((key) => key.includes('Minor'))).toEqual([]);
 	});
 
-	it('gives the driver the total and the rest to collect of an assembled request', () => {
+	it('gives the driver the total of an assembled request to collect at the door', () => {
 		const id = assembled(2);
-		pay(id, 1000_00, ids.manager);
 
-		expect(stop(id)).toMatchObject({
-			totalMinor: totalOf(id),
-			dueMinor: totalOf(id) - 1000_00
-		});
+		expect(stop(id)).toMatchObject({ totalMinor: totalOf(id) });
 	});
 
 	it('keeps every other money key out of the body the driver gets', () => {
@@ -78,7 +74,7 @@ describe('the lists of the driver (C6 DoD)', () => {
 
 		const money = keysOf(delivery().overview()).filter((key) => key.includes('Minor'));
 
-		expect(new Set(money)).toEqual(new Set(['totalMinor', 'dueMinor']));
+		expect(new Set(money)).toEqual(new Set(['totalMinor']));
 	});
 
 	it('leaves stock requests off the screen: they never go to a door', () => {

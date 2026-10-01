@@ -8,7 +8,6 @@ import {
 	type TransitionRow,
 	type VisibilityScope
 } from './request-transition.repository';
-import { requestDebtMinor } from '$lib/domain/payment/debt';
 import { evaluateGuards } from '$lib/domain/request/guards';
 import {
 	TRANSITIONS,
@@ -89,10 +88,9 @@ export class RequestTransitionService extends BaseService {
 		});
 	}
 
-	/** The rest of the total in cash; nothing is marked when the marks already cover it. */
+	/** The whole total in cash: nothing is paid before the door (tech.md v1.44). A free request marks nothing. */
 	private collectCash(requestId: number, tx: Tx): number {
-		const facts = this.repo.guardFacts(requestId, tx);
-		const amountMinor = requestDebtMinor(facts.totalMinor, facts.paymentMarksMinor);
+		const amountMinor = this.repo.guardFacts(requestId, tx).totalMinor;
 		if (amountMinor > 0) {
 			this.repo.insertCashMark({ requestId, amountMinor, createdById: this.ctx.userId }, tx);
 		}

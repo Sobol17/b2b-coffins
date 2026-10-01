@@ -1,21 +1,20 @@
 import type { PositionTitles } from '../crm-shop/dto';
-import type { StopRow, StopSums } from './delivery.repository';
-import { requestDebtMinor } from '$lib/domain/payment/debt';
+import type { StopRow } from './delivery.repository';
 import { isFullyLoaded, loadableQty } from '$lib/domain/request/loading';
 import type { DemandLine } from '$lib/domain/stock/allocation';
 import type { DeliveryLineDto, DeliveryStopDto } from '$lib/types/crm-delivery';
 import { navigationUrl } from '$lib/utils/navigation';
 
-/** What one stop needs besides its row: its lines, the fill of the shelf and, if ready, its sums. */
+/** What one stop needs besides its row: its lines, the fill of the shelf and, if ready, its total. */
 export interface StopContext {
 	readonly lines: readonly DemandLine[];
 	readonly filled: ReadonlyMap<number, number>;
 	readonly titles: PositionTitles;
-	readonly sums: StopSums | undefined;
+	readonly totalMinor: number | undefined;
 }
 
 /**
- * Projection of the delivery screen (tech.md v1.43). The sums go out for an assembled request only:
+ * Projection of the delivery screen (tech.md v1.43). The total goes out for an assembled request only:
  * the driver takes cash for it at the door, a request in work is only planned.
  */
 export class DeliveryDtoMapper {
@@ -44,12 +43,8 @@ export class DeliveryDtoMapper {
 			// The same rule as guard fullyLoaded, so the button never offers what the move refuses.
 			canDeliver: isReady && isFullyLoaded(false, lines)
 		};
-		if (!isReady || context.sums === undefined) return base;
-		return {
-			...base,
-			totalMinor: context.sums.totalMinor,
-			dueMinor: requestDebtMinor(context.sums.totalMinor, [context.sums.marksMinor])
-		};
+		if (!isReady || context.totalMinor === undefined) return base;
+		return { ...base, totalMinor: context.totalMinor };
 	}
 
 	private static toLine(
