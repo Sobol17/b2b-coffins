@@ -4,6 +4,7 @@ import { formAction, orHttpStatus } from '$lib/server/core/http';
 import { CrmRequestCardService } from '$lib/server/crm-request/crm-request-card.service';
 import { CrmRequestPriorityService } from '$lib/server/crm-request/crm-request-priority.service';
 import { CrmRequestItemsService } from '$lib/server/crm-request/crm-request-items.service';
+import { PaymentMarkService } from '$lib/server/payment/payment-mark.service';
 import { RequestTransitionService } from '$lib/server/request/request-transition.service';
 import {
 	addLineSchema,
@@ -11,6 +12,7 @@ import {
 	prioritySchema,
 	removeLineSchema
 } from '$lib/validation/crm-request';
+import { paymentMarkSchema, paymentReverseSchema } from '$lib/validation/payment';
 import { requestIdSchema, requestTransitionSchema } from '$lib/validation/request';
 import type { Actions, PageServerLoad, RequestEvent } from './$types';
 
@@ -28,6 +30,7 @@ function context(event: RequestEvent) {
 		priorities: () => new CrmRequestPriorityService(actor),
 		items: () => new CrmRequestItemsService(actor),
 		moves: () => new RequestTransitionService(actor),
+		payments: () => new PaymentMarkService(actor),
 		cards: () => new CrmRequestCardService(actor)
 	};
 }
@@ -61,6 +64,16 @@ export const actions = {
 		const { id, items, request } = context(event);
 		return formAction(request, 'removeLine', removeLineSchema, (input) =>
 			items().removeLine(id, input)
+		);
+	},
+	pay: (event) => {
+		const { id, payments, request } = context(event);
+		return formAction(request, 'pay', paymentMarkSchema, (input) => payments().mark(id, input));
+	},
+	reversePayment: (event) => {
+		const { id, payments, request } = context(event);
+		return formAction(request, 'reversePayment', paymentReverseSchema, (input) =>
+			payments().reverse(id, input)
 		);
 	}
 } satisfies Actions;

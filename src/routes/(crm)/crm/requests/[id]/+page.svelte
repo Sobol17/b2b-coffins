@@ -3,9 +3,10 @@
 	import HistoryPanel from '$lib/crm/requests/HistoryPanel.svelte';
 	import ItemsPanel from '$lib/crm/requests/ItemsPanel.svelte';
 	import MovesPanel from '$lib/crm/requests/MovesPanel.svelte';
+	import PaymentsPanel from '$lib/crm/requests/PaymentsPanel.svelte';
 	import PriorityPanel from '$lib/crm/requests/PriorityPanel.svelte';
 	import { FLAG_TITLE, PRIORITY_TITLE, STOCK_TITLE } from '$lib/crm/requests/labels';
-	import { Breadcrumbs, Card, PriceCell, StatusBadge, TONE_CLASS } from '$lib/ui';
+	import { Breadcrumbs, Card, StatusBadge, TONE_CLASS } from '$lib/ui';
 	import { formatDateTime } from '$lib/utils/format';
 	import type { PageProps } from './$types';
 
@@ -76,13 +77,12 @@
 							<dt class="text-fg-muted">Комментарий</dt>
 							<dd class="whitespace-pre-line">{card.comment}</dd>
 						{/if}
-						{#if data.user.canSeePrices && card.paidMinor !== undefined}
-							<dt class="text-fg-muted">Оплачено</dt>
-							<dd><PriceCell valueMinor={card.paidMinor} /></dd>
-						{/if}
 					</dl>
 				</Card.Content>
 			</Card.Root>
+			{#if data.user.canSeePrices && !card.isStockRequest && (card.canMarkPayment || (card.payments?.length ?? 0) > 0)}
+				<PaymentsPanel {card} timeZone={data.timezone} />
+			{/if}
 			<PriorityPanel {card} />
 			{#if card.attachments.length > 0}
 				<Card.Root>
