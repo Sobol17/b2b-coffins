@@ -1,10 +1,15 @@
+import { PolicyService } from '../auth/policy';
 import { CounterpartyDetailRepository } from '../crm-counterparty/counterparty-detail.repository';
+import { CrmCounterpartyDtoMapper } from '../crm-counterparty/dto';
+import { PaymentMarkRepository } from '../payment/payment-mark.repository';
 import { DraftItemRepository } from '../request/draft-item.repository';
 import { CardDtoMapper } from '../request/card.dto';
 import { RequestCardRepository } from '../request/request-card.repository';
 import { CrmRequestBaseService } from './crm-request-base.service';
 import { CrmRequestChoicesRepository } from './crm-request-choices.repository';
 import { CrmRequestRepository, type SteeredRow } from './crm-request.repository';
+import { requestDebtMinor } from '$lib/domain/payment/debt';
+import { acceptsPayment } from '$lib/domain/payment/mark';
 import { itemsEditMode } from '$lib/domain/request/amendment';
 import { attentionFlags } from '$lib/domain/request/attention';
 import { targetsForRole } from '$lib/domain/request/state-machine';
@@ -25,7 +30,8 @@ export class CrmRequestCardService extends CrmRequestBaseService {
 		private readonly lines: DraftItemRepository = new DraftItemRepository(),
 		private readonly choiceLists: CrmRequestChoicesRepository = new CrmRequestChoicesRepository(),
 		private readonly addressBook: CounterpartyDetailRepository = new CounterpartyDetailRepository(),
-		private readonly now: () => Date = () => new Date()
+		private readonly now: () => Date = () => new Date(),
+		private readonly marks: PaymentMarkRepository = new PaymentMarkRepository()
 	) {
 		super(ctx, requests);
 	}
@@ -54,7 +60,25 @@ export class CrmRequestCardService extends CrmRequestBaseService {
 			counterpartyName: request.counterpartyName,
 			isStockRequest: request.isStockRequest,
 			flags: this.flags(request),
-			itemsEdit: itemsEditMode(request.status)
+			itemsEdit: itemsEditMode(request.status),
+			...this.payments(request)
+		};
+	}
+
+	/** The marks and the rest go out with the sums only, the same rule as every money key. */
+	private payments(
+		request: SteeredRow
+	): Pick<CrmRequestCardDto, 'canMarkPayment' | 'payments' | 'dueMinor'> {
+		const canMarkPayment =
+			PolicyService.can(this.ctx, 'request.payment.mark') &&
+			acceptsPayment(request.status, request.isStockRequest);
+		if (!this.ctx.canSeePrices) return { canMarkPayment };
+		const rows = this.marks.ofRequest(request.id);
+		const paid = rows.map((row) => row.amountMinor);
+		return {
+			canMarkPayment,
+			payments: rows.map((row) => CrmCounterpartyDtoMapper.toPayment(row)),
+			dueMinor: request.isStockRequest ? 0 : requestDebtMinor(request.totalMinor, paid)
 		};
 	}
 

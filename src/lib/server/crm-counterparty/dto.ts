@@ -9,7 +9,7 @@ import type {
 } from '$lib/types/crm-counterparty';
 import { definedProps } from '$lib/utils/props';
 import type { AddressRecord, ContractRecord } from './counterparty-detail.repository';
-import type { PaymentMarkRow } from './counterparty-ledger.repository';
+import type { PaymentMarkRow } from '../payment/payment-mark.repository';
 import type { CounterpartyListRow, ManagedCounterpartyRow } from './crm-counterparty.repository';
 
 export interface CardParts {

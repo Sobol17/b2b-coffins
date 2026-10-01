@@ -73,6 +73,10 @@ export interface CrmPaymentMarkDto {
 	readonly paidAt: string;
 	readonly method: PaymentMethod;
 	readonly comment: string | null;
+	/** Set on a row that cancels an earlier mark; it carries the negated amount (tech.md v1.44). */
+	readonly reversalOfId: number | null;
+	/** A later row cancelled this mark. */
+	readonly isReversed: boolean;
 	readonly createdByName: string;
 }
 

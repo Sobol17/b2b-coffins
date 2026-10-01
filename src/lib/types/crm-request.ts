@@ -1,3 +1,4 @@
+import type { CrmPaymentMarkDto } from './crm-counterparty';
 import type { RequestCardDto, RequestListItemDto, RequestPriority, RequestStatus } from './request';
 
 /** Board, registry and card of the workshop, tech.md §8 (C4). Money keys only for a role with prices. */
@@ -68,6 +69,12 @@ export interface CrmRequestCardDto extends Omit<RequestCardDto, 'comments'> {
 	readonly isStockRequest: boolean;
 	readonly flags: readonly AttentionFlag[];
 	readonly itemsEdit: ItemsEditMode;
+	/** `awaiting_payment`, a counterparty request and the right `request.payment.mark` (tech.md v1.44). */
+	readonly canMarkPayment: boolean;
+	/** Newest first, role with prices only. */
+	readonly payments?: readonly CrmPaymentMarkDto[];
+	/** The total less the payment marks, never below zero; zero for a stock request. */
+	readonly dueMinor?: number;
 }
 
 export interface CrmRequestVariantChoice {

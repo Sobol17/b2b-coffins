@@ -66,6 +66,15 @@ export class RequestTransitionService extends BaseService {
 		});
 	}
 
+	/**
+	 * Automatic steps a payment mark opened (tech.md 6.2, invariant 7). It runs in the transaction of
+	 * the mark and writes no audit row of its own: the mark is the action, the step is its outcome.
+	 */
+	settle(requestId: number, tx: Tx): RequestStatus {
+		const request = this.reach(requestId, tx);
+		return this.chainAutoSteps(request.id, request.status, tx);
+	}
+
 	private run(
 		requestId: number,
 		input: RequestTransitionInput,

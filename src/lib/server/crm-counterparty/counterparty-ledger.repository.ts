@@ -2,20 +2,9 @@ import { and, desc, eq, ne, sql } from 'drizzle-orm';
 import { countExpression, offsetFor } from '../core/list';
 import { BaseRepository } from '../core/repository';
 import { paymentMarks, requests, users } from '../db/schema';
+import { MARK_COLUMNS, type PaymentMarkRow } from '../payment/payment-mark.repository';
 import type { RegistryRow } from '../request/request-registry.repository';
-import type { PaymentMethod } from '$lib/types/crm-counterparty';
 import type { ListQuery } from '$lib/types/list';
-
-export interface PaymentMarkRow {
-	readonly id: number;
-	readonly requestId: number;
-	readonly requestNumber: string;
-	readonly amountMinor: number;
-	readonly paidAt: Date;
-	readonly method: PaymentMethod;
-	readonly comment: string | null;
-	readonly createdByName: string;
-}
 
 const BASE_COLUMNS = {
 	id: requests.id,
@@ -79,16 +68,7 @@ export class CounterpartyLedgerRepository extends BaseRepository<typeof requests
 			.where(where)
 			.all();
 		const rows = this.db()
-			.select({
-				id: paymentMarks.id,
-				requestId: paymentMarks.requestId,
-				requestNumber: requests.number,
-				amountMinor: paymentMarks.amountMinor,
-				paidAt: paymentMarks.paidAt,
-				method: paymentMarks.method,
-				comment: paymentMarks.comment,
-				createdByName: users.fullName
-			})
+			.select(MARK_COLUMNS)
 			.from(paymentMarks)
 			.innerJoin(requests, eq(requests.id, paymentMarks.requestId))
 			.innerJoin(users, eq(users.id, paymentMarks.createdById))
