@@ -1,4 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
+import { isNull } from 'drizzle-orm';
+import { notificationFeed } from '../../src/lib/server/db/schema';
 import { login, logout } from './fixtures';
 import { sendRequest } from './portal-flow';
 import { e2eDb, stockUp, transition } from './transitions';
@@ -20,11 +22,16 @@ function feedRows(page: Page) {
 
 /**
  * Earlier specs leave their own events unread in the shared e2e database, so the bell is emptied
- * first: after that the counter can only mean the event this test made. The full list is the way
- * to empty it, because the panel of the bell reads only the ten rows it shows.
+ * first: after that the counter can only mean the event this test made. The rows are marked read
+ * in the database: the list reads a page per visit, and the suite outgrew what that drains in time.
+ * The loop stays, because a fanout of an earlier spec may still be on its way.
  */
 async function drainBell(page: Page): Promise<void> {
 	await expect(async () => {
+		db.update(notificationFeed)
+			.set({ readAt: new Date() })
+			.where(isNull(notificationFeed.readAt))
+			.run();
 		await page.goto('/portal/profile/notifications');
 		await expect(page.getByTestId('bell-count')).toBeHidden({ timeout: 2000 });
 	}).toPass({ timeout: QUEUE_TIMEOUT });

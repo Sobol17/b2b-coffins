@@ -35,6 +35,11 @@
 			{formatDate(row.paidAt, timeZone)}
 		{:else if column.key === 'requestNumber'}
 			<div>{row.requestNumber}</div>
+			{#if row.reversalOfId !== null}
+				<div class="text-xs text-fg-muted">Сторно</div>
+			{:else if row.isReversed}
+				<div class="text-xs text-fg-muted">Сторнирована</div>
+			{/if}
 			{#if row.comment}<div class="text-xs text-fg-faint">{row.comment}</div>{/if}
 		{:else if column.key === 'method'}
 			{PAYMENT_METHOD_TITLE[row.method]}

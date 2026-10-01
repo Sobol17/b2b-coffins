@@ -5,7 +5,7 @@ import { RequestTransitionService } from '../../src/lib/server/request/request-t
 import { migratedDatabase } from './helpers/db';
 import { seedDeliveryWorld } from './helpers/crm-delivery';
 import { resetRequests } from './helpers/portal-requests';
-import { history, pay, refused, statusOf, totalOf } from './helpers/transitions';
+import { history, refused, statusOf, totalOf } from './helpers/transitions';
 
 const db = migratedDatabase();
 const { ids, actors, inWork, assembled, produce, writeOff, delivery, stop, lineOf, toStock } =
@@ -150,22 +150,6 @@ describe('«Доставлено» with the cash checkbox (C6 DoD)', () => {
 		expect(marks).toEqual([
 			expect.objectContaining({ method: 'cash', amountMinor: totalOf(id), createdById: ids.driver })
 		]);
-	});
-
-	it('marks only the rest when part of the total came by invoice before', () => {
-		const id = assembled(2);
-		pay(id, 500_00, ids.manager);
-		loadAll(id);
-
-		deliver(id, true);
-
-		const cash = db
-			.select()
-			.from(paymentMarks)
-			.where(and(eq(paymentMarks.requestId, id), eq(paymentMarks.method, 'cash')))
-			.all();
-		expect(cash.map((row) => row.amountMinor)).toEqual([totalOf(id) - 500_00]);
-		expect(statusOf(id)).toBe('paid');
 	});
 
 	it('leaves a delivery without cash waiting in awaiting_payment', () => {

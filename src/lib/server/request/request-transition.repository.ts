@@ -1,15 +1,10 @@
 import { and, eq, inArray, ne, type SQL } from 'drizzle-orm';
 import { BaseRepository } from '../core/repository';
 import type { Tx } from '../db/client';
+import { PaymentMarkRepository } from '../payment/payment-mark.repository';
 import { LoadingRepository } from '../stock/loading.repository';
 import { StockFill } from '../stock/stock-fill';
-import {
-	dictItems,
-	paymentMarks,
-	requestItems,
-	requestStatusHistory,
-	requests
-} from '../db/schema';
+import { dictItems, requestItems, requestStatusHistory, requests } from '../db/schema';
 import type { GuardFacts } from '$lib/domain/request/guards';
 import { reachableStatuses } from '$lib/domain/request/state-machine';
 import type { StampField } from '$lib/domain/request/transition-flow';
@@ -37,7 +32,8 @@ export interface HistoryEntry {
 export class RequestTransitionRepository extends BaseRepository<typeof requests> {
 	constructor(
 		private readonly fill: StockFill = new StockFill(),
-		private readonly loading: LoadingRepository = new LoadingRepository()
+		private readonly loading: LoadingRepository = new LoadingRepository(),
+		private readonly marks: PaymentMarkRepository = new PaymentMarkRepository()
 	) {
 		super(requests);
 	}
@@ -94,12 +90,7 @@ export class RequestTransitionRepository extends BaseRepository<typeof requests>
 				.all()
 				.map((line) => line.price),
 			totalMinor: row?.totalMinor ?? 0,
-			paymentMarksMinor: db
-				.select({ amount: paymentMarks.amountMinor })
-				.from(paymentMarks)
-				.where(eq(paymentMarks.requestId, requestId))
-				.all()
-				.map((mark) => mark.amount),
+			paymentMarksMinor: this.marks.amounts(requestId, tx),
 			delivery: {
 				isStockRequest: row?.isStockRequest ?? false,
 				deliveryAddressId: row?.deliveryAddressId ?? null,
@@ -152,10 +143,8 @@ export class RequestTransitionRepository extends BaseRepository<typeof requests>
 		mark: { requestId: number; amountMinor: number; createdById: number },
 		tx: Tx
 	): void {
-		this.db(tx)
-			.insert(paymentMarks)
-			.values({ ...mark, method: 'cash', paidAt: new Date() })
-			.run();
+		this.marks.insert({ ...mark, method: 'cash', paidAt: new Date(), comment: null }, tx);
+		this.marks.syncPaid(mark.requestId, tx);
 	}
 
 	private visibleWhere(ctx: ActorContext, scope: VisibilityScope, extra: SQL | undefined) {

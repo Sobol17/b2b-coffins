@@ -19,9 +19,6 @@
 	{#if stop.totalMinor !== undefined}
 		<p class="text-sm" data-testid="delivery-sum">
 			Сумма заявки {formatMinor(stop.totalMinor)}
-			{#if stop.dueMinor !== undefined && stop.dueMinor !== stop.totalMinor}
-				· к получению {formatMinor(stop.dueMinor)}
-			{/if}
 		</p>
 	{/if}
 	{#if stop.canDeliver}
@@ -32,7 +29,7 @@
 			use:enhance={withToast({ success: 'Заявка доставлена' })}
 		>
 			<input type="hidden" name="requestId" value={stop.id} />
-			{#if (stop.dueMinor ?? 0) > 0}
+			{#if (stop.totalMinor ?? 0) > 0}
 				<Checkbox name="cashCollected" value="on" label="Принял оплату наличными" />
 			{/if}
 			<TouchButton type="submit" variant="primary">Доставлено</TouchButton>

@@ -189,6 +189,25 @@ export function markPaidInFull(db: Db, number: string, actor: RoleKey): void {
 		.run();
 }
 
+/** The total of a request and the signed sum of its payment marks, straight from the database. */
+export function moneyOf(db: Db, number: string): { totalMinor: number; marksMinor: number } {
+	const id = requestId(db, number);
+	const [row] = db
+		.select({ total: requests.totalMinor })
+		.from(requests)
+		.where(eq(requests.id, id))
+		.all();
+	const marks = db
+		.select({ amount: paymentMarks.amountMinor })
+		.from(paymentMarks)
+		.where(eq(paymentMarks.requestId, id))
+		.all();
+	return {
+		totalMinor: row?.total ?? 0,
+		marksMinor: marks.reduce((sum, mark) => sum + mark.amount, 0)
+	};
+}
+
 export function statusChain(db: Db, number: string): string[] {
 	return db
 		.select({ from: requestStatusHistory.fromStatus, to: requestStatusHistory.toStatus })

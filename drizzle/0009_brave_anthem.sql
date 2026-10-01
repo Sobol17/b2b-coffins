@@ -1,0 +1,1 @@
+ALTER TABLE `payment_marks` ADD `reversal_of_id` integer;

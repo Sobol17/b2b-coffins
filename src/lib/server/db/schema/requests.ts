@@ -115,6 +115,8 @@ export const paymentMarks = sqliteTable(
 		paidAt: ts('paid_at').notNull(),
 		method: text('method', { enum: ['cash', 'bank', 'card', 'offset'] }).notNull(),
 		comment: text('comment'),
+		// Set on a row that cancels an earlier mark; marks are never edited in place (tech.md v1.44).
+		reversalOfId: integer('reversal_of_id'),
 		createdById: integer('created_by_id')
 			.notNull()
 			.references(() => users.id),
