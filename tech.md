@@ -1,8 +1,8 @@
 # tech.md — ядро проекта
 
 **Проект:** B2B-портал + CRM для столярной мастерской (производство гробов)
-**Версия ядра:** v1.44
-**Дата:** 01.10.2026
+**Версия ядра:** v1.45
+**Дата:** 02.10.2026
 **Статус:** этап 1 (портал, P1–P14) завершён 19.09.2026, этап 2 (CRM) начат слайсом C1
 **Владелец файла:** Sobol17 (тимлид и единственный разработчик)
 **Источник требований:** `TZ_B2B_CRM_stolyarka_v06.md`
@@ -11,6 +11,7 @@
 
 | Версия | Изменение |
 |---|---|
+| v1.45 | Контракт C8 по решению владельца от 02.10.2026. Раздел `/crm/stock` («Склад») читают по праву `stock.read`, меняют по `stock.manage` (`owner`, `manager`); водителю раздел отвечает 403. Реестр показывает остаток учётной позиции как сумму её движений по всем цветам, карточка `/crm/stock/[id]` раскладывает его по цветам и по журналу движений. Учётную позицию создают и правят в реестре: код, название, вид, единица, порог, активность; вид после создания не меняется, позиция не удаляется. Ручное движение пишет форма с двумя типами. `purchase` (приход) только с плюсом, причина необязательна. `adjustment` (корректировка) со знаком и с обязательной причиной из `stock_move_reason`; ноль сервер отклоняет. У изделия цвет обязан входить в матрицу варианта, у комплектующего цвета нет; `occurred_at` ставит сервер; в одном движении не больше `STOCK_MOVE_MAX` единиц. Сторно (§6.3) доступно только у `purchase` и `adjustment`, один раз на движение, сторно само не сторнируется. Выпуск исправляет корректировка, погрузку снимает экран доставки, инвентаризацию исправляет новая инвентаризация. Инвентаризация идёт через черновик: `inventories` получил колонку `kind` (комплектующие или изделия), `inventory_lines` получил `option_id` (цвет позиции изделия). Черновик получает строку на каждую активную позицию вида; у изделия на каждую пару «позиция, цвет» с хотя бы одним движением. Открытый черновик на вид один, черновик можно сохранять и удалить. «Провести» в одной транзакции пересчитывает `expected_qty` по остатку на момент проведения, пишет движение `inventory` на `actual − expected` по каждой строке с расхождением, ставит `applied` и `applied_at`; проведённая инвентаризация не правится и не удаляется. Порог считается по учётной позиции целиком: у изделия это сумма остатков всех цветов; порог 0 выключает проверку. Каждое складское движение, включая выпуск C5 и погрузку C6, ставит `stock.threshold.check` в своей транзакции; хендлер публикует `stock.below_threshold`, когда остаток ниже порога. До C12 fanout это событие пропускает, сигнал виден в реестре подсветкой и фильтром «ниже порога»; ключ `fanout:{eventKey}:{entityId}` пропустит по позиции одно такое событие за всё время, C12 решает его вместе с адресатами мастерской. Реестр и журнал позиции выгружаются в XLSX синхронно, без `report.export`. Чистая свёртка живёт в `lib/domain/stock/balance.ts`. Действия в `audit_log`: `stock.item.create`, `stock.item.update`, `stock.move.create`, `stock.move.reverse`, `stock.inventory.create`, `stock.inventory.save`, `stock.inventory.apply`, `stock.inventory.delete`. В §8 добавлен `lib/types/crm-stock.ts`, код живёт в `server/crm-stock/` |
 | v1.44 | Контракт C7 по решению владельца от 01.10.2026. Предоплаты в системе нет: отметка оплаты появляется не раньше доставки. Флажок «Принял оплату наличными» пишет `payment_marks` на всю сумму заявки, `DeliveryStopDto.dueMinor` выведен, экран доставки показывает только `totalMinor`. Администратор ставит отметку в карточке `/crm/requests/[id]` по новому праву `request.payment.mark` (`owner`, `manager`) и только у заявки контрагента в `awaiting_payment`: дата не позже сегодняшнего дня в `org.timezone`, сумма, способ из `PAYMENT_METHODS`, комментарий до 500 символов. Переплаты нет: отметка больше остатка отклоняется с 422. Экран показывает и принимает целые рубли (v1.32), а остаток бывает с копейками, поэтому сумма, которая отличается от остатка меньше чем на рубль, записывается как остаток целиком (`settledAmountMinor` в `lib/domain/payment/mark.ts`). Цепочку автоматических шагов отметка запускает в своей транзакции (инвариант 7): покрытая сумма закрывает заявку в `paid`, частичная оставляет в `awaiting_payment`. Отметка не правится и не удаляется. Ошибку гасит сторно: `payment_marks` получил `reversal_of_id`, строка сторно несёт ту же дату и способ, сумму с обратным знаком и обязательный комментарий. Сторно доступно, пока заявка в `awaiting_payment`, один раз на отметку; сторно само не сторнируется. Закрытая заявка отметок не меняет: обратных переходов нет. `requests.paid_minor` равен сумме отметок заявки и переписывается в транзакции каждой отметки и каждого сторно, включая наличные водителя; долг по-прежнему считается из самих отметок. Частичная отметка публикует `request.payment_marked`; ключ fanout и индекс фида пропускают по заявке одно такое событие, вторая частичная оплата повторно не уведомляет. Отметка, закрывшая заявку, публикует только `request.paid`. Сторно событий не публикует. Действия в `audit_log`: `payment.mark` и `payment.reverse`, сущность `payment_marks`. `CrmPaymentMarkDto` получил `reversalOfId` и `isReversed`, `CrmRequestCardDto` получил `payments`, `dueMinor` и `canMarkPayment`. Код живёт в `server/payment/`. Индикатор долга (C3) и флаг `payment_overdue` (C4) не менялись |
 | v1.43 | Контракт C6 по решению владельца от 29.09.2026. Погрузка хранится в журнале склада: `stock_moves` получил колонку `request_item_id` (строка заявки, которую грузят; `null` у прочих движений). Отметка «Погрузил N» пишет движение `shipment` на `−N` по позиции «вариант, цвет» строки с `request_id` и `request_item_id`, погружено по строке равно минус сумме движений с её `request_item_id`. Отдельной таблицы отметок нет. Грузят заявку контрагента в `ready`: не больше, чем осталось по строке, и не больше, чем склад держит для строки по `allocateStock`; при нехватке на складе сервер отклоняет погрузку. Кнопка «Снять» на строке, пока заявка в `ready`, пишет обратное движение `reversal` с `reversal_of_id` на каждое непогашенное движение погрузки строки (§6.3). Строка заявки держит в наполнении только непогруженный остаток: `DemandLine` получил `loadedQty`, строка хочет `qty − loadedQty`. Переход `ready -> delivered` получил guard `fullyLoaded`: каждая строка заявки погружена целиком, заявка на склад проходит без погрузки. Эффект `shipStockItems` снят с перехода и выведен из `EFFECT_CODES`: списание делает погрузка. Право `delivery.work` у `driver`, `manager` и `owner` открывает экран `/crm/delivery` («Доставка»), погрузку и доставку с него. Экран показывает заявки контрагентов в `ready` с адресом, контактом, ссылкой на Яндекс Карты и погрузкой по строкам, и заявки контрагентов в `in_work` для планирования, только на чтение. Заявок на склад на экране нет. Доска, реестр и карточка водителю по-прежнему отвечают 403. Водитель принимает наличные, поэтому экран доставки отдаёт ему сумму заявки и остаток к получению (`DeliveryStopDto.totalMinor`, `dueMinor`). Это единственное исключение из слепоты водителя к ценам, `canSeePrices` у него остаётся `false`. Флажок «Принял оплату наличными» пишет `payment_marks` со способом `cash` на остаток `totalMinor − Σ отметок` в транзакции доставки до цепочки автоматических шагов; при нулевом остатке отметка не пишется, заявке на склад флажок недоступен. Действия в `audit_log`: `request.load`, `request.unload`; доставка пишет `request.transition` с `cashCollected` в `after`. В §8 добавлен `lib/types/crm-delivery.ts` |
 | v1.42 | Три правки бизнеса от 24.09.2026. Роль `manager` в интерфейсе называется «Администратор»: это один человек, который ходит по складу, следит за работами и ведёт заявки. Код роли `manager` остаётся, потому что на нём стоят матрица прав, правила уведомлений и учётные записи; меняются подпись роли (`roles.title`, `ROLE_TITLE`) и тексты интерфейса, где он назван менеджером. В портале он называется «администратор мастерской», чтобы не путать его с администратором контрагента. Витрина портала не показывает наличие: `ProductListItemDto.stockQty`, `VariantDto.stockQty` и фильтр `CatalogFilters.inStock` выведены, карточка, листинг и фильтры остатка не рисуют, параметр адреса `inStock` игнорируется. Остаток по-прежнему считается для цеха (C5) и склада (C8). Исполнители выведены из системы: каждый работник и так знает свою зону. Таблица `request_assignees` удалена вместе с `ASSIGNEE_ROLES`, `CrmAssigneeDto`, `CrmRequestListItemDto.assigneeNames`, `CrmRequestCardDto.assignees`, `CrmRequestChoicesDto.crew`, формой исполнителей на карточке C4, колонкой «Исполнители» реестра и выгрузки, действиями аудита `request.assign` и `request.unassign`. `ATTENTION_FLAGS` сведён к `payment_overdue`. Из таблицы переходов ушёл признак `assignedOnly`, из `Transition` поле `assignedOnly`, из машины состояний отказ `not_assigned`: `ready -> delivered` делает любой водитель. Работник мастерской без `request.read.any` видит отправленные заявки в тех статусах, из которых его роль делает переход по §6.2 (`reachableStatuses` в `state-machine.ts`): водитель видит заявки в `ready`, у столяра и маляра переходов нет, и заявки им не видны. Приоритет заявки по-прежнему меняется на карточке C4 со строкой истории после запуска |
@@ -630,6 +631,7 @@ export const bomNorms = sqliteTable('bom_norms', {
 
 export const inventories = sqliteTable('inventories', {
   id: pk(),
+  kind: text('kind', { enum: ['product', 'component'] }).notNull(),   // one open draft per kind (v1.45)
   status: text('status', { enum: ['draft', 'applied'] }).notNull().default('draft'),
   comment: text('comment'),
   createdById: integer('created_by_id').notNull().references(() => users.id),
@@ -640,7 +642,8 @@ export const inventoryLines = sqliteTable('inventory_lines', {
   id: pk(),
   inventoryId: integer('inventory_id').notNull().references(() => inventories.id, { onDelete: 'cascade' }),
   stockItemId: integer('stock_item_id').notNull().references(() => stockItems.id),
-  expectedQty: integer('expected_qty').notNull(),
+  optionId: integer('option_id').references(() => options.id),   // colour of a product position, null for a component (v1.45)
+  expectedQty: integer('expected_qty').notNull(),                // refreshed from the balance when the inventory is applied
   actualQty: integer('actual_qty').notNull()
 });
 ```
@@ -932,7 +935,7 @@ export interface JobHandler<T> {
 | `notification.dispatch` | `{ notificationId: number }` | `notification:{id}` | Отправка одного уведомления в один канал, отметка `sent`/`failed` |
 | `notification.fanout` | `{ eventKey: EventKey, entityId: number }` | `fanout:{eventKey}:{entityId}` | Разворачивает событие в строки `notifications` по матрице ролей и личным настройкам и в строки `notification_feed` по одной на адресата |
 | `charity.recount` | `{ scope: string }` | `charity:{scope}:{requestId}` | Пересборка `charity_totals`, публикация в SSE-топик `charity` |
-| `stock.threshold.check` | `{ stockItemId: number }` | `threshold:{id}:{yyyymmdd}` | Сравнение остатка с порогом, событие `stock.below_threshold` |
+| `stock.threshold.check` | `{ stockItemId: number }` | `threshold:{id}:{yyyymmdd}` | Сравнение остатка позиции (все цвета вместе) с порогом, событие `stock.below_threshold`; ставит каждое складское движение (v1.45) |
 | `import.bom` | `{ mediaId: number, actorId: number }` | `import-bom:{mediaId}` | Разбор XLSX/CSV, создание `bom_versions` + `bom_norms` |
 | `import.rates` | `{ mediaId: number, actorId: number }` | `import-rates:{mediaId}` | Создание `work_rate_versions` + `work_rates` |
 | `payroll.calculate` | `{ periodId: number }` | `payroll:{periodId}:{revision}` | Пересчёт `payroll_lines` за период |
@@ -959,7 +962,7 @@ export const EVENT_KEYS = [
 - пара «событие, канал» существует для пользователя, только если правило называет одну из его ролей; значение по умолчанию включено, если хотя бы одно такое правило включено;
 - личная настройка из `user_notification_prefs` перекрывает значение по умолчанию; сохранение формы пишет строку на каждую предложенную пару, пару вне предложения сервер отклоняет;
 - к заявке человек портала относится как `cp_admin` всегда и как `cp_employee`, только если он автор заявки; заявка на склад в портал не пишет;
-- до C12 разворачиваются только события заявки и только для людей контрагента; живой канал один, `email`: `push` оживает в C15, `max` в C16;
+- до C12 разворачиваются только события заявки и только для людей контрагента; `stock.below_threshold` публикуется с C8, но адресатов получает в C12 (v1.45); живой канал один, `email`: `push` оживает в C15, `max` в C16;
 - строка `notification_feed` пишется каждому адресату события в той же транзакции, что и строки `notifications`. Адресат считается той же матрицей ролей, но без учёта каналов и личных настроек: фид в приложении выключить нельзя, настройки управляют почтой и МАКС (v1.33);
 - `notifications.payload` хранит `{ entityId }`, текст письма собирается в `notification.dispatch` из БД на момент отправки.
 
@@ -1340,6 +1343,50 @@ export interface DeliveryStopDto {
 }
 export interface DeliveryDto { ready: DeliveryStopDto[]; readyTotal: number; planned: DeliveryStopDto[]; plannedTotal: number; }
 
+// crm-stock.ts — the warehouse (C8, v1.45). Balance is the sum of moves, every figure opens into its moves. No money keys.
+export const STOCK_KINDS = ['product', 'component'] as const;
+export type StockKind = (typeof STOCK_KINDS)[number];
+export const MANUAL_MOVE_TYPES = ['purchase', 'adjustment'] as const;   // what the move form writes and what a reversal may cancel
+export type ManualMoveType = (typeof MANUAL_MOVE_TYPES)[number];
+export const INVENTORY_STATUSES = ['draft', 'applied'] as const;
+export type InventoryStatus = (typeof INVENTORY_STATUSES)[number];
+export const STOCK_MOVE_MAX = 100000;               // units in one manual move or one inventory line
+export interface StockFilters { kind?: StockKind; belowThreshold?: boolean; negative?: boolean; activeOnly?: boolean; }
+export interface StockRowDto {
+  id: number; kind: StockKind; code: string; title: string; unitId: number; unitTitle: string;
+  minThreshold: number; isActive: boolean;
+  balance: number;                                   // sum of every move of the item, all colours of a product together
+  isBelowThreshold: boolean;                         // minThreshold > 0 and balance < minThreshold
+  isNegative: boolean;                               // any position of the item is below zero
+}
+export interface StockPositionDto { optionId: number | null; colorTitle: string | null; balance: number; }
+export interface StockMoveDto {
+  id: number; occurredAt: string; type: StockMoveType; qty: number;
+  optionId: number | null; colorTitle: string | null;
+  requestId: number | null; requestNumber: string | null;
+  reasonTitle: string | null; comment: string | null; actorName: string | null;
+  reversalOfId: number | null; isReversed: boolean;
+  canReverse: boolean;                               // a manual move not yet reversed, the right stock.manage
+}
+export interface StockCardDto extends StockRowDto {
+  positions: StockPositionDto[];                     // one row for a component, a row per colour for a product
+  colors: { id: number; title: string }[];           // colours the move form offers: the matrix of the variant, empty for a component
+  canManage: boolean;
+}                                                    // the journal comes apart as ListResult<StockMoveDto>
+export interface StockChoicesDto { units: { id: number; title: string }[]; reasons: { id: number; title: string }[]; }
+export interface InventoryRowDto {
+  id: number; kind: StockKind; status: InventoryStatus; comment: string | null;
+  createdByName: string; createdAt: string; appliedAt: string | null;
+  lineCount: number; diffCount: number;              // lines where the count differs from the books
+}
+export interface InventoryLineDto {
+  id: number; stockItemId: number; optionId: number | null;
+  code: string; title: string; colorTitle: string | null; unitTitle: string;
+  expectedQty: number;                               // a draft shows the live balance, an applied one the frozen figure
+  actualQty: number;
+}
+export interface InventoryCardDto extends InventoryRowDto { lines: InventoryLineDto[]; canManage: boolean; }
+
 // money.ts — branded type, blocks accidental mixing with plain numbers
 export type Minor = number & { readonly __brand: 'minor' };
 
@@ -1715,7 +1762,7 @@ CONTRACT GAP
 **C7. Оплата и закрытие.** Отметки оплаты с датой, суммой, способом и комментарием, частичная оплата с остатком, индикатор задолженности контрагента, флаг долгого ожидания оплаты, сторно ошибочной отметки с записью в аудит. Предоплаты и переплаты нет (v1.44). Статус заявки менеджер руками не двигает: он ставит отметку оплаты, а `awaiting_payment -> paid` берёт система в транзакции этой отметки, как только отметки покрывают сумму (§6.2, инвариант 7).
 **DoD:** сумма отметок сходится с `totalMinor` до копейки, заявка закрывается автоматически при полном покрытии, частичная оплата оставляет её в `awaiting_payment`.
 
-**C8. Склад: остатки и движения.** Учётные позиции, журнал движений, движения по позициям «вариант, цвет» (приход отметкой выпуска C5, расход погрузкой C6, v1.41), ручные корректировки с причиной, инвентаризация одной операцией, минимальные пороги и сигнал, реестр и карточка позиции с раскрытием остатка до операций, экспорт XLSX, подсветка отрицательного остатка.
+**C8. Склад: остатки и движения.** Учётные позиции, журнал движений, движения по позициям «вариант, цвет» (приход отметкой выпуска C5, расход погрузкой C6, v1.41), приход закупкой и ручные корректировки с причиной, сторно ручного движения, инвентаризация через черновик с проведением одной операцией, минимальные пороги по позиции и сигнал `stock.below_threshold`, реестр и карточка позиции с раскрытием остатка до операций, экспорт XLSX, подсветка отрицательного остатка (контракт v1.45).
 **DoD:** остаток равен сумме движений, любая цифра раскрывается до перечня операций, инвентаризация проводится одной операцией.
 
 **C9. Склад: расчётные таблицы комплектующих.** Импорт XLSX/CSV с предпросмотром и отчётом об ошибках, версионирование, ручное редактирование норм, автоматическое списание комплектующих при отметке выпуска C5 (v1.41), расчёт потребности по заявкам в работе и дефицита.
