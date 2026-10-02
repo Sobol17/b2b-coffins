@@ -1,16 +1,31 @@
 import { AuditService } from '../../audit/audit.service';
 import { withTransaction } from '../../core/tx';
 import { BomFileReader } from '../../crm-bom/bom-file.reader';
-import { BomNormRepository } from '../../crm-bom/bom-norm.repository';
+import { BomNormRepository, type NewBomNorm } from '../../crm-bom/bom-norm.repository';
 import { BomVersionRepository } from '../../crm-bom/bom-version.repository';
 import { InvalidPayloadError, defineHandler } from '../job-handler';
 import { JOB_PAYLOAD_SCHEMAS } from '../topics';
-import { isImportable } from '$lib/domain/stock/bom-import';
+import { isImportable, type ParsedBom } from '$lib/domain/stock/bom-import';
 
 export interface ImportBomDeps {
 	readonly reader: Pick<BomFileReader, 'table' | 'check'>;
 	readonly versions: BomVersionRepository;
 	readonly norms: BomNormRepository;
+}
+
+/** A file that passed the check has every row resolved; the filter only tells the compiler so. */
+function normsOf(parsed: ParsedBom): NewBomNorm[] {
+	return parsed.rows.flatMap((row) =>
+		row.variantId === null || row.componentId === null || row.qtyPerUnitMilli === null
+			? []
+			: [
+					{
+						variantId: row.variantId,
+						componentId: row.componentId,
+						qtyPerUnitMilli: row.qtyPerUnitMilli
+					}
+				]
+	);
 }
 
 /**
@@ -34,21 +49,7 @@ export function createImportBomHandler(deps: ImportBomDeps) {
 					{ importedById: actorId, sourceFileId: mediaId },
 					tx
 				);
-				deps.norms.insertMany(
-					created.id,
-					parsed.rows.flatMap((row) =>
-						row.variantId === null || row.componentId === null || row.qtyPerUnitMilli === null
-							? []
-							: [
-									{
-										variantId: row.variantId,
-										componentId: row.componentId,
-										qtyPerUnitMilli: row.qtyPerUnitMilli
-									}
-								]
-					),
-					tx
-				);
+				deps.norms.insertMany(created.id, normsOf(parsed), tx);
 				AuditService.record(
 					{
 						actorId,
