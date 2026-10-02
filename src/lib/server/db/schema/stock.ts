@@ -41,6 +41,8 @@ export const stockMoves = sqliteTable(
 		// The colour of a product: two colours of one variant are two positions (tech.md v1.41).
 		optionId: integer('option_id').references(() => options.id),
 		qty: integer('qty').notNull(), // signed: + income, - outcome
+		// Exact norm × pieces of a consumption move: the fraction carries to the next mark (tech.md v1.46).
+		consumedMilli: integer('consumed_milli'),
 		type: text('type', { enum: STOCK_MOVE_TYPES }).notNull(),
 		requestId: integer('request_id').references(() => requests.id),
 		// The request line a loading ships (tech.md v1.43): the loaded pieces are summed from here.

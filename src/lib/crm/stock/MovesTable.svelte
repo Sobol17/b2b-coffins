@@ -5,6 +5,7 @@
 	import type { StockMoveDto } from '$lib/types/crm-stock';
 	import type { ListQuery } from '$lib/types/list';
 	import { formatDateTime } from '$lib/utils/format';
+	import { formatMilli } from '$lib/utils/milli';
 	import { MOVE_TYPE_TITLE, signed } from './labels';
 
 	/**
@@ -69,6 +70,9 @@
 			>
 				{signed(row.qty)}
 			</span>
+			{#if row.consumedMilli !== null}
+				<div class="text-xs text-fg-muted">по норме {formatMilli(row.consumedMilli)}</div>
+			{/if}
 		{:else if column.key === 'basis'}
 			{#if row.requestId !== null}
 				<a class="text-link" href={resolve(`/crm/requests/${row.requestId}`)}>

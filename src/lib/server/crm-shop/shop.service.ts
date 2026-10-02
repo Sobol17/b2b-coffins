@@ -1,6 +1,7 @@
 import { PolicyService } from '../auth/policy';
 import { NotFoundError, ValidationError } from '../core/errors';
 import { BaseService } from '../core/service';
+import { ComponentConsumption } from '../stock/component-consumption';
 import { StockFill } from '../stock/stock-fill';
 import { StockThreshold } from '../stock/stock-threshold';
 import { PositionTitles, ShopDtoMapper } from './dto';
@@ -20,7 +21,8 @@ export class ShopService extends BaseService {
 		private readonly shop: ShopRepository = new ShopRepository(),
 		private readonly fill: StockFill = new StockFill(),
 		private readonly now: () => Date = () => new Date(),
-		private readonly threshold: StockThreshold = new StockThreshold()
+		private readonly threshold: StockThreshold = new StockThreshold(),
+		private readonly consumption: ComponentConsumption = new ComponentConsumption()
 	) {
 		super(ctx);
 		this.assert(
@@ -55,7 +57,8 @@ export class ShopService extends BaseService {
 	}
 
 	/**
-	 * Pieces made on the shop floor land on the shelf; the fill hands them to the requests.
+	 * Pieces made on the shop floor land on the shelf; the fill hands them to the requests. The
+	 * components go off the shelf by the norm in the same transaction (tech.md v1.46).
 	 * @throws NotFoundError for an unknown variant, ValidationError for a variant without a stock
 	 * item or a colour outside its matrix.
 	 */
@@ -74,19 +77,30 @@ export class ShopService extends BaseService {
 			) {
 				throw new ValidationError('Этого цвета нет у варианта', { field: 'optionId' });
 			}
+			const occurredAt = this.now();
 			const moveId = this.shop.insertProduction(
 				{
 					stockItemId: variant.stockItemId,
 					optionId: input.optionId,
 					qty: input.qty,
 					actorId: this.ctx.userId,
-					occurredAt: this.now()
+					occurredAt
 				},
 				tx
 			);
+			const used = this.consumption.write(
+				{ variantId: input.variantId, pieces: input.qty, actorId: this.ctx.userId, occurredAt },
+				tx
+			);
 			// A mark may still leave the item under its threshold: the signal is due (tech.md v1.45).
-			this.threshold.watch(variant.stockItemId, tx, this.now());
-			return { result: undefined, entityId: moveId, after: { ...input } };
+			for (const id of [variant.stockItemId, ...used.consumed.map((row) => row.componentId)]) {
+				this.threshold.watch(id, tx, occurredAt);
+			}
+			return {
+				result: undefined,
+				entityId: moveId,
+				after: { ...input, bomVersionId: used.bomVersionId, consumed: [...used.consumed] }
+			};
 		});
 	}
 }

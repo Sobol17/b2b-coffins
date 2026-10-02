@@ -3,6 +3,7 @@ import { migrate } from 'drizzle-orm/better-sqlite3/migrator';
 import { hashPassword } from '../../src/lib/server/auth/password';
 import { createDb, type Db } from '../../src/lib/server/db/client';
 import {
+	bomVersions,
 	dictItems,
 	discountRules,
 	rateLimits,
@@ -82,13 +83,17 @@ export default async function globalSetup(): Promise<void> {
 	db.update(users).set({ isActive: false }).where(like(users.email, 'e2e.%')).run();
 	db.update(users).set({ failedAttempts: 0, lockedUntil: null }).run();
 	// The fill of v1.41 hands stock out across every request in work or assembled. Leftovers of an
-	// earlier run would take the pieces a spec makes, so a run starts with none of them and no
-	// production: the opening balances of the seed stay.
+	// earlier run would take the pieces a spec makes, so a run starts with none of them, no
+	// production and no consumption: the opening balances of the seed stay.
 	db.update(requests)
 		.set({ status: 'cancelled' })
 		.where(inArray(requests.status, ['in_work', 'ready']))
 		.run();
-	db.delete(stockMoves).where(eq(stockMoves.type, 'production')).run();
+	db.delete(stockMoves)
+		.where(inArray(stockMoves.type, ['production', 'consumption']))
+		.run();
+	// Norms a failed C9 run left active would write components off under every other spec.
+	db.delete(bomVersions).run();
 	// Items the CRM admin spec adds: nothing references them, so each run starts without them.
 	db.delete(dictItems).where(like(dictItems.code, 'e2e%')).run();
 }

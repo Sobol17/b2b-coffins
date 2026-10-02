@@ -1,13 +1,18 @@
 import { error, json } from '@sveltejs/kit';
 import { requireAction, requireScope } from '$lib/server/auth/guard';
+import { BomImportService } from '$lib/server/crm-bom/bom-import.service';
 import { ProductImageService } from '$lib/server/crm-catalog/product-image.service';
 import { rethrowAsHttp } from '$lib/server/core/http';
 import { RequestAttachmentService } from '$lib/server/request/request-attachment.service';
-import { attachmentUploadSchema, productImageUploadSchema } from '$lib/validation/files';
+import {
+	attachmentUploadSchema,
+	bomImportUploadSchema,
+	productImageUploadSchema
+} from '$lib/validation/files';
 import type { RequestAttachmentDto } from '$lib/types/request';
 import type { RequestHandler } from './$types';
 
-/** Portal request attachments and CRM product photos share the guarded file collection. */
+/** Portal request attachments, CRM product photos and norm files share the guarded collection. */
 export const POST: RequestHandler = async ({ request, locals, url }) => {
 	if (
 		request.headers.get('x-requested-with') !== 'XMLHttpRequest' ||
@@ -26,6 +31,17 @@ export const POST: RequestHandler = async ({ request, locals, url }) => {
 				bytes: Buffer.from(await parsed.data.file.arrayBuffer())
 			});
 			return json(image, { status: 201 });
+		} catch (err) {
+			rethrowAsHttp(err);
+		}
+	}
+	if ('bomImport' in form) {
+		const actor = requireAction(requireScope(locals.actor, 'crm', url.pathname), 'stock.manage');
+		const parsed = bomImportUploadSchema.safeParse(form);
+		if (!parsed.success) error(422, { code: 'validation', message: 'Выберите файл' });
+		try {
+			const bytes = Buffer.from(await parsed.data.file.arrayBuffer());
+			return json({ id: await new BomImportService(actor).upload(bytes) }, { status: 201 });
 		} catch (err) {
 			rethrowAsHttp(err);
 		}

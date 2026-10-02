@@ -22,7 +22,8 @@ export const MOVE_TYPE_TITLE: Readonly<Record<StockMoveType, string>> = {
 	adjustment: 'Корректировка',
 	inventory: 'Инвентаризация',
 	reversal: 'Сторно',
-	purchase: 'Приход'
+	purchase: 'Приход',
+	consumption: 'Списание по норме'
 };
 
 export const INVENTORY_STATUS_TITLE = { draft: 'Черновик', applied: 'Проведена' } as const;

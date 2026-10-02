@@ -1,0 +1,1 @@
+ALTER TABLE `stock_moves` ADD `consumed_milli` integer;

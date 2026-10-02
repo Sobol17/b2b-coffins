@@ -12,3 +12,9 @@ export const productImageUploadSchema = z.object({
 	productId: z.coerce.number().int().positive(),
 	file: z.instanceof(File, { error: 'Выберите фотографию' })
 });
+
+/** A norm file of C9: the marker field tells the collection route which service takes it. */
+export const bomImportUploadSchema = z.object({
+	bomImport: z.literal('1'),
+	file: z.instanceof(File, { error: 'Выберите файл' })
+});
