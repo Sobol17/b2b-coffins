@@ -38,5 +38,7 @@ export const jobKey = {
 	// One recount per delivered request: an hourly key dropped the second delivery of the hour (v1.18).
 	charityRecount: (scope: string, requestId: number): string => `charity:${scope}:${requestId}`,
 	// One signal per item a day: a shelf that stays low must not write a row per move.
-	threshold: (stockItemId: number, now: Date): string => `threshold:${stockItemId}:${utcDay(now)}`
+	threshold: (stockItemId: number, now: Date): string => `threshold:${stockItemId}:${utcDay(now)}`,
+	// One version per uploaded file: confirming the preview twice queues one import.
+	importBom: (mediaId: number): string => `import-bom:${mediaId}`
 } as const;
