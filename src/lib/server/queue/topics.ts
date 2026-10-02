@@ -36,5 +36,7 @@ export const jobKey = {
 	fanout: (eventKey: EventKey, entityId: number): string => `fanout:${eventKey}:${entityId}`,
 	dispatch: (notificationId: number): string => `notification:${notificationId}`,
 	// One recount per delivered request: an hourly key dropped the second delivery of the hour (v1.18).
-	charityRecount: (scope: string, requestId: number): string => `charity:${scope}:${requestId}`
+	charityRecount: (scope: string, requestId: number): string => `charity:${scope}:${requestId}`,
+	// One signal per item a day: a shelf that stays low must not write a row per move.
+	threshold: (stockItemId: number, now: Date): string => `threshold:${stockItemId}:${utcDay(now)}`
 } as const;

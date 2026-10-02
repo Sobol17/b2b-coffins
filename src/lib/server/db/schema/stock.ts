@@ -89,6 +89,11 @@ export const bomNorms = sqliteTable(
 
 export const inventories = sqliteTable('inventories', {
 	id: pk(),
+	// One open draft per kind (tech.md v1.45): components and products are counted apart.
+	// The default only lets SQLite add the column; the service always names the kind.
+	kind: text('kind', { enum: ['product', 'component'] })
+		.notNull()
+		.default('component'),
 	status: text('status', { enum: ['draft', 'applied'] })
 		.notNull()
 		.default('draft'),
@@ -108,6 +113,9 @@ export const inventoryLines = sqliteTable('inventory_lines', {
 	stockItemId: integer('stock_item_id')
 		.notNull()
 		.references(() => stockItems.id),
+	// The colour of a product position, null for a component (tech.md v1.45).
+	optionId: integer('option_id').references(() => options.id),
+	// Refreshed from the balance when the inventory is applied.
 	expectedQty: integer('expected_qty').notNull(),
 	actualQty: integer('actual_qty').notNull()
 });
