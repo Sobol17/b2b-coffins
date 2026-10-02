@@ -21,6 +21,7 @@ export const load: LayoutServerLoad = ({ locals, url }) => {
 			shop:
 				PolicyService.can(actor, 'request.read.any') && PolicyService.can(actor, 'stock.manage'),
 			delivery: PolicyService.can(actor, 'delivery.work'),
+			stock: PolicyService.can(actor, 'stock.read'),
 			catalog: PolicyService.can(actor, 'catalog.manage'),
 			counterparties: PolicyService.can(actor, 'counterparty.manage'),
 			settings: PolicyService.can(actor, 'settings.manage'),
