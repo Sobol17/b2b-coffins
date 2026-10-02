@@ -6,6 +6,7 @@ import { ShopRepository } from '../crm-shop/shop.repository';
 import type { Tx } from '../db/client';
 import { LoadingRepository, type LoadingLineRow } from '../stock/loading.repository';
 import { StockFill, type StockFillSnapshot } from '../stock/stock-fill';
+import { StockThreshold } from '../stock/stock-threshold';
 import { DeliveryRepository, type StopRow } from './delivery.repository';
 import { DeliveryDtoMapper } from './dto';
 import { loadableQty } from '$lib/domain/request/loading';
@@ -28,7 +29,8 @@ export class DeliveryService extends BaseService {
 		private readonly loading: LoadingRepository = new LoadingRepository(),
 		private readonly fill: StockFill = new StockFill(),
 		private readonly shop: ShopRepository = new ShopRepository(),
-		private readonly now: () => Date = () => new Date()
+		private readonly now: () => Date = () => new Date(),
+		private readonly threshold: StockThreshold = new StockThreshold()
 	) {
 		super(ctx);
 		this.assert(ctx.scope === 'crm' && PolicyService.can(ctx, 'delivery.work'), 'delivery.work');
@@ -137,5 +139,7 @@ export class DeliveryService extends BaseService {
 			},
 			tx
 		);
+		// The loading is what takes pieces off the shelf, so the threshold is watched here (v1.45).
+		this.threshold.watch(line.stockItemId, tx, this.now());
 	}
 }

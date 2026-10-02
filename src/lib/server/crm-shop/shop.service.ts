@@ -2,6 +2,7 @@ import { PolicyService } from '../auth/policy';
 import { NotFoundError, ValidationError } from '../core/errors';
 import { BaseService } from '../core/service';
 import { StockFill } from '../stock/stock-fill';
+import { StockThreshold } from '../stock/stock-threshold';
 import { PositionTitles, ShopDtoMapper } from './dto';
 import { ShopRepository } from './shop.repository';
 import { productionNeeds } from '$lib/domain/stock/allocation';
@@ -18,7 +19,8 @@ export class ShopService extends BaseService {
 		ctx: ActorContext,
 		private readonly shop: ShopRepository = new ShopRepository(),
 		private readonly fill: StockFill = new StockFill(),
-		private readonly now: () => Date = () => new Date()
+		private readonly now: () => Date = () => new Date(),
+		private readonly threshold: StockThreshold = new StockThreshold()
 	) {
 		super(ctx);
 		this.assert(
@@ -82,6 +84,8 @@ export class ShopService extends BaseService {
 				},
 				tx
 			);
+			// A mark may still leave the item under its threshold: the signal is due (tech.md v1.45).
+			this.threshold.watch(variant.stockItemId, tx, this.now());
 			return { result: undefined, entityId: moveId, after: { ...input } };
 		});
 	}
