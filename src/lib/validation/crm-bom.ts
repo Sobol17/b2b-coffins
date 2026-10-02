@@ -31,3 +31,6 @@ export const bomImportSchema = z.object({ mediaId: id });
 
 /** Query of the norms screen. A tampered id is dropped, not turned into a 422 page. */
 export const bomVersionParam = id.optional().catch(undefined);
+
+/** A button without fields: the action still goes through a schema like every form. */
+export const bomVersionCreateSchema = z.object({});
