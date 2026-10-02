@@ -631,7 +631,7 @@ export const bomNorms = sqliteTable('bom_norms', {
 
 export const inventories = sqliteTable('inventories', {
   id: pk(),
-  kind: text('kind', { enum: ['product', 'component'] }).notNull(),   // one open draft per kind (v1.45)
+  kind: text('kind', { enum: ['product', 'component'] }).notNull().default('component'),   // one open draft per kind (v1.45); the default only lets SQLite add the column
   status: text('status', { enum: ['draft', 'applied'] }).notNull().default('draft'),
   comment: text('comment'),
   createdById: integer('created_by_id').notNull().references(() => users.id),
