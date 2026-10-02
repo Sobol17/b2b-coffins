@@ -17,7 +17,9 @@ export const STOCK_MOVE_TYPES = [
 	'adjustment',
 	'inventory',
 	'reversal',
-	'purchase'
+	'purchase',
+	// Components written off by a production mark (tech.md v1.46).
+	'consumption'
 ] as const;
 export type StockMoveType = (typeof STOCK_MOVE_TYPES)[number];
 

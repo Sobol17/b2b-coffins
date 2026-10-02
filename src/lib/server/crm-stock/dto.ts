@@ -54,7 +54,8 @@ export class StockDtoMapper {
 			actorName: row.actorName,
 			reversalOfId: row.reversalOfId,
 			isReversed,
-			canReverse: canManage && isManualMove(row.type) && !isReversed
+			canReverse: canManage && isManualMove(row.type) && !isReversed,
+			consumedMilli: row.consumedMilli
 		};
 	}
 
