@@ -80,6 +80,29 @@ export const workDaySaveSchema = z.object({
 		})
 });
 
+const STAFF_PREFIX = 'staff.';
+const QTY_PREFIX = 'qty.';
+
+/**
+ * The day form sends a ticked `staff.<id>` box per worker and a `qty.<workTypeId>` field per work;
+ * an empty or zero quantity means the work was not done that day.
+ */
+function dayOfForm(value: unknown): unknown {
+	if (typeof value !== 'object' || value === null) return value;
+	const fields = Object.entries(value);
+	return {
+		date: fields.find(([key]) => key === 'date')?.[1],
+		staffIds: fields
+			.filter(([key]) => key.startsWith(STAFF_PREFIX))
+			.map(([key]) => key.slice(STAFF_PREFIX.length)),
+		entries: fields
+			.filter(([key, qty]) => key.startsWith(QTY_PREFIX) && qty !== '' && Number(qty) !== 0)
+			.map(([key, qty]) => ({ workTypeId: key.slice(QTY_PREFIX.length), qty }))
+	};
+}
+
+export const workDayFormSchema = z.preprocess(dayOfForm, workDaySaveSchema);
+
 export const workDayDateSchema = z.object({ date: payrollDateSchema });
 
 /**

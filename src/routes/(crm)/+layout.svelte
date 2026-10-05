@@ -18,6 +18,7 @@
 		...(data.can.shop ? [{ href: resolve('/crm/shop'), label: 'Цех' }] : []),
 		...(data.can.delivery ? [{ href: resolve('/crm/delivery'), label: 'Доставка' }] : []),
 		...(data.can.stock ? [{ href: resolve('/crm/stock'), label: 'Склад' }] : []),
+		...(data.can.payroll ? [{ href: resolve('/crm/payroll'), label: 'Выплаты' }] : []),
 		...(data.can.catalog
 			? [
 					{ href: resolve('/crm/catalog'), label: 'Каталог' },
