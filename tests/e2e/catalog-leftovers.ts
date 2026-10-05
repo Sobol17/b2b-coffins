@@ -3,7 +3,6 @@ import { join } from 'node:path';
 import { and, eq, inArray, like } from 'drizzle-orm';
 import type { Db } from '../../src/lib/server/db/client';
 import {
-	bomNorms,
 	categories,
 	discountRules,
 	media,
@@ -55,7 +54,7 @@ export function removeCatalogLeftovers(db: Db, filesDir: string): void {
 	}
 }
 
-/** Models whose variants a request line or a norm points at: those references do not cascade. */
+/** Models whose variants a request line points at: that reference does not cascade. */
 function heldProductIds(db: Db, productIds: readonly number[]): Set<number> {
 	if (productIds.length === 0) return new Set();
 	const ofProducts = inArray(productVariants.productId, [...productIds]);
@@ -65,11 +64,5 @@ function heldProductIds(db: Db, productIds: readonly number[]): Set<number> {
 		.innerJoin(requestItems, eq(requestItems.variantId, productVariants.id))
 		.where(ofProducts)
 		.all();
-	const normed = db
-		.select({ id: productVariants.productId })
-		.from(productVariants)
-		.innerJoin(bomNorms, eq(bomNorms.variantId, productVariants.id))
-		.where(ofProducts)
-		.all();
-	return new Set([...ordered, ...normed].map((row) => row.id));
+	return new Set(ordered.map((row) => row.id));
 }

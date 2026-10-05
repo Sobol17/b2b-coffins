@@ -65,12 +65,6 @@
 			</p>
 		</div>
 		<div class="flex flex-wrap gap-2 sm:ml-auto">
-			<a class={buttonVariants({ variant: 'secondary' })} href={resolve('/crm/stock/norms')}>
-				Нормы
-			</a>
-			<a class={buttonVariants({ variant: 'secondary' })} href={resolve('/crm/stock/deficit')}>
-				Дефицит
-			</a>
 			<a class={buttonVariants({ variant: 'secondary' })} href={resolve('/crm/stock/inventories')}>
 				Инвентаризации
 			</a>

@@ -1,15 +1,7 @@
 import { and, asc, eq, inArray, isNull, ne } from 'drizzle-orm';
 import { BaseRepository } from '../core/repository';
 import type { Tx } from '../db/client';
-import {
-	bomNorms,
-	bomVersions,
-	dictItems,
-	productOptions,
-	productVariants,
-	products,
-	stockItems
-} from '../db/schema';
+import { dictItems, productOptions, productVariants, products, stockItems } from '../db/schema';
 import type { CrmCatalogChoicesDto, CrmVariantDto } from '$lib/types/crm-catalog';
 import type { CompatibilityInput, VariantInput } from '$lib/validation/crm-catalog';
 
@@ -96,7 +88,6 @@ export class ManagedVariantRepository extends BaseRepository<typeof productVaria
 			isPublished: row.isPublished,
 			isDeleted: row.deletedAt !== null,
 			options: this.compatibility(row.id, tx),
-			activeBomNorms: this.activeNorms(row.id, tx),
 			...(withCost ? { costPriceMinor: costs.get(row.id) ?? 0 } : {})
 		}));
 	}
@@ -222,20 +213,6 @@ export class ManagedVariantRepository extends BaseRepository<typeof productVaria
 				.insert(productOptions)
 				.values(input.options.map((row) => ({ ...row, variantId: input.variantId })))
 				.run();
-	}
-
-	activeNorms(variantId: number, tx?: Tx) {
-		return this.db(tx)
-			.select({
-				id: bomNorms.id,
-				componentId: bomNorms.componentId,
-				qtyPerUnitMilli: bomNorms.qtyPerUnitMilli
-			})
-			.from(bomNorms)
-			.innerJoin(bomVersions, eq(bomVersions.id, bomNorms.bomVersionId))
-			.where(and(eq(bomNorms.variantId, variantId), eq(bomVersions.isActive, true)))
-			.orderBy(asc(bomNorms.id))
-			.all();
 	}
 
 	private costs(ids: number[], tx?: Tx): Map<number, number> {

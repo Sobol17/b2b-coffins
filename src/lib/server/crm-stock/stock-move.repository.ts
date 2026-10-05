@@ -23,7 +23,6 @@ export interface StockMoveRow {
 	readonly actorName: string | null;
 	readonly reversalOfId: number | null;
 	readonly isReversed: number;
-	readonly consumedMilli: number | null;
 }
 
 export interface NewStockMove {
@@ -63,8 +62,7 @@ const COLUMNS = {
 	comment: stockMoves.comment,
 	actorName: users.fullName,
 	reversalOfId: stockMoves.reversalOfId,
-	isReversed: IS_REVERSED,
-	consumedMilli: stockMoves.consumedMilli
+	isReversed: IS_REVERSED
 };
 
 /** The journal of the warehouse (C8): append-only, a mistake is cancelled by a reversal row. */

@@ -37,11 +37,6 @@ export interface CrmVariantDto {
 	readonly isPublished: boolean;
 	readonly isDeleted: boolean;
 	readonly options: readonly { readonly optionId: number; readonly isDefault: boolean }[];
-	readonly activeBomNorms: readonly {
-		readonly id: number;
-		readonly componentId: number;
-		readonly qtyPerUnitMilli: number;
-	}[];
 }
 
 export interface CrmProductDto {

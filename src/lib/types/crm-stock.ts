@@ -64,8 +64,6 @@ export interface StockMoveDto {
 	readonly isReversed: boolean;
 	/** A manual move not yet reversed, and the actor holds `stock.manage`. */
 	readonly canReverse: boolean;
-	/** Exact figure of a consumption move in milli-units (tech.md v1.46), null elsewhere. */
-	readonly consumedMilli: number | null;
 }
 
 /** The journal comes apart from the card as a page of `StockMoveDto`. */
