@@ -12,6 +12,7 @@
 		columns,
 		canManage,
 		emptyTitle,
+		statusTitle,
 		nameOf,
 		onEdit,
 		own
@@ -20,6 +21,8 @@
 		columns: readonly DataTableColumn[];
 		canManage: boolean;
 		emptyTitle: string;
+		/** How the page words an active and a switched-off row. */
+		statusTitle: { readonly on: string; readonly off: string };
 		nameOf: (row: TRow) => string;
 		onEdit: (row: TRow) => void;
 		/** Cells of the page's own columns. */
@@ -52,7 +55,7 @@
 					TONE_CLASS[row.isActive ? 'success' : 'neutral']
 				]}
 			>
-				{row.isActive ? 'Работает' : 'Выключен'}
+				{row.isActive ? statusTitle.on : statusTitle.off}
 			</span>
 		{:else if column.key === 'actions'}
 			<div class="flex flex-wrap justify-end gap-2">

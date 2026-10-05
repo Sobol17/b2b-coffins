@@ -42,6 +42,7 @@
 				rows={data.works}
 				{columns}
 				canManage={data.canManage}
+				statusTitle={{ on: 'Используется', off: 'Выключена' }}
 				emptyTitle="Работ нет"
 				nameOf={(row) => row.title}
 				onEdit={(row) => (editing = row)}

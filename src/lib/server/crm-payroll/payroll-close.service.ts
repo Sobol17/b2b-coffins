@@ -6,6 +6,7 @@ import { PayrollCalendar } from './payroll-calendar';
 import { PayrollPeriodRepository, type LineRow, type PeriodRow } from './payroll-period.repository';
 import { PayrollWeekReader } from './payroll-week.reader';
 import type { ActorContext } from '$lib/types/actor';
+import type { PayrollLineDto } from '$lib/types/crm-payroll';
 import type { PayrollPayInput, PayrollReopenInput } from '$lib/validation/crm-payroll';
 
 /**
@@ -41,19 +42,7 @@ export class PayrollCloseService extends PayrollBaseService {
 			const short = lines.find((line) => line.payoutMinor < 0);
 			if (short) throw new ValidationError(`Удержание больше начисленного: ${short.fullName}`);
 			const periodId = week.period.id;
-			// A line that kept only a cleared adjustment has nothing to show on the sheet.
-			for (const stale of week.lines) {
-				if (stale.id !== null && !lines.includes(stale)) this.periods.deleteLine(stale.id, tx);
-			}
-			for (const line of lines) {
-				const { daysWorked, accruedMinor, payoutMinor } = line;
-				this.periods.upsertLine(
-					periodId,
-					line.staffId,
-					{ daysWorked, accruedMinor, payoutMinor },
-					tx
-				);
-			}
+			this.freeze(periodId, week.lines, lines, tx);
 			const closedAt = this.calendar.moment();
 			this.periods.setStatus(
 				periodId,
@@ -129,6 +118,28 @@ export class PayrollCloseService extends PayrollBaseService {
 				after: { staffId: line.staffId, paidAt: null }
 			};
 		});
+	}
+
+	/** Writes the figures of the sheet into the lines and drops the lines the sheet does not show. */
+	private freeze(
+		periodId: number,
+		all: readonly PayrollLineDto[],
+		shown: readonly PayrollLineDto[],
+		tx: Tx
+	): void {
+		// A line that kept only a cleared adjustment has nothing to show on the sheet.
+		for (const stale of all) {
+			if (stale.id !== null && !shown.includes(stale)) this.periods.deleteLine(stale.id, tx);
+		}
+		for (const line of shown) {
+			const { daysWorked, accruedMinor, payoutMinor } = line;
+			this.periods.upsertLine(
+				periodId,
+				line.staffId,
+				{ daysWorked, accruedMinor, payoutMinor },
+				tx
+			);
+		}
 	}
 
 	private requirePeriod(id: number, tx: Tx): PeriodRow {

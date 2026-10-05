@@ -41,6 +41,7 @@
 				rows={data.staff}
 				{columns}
 				canManage={data.canManage}
+				statusTitle={{ on: 'Работает', off: 'Выключен' }}
 				emptyTitle="Сотрудников нет"
 				nameOf={(row) => row.fullName}
 				onEdit={(row) => (editing = row)}
