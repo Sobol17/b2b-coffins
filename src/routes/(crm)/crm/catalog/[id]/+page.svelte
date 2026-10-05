@@ -64,7 +64,7 @@
 							<p class="text-sm text-fg-muted">
 								Учётная позиция: {data.choices.stockProducts.find(
 									(row) => row.id === variant.stockItemId
-								)?.title ?? 'не привязана'} · Норм активной версии: {variant.activeBomNorms.length}
+								)?.title ?? 'не привязана'}
 							</p>
 						</div>
 						{#if !variant.isDeleted && !data.product.isDeleted}
@@ -111,11 +111,6 @@
 						>
 							<VariantOptions {variant} options={data.options} />
 						</div>{/if}
-					{#if variant.activeBomNorms.length > 0}<ul class="mt-3 text-sm text-fg-muted">
-							{#each variant.activeBomNorms as norm (norm.id)}<li>
-									Комплектующее #{norm.componentId}: {norm.qtyPerUnitMilli} тысячных на изделие
-								</li>{/each}
-						</ul>{/if}
 				</div>
 			{/each}
 		</Card.Content></Card.Root

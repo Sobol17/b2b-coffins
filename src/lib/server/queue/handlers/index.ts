@@ -1,6 +1,5 @@
 import type { RegisteredHandler } from '../job-handler';
 import { charityRecountHandler } from './charity-recount';
-import { importBomHandler } from './import-bom';
 import { notificationDispatchHandler } from './notification-dispatch';
 import { notificationFanoutHandler } from './notification-fanout';
 import { sessionCleanupHandler } from './session-cleanup';
@@ -12,6 +11,5 @@ export const HANDLERS: readonly RegisteredHandler[] = [
 	charityRecountHandler,
 	notificationFanoutHandler,
 	notificationDispatchHandler,
-	stockThresholdCheckHandler,
-	importBomHandler
+	stockThresholdCheckHandler
 ];

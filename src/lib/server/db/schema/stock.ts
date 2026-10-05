@@ -8,7 +8,7 @@ import {
 } from 'drizzle-orm/sqlite-core';
 import { STOCK_MOVE_TYPES } from '$lib/types/dicts';
 import { bool, createdAt, pk, ts, updatedAt } from './_shared';
-import { dictItems, media, options, productVariants } from './catalog';
+import { dictItems, options } from './catalog';
 import { requestItems, requests } from './requests';
 import { users } from './users';
 
@@ -41,8 +41,6 @@ export const stockMoves = sqliteTable(
 		// The colour of a product: two colours of one variant are two positions (tech.md v1.41).
 		optionId: integer('option_id').references(() => options.id),
 		qty: integer('qty').notNull(), // signed: + income, - outcome
-		// Exact norm × pieces of a consumption move: the fraction carries to the next mark (tech.md v1.46).
-		consumedMilli: integer('consumed_milli'),
 		type: text('type', { enum: STOCK_MOVE_TYPES }).notNull(),
 		requestId: integer('request_id').references(() => requests.id),
 		// The request line a loading ships (tech.md v1.43): the loaded pieces are summed from here.
@@ -60,33 +58,6 @@ export const stockMoves = sqliteTable(
 		index('stock_moves_request_idx').on(t.requestId),
 		index('stock_moves_request_item_idx').on(t.requestItemId)
 	]
-);
-
-export const bomVersions = sqliteTable('bom_versions', {
-	id: pk(),
-	version: integer('version').notNull(),
-	importedById: integer('imported_by_id').references(() => users.id),
-	sourceFileId: integer('source_file_id').references(() => media.id),
-	isActive: bool('is_active').notNull().default(false),
-	createdAt: createdAt()
-});
-
-export const bomNorms = sqliteTable(
-	'bom_norms',
-	{
-		id: pk(),
-		bomVersionId: integer('bom_version_id')
-			.notNull()
-			.references(() => bomVersions.id, { onDelete: 'cascade' }),
-		variantId: integer('variant_id')
-			.notNull()
-			.references(() => productVariants.id),
-		componentId: integer('component_id')
-			.notNull()
-			.references(() => stockItems.id),
-		qtyPerUnitMilli: integer('qty_per_unit_milli').notNull() // qty * 1000, integer math only
-	},
-	(t) => [uniqueIndex('bom_norms_uq').on(t.bomVersionId, t.variantId, t.componentId)]
 );
 
 export const inventories = sqliteTable('inventories', {

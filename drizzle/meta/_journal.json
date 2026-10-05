@@ -85,6 +85,13 @@
       "when": 1790913420345,
       "tag": "0011_glossy_nightcrawler",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "6",
+      "when": 1791202171248,
+      "tag": "0012_sad_goliath",
+      "breakpoints": true
     }
   ]
 }
