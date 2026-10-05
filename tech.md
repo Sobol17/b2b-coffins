@@ -1,7 +1,7 @@
 # tech.md — ядро проекта
 
 **Проект:** B2B-портал + CRM для столярной мастерской (производство гробов)
-**Версия ядра:** v1.47
+**Версия ядра:** v1.48
 **Дата:** 05.10.2026
 **Статус:** этап 1 (портал, P1–P14) завершён 19.09.2026, этап 2 (CRM) начат слайсом C1
 **Владелец файла:** Sobol17 (тимлид и единственный разработчик)
@@ -11,6 +11,7 @@
 
 | Версия | Изменение |
 |---|---|
+| v1.48 | Контракт C10 по решению бизнеса от 05.10.2026. Оплата труда бригадная: в рабочем дне отмечают, кто работал и какие работы сделаны, сумма дня делится поровну между работавшими. Виды работ с ценой за единицу ведутся руками в таблице `work_types` («название работы, стоимость»); импорт и версии расценок выведены: убраны таблицы `work_rate_versions` и `work_rates`, топики `import.rates` и `payroll.calculate`, справочник `work_type` из `DICT_CODES`. Цена замораживается в записи работы: правка цены действует на новые записи, старые дни держат свою. Рабочий день один на дату: `work_days` уникален по `work_date`, состав дня лежит в `work_day_staff`, работы в `work_entries` (одна запись на вид работ в дне, `request_id` убран). Сумма дня `total_minor` равна сумме `qty × rate_minor`, доля работника `share_minor = floor(total / число работавших / 100) × 100`: доля округляется до целого рубля вниз, остаток остаётся у мастерской. День без работавших долю не имеет, работы без работавших сервер отклоняет; день без людей и без работ не хранится. Будущую дату отметить нельзя. «Скопировать прошлый день» переносит в пустой день состав работавших последнего отмеченного дня, работы не переносит. Неделя: `payroll.week_closing_day` это ISO-день недели, в который закрывают прошедшую неделю; период длится 7 дней и начинается в этот день недели в `org.timezone` (при 1 это понедельник–воскресенье). Строка `payroll_periods` создаётся первой записью дня или корректировки. Свод открытой недели считается на лету: дни работника, начислено (сумма долей его дней), корректировка, к выплате `accrued + adjustment`; корректировка со знаком, с обязательным комментарием, выплата не уходит в минус. Закрытие `open -> calculated` замораживает строки `payroll_lines` в своей транзакции и публикует `payroll.week_closed`; неделя без отмеченных дней и корректировок не закрывается. В `calculated` и `paid` дни, работы и корректировки не меняются: `ConflictError`. Переоткрытие `calculated -> open` требует комментарий и пишет `payroll.reopen`; период с отметкой выплаты не переоткрывается, сначала отметку снимают. Выплата отмечается по строке с суммой больше нуля в `calculated`; когда отмечены все такие строки, период становится `paid`; снятие отметки возвращает `calculated`. Ведомость недели отдаётся в XLSX синхронно. Отчёт за произвольные даты: по сотрудникам (дни, начислено) и по видам работ (количество, сумма), корректировки в него не входят. Раздел читают по `payroll.read`, меняют по `payroll.manage`; экраны `/crm/payroll` (неделя), `/crm/payroll/day/[date]`, `/crm/payroll/staff`, `/crm/payroll/works`, `/crm/payroll/reports`, `/crm/payroll/sheet.xlsx`. Чистая логика в `lib/domain/payroll/calc.ts`, код в `server/crm-payroll/`, типы в `lib/types/crm-payroll.ts`. Действия в `audit_log`: `staff.create`, `staff.update`, `staff.enable`, `staff.disable`, `work_type.create`, `work_type.update`, `work_type.enable`, `work_type.disable`, `payroll.day.save`, `payroll.adjust`, `payroll.close`, `payroll.reopen`, `payroll.pay`, `payroll.unpay`. Себестоимость варианта: право `catalog.cost.read` получил `manager`, `canSeeCost` истинен для `owner` и `manager`, оба видят и правят её в форме варианта C2 |
 | v1.47 | Решение бизнеса от 05.10.2026: детальный учёт составных ресурсов система не ведёт. Слайс C9 выведен из системы целиком, его номер не переиспользуется: убраны таблицы `bom_versions` и `bom_norms`, колонка `stock_moves.consumed_milli`, тип движения `consumption`, топик `import.bom`, экраны `/crm/stock/norms` и `/crm/stock/deficit`, загрузка файла норм через `POST /api/files`, типы `lib/types/crm-bom.ts`, чистая логика `domain/stock/consumption`, `requirement`, `bom-import`, папка `server/crm-bom/`, ключ `VariantDto.activeBomNorms` карточки модели C2. Отметка выпуска C5 пишет только движение `production`, комплектующие не списывает, аудит `stock.produce` снова несёт только вход отметки. Склад комплектующих C8 остаётся: остатки, закупка, корректировки, инвентаризация и пороги ведутся руками. Себестоимость изделия это число `product_variants.cost_price_minor`, которое заполняют руками в карточке варианта (C2) |
 | v1.46 | Контракт C9 по решению владельца от 02.10.2026. Раздел норм `/crm/stock/norms` и список дефицита `/crm/stock/deficit` читают по праву `stock.read`, меняют по `stock.manage`. Файл норм: XLSX (первый лист) или CSV (разделитель `;` или `,`, кодировка UTF-8 или Windows-1251), первая строка это заголовок с колонками `BOM_FILE_COLUMNS` в любом порядке и регистре, пустые строки пропускаются. Норма это число больше нуля, не больше `BOM_QTY_MAX_MILLI` и не точнее трёх знаков, запятая и точка равноправны. Тип файла сервер определяет по содержимому, а не по MIME браузера: ZIP-сигнатура это XLSX, текст без нулевых байтов это CSV; файл не больше `BOM_IMPORT_MAX_BYTES` и `BOM_IMPORT_MAX_ROWS` строк. Поток импорта: загрузка через `POST /api/files` с полем `bomImport` кладёт файл в `media` с `owner_scope = 'import'` и строкой аудита `bom.file.upload`; экран `/crm/stock/norms/import?file={mediaId}` разбирает файл синхронно и показывает предпросмотр `BomPreviewDto` с отчётом об ошибках; «Импортировать» ставит `import.bom`. Хендлер разбирает файл заново и одной транзакцией создаёт версию `max(version) + 1`, её нормы и делает её активной, прежняя активная гаснет; строка аудита `bom.import` пишется с `actorId` из payload. Файл с ошибкой файла или хотя бы одной ошибкой строки не импортируется целиком: синхронная кнопка недоступна, а хендлер бросает `InvalidPayloadError`, и джоб сразу уходит в `dead` без версии. Идемпотентность: версия с тем же `source_file_id` уже есть, значит хендлер ничего не делает. Файл импорта через `/api/files/[id]` не раздаётся. Версии: активная ровно одна или ни одной; «Новая версия» создаёт версию `max + 1` с копией норм активной (пустую, если активной нет) и делает её активной; «Сделать активной» возвращает в работу прежнюю версию. Ручная правка (добавить, изменить, удалить норму) идёт только в активной версии, на месте; неактивные версии только читаются. Варианта без `deleted_at` и позиции `kind = 'component'` требует и импорт, и ручная правка. Списание: `STOCK_MOVE_TYPES` получил `consumption`, `stock_moves` получил колонку `consumed_milli`. Отметка выпуска C5 в своей транзакции пишет по движению `consumption` на каждую норму варианта из активной версии: `consumed_milli = N × норма`, `qty = −floor((перенос + consumed_milli) / 1000)`, где перенос это сумма `consumed_milli` минус 1000 × сумма списанного по всем движениям `consumption` позиции. Дробный хвост переходит в следующую отметку, движение с `qty = 0` пишется, чтобы хвост не потерялся. Вариант без норм и выпуск без активной версии проходят без списания. Нехватка комплектующих выпуск не блокирует: остаток уходит в минус, C8 его подсвечивает. Сторно у `consumption` нет, ошибку исправляет корректировка. Каждое списание ставит проверку порога C8. Аудит `stock.produce` получает в `after` ключи `bomVersionId` и `consumed`. Старые списания не пересчитываются: движения append-only, смена версии и правка нормы действуют на следующие отметки. Потребность: недостающие штуки очереди выпуска C5 (`productionNeeds`), умноженные на норму активной версии, по комплектующему; дефицит `max(0, needMilli − balance × 1000)`. Экран дефицита показывает комплектующие с потребностью больше нуля, строки с дефицитом идут первыми. Чистая логика: `lib/domain/stock/consumption.ts` (перенос), `lib/domain/stock/requirement.ts` (потребность и дефицит), `lib/domain/stock/bom-import.ts` (разбор строк файла). Действия в `audit_log`: `bom.file.upload`, `bom.import`, `bom.version.create`, `bom.version.activate`, `bom.norm.create`, `bom.norm.update`, `bom.norm.delete`. `StockMoveDto` получил `consumedMilli`. В §8 добавлен `lib/types/crm-bom.ts`, код живёт в `server/crm-bom/` |
 | v1.45 | Контракт C8 по решению владельца от 02.10.2026. Раздел `/crm/stock` («Склад») читают по праву `stock.read`, меняют по `stock.manage` (`owner`, `manager`); водителю раздел отвечает 403. Реестр показывает остаток учётной позиции как сумму её движений по всем цветам, карточка `/crm/stock/[id]` раскладывает его по цветам и по журналу движений. Учётную позицию создают и правят в реестре: код, название, вид, единица, порог, активность; вид после создания не меняется, позиция не удаляется. Ручное движение пишет форма с двумя типами. `purchase` (приход) только с плюсом, причина необязательна. `adjustment` (корректировка) со знаком и с обязательной причиной из `stock_move_reason`; ноль сервер отклоняет. У изделия цвет обязан входить в матрицу варианта, у комплектующего цвета нет; `occurred_at` ставит сервер; в одном движении не больше `STOCK_MOVE_MAX` единиц. Сторно (§6.3) доступно только у `purchase` и `adjustment`, один раз на движение, сторно само не сторнируется. Выпуск исправляет корректировка, погрузку снимает экран доставки, инвентаризацию исправляет новая инвентаризация. Инвентаризация идёт через черновик: `inventories` получил колонку `kind` (комплектующие или изделия), `inventory_lines` получил `option_id` (цвет позиции изделия). Черновик получает строку на каждую активную позицию вида; у изделия на каждую пару «позиция, цвет» с хотя бы одним движением. Открытый черновик на вид один, черновик можно сохранять и удалить. «Провести» в одной транзакции пересчитывает `expected_qty` по остатку на момент проведения, пишет движение `inventory` на `actual − expected` по каждой строке с расхождением, ставит `applied` и `applied_at`; проведённая инвентаризация не правится и не удаляется. Порог считается по учётной позиции целиком: у изделия это сумма остатков всех цветов; порог 0 выключает проверку. Складское движение, после которого остаток позиции ниже порога, ставит `stock.threshold.check` в своей транзакции: ручное движение, сторно, проведение инвентаризации, выпуск C5, погрузка C6 и её снятие. День в ключе джоба оставляет от низкого остатка один сигнал в сутки. Хендлер читает остаток заново и публикует `stock.below_threshold`, если он всё ещё ниже порога. До C12 fanout это событие пропускает, сигнал виден в реестре подсветкой и фильтром «ниже порога»; ключ `fanout:{eventKey}:{entityId}` пропустит по позиции одно такое событие за всё время, C12 решает его вместе с адресатами мастерской. Реестр и журнал позиции выгружаются в XLSX синхронно, без `report.export`. Чистая свёртка живёт в `lib/domain/stock/balance.ts`. Действия в `audit_log`: `stock.item.create`, `stock.item.update`, `stock.move.create`, `stock.move.reverse`, `stock.inventory.create`, `stock.inventory.save`, `stock.inventory.apply`, `stock.inventory.delete`. В §8 добавлен `lib/types/crm-stock.ts`, код живёт в `server/crm-stock/` |
@@ -111,7 +112,7 @@
 | UI-база | shadcn-svelte (bits-ui) | Единственная UI-база на оба контура: CRM целиком и базовые компоненты портала. Примитивы кастомизируются, свои с нуля не пишем. Среда компонентов ограничена списком: `bits-ui`, `@internationalized/date`, `tailwind-variants`, `clsx`, `tailwind-merge`, `@lucide/svelte`, `tw-animate-css`. Не тянем `vaul-svelte`, `svelte-sonner`, `mode-watcher`, `@tanstack/table-core`, `formsnap`, `sveltekit-superforms`, `layerchart`: `Drawer` собирается на `sheet`, `Toast` на рунном сторе §9, `DataTable` на серверной пагинации §4.3, формы на form actions и Zod §15.3 |
 | Фоновые задачи | Внутрипроцессный воркер + таблица `job_queue` | Транзакционный outbox, ретраи, идемпотентность |
 | Реальное время | SSE (`/api/stream/:topic`) | Счётчик пожертвований, доска заявок |
-| Импорт таблиц | `exceljs` (XLSX), `papaparse` (CSV) | Расчётные таблицы и расценки |
+| Импорт таблиц | `exceljs` (XLSX), `papaparse` (CSV) | Выгрузки XLSX, импорт прайса командой CLI |
 | Пароли | `@node-rs/argon2` (argon2id) | Политика сложности в `lib/server/auth/policy.ts` |
 | Почта | `nodemailer` за интерфейсом `MailDriver` | Фейк с первого дня |
 | Web Push | `web-push`, VAPID | Драйвер `PushDriver` за тем же интерфейсом. Реальная отправка подключается в C15 |
@@ -200,7 +201,7 @@ src/
       request/state-machine.ts    статусы, переходы, guard-ы
       request/pricing.ts          суммы позиций, скидки, округление
       charity/rate.ts             расчёт отчисления
-      payroll/calc.ts             дневной и недельный расчёт
+      payroll/calc.ts             доля дня, недельный свод, границы периода
       stock/balance.ts            свёртка движений в остаток
     server/                       только сервер, в браузер не попадает
       core/                       repository.ts, service.ts, errors.ts, list.ts, tx.ts
@@ -646,40 +647,37 @@ export const staff = sqliteTable('staff', {
   createdAt: createdAt()
 });
 
-export const workRateVersions = sqliteTable('work_rate_versions', {
-  id: pk(), version: integer('version').notNull(),
-  validFrom: ts('valid_from').notNull(),
-  importedById: integer('imported_by_id').references(() => users.id),
-  createdAt: createdAt()
-});
-
-export const workRates = sqliteTable('work_rates', {
+export const workTypes = sqliteTable('work_types', {
   id: pk(),
-  versionId: integer('version_id').notNull().references(() => workRateVersions.id, { onDelete: 'cascade' }),
-  workTypeId: integer('work_type_id').notNull().references(() => dictItems.id),  // dict = 'work_type'
-  unitId: integer('unit_id').notNull().references(() => dictItems.id),
-  rateMinor: money('rate_minor')
-}, (t) => ({ uq: uniqueIndex('work_rates_uq').on(t.versionId, t.workTypeId) }));
+  title: text('title').notNull(),
+  rateMinor: money('rate_minor'),                      // price of one unit of the work
+  isActive: integer('is_active', { mode: 'boolean' }).notNull().default(true),
+  createdAt: createdAt()
+}, (t) => ({ uq: uniqueIndex('work_types_title_uq').on(t.title) }));
 
 export const workDays = sqliteTable('work_days', {
   id: pk(),
-  staffId: integer('staff_id').notNull().references(() => staff.id),
-  workDate: ts('work_date').notNull(),
-  present: integer('present', { mode: 'boolean' }).notNull().default(true),
-  totalMinor: money('total_minor'),                    // recalculated on every entry change
+  workDate: ts('work_date').notNull(),                 // start of the calendar day in org.timezone
+  totalMinor: money('total_minor'),                    // sum of the entries
+  shareMinor: money('share_minor'),                    // one worker's pay for the day, whole roubles (v1.48)
   createdById: integer('created_by_id').notNull().references(() => users.id),
   createdAt: createdAt(), updatedAt: updatedAt()
-}, (t) => ({ uq: uniqueIndex('work_days_uq').on(t.staffId, t.workDate) }));
+}, (t) => ({ uq: uniqueIndex('work_days_uq').on(t.workDate) }));
+
+export const workDayStaff = sqliteTable('work_day_staff', {
+  id: pk(),
+  workDayId: integer('work_day_id').notNull().references(() => workDays.id, { onDelete: 'cascade' }),
+  staffId: integer('staff_id').notNull().references(() => staff.id)
+}, (t) => ({ uq: uniqueIndex('work_day_staff_uq').on(t.workDayId, t.staffId) }));
 
 export const workEntries = sqliteTable('work_entries', {
   id: pk(),
   workDayId: integer('work_day_id').notNull().references(() => workDays.id, { onDelete: 'cascade' }),
-  workTypeId: integer('work_type_id').notNull().references(() => dictItems.id),
+  workTypeId: integer('work_type_id').notNull().references(() => workTypes.id),
   qty: integer('qty').notNull(),
-  rateMinor: money('rate_minor'),                      // frozen rate at entry time
-  amountMinor: money('amount_minor'),
-  requestId: integer('request_id').references(() => requests.id)
-});
+  rateMinor: money('rate_minor'),                      // frozen price at entry time
+  amountMinor: money('amount_minor')
+}, (t) => ({ uq: uniqueIndex('work_entries_uq').on(t.workDayId, t.workTypeId) }));
 
 export const payrollPeriods = sqliteTable('payroll_periods', {
   id: pk(),
@@ -921,8 +919,6 @@ export interface JobHandler<T> {
 | `notification.fanout` | `{ eventKey: EventKey, entityId: number }` | `fanout:{eventKey}:{entityId}` | Разворачивает событие в строки `notifications` по матрице ролей и личным настройкам и в строки `notification_feed` по одной на адресата |
 | `charity.recount` | `{ scope: string }` | `charity:{scope}:{requestId}` | Пересборка `charity_totals`, публикация в SSE-топик `charity` |
 | `stock.threshold.check` | `{ stockItemId: number }` | `threshold:{id}:{yyyymmdd}` | Сравнение остатка позиции (все цвета вместе) с порогом, событие `stock.below_threshold`; ставит движение, оставившее остаток ниже порога (v1.45) |
-| `import.rates` | `{ mediaId: number, actorId: number }` | `import-rates:{mediaId}` | Создание `work_rate_versions` + `work_rates` |
-| `payroll.calculate` | `{ periodId: number }` | `payroll:{periodId}:{revision}` | Пересчёт `payroll_lines` за период |
 | `report.export` | `{ reportKey: string, filters: object, userId: number }` | `report:{sha256(reportKey+filters+userId)}` | XLSX в `media`, уведомление автору |
 | `session.cleanup` | `{}` | `cleanup:{yyyymmdd}` | Удаление протухших сессий, токенов, мёртвых push-подписок |
 
@@ -982,7 +978,7 @@ export interface ActorContext {
   readonly scope: 'portal' | 'crm';
   readonly counterpartyId: number | null;   // row-level filter for portal users
   readonly canSeePrices: boolean;           // false for cp_employee, carpenter, painter, driver
-  readonly canSeeCost: boolean;             // owner only
+  readonly canSeeCost: boolean;             // owner and manager (v1.48)
   readonly requestId: string;               // correlation id for logs and audit
 }
 
@@ -1370,13 +1366,60 @@ export interface InventoryLineDto {
 }
 export interface InventoryCardDto extends InventoryRowDto { lines: InventoryLineDto[]; canManage: boolean; }
 
+// crm-payroll.ts — staff, work prices, day sheets and the weekly payroll (C10, v1.48). Read by payroll.read only.
+export const PAYROLL_PERIOD_STATUSES = ['open', 'calculated', 'paid'] as const;
+export type PayrollPeriodStatus = (typeof PAYROLL_PERIOD_STATUSES)[number];
+export const PAYROLL_QTY_MAX = 10_000;                  // units of one work in a day
+export const PAYROLL_RATE_MAX_MINOR = 100_000_000;      // 1 000 000 roubles per unit
+export const PAYROLL_ADJUSTMENT_MAX_MINOR = 100_000_000;
+export const PAYROLL_SHARE_STEP_MINOR = 100;            // a share is whole roubles, rounded down
+export const PAYROLL_REPORT_MAX_DAYS = 366;
+export interface StaffDto { id: number; fullName: string; position: string | null; isActive: boolean; hasAccount: boolean; }
+export interface WorkTypeDto { id: number; title: string; rateMinor: number; isActive: boolean; }
+export interface WorkEntryDto { workTypeId: number; title: string; qty: number; rateMinor: number; amountMinor: number; }
+export interface WorkDayStaffDto { id: number; fullName: string; position: string | null; present: boolean; }
+export interface WorkDayDto {
+  date: string;                                        // 'YYYY-MM-DD' in org.timezone
+  weekStartsOn: string;
+  periodStatus: PayrollPeriodStatus;
+  canEdit: boolean;                                    // the period is open and the actor holds payroll.manage
+  canCopyPrevious: boolean;                            // nobody is marked yet and an earlier marked day exists
+  staff: WorkDayStaffDto[];                            // active staff plus whoever is already on the day
+  workTypes: WorkTypeDto[];                            // active ones plus those already on the day
+  entries: WorkEntryDto[];
+  presentCount: number; totalMinor: number; shareMinor: number;
+}
+export interface PayrollDayCellDto { date: string; presentCount: number; totalMinor: number; shareMinor: number; }
+export interface PayrollLineDto {
+  id: number | null;                                   // null until the line is stored
+  staffId: number; fullName: string; position: string | null;
+  daysWorked: number; accruedMinor: number;
+  adjustmentMinor: number; adjustmentComment: string | null;
+  payoutMinor: number;                                 // accruedMinor + adjustmentMinor, never below zero
+  paidAt: string | null; paidComment: string | null;
+}
+export interface PayrollWeekDto {
+  periodId: number | null;                             // null until the first day or adjustment of the week
+  startsOn: string; endsOn: string;                    // 'YYYY-MM-DD', both inside the week
+  status: PayrollPeriodStatus; closedAt: string | null; closedByName: string | null;
+  days: PayrollDayCellDto[];                           // seven cells, a day nobody marked has zeros
+  lines: PayrollLineDto[];                             // open: active staff plus anyone with a day or an adjustment; closed: the frozen lines
+  totalPayoutMinor: number; canManage: boolean;
+}
+export interface PayrollReportDto {
+  from: string; to: string;
+  staff: { staffId: number; fullName: string; daysWorked: number; accruedMinor: number }[];
+  works: { workTypeId: number; title: string; qty: number; amountMinor: number }[];
+  worksTotalMinor: number; accruedTotalMinor: number;  // they differ by the rounding remainder
+}
+
 // money.ts — branded type, blocks accidental mixing with plain numbers
 export type Minor = number & { readonly __brand: 'minor' };
 
 // dicts.ts
-export const DICT_CODES = ['material','finish','fabric','hardware','unit','work_type','refusal_reason','stock_move_reason','transport'] as const;
+export const DICT_CODES = ['material','finish','fabric','hardware','unit','refusal_reason','stock_move_reason','transport'] as const;
 export const STOCK_MOVE_TYPES = ['production','shipment','adjustment','inventory','reversal','purchase'] as const;
-export const JOB_TOPICS = ['notification.dispatch','notification.fanout','charity.recount','stock.threshold.check','import.rates','payroll.calculate','report.export','session.cleanup'] as const;
+export const JOB_TOPICS = ['notification.dispatch','notification.fanout','charity.recount','stock.threshold.check','report.export','session.cleanup'] as const;
 ```
 
 ### 8.1 Проекции по ролям
@@ -1727,8 +1770,8 @@ CONTRACT GAP
 **C1. Каркас CRM, пользователи, справочники, настройки, аудит.** Layout и навигация CRM, управление сотрудниками мастерской и ролями, справочники `dict_items`, настройки организации и нумерации, ставка отчисления и данные фонда, лимит сотрудников, журнал аудита с фильтрами. IP-фильтр входа выведен из объёма (v1.37).
 **DoD:** руководитель заводит пользователя, справочник и настройку без разработчика, каждое изменение видно в журнале аудита.
 
-**C2. CRM: каталог и цены.** CRUD категорий, моделей, вариантов, цветовых опций и матрицы совместимости, медиа с обложкой и порядком, прайс-листы и скидки с периодом действия, себестоимость только для руководителя, выбор существующей учётной позиции склада, публикация и скрытие в портале. Категории создаются в CRM, поэтому пустой каталог можно наполнить без сида. Модели и варианты удаляются мягко (`deleted_at`), опции выключаются (`is_active`), категория с потомками или моделями не удаляется. Цена `price_lists` действует в полуоткрытом окне `[valid_from, valid_to)`; базовые прайс-листы не могут одновременно действовать. Для каждой строки заявки берётся максимум договорной скидки и действующих `discount_rules` её категории и предков; строки с одним процентом складываются до округления. `DraftDto.discountPercent` показывает округлённый эффективный процент от общей суммы, `discountMinor` остаётся точным; для одной договорной ставки без правил расчёт не меняется. Раздача медиа продукта использует существующий `/api/files/[id]`.
-**DoD:** каталог наполняется через CRM без сида, себестоимость не приходит в ответах никому кроме руководителя.
+**C2. CRM: каталог и цены.** CRUD категорий, моделей, вариантов, цветовых опций и матрицы совместимости, медиа с обложкой и порядком, прайс-листы и скидки с периодом действия, себестоимость для руководителя и администратора (v1.48), выбор существующей учётной позиции склада, публикация и скрытие в портале. Категории создаются в CRM, поэтому пустой каталог можно наполнить без сида. Модели и варианты удаляются мягко (`deleted_at`), опции выключаются (`is_active`), категория с потомками или моделями не удаляется. Цена `price_lists` действует в полуоткрытом окне `[valid_from, valid_to)`; базовые прайс-листы не могут одновременно действовать. Для каждой строки заявки берётся максимум договорной скидки и действующих `discount_rules` её категории и предков; строки с одним процентом складываются до округления. `DraftDto.discountPercent` показывает округлённый эффективный процент от общей суммы, `discountMinor` остаётся точным; для одной договорной ставки без правил расчёт не меняется. Раздача медиа продукта использует существующий `/api/files/[id]`.
+**DoD:** каталог наполняется через CRM без сида, себестоимость не приходит в ответах никому кроме руководителя и администратора (v1.48).
 
 **C3. CRM: контрагенты.** Карточка с реквизитами, договором, адресами, прайсом и схемой расчётов, список пользователей контрагента, выдача администратора, история заявок и оплат, индикатор задолженности, заметки, ответственный менеджер. Контрагент заводится одной транзакцией с первым администратором. Долг считается из `payment_marks` одним запросом для портала и CRM (v1.39). Скан договора и архивация контрагента в объём не входят.
 **DoD:** менеджер заводит контрагента с администратором и отправляет доступ, индикатор долга сходится с реестром отметок оплаты.
@@ -1750,8 +1793,8 @@ CONTRACT GAP
 
 Номер C9 выведен из дорожной карты вместе с нормами комплектующих (v1.47) и не переиспользуется.
 
-**C10. Персонал и еженедельные выплаты.** Справочник сотрудников, импорт и версионирование расценок, ежедневный чеклист присутствия с копированием вчерашнего дня, работы и количества, дневной заработок, недельный свод, корректировки с комментарием, закрытие и переоткрытие периода, отметка выплаты, ведомость в XLSX, отчёты по сотрудникам и видам работ.
-**DoD:** день отмечается за минуту, недельная ведомость совпадает с контрольным примером бизнеса до копейки, закрытый период не редактируется без переоткрытия с записью в аудит.
+**C10. Персонал и еженедельные выплаты** (переопределён в v1.48). Справочник сотрудников, виды работ с ценой за единицу, рабочий день: кто работал, какие работы и сколько, сумма дня поровну между работавшими с округлением доли до рубля вниз, копирование состава прошлого дня. Недельный свод, корректировки с комментарием, закрытие и переоткрытие периода, отметка выплаты, ведомость в XLSX, отчёт по сотрудникам и видам работ. Себестоимость варианта правят руководитель и администратор.
+**DoD:** день отмечается за минуту, недельная ведомость совпадает с контрольным примером до копейки, закрытый период не редактируется без переоткрытия с записью в аудит.
 
 Номер C11 выведен из дорожной карты вместе с документами и не переиспользуется.
 
@@ -1761,7 +1804,7 @@ CONTRACT GAP
 **C13. Отчёты и аналитика.** Дашборд руководителя, продажи по контрагентам, моделям и периодам, складские движения и оборачиваемость, выплаты, воронка заявок, отменённые и отклонённые заявки, отчёт по благотворительности с реестром перечислений и остатком «начислено, но не перечислено», фильтры и экспорт.
 **DoD:** руководитель получает цифры за период без выгрузки в Excel вручную, сумма на баннере сходится с отчётом.
 
-**C14. Стабилизация и приёмка.** Сквозное e2e по всем семи ролям, нагрузочная проверка реестров на 10 тыс. заявок и 50 тыс. движений, аудит безопасности (права на переходы, прямые ссылки, сокрытие цен, загрузка файлов), правки UX по итогам пилота, инструкции по ролям, первичное наполнение справочников, каталога и расценок. Стенд разворачивается по `docs/deploy.md` (v1.21).
+**C14. Стабилизация и приёмка.** Сквозное e2e по всем семи ролям, нагрузочная проверка реестров на 10 тыс. заявок и 50 тыс. движений, аудит безопасности (права на переходы, прямые ссылки, сокрытие цен, загрузка файлов), правки UX по итогам пилота, инструкции по ролям, первичное наполнение справочников, каталога и видов работ. Стенд разворачивается по `docs/deploy.md` (v1.21).
 **DoD:** сквозной сценарий отработан всеми ролями на реальных данных, контрольный пример по выплатам сходится до копейки, акт приёмки подписан.
 
 **C15. PWA и Web Push** (бывший K6, перенесён в v1.8). `manifest.webmanifest` с иконками и shortcuts, регистрация push-only service worker по §17, обработчики `push` и `notificationclick`, кнопка установки и инструкция для iOS. Реальный драйвер Web Push на VAPID-ключах, подписки в `push_subscriptions`, канал push в матрице уведомлений портала и CRM, push водителю при переходе в `ready`, отзыв протухших подписок джобом `session.cleanup`. Кеширование, офлайн-фолбэк и фоновая синхронизация не делаются.
