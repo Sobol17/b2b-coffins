@@ -9,7 +9,7 @@ export interface ActorContext {
 	readonly counterpartyId: number | null;
 	/** False for cp_employee, carpenter, painter, driver. */
 	readonly canSeePrices: boolean;
-	/** Owner only. */
+	/** Owner and manager (tech.md v1.48). */
 	readonly canSeeCost: boolean;
 	/** Correlation id for logs and audit. */
 	readonly requestId: string;

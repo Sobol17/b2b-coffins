@@ -1,0 +1,8 @@
+[
+	{ "title": "Раскрой", "rateMinor": 15000 },
+	{ "title": "Сборка корпуса", "rateMinor": 20000 },
+	{ "title": "Шлифовка", "rateMinor": 8000 },
+	{ "title": "Лакировка", "rateMinor": 12000 },
+	{ "title": "Обивка", "rateMinor": 10000 },
+	{ "title": "Упаковка", "rateMinor": 3000 }
+]

@@ -9,7 +9,7 @@ import type { ListQuery, Page } from '$lib/types/list';
 import type { CreateDictItemInput, UpdateDictItemInput } from '$lib/validation/dicts';
 
 /**
- * Dictionaries of `dict_items` (C1): materials, units, work types, reasons. An item is switched off
+ * Dictionaries of `dict_items` (C1): materials, units, reasons. An item is switched off
  * rather than deleted: variants, stock items and history rows keep pointing at it.
  */
 export class DictService extends BaseService {

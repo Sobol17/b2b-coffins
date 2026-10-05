@@ -9,7 +9,8 @@ import {
 	seedCounterparties,
 	seedCrmUsers,
 	seedPriceLists,
-	seedStaff
+	seedStaff,
+	seedWorkTypes
 } from '../../scripts/seed/parties';
 import {
 	seedDicts,
@@ -32,7 +33,8 @@ import {
 	roles,
 	stockMoves,
 	userRoles,
-	users
+	users,
+	workTypes
 } from '../../src/lib/server/db/schema';
 
 const COUNTED_TABLES = {
@@ -72,6 +74,7 @@ async function runSeed(db: Db): Promise<void> {
 	seedStockBalances(db);
 	await seedCrmUsers(db);
 	seedStaff(db);
+	seedWorkTypes(db);
 	await seedCounterparties(db, seedPriceLists(db));
 }
 
@@ -153,6 +156,15 @@ describe('migrations and seed on a clean database', () => {
 		);
 		expect(email.length).toBeGreaterThan(0);
 		for (const rule of email) expect(texts).toContain(`${rule.eventKey}:email`);
+	});
+
+	it('gives the payroll works with a price of a unit in whole roubles (v1.48)', () => {
+		const works = db.select().from(workTypes).all();
+		expect(works.length).toBeGreaterThan(0);
+		for (const work of works) {
+			expect(work.rateMinor).toBeGreaterThan(0);
+			expect(work.rateMinor % 100).toBe(0);
+		}
 	});
 
 	it('keeps dictionary codes unique inside a dictionary', () => {

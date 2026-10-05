@@ -24,11 +24,12 @@ describe('PolicyService, the single point of permission checks', () => {
 		}
 	});
 
-	it('shows cost price to the owner alone', () => {
+	it('shows cost price to the owner and the administrator only', () => {
 		for (const role of ROLE_CODES) {
-			expect(PolicyService.canSeeCost([role])).toBe(role === 'owner');
+			expect(PolicyService.canSeeCost([role])).toBe(role === 'owner' || role === 'manager');
 		}
-		expect(PolicyService.can({ roles: ['manager'] }, 'catalog.cost.read')).toBe(false);
+		expect(PolicyService.can({ roles: ['manager'] }, 'catalog.cost.read')).toBe(true);
+		expect(PolicyService.can({ roles: ['driver'] }, 'catalog.cost.read')).toBe(false);
 		expect(PolicyService.can({ roles: ['owner'] }, 'catalog.cost.read')).toBe(true);
 	});
 

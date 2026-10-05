@@ -13,8 +13,6 @@ export const JOB_PAYLOAD_SCHEMAS = {
 	'notification.fanout': z.strictObject({ eventKey: z.enum(EVENT_KEYS), entityId: id }),
 	'charity.recount': z.strictObject({ scope: z.string().min(1) }),
 	'stock.threshold.check': z.strictObject({ stockItemId: id }),
-	'import.rates': z.strictObject({ mediaId: id, actorId: id }),
-	'payroll.calculate': z.strictObject({ periodId: id }),
 	'report.export': z.strictObject({
 		reportKey: z.string().min(1),
 		filters: z.record(z.string(), z.unknown()),

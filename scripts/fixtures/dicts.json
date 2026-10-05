@@ -21,13 +21,6 @@
 	{ "dict": "unit", "code": "l", "title": "л", "sortOrder": 40 },
 	{ "dict": "unit", "code": "kg", "title": "кг", "sortOrder": 50 },
 
-	{ "dict": "work_type", "code": "sawing", "title": "Раскрой", "sortOrder": 10 },
-	{ "dict": "work_type", "code": "assembly", "title": "Сборка корпуса", "sortOrder": 20 },
-	{ "dict": "work_type", "code": "sanding", "title": "Шлифовка", "sortOrder": 30 },
-	{ "dict": "work_type", "code": "lacquering", "title": "Лакировка", "sortOrder": 40 },
-	{ "dict": "work_type", "code": "upholstery", "title": "Обивка", "sortOrder": 50 },
-	{ "dict": "work_type", "code": "packing", "title": "Упаковка", "sortOrder": 60 },
-
 	{
 		"dict": "refusal_reason",
 		"code": "out_of_assortment",

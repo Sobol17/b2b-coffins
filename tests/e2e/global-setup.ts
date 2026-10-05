@@ -21,7 +21,8 @@ import {
 	seedCounterparties,
 	seedCrmUsers,
 	seedPriceLists,
-	seedStaff
+	seedStaff,
+	seedWorkTypes
 } from '../../scripts/seed/parties';
 import {
 	seedDicts,
@@ -66,6 +67,7 @@ export default async function globalSetup(): Promise<void> {
 	seedStockBalances(db);
 	await seedCrmUsers(db);
 	seedStaff(db);
+	seedWorkTypes(db);
 	await seedCounterparties(db, seedPriceLists(db));
 
 	for (const account of Object.values(TEMP_ACCOUNTS)) {

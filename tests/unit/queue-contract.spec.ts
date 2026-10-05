@@ -8,8 +8,6 @@ const DOCUMENTED = {
 	'notification.fanout': { eventKey: 'request.submitted', entityId: 7 },
 	'charity.recount': { scope: 'year:2026' },
 	'stock.threshold.check': { stockItemId: 4 },
-	'import.rates': { mediaId: 6, actorId: 2 },
-	'payroll.calculate': { periodId: 9 },
 	'report.export': { reportKey: 'sales', filters: { year: 2026 }, userId: 2 },
 	'session.cleanup': {}
 } as const;
@@ -29,9 +27,9 @@ describe('job payload contract of tech.md 7.2', () => {
 	});
 
 	it('rejects an identifier that is not a positive integer', () => {
-		const schema = JOB_PAYLOAD_SCHEMAS['payroll.calculate'];
-		expect(schema.safeParse({ periodId: 0 }).success).toBe(false);
-		expect(schema.safeParse({ periodId: '9' }).success).toBe(false);
+		const schema = JOB_PAYLOAD_SCHEMAS['stock.threshold.check'];
+		expect(schema.safeParse({ stockItemId: 0 }).success).toBe(false);
+		expect(schema.safeParse({ stockItemId: '9' }).success).toBe(false);
 	});
 
 	it('rejects an event key outside the catalog of tech.md 7.3', () => {

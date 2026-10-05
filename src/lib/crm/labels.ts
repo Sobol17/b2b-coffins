@@ -39,7 +39,6 @@ export const DICT_TITLE: Readonly<Record<DictCode, string>> = {
 	fabric: 'Ткани',
 	hardware: 'Фурнитура',
 	unit: 'Единицы измерения',
-	work_type: 'Виды работ',
 	refusal_reason: 'Причины отказа',
 	stock_move_reason: 'Причины движений склада',
 	transport: 'Транспорт'

@@ -10,6 +10,7 @@ import {
 	productVariants,
 	roles,
 	staff,
+	workTypes,
 	userRoles,
 	users
 } from '../../src/lib/server/db/schema';
@@ -19,7 +20,8 @@ import {
 	crmUserFixture,
 	loadFixture,
 	priceListFixture,
-	staffFixture
+	staffFixture,
+	workTypeFixture
 } from './schema';
 
 function roleIdByCode(db: Db, code: RoleCode): number {
@@ -206,6 +208,13 @@ export async function seedCrmUsers(db: Db): Promise<number> {
 export function seedStaff(db: Db): number {
 	const fixtures = loadFixture('staff.json', z.array(staffFixture));
 	for (const fixture of fixtures) upsertStaff(db, fixture.fullName, fixture.position, null);
+	return fixtures.length;
+}
+
+/** Work prices are operator-owned after the first run: the seed inserts, it never overwrites. */
+export function seedWorkTypes(db: Db): number {
+	const fixtures = loadFixture('work-types.json', z.array(workTypeFixture));
+	for (const fixture of fixtures) db.insert(workTypes).values(fixture).onConflictDoNothing().run();
 	return fixtures.length;
 }
 
