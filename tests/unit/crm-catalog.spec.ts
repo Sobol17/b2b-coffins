@@ -101,38 +101,46 @@ describe('C2 catalog from an empty database', () => {
 		).toBeGreaterThan(0);
 	});
 
-	it('does not select or return cost for a manager, and rejects a forged cost write', () => {
-		const owner = new CrmCatalogService(actor('owner'));
+	it('lets the administrator read and change the cost of a variant', () => {
 		const manager = new CrmCatalogService(actor('manager'));
-		const product = owner.listProducts()[0];
-		expect(product).toBeDefined();
-		const detail = manager.getProduct(product?.id ?? 0);
-		expect(JSON.stringify(detail)).not.toContain('costPriceMinor');
-		const variant = detail.variants[0];
-		expect(variant).toBeDefined();
-		expect(() =>
-			manager.updateVariant(variant?.id ?? 0, {
-				productId: product?.id ?? 0,
-				sku: 'C2-VARIANT',
-				sizeCode: '190',
-				materialId,
-				lengthMm: 1900,
-				widthMm: null,
-				heightMm: null,
-				weightG: null,
-				basePriceMinor: 100000,
-				costPriceMinor: 1,
-				stockItemId: null,
-				isPublished: true
-			})
-		).toThrow(ForbiddenError);
+		const product = manager.listProducts()[0];
+		const variant = manager.getProduct(product?.id ?? 0).variants[0];
+		expect(variant?.costPriceMinor).toBe(50000);
+		manager.updateVariant(variant?.id ?? 0, {
+			productId: product?.id ?? 0,
+			sku: 'C2-VARIANT',
+			sizeCode: '190',
+			materialId,
+			lengthMm: 1900,
+			widthMm: null,
+			heightMm: null,
+			weightG: null,
+			basePriceMinor: 100000,
+			costPriceMinor: 61000,
+			stockItemId: null,
+			isPublished: true
+		});
 		expect(
 			db
 				.select({ cost: productVariants.costPriceMinor })
 				.from(productVariants)
 				.where(eq(productVariants.id, variant?.id ?? 0))
 				.all()[0]?.cost
-		).toBe(50000);
+		).toBe(61000);
+		manager.updateVariant(variant?.id ?? 0, {
+			productId: product?.id ?? 0,
+			sku: 'C2-VARIANT',
+			sizeCode: '190',
+			materialId,
+			lengthMm: 1900,
+			widthMm: null,
+			heightMm: null,
+			weightG: null,
+			basePriceMinor: 100000,
+			costPriceMinor: 50000,
+			stockItemId: null,
+			isPublished: true
+		});
 	});
 
 	it('validates references and blocks matrix entries for inactive colours', () => {

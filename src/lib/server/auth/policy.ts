@@ -39,6 +39,8 @@ const GRANTS: Readonly<Record<RoleCode, readonly Action[]>> = {
 		'crm.access',
 		'catalog.read',
 		'catalog.manage',
+		// The administrator fills the cost of a variant in by hand (tech.md v1.48).
+		'catalog.cost.read',
 		'request.read.any',
 		'request.create',
 		'request.assign',
@@ -86,7 +88,7 @@ export class PolicyService {
 	}
 
 	static canSeeCost(roles: readonly RoleCode[]): boolean {
-		return roles.includes('owner');
+		return roles.includes('owner') || roles.includes('manager');
 	}
 
 	/** The administrator of a counterparty reads its whole history, an employee only the own (P6). */

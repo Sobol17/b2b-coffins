@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
 import { login, logout } from './fixtures';
 
-test('C2 fills and publishes a model through CRM; manager never receives cost', async ({
+test('C2 fills and publishes a model through CRM; the portal never receives cost', async ({
 	page
 }) => {
 	const suffix = Date.now();
@@ -86,9 +86,9 @@ test('C2 fills and publishes a model through CRM; manager never receives cost', 
 	await login(page, 'manager');
 	const response = await page.goto(productUrl);
 	const body = (await response?.text()) ?? '';
-	expect(body).not.toContain('costPriceMinor');
-	expect(body).not.toContain('50000');
-	const forged = await page.request.post(`${productUrl}?/updateVariant`, {
+	// The administrator fills the cost in by hand (tech.md v1.48).
+	expect(body).toContain('costPriceMinor');
+	const saved = await page.request.post(`${productUrl}?/updateVariant`, {
 		headers: { origin: 'http://localhost:4173' },
 		form: {
 			id: variantId,
@@ -101,12 +101,13 @@ test('C2 fills and publishes a model through CRM; manager never receives cost', 
 			isPublished: 'true'
 		}
 	});
-	expect(await forged.json()).toMatchObject({ type: 'failure', status: 403 });
+	expect(await saved.json()).toMatchObject({ type: 'success' });
 
 	await logout(page);
 	await login(page, 'cp_admin');
-	await page.goto('/portal/catalog');
+	const storefront = await page.goto('/portal/catalog');
 	await expect(page.getByText(category)).toBeVisible();
+	expect((await storefront?.text()) ?? '').not.toContain('costPriceMinor');
 	expect((await page.goto('/crm/catalog'))?.status()).toBe(403);
 	await page.goto('/portal/profile');
 	await logout(page);
