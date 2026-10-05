@@ -139,6 +139,11 @@ export const staffFixture = z.object({
 	position: z.string().min(1)
 });
 
+export const workTypeFixture = z.object({
+	title: z.string().min(1),
+	rateMinor: z.number().int().nonnegative()
+});
+
 /** Opening balance of a stock item, posted once as an `inventory` move. */
 export const stockBalanceFixture = z.object({
 	stockItem: z.string().min(1),

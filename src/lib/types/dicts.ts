@@ -4,7 +4,6 @@ export const DICT_CODES = [
 	'fabric',
 	'hardware',
 	'unit',
-	'work_type',
 	'refusal_reason',
 	'stock_move_reason',
 	'transport'
@@ -26,8 +25,6 @@ export const JOB_TOPICS = [
 	'notification.fanout',
 	'charity.recount',
 	'stock.threshold.check',
-	'import.rates',
-	'payroll.calculate',
 	'report.export',
 	'session.cleanup'
 ] as const;

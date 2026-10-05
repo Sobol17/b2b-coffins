@@ -1,7 +1,6 @@
 import { integer, sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqlite-core';
+import { PAYROLL_PERIOD_STATUSES } from '$lib/types/crm-payroll';
 import { bool, createdAt, money, pk, ts, updatedAt } from './_shared';
-import { dictItems } from './catalog';
-import { requests } from './requests';
 import { users } from './users';
 
 export const staff = sqliteTable('staff', {
@@ -15,64 +14,64 @@ export const staff = sqliteTable('staff', {
 	createdAt: createdAt()
 });
 
-export const workRateVersions = sqliteTable('work_rate_versions', {
-	id: pk(),
-	version: integer('version').notNull(),
-	validFrom: ts('valid_from').notNull(),
-	importedById: integer('imported_by_id').references(() => users.id),
-	createdAt: createdAt()
-});
-
-export const workRates = sqliteTable(
-	'work_rates',
+export const workTypes = sqliteTable(
+	'work_types',
 	{
 		id: pk(),
-		versionId: integer('version_id')
-			.notNull()
-			.references(() => workRateVersions.id, { onDelete: 'cascade' }),
-		workTypeId: integer('work_type_id')
-			.notNull()
-			.references(() => dictItems.id), // dict = 'work_type'
-		unitId: integer('unit_id')
-			.notNull()
-			.references(() => dictItems.id),
-		rateMinor: money('rate_minor')
+		title: text('title').notNull(),
+		rateMinor: money('rate_minor'), // price of one unit of the work
+		isActive: bool('is_active').notNull().default(true),
+		createdAt: createdAt()
 	},
-	(t) => [uniqueIndex('work_rates_uq').on(t.versionId, t.workTypeId)]
+	(t) => [uniqueIndex('work_types_title_uq').on(t.title)]
 );
 
 export const workDays = sqliteTable(
 	'work_days',
 	{
 		id: pk(),
-		staffId: integer('staff_id')
-			.notNull()
-			.references(() => staff.id),
-		workDate: ts('work_date').notNull(),
-		present: bool('present').notNull().default(true),
-		totalMinor: money('total_minor'), // recalculated on every entry change
+		workDate: ts('work_date').notNull(), // start of the calendar day in org.timezone
+		totalMinor: money('total_minor'), // sum of the entries
+		shareMinor: money('share_minor'), // one worker's pay for the day, whole roubles (v1.48)
 		createdById: integer('created_by_id')
 			.notNull()
 			.references(() => users.id),
 		createdAt: createdAt(),
 		updatedAt: updatedAt()
 	},
-	(t) => [uniqueIndex('work_days_uq').on(t.staffId, t.workDate)]
+	(t) => [uniqueIndex('work_days_uq').on(t.workDate)]
 );
 
-export const workEntries = sqliteTable('work_entries', {
-	id: pk(),
-	workDayId: integer('work_day_id')
-		.notNull()
-		.references(() => workDays.id, { onDelete: 'cascade' }),
-	workTypeId: integer('work_type_id')
-		.notNull()
-		.references(() => dictItems.id),
-	qty: integer('qty').notNull(),
-	rateMinor: money('rate_minor'), // frozen rate at entry time
-	amountMinor: money('amount_minor'),
-	requestId: integer('request_id').references(() => requests.id)
-});
+export const workDayStaff = sqliteTable(
+	'work_day_staff',
+	{
+		id: pk(),
+		workDayId: integer('work_day_id')
+			.notNull()
+			.references(() => workDays.id, { onDelete: 'cascade' }),
+		staffId: integer('staff_id')
+			.notNull()
+			.references(() => staff.id)
+	},
+	(t) => [uniqueIndex('work_day_staff_uq').on(t.workDayId, t.staffId)]
+);
+
+export const workEntries = sqliteTable(
+	'work_entries',
+	{
+		id: pk(),
+		workDayId: integer('work_day_id')
+			.notNull()
+			.references(() => workDays.id, { onDelete: 'cascade' }),
+		workTypeId: integer('work_type_id')
+			.notNull()
+			.references(() => workTypes.id),
+		qty: integer('qty').notNull(),
+		rateMinor: money('rate_minor'), // frozen price at entry time
+		amountMinor: money('amount_minor')
+	},
+	(t) => [uniqueIndex('work_entries_uq').on(t.workDayId, t.workTypeId)]
+);
 
 export const payrollPeriods = sqliteTable(
 	'payroll_periods',
@@ -80,9 +79,7 @@ export const payrollPeriods = sqliteTable(
 		id: pk(),
 		startsOn: ts('starts_on').notNull(),
 		endsOn: ts('ends_on').notNull(),
-		status: text('status', { enum: ['open', 'calculated', 'paid'] })
-			.notNull()
-			.default('open'),
+		status: text('status', { enum: PAYROLL_PERIOD_STATUSES }).notNull().default('open'),
 		closedById: integer('closed_by_id').references(() => users.id),
 		closedAt: ts('closed_at'),
 		createdAt: createdAt()

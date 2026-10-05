@@ -78,9 +78,9 @@ describe('dictionaries of dict_items', () => {
 
 	it('switches an item off instead of deleting it', () => {
 		const item = service().create({
-			dict: 'work_type',
-			code: 'sawing',
-			title: 'Раскрой',
+			dict: 'transport',
+			code: 'gazelle',
+			title: 'Газель',
 			sortOrder: 0
 		});
 		expect(service().setActive(item.id, false).isActive).toBe(false);
