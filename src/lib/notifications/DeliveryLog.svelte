@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { resolve } from '$app/paths';
+	import type { ResolvedPathname } from '$app/types';
 	import { DataTable, TONE_CLASS, type DataTableColumn } from '$lib/ui';
 	import type { ListQuery } from '$lib/types/list';
 	import type { NotificationLogItemDto } from '$lib/types/notifications';
@@ -11,13 +11,15 @@
 		total,
 		query,
 		onQueryChange,
-		timeZone
+		timeZone,
+		requestHref
 	}: {
 		rows: readonly NotificationLogItemDto[];
 		total: number;
 		query: ListQuery;
 		onQueryChange: (next: ListQuery) => void;
 		timeZone: string;
+		requestHref: (requestId: number) => ResolvedPathname;
 	} = $props();
 
 	const columns: DataTableColumn[] = [
@@ -35,9 +37,7 @@
 			<div class="text-xs text-fg-faint">{formatDateTime(row.createdAt, timeZone)}</div>
 		{:else if column.key === 'request'}
 			{#if row.requestId !== null && row.requestNumber !== null}
-				<a class="underline" href={resolve(`/portal/requests/${row.requestId}`)}
-					>{row.requestNumber}</a
-				>
+				<a class="underline" href={requestHref(row.requestId)}>{row.requestNumber}</a>
 			{:else}
 				—
 			{/if}

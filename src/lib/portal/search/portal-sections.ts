@@ -17,7 +17,7 @@ const ALIASES: Readonly<Record<string, readonly string[]>> = {
 	'Мои сотрудники': ['доступ', 'пользователи', 'персонал'],
 	'Мои цены': ['прайс', 'цена агентства'],
 	'Мои заявки': ['история', 'заказы'],
-	Уведомления: ['письма', 'почта', 'рассылка']
+	Уведомления: ['пуш', 'колокольчик', 'лента']
 };
 
 /** Pages the role can open, in menu order. A hint, not a guard: each page checks the right itself. */

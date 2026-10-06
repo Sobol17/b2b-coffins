@@ -1,11 +1,11 @@
 <script lang="ts">
 	import { invalidateAll } from '$app/navigation';
-	import { resolve } from '$app/paths';
+	import type { ResolvedPathname } from '$app/types';
 	import { DataTable, type DataTableColumn } from '$lib/ui';
 	import type { ListQuery } from '$lib/types/list';
 	import type { NotificationFeedItemDto } from '$lib/types/notifications';
 	import { formatDateTime } from '$lib/utils/format';
-	import { EVENT_LABEL } from './labels';
+	import { EVENT_LABEL, feedSubject, type FeedHref } from './labels';
 	import { markFeedRead } from './read-feed';
 
 	let {
@@ -13,18 +13,22 @@
 		total,
 		query,
 		onQueryChange,
-		timeZone
+		timeZone,
+		hrefOf,
+		readUrl
 	}: {
 		rows: readonly NotificationFeedItemDto[];
 		total: number;
 		query: ListQuery;
 		onQueryChange: (next: ListQuery) => void;
 		timeZone: string;
+		hrefOf: FeedHref;
+		readUrl: ResolvedPathname;
 	} = $props();
 
 	const columns: DataTableColumn[] = [
 		{ key: 'event', label: 'Событие' },
-		{ key: 'request', label: 'Заявка' },
+		{ key: 'subject', label: 'О чём' },
 		{ key: 'state', label: 'Прочитано' }
 	];
 
@@ -32,7 +36,7 @@
 	$effect(() => {
 		const ids = rows.filter((row) => !row.isRead).map((row) => row.id);
 		if (ids.length === 0) return;
-		void markFeedRead(ids).then((left) => {
+		void markFeedRead(readUrl, ids).then((left) => {
 			if (left !== null) void invalidateAll();
 		});
 	});
@@ -43,13 +47,12 @@
 		{#if column.key === 'event'}
 			<div>{EVENT_LABEL[row.eventKey].title}</div>
 			<div class="text-xs text-fg-faint">{formatDateTime(row.createdAt, timeZone)}</div>
-		{:else if column.key === 'request'}
-			{#if row.requestId !== null && row.requestNumber !== null}
-				<a class="underline" href={resolve(`/portal/requests/${row.requestId}`)}>
-					{row.requestNumber}
-				</a>
+		{:else if column.key === 'subject'}
+			{@const href = hrefOf(row)}
+			{#if href === null}
+				{feedSubject(row)}
 			{:else}
-				—
+				<a class="underline" {href}>{feedSubject(row)}</a>
 			{/if}
 		{:else if column.key === 'state'}
 			<span data-testid="feed-state" class="text-sm text-fg-muted">

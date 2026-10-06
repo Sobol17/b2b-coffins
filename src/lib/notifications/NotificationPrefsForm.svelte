@@ -9,7 +9,7 @@
 	 * One switch per pair «event, channel» the role is offered. Unchecked boxes send nothing, so the
 	 * server reads the whole selection from the checked values and stores a row for every pair.
 	 */
-	let { prefs, email }: { prefs: readonly NotificationPrefDto[]; email: string } = $props();
+	let { prefs }: { prefs: readonly NotificationPrefDto[] } = $props();
 
 	let saving = $state(false);
 
@@ -19,8 +19,8 @@
 		return on === 0
 			? {
 					kind: 'warning',
-					title: 'Письма отключены',
-					description: 'События остаются в ленте уведомлений и в разделе «Мои заявки»'
+					title: 'Уведомления отключены',
+					description: 'События остаются в ленте уведомлений'
 				}
 			: {
 					title: 'Настройки сохранены',
@@ -31,8 +31,8 @@
 
 {#if prefs.length === 0}
 	<EmptyState
-		title="Для вашей роли писем нет"
-		description="События по заявкам видно в ленте уведомлений и в разделе «Мои заявки»."
+		title="Для вашей роли уведомлений нет"
+		description="События видно в ленте уведомлений."
 	/>
 {:else}
 	<form
@@ -46,11 +46,11 @@
 		})}
 	>
 		<p class="text-fg-muted">
-			Письма приходят на <span class="text-fg">{email}</span>. Адрес меняет администратор
-			мастерской. Бот в МАКС заработает позже: выбор сохранится и включится вместе с ним.
+			Пуш-уведомления и бот в МАКС заработают позже: выбор сохранится и включится вместе с ними.
+			Лента событий работает уже сейчас.
 		</p>
 		<fieldset class="flex flex-col divide-y divide-border">
-			<legend class="sr-only">Уведомления о событиях заявки</legend>
+			<legend class="sr-only">Уведомления о событиях</legend>
 			{#each prefs as pref (prefKey(pref.eventKey, pref.channel))}
 				<div
 					data-testid="notification-pref"

@@ -1,17 +1,30 @@
 <script lang="ts">
-	import { resolve } from '$app/paths';
+	import type { ResolvedPathname } from '$app/types';
 	import BellIcon from '@lucide/svelte/icons/bell';
 	import { Button, Popover } from '$lib/ui';
 	import type { NotificationBellDto, NotificationFeedItemDto } from '$lib/types/notifications';
 	import { formatDateTime } from '$lib/utils/format';
-	import { EVENT_LABEL } from './labels';
+	import { EVENT_LABEL, feedSubject, type FeedHref } from './labels';
 	import { markFeedRead } from './read-feed';
 
 	/*
-	 * The bell of tech.md 18.5. The counter arrives with the layout data and is recounted on every
-	 * navigation; opening the panel marks the rows it shows and keeps the answer until the next load.
+	 * The bell of tech.md 18.5, shared by both contours since v1.49. The counter arrives with the
+	 * layout data and is recounted on every navigation; opening the panel marks the rows it shows
+	 * and keeps the answer until the next load. Routes come from the contour that draws it.
 	 */
-	let { bell, timeZone }: { bell: NotificationBellDto; timeZone: string } = $props();
+	let {
+		bell,
+		timeZone,
+		hrefOf,
+		allHref,
+		readUrl
+	}: {
+		bell: NotificationBellDto;
+		timeZone: string;
+		hrefOf: FeedHref;
+		allHref: ResolvedPathname;
+		readUrl: ResolvedPathname;
+	} = $props();
 
 	let open = $state(false);
 	/** The answer of the last mark, tied to the counter it corrected: fresh data wins over it. */
@@ -31,7 +44,7 @@
 		if (!next) return;
 		const ids = bell.items.filter((item) => !item.isRead).map((item) => item.id);
 		if (ids.length === 0) return;
-		const left = await markFeedRead(ids);
+		const left = await markFeedRead(readUrl, ids);
 		if (left !== null) marked = { from: bell.unread, unread: left, ids };
 	}
 </script>
@@ -67,14 +80,15 @@
 		{:else}
 			<ul class="flex flex-col border-t border-border">
 				{#each items as item (item.id)}
+					{@const href = hrefOf(item)}
 					<li>
-						{#if item.requestId === null}
+						{#if href === null}
 							<div data-testid="bell-item" class="flex flex-col gap-0.5 px-4 py-2.5">
 								{@render line(item)}
 							</div>
 						{:else}
 							<a
-								href={resolve(`/portal/requests/${item.requestId}`)}
+								{href}
 								data-testid="bell-item"
 								class="flex flex-col gap-0.5 px-4 py-2.5 hover:bg-surface-muted"
 								onclick={() => (open = false)}
@@ -87,7 +101,7 @@
 			</ul>
 		{/if}
 		<a
-			href={resolve('/portal/profile/notifications')}
+			href={allHref}
 			data-testid="bell-all"
 			class="border-t border-border px-4 py-3 text-link hover:underline"
 			onclick={() => (open = false)}
@@ -100,6 +114,6 @@
 {#snippet line(item: NotificationFeedItemDto)}
 	<span class={item.isRead ? 'text-fg-muted' : 'text-fg'}>{EVENT_LABEL[item.eventKey].title}</span>
 	<span class="text-xs text-fg-faint">
-		{item.requestNumber ?? '—'} · {formatDateTime(item.createdAt, timeZone)}
+		{feedSubject(item)} · {formatDateTime(item.createdAt, timeZone)}
 	</span>
 {/snippet}
