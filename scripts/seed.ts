@@ -1,6 +1,5 @@
 import { config } from '../src/lib/server/config';
 import { createDb } from '../src/lib/server/db/client';
-import { retireMailChannel } from './seed/legacy-email';
 import { seedCatalog, seedStockBalances, seedStockItems } from './seed/catalog';
 import {
 	seedCounterparties,
@@ -27,7 +26,6 @@ async function main(): Promise<void> {
 		dicts: seedDicts(db),
 		settings: seedSettings(db),
 		numbering: seedNumbering(db),
-		retiredMailRows: retireMailChannel(db),
 		notificationRules: seedNotificationRules(db),
 		notificationTemplates: seedNotificationTemplates(db),
 		stockItems: seedStockItems(db),

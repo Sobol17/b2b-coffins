@@ -1,6 +1,7 @@
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { sql } from 'drizzle-orm';
 import { migrate } from 'drizzle-orm/better-sqlite3/migrator';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createDb, type Db } from '../../src/lib/server/db/client';
@@ -150,6 +151,28 @@ describe('migrations and seed on a clean database', () => {
 		}
 		expect(rules.every((rule) => rule.channel === 'push' || rule.channel === 'max')).toBe(true);
 		expect(db.select().from(notificationTemplates).all()).toHaveLength(0);
+	});
+
+	it('clears the mail rows an older database still carries (v1.49)', () => {
+		// The column has no CHECK, so a database seeded before v1.49 holds rows the types deny.
+		db.run(
+			sql`insert into notification_rules (event_key, role_code, channel, enabled)
+				values ('request.ready', 'cp_admin', 'email', 1)`
+		);
+		db.run(
+			sql`insert into notification_templates (event_key, channel, subject, body, is_active)
+				values ('request.ready', 'email', 's', 'b', 1)`
+		);
+
+		seedNotificationRules(db);
+
+		const channels = db
+			.all<{ channel: string }>(
+				sql`select channel from notification_rules union all select channel from notification_templates`
+			)
+			.map((row) => row.channel);
+		expect(channels).not.toContain('email');
+		expect(channels.length).toBeGreaterThan(0);
 	});
 
 	it('gives the payroll works with a price of a unit in whole roubles (v1.48)', () => {
