@@ -52,9 +52,10 @@ test('the bell counts a new event and the open panel clears it', async ({ page }
 	await drainBell(page);
 	toReady(number);
 
+	// Two events on the way to `ready`: the acceptance is published since v1.49.
 	await expect(async () => {
 		await page.goto('/portal');
-		await expect(page.getByTestId('bell-count')).toHaveText('1', { timeout: 500 });
+		await expect(page.getByTestId('bell-count')).toHaveText('2', { timeout: 500 });
 	}).toPass({ timeout: QUEUE_TIMEOUT });
 
 	await page.getByTestId('bell-button').click();
