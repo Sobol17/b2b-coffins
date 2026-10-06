@@ -29,6 +29,9 @@ export type GuardCode = (typeof GUARD_CODES)[number];
 export const EFFECT_CODES = [
 	'audit',
 	'freezeCharity',
+	'emit:request.accepted',
+	'emit:request.cancelled',
+	'emit:request.rejected',
 	'emit:request.ready',
 	'emit:request.delivered',
 	'emit:request.paid'
