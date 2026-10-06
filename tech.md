@@ -1,8 +1,8 @@
 # tech.md — ядро проекта
 
 **Проект:** B2B-портал + CRM для столярной мастерской (производство гробов)
-**Версия ядра:** v1.48
-**Дата:** 05.10.2026
+**Версия ядра:** v1.49
+**Дата:** 06.10.2026
 **Статус:** этап 1 (портал, P1–P14) завершён 19.09.2026, этап 2 (CRM) начат слайсом C1
 **Владелец файла:** Sobol17 (тимлид и единственный разработчик)
 **Источник требований:** `TZ_B2B_CRM_stolyarka_v06.md`
@@ -11,6 +11,7 @@
 
 | Версия | Изменение |
 |---|---|
+| v1.49 | Контракт C12 по решениям владельца от 06.10.2026. Почта из событий выведена: о событиях система сообщает колокольчиком в приложении и веб-пушем, письма остаются только под доступ, то есть временный пароль и восстановление пароля, и уходят через `MailDriver` напрямую, как раньше. Канал `email` убран из `NOTIFICATION_CHANNELS` и из enum-ов колонок `channel` четырёх таблиц уведомлений; SQLite хранит enum текстом, поэтому миграции нет, а строки старого канала в `notification_rules`, `notification_templates`, `user_notification_prefs` и `notifications` удаляет сид (`scripts/seed/legacy-email.ts`). Правила email в фикстуре матрицы заменены правилами `push` для тех же ролей. `LIVE_CHANNELS` пуст до C15: fanout пишет только ленту, строк `notifications` не создаёт, `notification.dispatch` отправляет строку неживого канала в `dead`. Фикстура шаблонов пуста, шаблоны push с переменными, предпросмотр, тестовую отправку и журнал отправок руководителя делает C15. Провайдер пушей это Web Push на VAPID через библиотеку `web-push` (§3), внешний сервис не подключаем. C15 переставлен в дорожной карте сразу за C12, раньше C13: на iOS пуш приходит только установленному приложению, поэтому PWA и пуш идут одним слайсом. Переходы `new -> in_work`, `new -> cancelled` и `new -> rejected` получили эффекты `emit:request.accepted`, `emit:request.cancelled` и `emit:request.rejected`, открытый пункт v1.19 закрыт. `notification.fanout` разворачивает каждое событие §7.3 и для людей мастерской: адресаты это активные учётные записи контура CRM, роль к событию человек держит без условий авторства, инициатор действия из адресатов не исключается. Заявка на склад в портал не пишет, мастерская получает её события по правилам, кроме `driver`: на экране доставки таких заявок нет. `stock.below_threshold` и `payroll.week_closed` идут только мастерской. Сигнал порога остаётся одним на позицию за всё время: ключ `fanout:{eventKey}:{entityId}` не меняется, повторное падение остатка видно подсветкой реестра C8; повторное закрытие переоткрытой недели по той же причине второй раз не уведомляет. Колокольчик появился в шапке CRM: `ContourShell` рисует сниппет `bell` в обоих контурах, фид `notification_feed` пишется и людям мастерской, счётчик пересчитывается на переходе между страницами, отметку прочтения принимает `POST /crm/notifications/read`. `NotificationFeedItemDto` получил `entityId` и `entityLabel` для событий склада и выплат; человеку мастерской заявка в ленте видна без забора контрагента. Строка ленты ведёт на `/crm/requests/{id}` при праве `request.read.any` и на `/crm/delivery` без него, событие склада на `/crm/stock/{id}`, событие выплат на `/crm/payroll`. Личный экран `/crm/notifications` по праву `crm.access`: лента событий и переключатели пар матрицы своих ролей; переключатель до C15 только хранит выбор. Экран руководителя `/crm/settings/notifications` по праву `settings.manage` показывает матрицу `notification_rules` на чтение, меняет её сид. `NotificationSettingsDto` потерял `email`. Компоненты ленты, переключателей и журнала переехали из `lib/portal/notifications` в `lib/notifications`, их делят оба контура. Новых действий аудита нет: личные настройки пишут прежний `notifications.prefs.update`. В §8 добавлен `lib/types/crm-notifications.ts`, экраны лежат в `src/lib/crm/notifications/`. Схема БД не менялась |
 | v1.48 | Контракт C10 по решению бизнеса от 05.10.2026. Оплата труда бригадная: в рабочем дне отмечают, кто работал и какие работы сделаны, сумма дня делится поровну между работавшими. Виды работ с ценой за единицу ведутся руками в таблице `work_types` («название работы, стоимость»); импорт и версии расценок выведены: убраны таблицы `work_rate_versions` и `work_rates`, топики `import.rates` и `payroll.calculate`, справочник `work_type` из `DICT_CODES`. Цена замораживается в записи работы: правка цены действует на новые записи, старые дни держат свою. Рабочий день один на дату: `work_days` уникален по `work_date`, состав дня лежит в `work_day_staff`, работы в `work_entries` (одна запись на вид работ в дне, `request_id` убран). Сумма дня `total_minor` равна сумме `qty × rate_minor`, доля работника `share_minor = floor(total / число работавших / 100) × 100`: доля округляется до целого рубля вниз, остаток остаётся у мастерской. День без работавших долю не имеет, работы без работавших сервер отклоняет; день без людей и без работ не хранится. Будущую дату отметить нельзя. «Скопировать прошлый день» переносит в пустой день состав работавших последнего отмеченного дня, работы не переносит. Неделя: `payroll.week_closing_day` это ISO-день недели, в который закрывают прошедшую неделю; период длится 7 дней и начинается в этот день недели в `org.timezone` (при 1 это понедельник–воскресенье). Строка `payroll_periods` создаётся первой записью дня или корректировки. Свод открытой недели считается на лету: дни работника, начислено (сумма долей его дней), корректировка, к выплате `accrued + adjustment`; корректировка со знаком, с обязательным комментарием, выплата не уходит в минус. Закрытие `open -> calculated` замораживает строки `payroll_lines` в своей транзакции и публикует `payroll.week_closed`; неделя без отмеченных дней и корректировок не закрывается. В `calculated` и `paid` дни, работы и корректировки не меняются: `ConflictError`. Переоткрытие `calculated -> open` требует комментарий и пишет `payroll.reopen`; период с отметкой выплаты не переоткрывается, сначала отметку снимают. Выплата отмечается по строке с суммой больше нуля в `calculated`; когда отмечены все такие строки, период становится `paid`; снятие отметки возвращает `calculated`. Ведомость недели отдаётся в XLSX синхронно. Отчёт за произвольные даты: по сотрудникам (дни, начислено) и по видам работ (количество, сумма), корректировки в него не входят. Раздел читают по `payroll.read`, меняют по `payroll.manage`; экраны `/crm/payroll` (неделя), `/crm/payroll/day/[date]`, `/crm/payroll/staff`, `/crm/payroll/works`, `/crm/payroll/reports`, `/crm/payroll/sheet.xlsx`. Чистая логика в `lib/domain/payroll/calc.ts`, код в `server/crm-payroll/`, типы в `lib/types/crm-payroll.ts`. Действия в `audit_log`: `staff.create`, `staff.update`, `staff.enable`, `staff.disable`, `work_type.create`, `work_type.update`, `work_type.enable`, `work_type.disable`, `payroll.day.save`, `payroll.adjust`, `payroll.close`, `payroll.reopen`, `payroll.pay`, `payroll.unpay`. Себестоимость варианта: право `catalog.cost.read` получил `manager`, `canSeeCost` истинен для `owner` и `manager`, оба видят и правят её в форме варианта C2 |
 | v1.47 | Решение бизнеса от 05.10.2026: детальный учёт составных ресурсов система не ведёт. Слайс C9 выведен из системы целиком, его номер не переиспользуется: убраны таблицы `bom_versions` и `bom_norms`, колонка `stock_moves.consumed_milli`, тип движения `consumption`, топик `import.bom`, экраны `/crm/stock/norms` и `/crm/stock/deficit`, загрузка файла норм через `POST /api/files`, типы `lib/types/crm-bom.ts`, чистая логика `domain/stock/consumption`, `requirement`, `bom-import`, папка `server/crm-bom/`, ключ `VariantDto.activeBomNorms` карточки модели C2. Отметка выпуска C5 пишет только движение `production`, комплектующие не списывает, аудит `stock.produce` снова несёт только вход отметки. Склад комплектующих C8 остаётся: остатки, закупка, корректировки, инвентаризация и пороги ведутся руками. Себестоимость изделия это число `product_variants.cost_price_minor`, которое заполняют руками в карточке варианта (C2) |
 | v1.46 | Контракт C9 по решению владельца от 02.10.2026. Раздел норм `/crm/stock/norms` и список дефицита `/crm/stock/deficit` читают по праву `stock.read`, меняют по `stock.manage`. Файл норм: XLSX (первый лист) или CSV (разделитель `;` или `,`, кодировка UTF-8 или Windows-1251), первая строка это заголовок с колонками `BOM_FILE_COLUMNS` в любом порядке и регистре, пустые строки пропускаются. Норма это число больше нуля, не больше `BOM_QTY_MAX_MILLI` и не точнее трёх знаков, запятая и точка равноправны. Тип файла сервер определяет по содержимому, а не по MIME браузера: ZIP-сигнатура это XLSX, текст без нулевых байтов это CSV; файл не больше `BOM_IMPORT_MAX_BYTES` и `BOM_IMPORT_MAX_ROWS` строк. Поток импорта: загрузка через `POST /api/files` с полем `bomImport` кладёт файл в `media` с `owner_scope = 'import'` и строкой аудита `bom.file.upload`; экран `/crm/stock/norms/import?file={mediaId}` разбирает файл синхронно и показывает предпросмотр `BomPreviewDto` с отчётом об ошибках; «Импортировать» ставит `import.bom`. Хендлер разбирает файл заново и одной транзакцией создаёт версию `max(version) + 1`, её нормы и делает её активной, прежняя активная гаснет; строка аудита `bom.import` пишется с `actorId` из payload. Файл с ошибкой файла или хотя бы одной ошибкой строки не импортируется целиком: синхронная кнопка недоступна, а хендлер бросает `InvalidPayloadError`, и джоб сразу уходит в `dead` без версии. Идемпотентность: версия с тем же `source_file_id` уже есть, значит хендлер ничего не делает. Файл импорта через `/api/files/[id]` не раздаётся. Версии: активная ровно одна или ни одной; «Новая версия» создаёт версию `max + 1` с копией норм активной (пустую, если активной нет) и делает её активной; «Сделать активной» возвращает в работу прежнюю версию. Ручная правка (добавить, изменить, удалить норму) идёт только в активной версии, на месте; неактивные версии только читаются. Варианта без `deleted_at` и позиции `kind = 'component'` требует и импорт, и ручная правка. Списание: `STOCK_MOVE_TYPES` получил `consumption`, `stock_moves` получил колонку `consumed_milli`. Отметка выпуска C5 в своей транзакции пишет по движению `consumption` на каждую норму варианта из активной версии: `consumed_milli = N × норма`, `qty = −floor((перенос + consumed_milli) / 1000)`, где перенос это сумма `consumed_milli` минус 1000 × сумма списанного по всем движениям `consumption` позиции. Дробный хвост переходит в следующую отметку, движение с `qty = 0` пишется, чтобы хвост не потерялся. Вариант без норм и выпуск без активной версии проходят без списания. Нехватка комплектующих выпуск не блокирует: остаток уходит в минус, C8 его подсвечивает. Сторно у `consumption` нет, ошибку исправляет корректировка. Каждое списание ставит проверку порога C8. Аудит `stock.produce` получает в `after` ключи `bomVersionId` и `consumed`. Старые списания не пересчитываются: движения append-only, смена версии и правка нормы действуют на следующие отметки. Потребность: недостающие штуки очереди выпуска C5 (`productionNeeds`), умноженные на норму активной версии, по комплектующему; дефицит `max(0, needMilli − balance × 1000)`. Экран дефицита показывает комплектующие с потребностью больше нуля, строки с дефицитом идут первыми. Чистая логика: `lib/domain/stock/consumption.ts` (перенос), `lib/domain/stock/requirement.ts` (потребность и дефицит), `lib/domain/stock/bom-import.ts` (разбор строк файла). Действия в `audit_log`: `bom.file.upload`, `bom.import`, `bom.version.create`, `bom.version.activate`, `bom.norm.create`, `bom.norm.update`, `bom.norm.delete`. `StockMoveDto` получил `consumedMilli`. В §8 добавлен `lib/types/crm-bom.ts`, код живёт в `server/crm-bom/` |
@@ -81,7 +82,7 @@
 | Стадия | Состав | Что на выходе |
 |---|---|---|
 | **Стадия 0. Каркас** | Слайсы K1–K5, K7 (K6 перенесён в C15) | Приложение запускается локально одной командой, работают миграции, сид, аутентификация, UI-кит, очередь, эталонная вертикаль |
-| **Стадия 1. Фичи слайсами** | Этап 1 (P1–P9), Этап 2 (C1–C15) | Рабочая система |
+| **Стадия 1. Фичи слайсами** | Этап 1 (P1–P14), Этап 2 (C1–C16) | Рабочая система |
 
 Внутри стадии 1 два этапа:
 
@@ -114,8 +115,8 @@
 | Реальное время | SSE (`/api/stream/:topic`) | Счётчик пожертвований, доска заявок |
 | Импорт таблиц | `exceljs` (XLSX), `papaparse` (CSV) | Выгрузки XLSX, импорт прайса командой CLI |
 | Пароли | `@node-rs/argon2` (argon2id) | Политика сложности в `lib/server/auth/policy.ts` |
-| Почта | `nodemailer` за интерфейсом `MailDriver` | Фейк с первого дня |
-| Web Push | `web-push`, VAPID | Драйвер `PushDriver` за тем же интерфейсом. Реальная отправка подключается в C15 |
+| Почта | `nodemailer` за интерфейсом `MailDriver` | Фейк с первого дня. Только письма доступа: временный пароль и восстановление пароля; о событиях почта не сообщает (v1.49) |
+| Web Push | `web-push`, VAPID | Драйвер `PushDriver` за тем же интерфейсом. Реальная отправка подключается в C15. Провайдер один, внешний сервис пушей не подключаем (v1.49) |
 | Логи | `pino` в stdout | Структурные, с `requestId`, без ПДн |
 | Тесты | Vitest, Playwright, fast-check | Юнит, e2e по ролям, property-based на домене |
 | Линт | ESLint + Prettier + `svelte-check` | Гейт перед мёрджем (§11.1) |
@@ -236,6 +237,7 @@ src/
         board/ , requests/ , catalog/ , counterparties/ , stock/ , payroll/ , reports/ , settings/
         shop/                     цех: очередь выпуска позиций и наполнение заявок (v1.41)
         delivery/                 доставка: погрузка по строкам, «Доставлено», заявки в работе для плана (v1.43)
+        notifications/            личная лента, переключатели и журнал; read/ отмечает прочтение (v1.49)
     api/
       stream/[topic]/+server.ts   SSE
       files/[id]/+server.ts       раздача файлов с проверкой прав
@@ -732,7 +734,7 @@ export const numberingSequences = sqliteTable('numbering_sequences', {
 export const notificationTemplates = sqliteTable('notification_templates', {
   id: pk(),
   eventKey: text('event_key', { enum: EVENT_KEYS }).notNull(),
-  channel: text('channel', { enum: ['email', 'push', 'max'] }).notNull(),
+  channel: text('channel', { enum: ['push', 'max'] }).notNull(),
   subject: text('subject'), body: text('body').notNull(),
   isActive: integer('is_active', { mode: 'boolean' }).notNull().default(true)
 }, (t) => ({ uq: uniqueIndex('nt_uq').on(t.eventKey, t.channel) }));
@@ -740,14 +742,14 @@ export const notificationTemplates = sqliteTable('notification_templates', {
 export const notificationRules = sqliteTable('notification_rules', {
   eventKey: text('event_key', { enum: EVENT_KEYS }).notNull(),
   roleCode: text('role_code', { enum: ROLE_CODES }).notNull(),
-  channel: text('channel', { enum: ['email', 'push', 'max'] }).notNull(),
+  channel: text('channel', { enum: ['push', 'max'] }).notNull(),
   enabled: integer('enabled', { mode: 'boolean' }).notNull().default(true)
 }, (t) => ({ pkUq: primaryKey({ columns: [t.eventKey, t.roleCode, t.channel] }) }));
 
 export const userNotificationPrefs = sqliteTable('user_notification_prefs', {
   userId: integer('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
   eventKey: text('event_key', { enum: EVENT_KEYS }).notNull(),
-  channel: text('channel', { enum: ['email', 'push', 'max'] }).notNull(),
+  channel: text('channel', { enum: ['push', 'max'] }).notNull(),
   enabled: integer('enabled', { mode: 'boolean' }).notNull()
 }, (t) => ({ pkUq: primaryKey({ columns: [t.userId, t.eventKey, t.channel] }) }));
 
@@ -755,7 +757,7 @@ export const notifications = sqliteTable('notifications', {
   id: pk(),
   eventKey: text('event_key', { enum: EVENT_KEYS }).notNull(),
   userId: integer('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
-  channel: text('channel', { enum: ['email', 'push', 'max'] }).notNull(),
+  channel: text('channel', { enum: ['push', 'max'] }).notNull(),
   payload: text('payload', { mode: 'json' }).$type<Record<string, unknown>>().notNull(),
   status: text('status', { enum: ['queued', 'sent', 'failed'] }).notNull().default('queued'),
   attempts: integer('attempts').notNull().default(0),
@@ -857,9 +859,12 @@ export const settings = sqliteTable('settings', {
 export const TRANSITIONS: readonly Transition[] = [
   { from: 'draft',  to: 'new',       roles: ['cp_admin','cp_employee','manager','owner'], ownOnly: true,
     guards: ['deliveryFilled'] },
-  { from: 'new',    to: 'in_work',   roles: ['manager','owner'], guards: ['pricesFixed'], effects: ['audit'] },
-  { from: 'new',    to: 'cancelled', roles: ['cp_admin','cp_employee','manager','owner'], ownOnly: true },
-  { from: 'new',    to: 'rejected',  roles: ['manager','owner'], requiresReason: true },
+  { from: 'new',    to: 'in_work',   roles: ['manager','owner'], guards: ['pricesFixed'],
+    effects: ['audit','emit:request.accepted'] },
+  { from: 'new',    to: 'cancelled', roles: ['cp_admin','cp_employee','manager','owner'], ownOnly: true,
+    effects: ['emit:request.cancelled'] },
+  { from: 'new',    to: 'rejected',  roles: ['manager','owner'], requiresReason: true,
+    effects: ['emit:request.rejected'] },
   { from: 'in_work', to: 'ready',    roles: ['manager','owner'],
     guards: ['stockCovered'], effects: ['emit:request.ready'] },
   { from: 'ready',  to: 'delivered', roles: ['driver','manager','owner'],
@@ -882,7 +887,7 @@ export const TRANSITIONS: readonly Transition[] = [
 8. Заявка контрагента уходит из `draft` только с заполненными `deliveryAddressId`, `deliveryAt` и `deceasedName`: это guard `deliveryFilled`. Заявка на склад (`isStockRequest = true`) его не требует. `deliveryAt` замораживается на этом переходе вместе с ценами и дальше не меняется ни одним переходом: срок сдвигается только отменой и новой заявкой.
 9. Заявка контрагента уходит в `delivered` только погруженной целиком: это guard `fullyLoaded`. Погружено по строке равно минус сумме движений склада с её `request_item_id`. Заявка на склад его не требует (v1.43).
 
-Коды guard-ов: `stockCovered`, `pricesFixed`, `fullyPaid`, `deliveryFilled`, `fullyLoaded` (`GUARD_CODES` в `lib/types/request.ts`, v1.43). Коды эффектов: `audit`, `freezeCharity`, `emit:request.ready`, `emit:request.delivered`, `emit:request.paid` (`EFFECT_CODES`, v1.43).
+Коды guard-ов: `stockCovered`, `pricesFixed`, `fullyPaid`, `deliveryFilled`, `fullyLoaded` (`GUARD_CODES` в `lib/types/request.ts`, v1.43). Коды эффектов: `audit`, `freezeCharity`, `emit:request.accepted`, `emit:request.cancelled`, `emit:request.rejected`, `emit:request.ready`, `emit:request.delivered`, `emit:request.paid` (`EFFECT_CODES`, v1.49).
 
 ### 6.3 Компенсация вместо удаления
 
@@ -942,11 +947,13 @@ export const EVENT_KEYS = [
 - пара «событие, канал» существует для пользователя, только если правило называет одну из его ролей; значение по умолчанию включено, если хотя бы одно такое правило включено;
 - личная настройка из `user_notification_prefs` перекрывает значение по умолчанию; сохранение формы пишет строку на каждую предложенную пару, пару вне предложения сервер отклоняет;
 - к заявке человек портала относится как `cp_admin` всегда и как `cp_employee`, только если он автор заявки; заявка на склад в портал не пишет;
-- до C12 разворачиваются только события заявки и только для людей контрагента; `stock.below_threshold` публикуется с C8, но адресатов получает в C12 (v1.45); живой канал один, `email`: `push` оживает в C15, `max` в C16;
-- строка `notification_feed` пишется каждому адресату события в той же транзакции, что и строки `notifications`. Адресат считается той же матрицей ролей, но без учёта каналов и личных настроек: фид в приложении выключить нельзя, настройки управляют почтой и МАКС (v1.33);
+- человек мастерской (активная учётная запись контура CRM) относится к событию всеми своими ролями; у заявки на склад роль `driver` не считается, остальные роли мастерской получают её события по правилам; `stock.below_threshold` и `payroll.week_closed` идут только мастерской (v1.49);
+- инициатор действия из адресатов не исключается: payload fanout актора не несёт (v1.49);
+- живых каналов до C15 нет: `push` оживает в C15, `max` в C16, почта о событиях не сообщает (v1.49). До C15 fanout пишет только ленту;
+- строка `notification_feed` пишется каждому адресату события, человеку портала и человеку мастерской, в той же транзакции, что и строки `notifications`. Адресат считается той же матрицей ролей, но без учёта каналов и личных настроек: фид в приложении выключить нельзя, настройки управляют пушем и МАКС (v1.33, v1.49);
 - `notifications.payload` хранит `{ entityId }`, текст письма собирается в `notification.dispatch` из БД на момент отправки.
 
-Переменные шаблона: `{{number}}`, `{{status}}` (подпись из `lib/ui/status.ts`), `{{url}}` (`ORIGIN` плюс путь карточки), `{{counterparty}}`, `{{externalNumber}}`. Подстановка идёт в один проход, значение с фигурными скобками не раскрывается. Денежных переменных нет.
+Переменные шаблона привязаны к событию (`EVENT_TEMPLATE_VARIABLES`, v1.49). События заявки: `{{number}}`, `{{status}}` (подпись из `lib/ui/status.ts`), `{{url}}`, `{{counterparty}}`, `{{externalNumber}}`. `stock.below_threshold`: `{{item}}` (название позиции), `{{code}}`, `{{balance}}`, `{{threshold}}`, `{{unit}}`, `{{url}}`. `payroll.week_closed`: `{{period}}` (границы недели в `org.timezone`), `{{url}}`. `{{url}}` это `ORIGIN` плюс путь по адресату: `/portal/requests/{id}` человеку портала, `/crm/requests/{id}` человеку мастерской с правом `request.read.any`, `/crm/delivery` остальным людям мастерской, `/crm/stock/{id}` у события склада, `/crm/payroll?week={дата начала}` у события выплат. Подстановка идёт в один проход, значение с фигурными скобками не раскрывается. Денежных переменных нет. Переменная вне набора своего события роняет сид и отклоняется при сохранении шаблона в CRM. Набор по событию, ссылку по адресату и правку шаблонов делает C15 вместе с шаблонами push; до него `notification_templates` пуста (v1.49).
 
 ### 7.4 SSE
 
@@ -1054,8 +1061,8 @@ export interface RequestCardDto {
 }
 
 // notifications.ts — personal settings and the delivery log of a portal user (P9).
-export const NOTIFICATION_CHANNELS = ['email','push','max'] as const;
-export const LIVE_CHANNELS = ['email'] as const;          // push joins in C15, max in C16
+export const NOTIFICATION_CHANNELS = ['push','max'] as const;      // mail carries access letters only (v1.49)
+export const LIVE_CHANNELS = [] as const;                 // push joins in C15, max in C16
 export const NOTIFICATION_STATUSES = ['queued','sent','failed'] as const;
 export interface NotificationPrefDto { eventKey: EventKey; channel: NotificationChannel; enabled: boolean; isDefault: boolean; }
 export interface NotificationLogItemDto {
@@ -1063,13 +1070,17 @@ export interface NotificationLogItemDto {
   requestId: number | null; requestNumber: string | null;   // null when the row points outside the actor's counterparty
   createdAt: string; sentAt: string | null;                  // the driver error never leaves the server
 }
-export interface NotificationSettingsDto { email: string; prefs: NotificationPrefDto[]; log: Page<NotificationLogItemDto>; }
+export interface NotificationSettingsDto { prefs: NotificationPrefDto[]; log: Page<NotificationLogItemDto>; }
 // The bell of the portal header (v1.33). The feed is not a channel: a user cannot switch it off.
 export interface NotificationFeedItemDto {
   id: number; eventKey: EventKey; requestId: number | null; requestNumber: string | null;
+  entityId: number | null; entityLabel: string | null;   // stock item or payroll week of a workshop event, null elsewhere (v1.49)
   isRead: boolean; createdAt: string;
 }
 export interface NotificationBellDto { unread: number; items: NotificationFeedItemDto[]; }
+
+// crm-notifications.ts — the matrix the owner reads (C12, v1.49). The seed writes it.
+export interface NotificationRuleCellDto { eventKey: EventKey; roleCode: RoleCode; channel: NotificationChannel; enabled: boolean; isLive: boolean; }
 
 // landing.ts — what a guest may see on `/` (P13). No article, price or stock leaves the catalog.
 export const LANDING_WORKS_LIMIT = 9;
@@ -1469,7 +1480,7 @@ export class RequestDtoMapper {
 | `PhotoGallery` / `PhotoUploader` | `mediaIds`, `editable` |
 | `PriceCell` | `valueMinor?`, рисует прочерк, когда значение не пришло |
 | `Stepper` | история статусов заявки |
-| `ContourShell` | `variant: 'crm'\|'portal'`, `title`, `userName`, `roles`, `links`, `accountHref`, `cart`, `bell?: { href, unread }` (колокольчик уведомлений портала, v1.33), `footerCaption`, `search?: Snippet` (поиск в шапке портала, v1.30) |
+| `ContourShell` | `variant: 'crm'\|'portal'`, `title`, `userName`, `roles`, `links`, `accountHref`, `cart`, `bell?: Snippet` (колокольчик уведомлений, рисуется в обоих контурах с v1.49), `footerCaption`, `search?: Snippet` (поиск в шапке портала, v1.30) |
 
 Токены: цвета, радиусы, тени и шкала отступов в `src/app.css` как CSS-переменные. Хардкод цвета в компоненте слайса — повод для отката.
 
@@ -1719,7 +1730,7 @@ CONTRACT GAP
 
 ### Этап 1. Клиентская часть (B2B-портал)
 
-**Статус: этап 1 закрыт 19.09.2026, слайсы P1–P14 влиты в `main`.** Сценарий DoD P9 показан на `node build`, правки бизнеса от 19.09.2026 закрыты слайсами P10–P13, фон лендинга сделан слайсом P14. Открытым остался один пункт: переходы §6.2 не публикуют `request.accepted`, `request.cancelled` и `request.rejected`, поэтому письма по ним не уходят (v1.19). Следующая задача этапа 2 это C1.
+**Статус: этап 1 закрыт 19.09.2026, слайсы P1–P14 влиты в `main`.** Сценарий DoD P9 показан на `node build`, правки бизнеса от 19.09.2026 закрыты слайсами P10–P13, фон лендинга сделан слайсом P14. Пункт про `request.accepted`, `request.cancelled` и `request.rejected`, которые не публиковались с v1.19, закрыт в C12 (v1.49).
 
 Экраны этапа собираются по макетам из `ui/`. Какой макет относится к какому слайсу, что из макета берётся и что нет, записано в §18.5 и §18.6.
 
@@ -1798,17 +1809,17 @@ CONTRACT GAP
 
 Номер C11 выведен из дорожной карты вместе с документами и не переиспользуется.
 
-**C12. Уведомления CRM.** Полная матрица событий CRM, шаблоны с переменными, предпросмотр и тестовая отправка, персональные настройки, лог доставки. Канал push и отзыв протухших подписок подключаются в C15.
-**DoD:** по каждому событию из §7.3 адресаты получают уведомление в выбранных каналах, лог показывает статус доставки.
+**C12. Уведомления CRM** (контракт v1.49). Разворот каждого события §7.3 для людей мастерской, события приёма, отмены и отклонения заявки, почта выведена из событий, колокольчик в шапке CRM, личный экран `/crm/notifications` с лентой и переключателями, матрица на чтение для руководителя. Каналов доставки до C15 нет.
+**DoD:** по каждому событию из §7.3 адресаты мастерской и портала видят его в колокольчике, счётчик непрочитанного обнуляется при открытии списка, повторный прогон `notification.fanout` оставляет одну строку ленты на человека, письмо о событии не уходит никому.
+
+**C15. PWA и Web Push** (бывший K6, перенесён в v1.8, идёт сразу за C12 с v1.49). `manifest.webmanifest` с иконками и shortcuts, регистрация push-only service worker по §17, обработчики `push` и `notificationclick`, кнопка установки и инструкция для iOS. Реальный драйвер Web Push на VAPID-ключах, подписки в `push_subscriptions`, канал push в матрице уведомлений портала и CRM, шаблоны push с переменными по событию (§7.3), их правка, предпросмотр и тестовая отправка себе, журнал отправок всех людей для руководителя, push водителю при переходе в `ready`, отзыв протухших подписок джобом `session.cleanup`. Кеширование, офлайн-фолбэк и фоновая синхронизация не делаются.
+**DoD:** приложение ставится на домашний экран Android и iOS и открывается в standalone-режиме, водитель получает push в момент готовности и открывает карточку заявки из уведомления, Cache Storage пуст.
 
 **C13. Отчёты и аналитика.** Дашборд руководителя, продажи по контрагентам, моделям и периодам, складские движения и оборачиваемость, выплаты, воронка заявок, отменённые и отклонённые заявки, отчёт по благотворительности с реестром перечислений и остатком «начислено, но не перечислено», фильтры и экспорт.
 **DoD:** руководитель получает цифры за период без выгрузки в Excel вручную, сумма на баннере сходится с отчётом.
 
 **C14. Стабилизация и приёмка.** Сквозное e2e по всем семи ролям, нагрузочная проверка реестров на 10 тыс. заявок и 50 тыс. движений, аудит безопасности (права на переходы, прямые ссылки, сокрытие цен, загрузка файлов), правки UX по итогам пилота, инструкции по ролям, первичное наполнение справочников, каталога и видов работ. Стенд разворачивается по `docs/deploy.md` (v1.21).
 **DoD:** сквозной сценарий отработан всеми ролями на реальных данных, контрольный пример по выплатам сходится до копейки, акт приёмки подписан.
-
-**C15. PWA и Web Push** (бывший K6, перенесён в v1.8). `manifest.webmanifest` с иконками и shortcuts, регистрация push-only service worker по §17, обработчики `push` и `notificationclick`, кнопка установки и инструкция для iOS. Реальный драйвер Web Push на VAPID-ключах, подписки в `push_subscriptions`, канал push в матрице уведомлений портала и CRM, push водителю при переходе в `ready`, отзыв протухших подписок джобом `session.cleanup`. Кеширование, офлайн-фолбэк и фоновая синхронизация не делаются.
-**DoD:** приложение ставится на домашний экран Android и iOS и открывается в standalone-режиме, водитель получает push в момент готовности и открывает карточку заявки из уведомления, Cache Storage пуст.
 
 **C16. Бот МАКС.** Драйвер канала `max` на Bot API: привязка чата к пользователю, отправка по матрице §7.3, лог доставки и ретраи тем же `notification.dispatch`. Привязка чата открывает разрыв контракта и поднимается блоком CONTRACT GAP в начале слайса. Канал становится живым, то есть входит в `LIVE_CHANNELS`.
 **DoD:** пользователь привязывает чат один раз и получает событие ботом, отказ бота виден в логе доставки и уходит в ретрай, повторная отправка того же уведомления второго сообщения не создаёт.
@@ -1959,7 +1970,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 
 ## 17. PWA
 
-Раздел реализуется слайсом C15 в конце этапа 2 (v1.8). До него в приложении нет манифеста, service worker и push-подписок, а тесты §17.5 не заводятся.
+Раздел реализуется слайсом C15 сразу за C12 (v1.49). До него в приложении нет манифеста, service worker и push-подписок, а тесты §17.5 не заводятся.
 
 Приложение поставляется как PWA. Отдельного мобильного клиента нет: цех, водитель и контрагент ставят приложение на домашний экран и работают из standalone-окна. Вторая причина — Web Push, без которого водитель не узнает о готовности заявки.
 
