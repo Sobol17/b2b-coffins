@@ -1,5 +1,6 @@
 import { requireAction, requireScope } from '$lib/server/auth/guard';
 import { PolicyService } from '$lib/server/auth/policy';
+import { NotificationFeedService } from '$lib/server/notifications/notification-feed.service';
 import { OrgService } from '$lib/server/settings/org.service';
 import type { LayoutServerLoad } from './$types';
 
@@ -15,6 +16,8 @@ export const load: LayoutServerLoad = ({ locals, url }) => {
 			canSeePrices: actor.canSeePrices
 		},
 		timezone: OrgService.timezone(),
+		// The bell counts on every navigation: tech.md 7.4 has no personal stream to push it (v1.49).
+		bell: new NotificationFeedService(actor).bell(),
 		// Navigation only: every page and action checks its own right on the server again.
 		can: {
 			requests: PolicyService.can(actor, 'request.read.any'),

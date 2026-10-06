@@ -8,6 +8,7 @@ import {
 	requests,
 	userNotificationPrefs
 } from '../../src/lib/server/db/schema';
+import { NotificationMatrixService } from '../../src/lib/server/notifications/notification-matrix.service';
 import { NotificationSettingsService } from '../../src/lib/server/notifications/notification-settings.service';
 import { notificationPrefsSchema } from '../../src/lib/validation/notifications';
 import { crmActor, portalActor, resetRequests, seedOrderingWorld } from './helpers/portal-requests';
@@ -195,5 +196,32 @@ describe('NotificationSettingsService', () => {
 
 		expect(log).toMatchObject({ total: 5, page: 2, perPage: 2 });
 		expect(log.rows).toHaveLength(2);
+	});
+});
+
+describe('NotificationMatrixService (C12)', () => {
+	const owner = crmActor(
+		'owner',
+		insertUser({ email: 'own@n.example', role: 'owner', counterpartyId: null })
+	);
+
+	it('hands the owner every rule of the seed with the state of its channel', () => {
+		const cells = new NotificationMatrixService(owner).cells();
+
+		expect(cells).toContainEqual({
+			eventKey: 'stock.below_threshold',
+			roleCode: 'manager',
+			channel: 'push',
+			enabled: true,
+			isLive: false
+		});
+		expect(cells.every((cell) => cell.channel === 'push' || cell.channel === 'max')).toBe(true);
+		// No channel has a driver before C15.
+		expect(cells.some((cell) => cell.isLive)).toBe(false);
+	});
+
+	it('refuses everybody but the owner', () => {
+		expect(() => new NotificationMatrixService(manager).cells()).toThrow(ForbiddenError);
+		expect(() => new NotificationMatrixService(admin).cells()).toThrow(ForbiddenError);
 	});
 });
