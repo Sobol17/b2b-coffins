@@ -6,6 +6,7 @@ import type {
 	NotificationLogItemDto,
 	NotificationPrefDto
 } from '$lib/types/notifications';
+import { formatDate } from '$lib/utils/format';
 
 export class NotificationDtoMapper {
 	static toPref(choice: ChannelChoice): NotificationPrefDto {
@@ -32,13 +33,19 @@ export class NotificationDtoMapper {
 		};
 	}
 
-	/** One line of the bell. The event carries no money and no personal data of the deceased. */
-	static toFeedItem(row: FeedRow): NotificationFeedItemDto {
+	/**
+	 * One line of the bell. The event carries no money and no personal data of the deceased. A
+	 * payroll week is labelled by its first day in the organisation timezone.
+	 */
+	static toFeedItem(row: FeedRow, timeZone: string): NotificationFeedItemDto {
+		const week = row.weekStartsOn ? formatDate(row.weekStartsOn.toISOString(), timeZone) : null;
 		return {
 			id: row.id,
 			eventKey: row.eventKey,
 			requestId: row.requestId,
 			requestNumber: row.requestNumber,
+			entityId: row.stockItemId ?? row.weekId,
+			entityLabel: row.stockItemTitle ?? week,
 			isRead: row.readAt !== null,
 			createdAt: row.createdAt.toISOString()
 		};

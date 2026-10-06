@@ -1,4 +1,4 @@
-import { and, desc, eq, isNull, sql } from 'drizzle-orm';
+import { and, desc, eq, isNull, sql, type SQL } from 'drizzle-orm';
 import { BaseRepository } from '../core/repository';
 import { countExpression } from '../core/list';
 import type { Tx } from '../db/client';
@@ -75,19 +75,24 @@ export class NotificationRepository extends BaseRepository<typeof notifications>
 
 	/** Active, not deleted portal accounts of one counterparty with their roles. */
 	portalPeople(counterpartyId: number, tx?: Tx): Person[] {
+		return this.people(
+			and(eq(users.counterpartyId, counterpartyId), eq(users.scope, 'portal')),
+			tx
+		);
+	}
+
+	/** Active, not deleted accounts of the workshop with their roles (v1.49). */
+	crmPeople(tx?: Tx): Person[] {
+		return this.people(eq(users.scope, 'crm'), tx);
+	}
+
+	private people(scope: SQL | undefined, tx?: Tx): Person[] {
 		const rows = this.db(tx)
 			.select({ userId: users.id, email: users.email, role: roles.code })
 			.from(users)
 			.innerJoin(userRoles, eq(userRoles.userId, users.id))
 			.innerJoin(roles, eq(roles.id, userRoles.roleId))
-			.where(
-				and(
-					eq(users.counterpartyId, counterpartyId),
-					eq(users.scope, 'portal'),
-					eq(users.isActive, true),
-					isNull(users.deletedAt)
-				)
-			)
+			.where(and(scope, eq(users.isActive, true), isNull(users.deletedAt)))
 			.orderBy(users.id)
 			.all();
 		const people = new Map<number, Person>();

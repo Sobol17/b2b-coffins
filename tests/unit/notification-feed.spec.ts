@@ -1,25 +1,32 @@
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { seedNotificationRules, seedNotificationTemplates } from '../../scripts/seed/reference';
+import { seedNotificationRules } from '../../scripts/seed/reference';
 import {
 	jobQueue,
 	notificationFeed,
 	notifications,
+	payrollPeriods,
+	stockItems,
 	userNotificationPrefs
 } from '../../src/lib/server/db/schema';
+import { bus } from '../../src/lib/server/events/bus';
 import { NotificationFeedService } from '../../src/lib/server/notifications/notification-feed.service';
 import { NotificationRuleRepository } from '../../src/lib/server/notifications/notification-rule.repository';
 import { NotificationRepository } from '../../src/lib/server/notifications/notification.repository';
 import { createNotificationFanoutHandler } from '../../src/lib/server/queue/handlers/notification-fanout';
 import { Worker } from '../../src/lib/server/queue/worker';
+import type { EventKey } from '../../src/lib/types/events';
 import { seedCharityWorld } from './helpers/charity';
-import { migratedDatabase } from './helpers/db';
-import { resetRequests } from './helpers/portal-requests';
+import { insertUser, migratedDatabase } from './helpers/db';
+import { crmActor, resetRequests } from './helpers/portal-requests';
 
 const db = migratedDatabase();
 const { world, actors, sent, drive } = seedCharityWorld(db);
 seedNotificationRules(db);
-seedNotificationTemplates(db);
+const owner = crmActor(
+	'owner',
+	insertUser({ email: 'own@feed.example', role: 'owner', counterpartyId: null })
+);
 
 /** Only the fanout runs here: the feed row is written before any driver touches a channel. */
 function fanout(): Worker {
@@ -34,13 +41,19 @@ function fanout(): Worker {
 	});
 }
 
-function feedOf(userId: number) {
-	return db.select().from(notificationFeed).where(eq(notificationFeed.userId, userId)).all();
+/** Rows of one event: on its way to `ready` a request also tells the portal it was accepted. */
+function feedOf(userId: number, eventKey: EventKey = 'request.ready') {
+	return db
+		.select()
+		.from(notificationFeed)
+		.where(and(eq(notificationFeed.userId, userId), eq(notificationFeed.eventKey, eventKey)))
+		.all();
 }
 
 beforeEach(() => {
 	resetRequests(db);
 	db.delete(notificationFeed).run();
+	db.delete(payrollPeriods).run();
 	db.delete(notifications).run();
 	db.delete(userNotificationPrefs).run();
 });
@@ -72,12 +85,12 @@ describe('the fanout mirrors an event into the feed (P12)', () => {
 		expect(feedOf(world.employeeId)).toHaveLength(0);
 	});
 
-	it('writes the row even when the person switched the letter off', async () => {
+	it('writes the row even when the person switched the channel off', async () => {
 		db.insert(userNotificationPrefs)
 			.values({
 				userId: world.adminId,
 				eventKey: 'request.ready',
-				channel: 'email',
+				channel: 'push',
 				enabled: false
 			})
 			.run();
@@ -167,7 +180,9 @@ describe('marking the feed read (P12)', () => {
 		await fanout().drain();
 		const [foreign] = feedOf(world.employeeId);
 
-		expect(new NotificationFeedService(actors.admin).markRead([foreign?.id ?? 0])).toBe(1);
+		const mine = new NotificationFeedService(actors.admin).bell().unread;
+
+		expect(new NotificationFeedService(actors.admin).markRead([foreign?.id ?? 0])).toBe(mine);
 		expect(feedOf(world.employeeId)[0]?.readAt).toBeNull();
 	});
 
@@ -176,9 +191,69 @@ describe('marking the feed read (P12)', () => {
 		drive(id, 'ready');
 		await fanout().drain();
 		const service = new NotificationFeedService(actors.admin);
-		const [item] = service.bell().items;
+		const { unread, items } = service.bell();
 
-		expect(service.markRead([item?.id ?? 0])).toBe(0);
-		expect(service.markRead([item?.id ?? 0])).toBe(0);
+		expect(service.markRead([items[0]?.id ?? 0])).toBe(unread - 1);
+		expect(service.markRead([items[0]?.id ?? 0])).toBe(unread - 1);
+	});
+});
+
+describe('the bell of the workshop header (C12)', () => {
+	it('shows a workshop reader the request of any counterparty', async () => {
+		const id = sent(actors.outsider);
+		await fanout().drain();
+
+		const [item] = new NotificationFeedService(actors.manager).bell().items;
+
+		expect(item).toMatchObject({ eventKey: 'request.submitted', requestId: id, isRead: false });
+		expect(item?.requestNumber).toMatch(/^З-\d{4}-\d+$/);
+	});
+
+	it('names the stock item of a low shelf and the first day of a closed week', async () => {
+		const [item] = db.select().from(stockItems).limit(1).all();
+		const [week] = db
+			.insert(payrollPeriods)
+			.values({
+				startsOn: new Date('2026-09-27T21:00:00.000Z'),
+				endsOn: new Date('2026-10-04T21:00:00.000Z')
+			})
+			.returning()
+			.all();
+		bus.emit('stock.below_threshold', item?.id ?? 0);
+		bus.emit('payroll.week_closed', week?.id ?? 0);
+		await fanout().drain();
+
+		const items = new NotificationFeedService(owner).bell().items;
+
+		expect(items.find((row) => row.eventKey === 'stock.below_threshold')).toMatchObject({
+			requestId: null,
+			entityId: item?.id,
+			entityLabel: item?.title
+		});
+		// The week starts at midnight of the organisation, Moscow in the seed.
+		expect(items.find((row) => row.eventKey === 'payroll.week_closed')).toMatchObject({
+			entityId: week?.id,
+			entityLabel: '28.09.2026'
+		});
+	});
+
+	it('never hands a workshop entity to a portal reader', async () => {
+		const [item] = db.select().from(stockItems).limit(1).all();
+		// A row that should not exist: the fanout keeps stock events inside the workshop.
+		db.insert(notificationFeed)
+			.values({ userId: world.adminId, eventKey: 'stock.below_threshold', entityId: item?.id ?? 0 })
+			.run();
+
+		const [row] = new NotificationFeedService(actors.admin).bell().items;
+
+		expect(row).toMatchObject({ requestId: null, entityId: null, entityLabel: null });
+	});
+
+	it('marks the own rows of a workshop reader read', async () => {
+		sent(actors.admin);
+		await fanout().drain();
+		const service = new NotificationFeedService(actors.manager);
+
+		expect(service.markRead(service.bell().items.map((row) => row.id))).toBe(0);
 	});
 });

@@ -1,6 +1,6 @@
 import { EVENT_KEYS, type EventKey } from '$lib/types/events';
 import { NOTIFICATION_CHANNELS, type NotificationChannel } from '$lib/types/notifications';
-import type { RoleCode } from '$lib/types/roles';
+import { CRM_ROLES, type RoleCode } from '$lib/types/roles';
 
 export interface RoleRule {
 	readonly eventKey: EventKey;
@@ -106,6 +106,20 @@ export function prefsFromSelection(
  */
 export function rolesTowardsRequest(roles: readonly RoleCode[], isAuthor: boolean): RoleCode[] {
 	return roles.filter((role) => role === 'cp_admin' || (role === 'cp_employee' && isAuthor));
+}
+
+/**
+ * Roles a workshop person holds towards an event (v1.49): all of them, authorship aside. A stock
+ * request never reaches the delivery screen, so the driver role does not count for it.
+ */
+export function workshopRolesTowards(
+	roles: readonly RoleCode[],
+	isStockRequest: boolean
+): RoleCode[] {
+	return roles.filter(
+		(role) =>
+			(CRM_ROLES as readonly RoleCode[]).includes(role) && !(isStockRequest && role === 'driver')
+	);
 }
 
 /** Form value of one switch: `request.ready:email`. */

@@ -7,6 +7,7 @@ import {
 	prefsFromSelection,
 	receives,
 	rolesTowardsRequest,
+	workshopRolesTowards,
 	type PersonalPref,
 	type RoleRule
 } from '../../src/lib/domain/notification/matrix';
@@ -143,28 +144,34 @@ describe('notification matrix (P9)', () => {
 
 	it('sends nothing for a role without rules', () => {
 		const matrix: RoleRule[] = [
-			{ eventKey: 'request.ready', roleCode: 'cp_admin', channel: 'email', enabled: true }
+			{ eventKey: 'request.ready', roleCode: 'cp_admin', channel: 'push', enabled: true }
 		];
-		const choices = channelChoices(matrix, ['driver'], [], ['email']);
+		const choices = channelChoices(matrix, ['driver'], [], ['push']);
 
 		expect(choices).toEqual([]);
-		expect(receives(choices, 'request.ready', 'email')).toBe(false);
+		expect(receives(choices, 'request.ready', 'push')).toBe(false);
 	});
 
-	it('keeps push closed until the channel goes live', () => {
+	it('keeps a channel closed until it goes live', () => {
 		const matrix: RoleRule[] = [
 			{ eventKey: 'request.ready', roleCode: 'cp_admin', channel: 'push', enabled: true }
 		];
 
-		expect(channelChoices(matrix, ['cp_admin'], [], ['email'])).toEqual([]);
+		expect(channelChoices(matrix, ['cp_admin'], [], [])).toEqual([]);
+		expect(channelChoices(matrix, ['cp_admin'], [], ['max'])).toEqual([]);
 	});
 
-	it('keeps push closed until the channel goes live', () => {
-		const matrix: RoleRule[] = [
-			{ eventKey: 'request.ready', roleCode: 'cp_admin', channel: 'push', enabled: true }
-		];
-
-		expect(channelChoices(matrix, ['cp_admin'], [], ['email'])).toEqual([]);
+	it('gives a workshop person every workshop role, the driver aside for a stock request', () => {
+		fc.assert(
+			fc.property(roles, fc.boolean(), (rl, isStock) => {
+				const towards = workshopRolesTowards(rl, isStock);
+				expect(towards.some((role) => role === 'cp_admin' || role === 'cp_employee')).toBe(false);
+				expect(towards.includes('driver')).toBe(rl.includes('driver') && !isStock);
+				for (const role of ['owner', 'manager', 'carpenter', 'painter'] as const) {
+					expect(towards.includes(role)).toBe(rl.includes(role));
+				}
+			})
+		);
 	});
 });
 
@@ -190,7 +197,7 @@ describe('who the in-app feed reaches (P12)', () => {
 
 	it('addresses a user whose only rule is switched off or answers another channel', () => {
 		const matrix: RoleRule[] = [
-			{ eventKey: 'request.ready', roleCode: 'cp_admin', channel: 'email', enabled: false },
+			{ eventKey: 'request.ready', roleCode: 'cp_admin', channel: 'push', enabled: false },
 			{ eventKey: 'request.paid', roleCode: 'cp_admin', channel: 'max', enabled: true }
 		];
 

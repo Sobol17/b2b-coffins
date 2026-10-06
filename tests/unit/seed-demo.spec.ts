@@ -1,4 +1,4 @@
-import { and, eq, like, sql } from 'drizzle-orm';
+import { eq, like } from 'drizzle-orm';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { seedCatalog, seedStockBalances, seedStockItems } from '../../scripts/seed/catalog';
 import { seedDemo } from '../../scripts/seed/demo';
@@ -11,7 +11,6 @@ import {
 import {
 	seedDicts,
 	seedNotificationRules,
-	seedNotificationTemplates,
 	seedNumbering,
 	seedRoles,
 	seedSettings
@@ -20,6 +19,7 @@ import {
 	auditLog,
 	counterparties,
 	jobQueue,
+	notificationFeed,
 	notifications,
 	requestStatusHistory,
 	requests,
@@ -52,14 +52,11 @@ function demoRequests() {
 		.all();
 }
 
-function mailLog(email: string) {
+function feedOf(email: string) {
 	return db
-		.select({
-			status: notifications.status,
-			requestId: sql<number>`json_extract(${notifications.payload}, '$.entityId')`
-		})
-		.from(notifications)
-		.where(and(eq(notifications.userId, userId(email)), eq(notifications.channel, 'email')))
+		.select({ eventKey: notificationFeed.eventKey, requestId: notificationFeed.entityId })
+		.from(notificationFeed)
+		.where(eq(notificationFeed.userId, userId(email)))
 		.all();
 }
 
@@ -68,6 +65,7 @@ function counts() {
 		requests: db.select().from(requests).all().length,
 		history: db.select().from(requestStatusHistory).all().length,
 		notifications: db.select().from(notifications).all().length,
+		feed: db.select().from(notificationFeed).all().length,
 		jobs: db.select().from(jobQueue).all().length,
 		audit: db.select().from(auditLog).all().length
 	};
@@ -81,7 +79,6 @@ beforeAll(async () => {
 	seedSettings(db);
 	seedNumbering(db);
 	seedNotificationRules(db);
-	seedNotificationTemplates(db);
 	seedStockItems(db);
 	seedCatalog(db);
 	seedStockBalances(db);
@@ -121,26 +118,22 @@ describe('pnpm seed:demo (v1.23)', () => {
 		}
 	});
 
-	it('fills the mail log of the administrator and the employee through the queue', () => {
-		const admin = mailLog(ADMIN);
-		const employee = mailLog(EMPLOYEE);
-
-		expect(admin.length).toBeGreaterThan(0);
-		expect(employee.length).toBeGreaterThan(0);
-		for (const row of [...admin, ...employee]) expect(row.status).toBe('sent');
-		expect(firstRun.mailed).toBe(
-			db.select().from(notifications).where(eq(notifications.status, 'sent')).all().length
-		);
+	it('fills the bell of the administrator and the employee through the queue', () => {
+		expect(feedOf(ADMIN).length).toBeGreaterThan(0);
+		expect(feedOf(EMPLOYEE).length).toBeGreaterThan(0);
+		expect(firstRun.jobs).toBeGreaterThan(0);
+		// Mail is not an event channel (v1.49) and push has no driver before C15.
+		expect(db.select().from(notifications).all()).toHaveLength(0);
 	});
 
-	it('mails the employee only about requests the employee wrote', () => {
+	it('tells the employee only about requests the employee wrote', () => {
 		const own = new Set(
 			demoRequests()
 				.filter((row) => row.createdById === userId(EMPLOYEE))
 				.map((row) => row.id)
 		);
 
-		for (const row of mailLog(EMPLOYEE)) expect(own).toContain(row.requestId);
+		for (const row of feedOf(EMPLOYEE)) expect(own).toContain(row.requestId);
 	});
 
 	it('leaves no job behind', () => {
@@ -158,7 +151,7 @@ describe('pnpm seed:demo (v1.23)', () => {
 
 		const again = await seedDemo(db);
 
-		expect(again).toEqual({ requests: 0, mailed: 0 });
+		expect(again).toEqual({ requests: 0, jobs: 0 });
 		expect(counts()).toEqual(before);
 	});
 });

@@ -29,7 +29,7 @@ function addLog(userId: number, entityId: number, status: 'queued' | 'sent' | 'f
 		.values({
 			eventKey: 'request.ready',
 			userId,
-			channel: 'email',
+			channel: 'push',
 			payload: { entityId },
 			status,
 			error: status === 'failed' ? 'smtp.internal.example: 535 auth failed for robot' : null
@@ -55,23 +55,22 @@ beforeEach(() => {
 
 describe('notification settings form contract (P9)', () => {
 	it('accepts checked switches and refuses anything else', () => {
-		expect(notificationPrefsSchema.safeParse({ enabled: ['request.ready:email'] }).success).toBe(
+		expect(notificationPrefsSchema.safeParse({ enabled: ['request.ready:push'] }).success).toBe(
 			true
 		);
 		expect(notificationPrefsSchema.safeParse({ enabled: [] }).success).toBe(true);
 		expect(notificationPrefsSchema.safeParse({ enabled: ['request.ready:sms'] }).success).toBe(
 			false
 		);
-		expect(notificationPrefsSchema.safeParse({ enabled: ["x' or 1=1:email"] }).success).toBe(false);
+		expect(notificationPrefsSchema.safeParse({ enabled: ["x' or 1=1:push"] }).success).toBe(false);
 	});
 });
 
 describe('NotificationSettingsService', () => {
 	it('offers the administrator the events of its role on every channel of the matrix', () => {
-		const { prefs, email } = new NotificationSettingsService(admin).settings();
+		const { prefs } = new NotificationSettingsService(admin).settings();
 
-		expect(email).toBe('admin@rs.example');
-		expect(prefs.filter((p) => p.channel === 'email').map((p) => p.eventKey)).toEqual([
+		expect(prefs.filter((p) => p.channel === 'push').map((p) => p.eventKey)).toEqual([
 			'request.accepted',
 			'request.ready',
 			'request.delivered',
@@ -80,17 +79,18 @@ describe('NotificationSettingsService', () => {
 			'request.paid'
 		]);
 		expect(prefs.every((p) => p.isDefault)).toBe(true);
-		expect(prefs.filter((p) => p.channel === 'email').every((p) => p.enabled)).toBe(true);
+		expect(prefs.filter((p) => p.channel === 'push').every((p) => p.enabled)).toBe(true);
 		// MAX is offered before its driver: the switch waits switched off until C16.
 		expect(prefs.filter((p) => p.channel === 'max')).toHaveLength(6);
 		expect(prefs.some((p) => p.channel === 'max' && p.enabled)).toBe(false);
-		expect(prefs.some((p) => p.channel === 'push')).toBe(false);
+		// Mail left the event channels in v1.49: nothing but push and the bot is on offer.
+		expect(JSON.stringify(prefs)).not.toContain('email');
 	});
 
 	it('offers an employee only the events of its own role', () => {
 		const { prefs } = new NotificationSettingsService(employee).settings();
 
-		expect(prefs.filter((p) => p.channel === 'email').map((p) => p.eventKey)).toEqual([
+		expect(prefs.filter((p) => p.channel === 'push').map((p) => p.eventKey)).toEqual([
 			'request.accepted',
 			'request.ready',
 			'request.delivered',
@@ -102,11 +102,11 @@ describe('NotificationSettingsService', () => {
 	it('stores the switches, reads them back and writes the audit row', () => {
 		const service = new NotificationSettingsService(admin);
 
-		const saved = service.save({ enabled: ['request.paid:email', 'request.ready:max'] });
+		const saved = service.save({ enabled: ['request.paid:push', 'request.ready:max'] });
 
 		expect(saved.filter((p) => p.enabled).map((p) => `${p.eventKey}:${p.channel}`)).toEqual([
 			'request.ready:max',
-			'request.paid:email'
+			'request.paid:push'
 		]);
 		expect(saved.every((p) => !p.isDefault)).toBe(true);
 		expect(service.settings().prefs).toEqual(saved);
@@ -125,15 +125,36 @@ describe('NotificationSettingsService', () => {
 	it('refuses a switch the role is not offered and changes nothing', () => {
 		const service = new NotificationSettingsService(employee);
 
-		expect(() => service.save({ enabled: ['request.paid:email'] })).toThrow(ValidationError);
-		expect(() => service.save({ enabled: ['request.ready:push'] })).toThrow(ValidationError);
+		expect(() => service.save({ enabled: ['request.paid:push'] })).toThrow(ValidationError);
+		expect(() => service.save({ enabled: ['request.submitted:push'] })).toThrow(ValidationError);
 		expect(db.select().from(userNotificationPrefs).all()).toHaveLength(0);
 		expect(db.select().from(auditLog).all()).toHaveLength(0);
 	});
 
-	it('keeps the workshop out of the portal settings', () => {
-		expect(() => new NotificationSettingsService(manager).settings()).toThrow(ForbiddenError);
-		expect(() => new NotificationSettingsService(manager).save({ enabled: [] })).toThrow(
+	it('offers a workshop person the events of the workshop role (C12)', () => {
+		const service = new NotificationSettingsService(manager);
+
+		const { prefs } = service.settings();
+
+		expect(prefs.map((p) => `${p.eventKey}:${p.channel}`)).toEqual([
+			'request.submitted:push',
+			'request.ready:push',
+			'request.delivered:push',
+			'request.cancelled:push',
+			'request.paid:push',
+			'stock.below_threshold:push'
+		]);
+		expect(() => service.save({ enabled: ['request.accepted:push'] })).toThrow(ValidationError);
+		expect(service.save({ enabled: ['request.ready:push'] }).filter((p) => p.enabled)).toHaveLength(
+			1
+		);
+	});
+
+	it('refuses an actor whose roles do not open its contour', () => {
+		const stray = { ...manager, roles: [] };
+
+		expect(() => new NotificationSettingsService(stray).settings()).toThrow(ForbiddenError);
+		expect(() => new NotificationSettingsService(stray).save({ enabled: [] })).toThrow(
 			ForbiddenError
 		);
 	});
