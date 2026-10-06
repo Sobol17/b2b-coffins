@@ -1,5 +1,4 @@
 import { and, eq, like } from 'drizzle-orm';
-import { config } from '../../src/lib/server/config';
 import type { Db } from '../../src/lib/server/db/client';
 import {
 	counterparties,
@@ -11,11 +10,7 @@ import {
 } from '../../src/lib/server/db/schema';
 import { DeliveryService } from '../../src/lib/server/crm-delivery/delivery.service';
 import { ShopService } from '../../src/lib/server/crm-shop/shop.service';
-import { FakeMailDriver } from '../../src/lib/server/notifications/drivers/mail';
-import { NotificationRuleRepository } from '../../src/lib/server/notifications/notification-rule.repository';
-import { NotificationRepository } from '../../src/lib/server/notifications/notification.repository';
 import { charityRecountHandler } from '../../src/lib/server/queue/handlers/charity-recount';
-import { createNotificationDispatchHandler } from '../../src/lib/server/queue/handlers/notification-dispatch';
 import { notificationFanoutHandler } from '../../src/lib/server/queue/handlers/notification-fanout';
 import { Worker } from '../../src/lib/server/queue/worker';
 import { DraftService } from '../../src/lib/server/request/draft.service';
@@ -35,13 +30,13 @@ import {
 type People = Record<keyof typeof DEMO_PEOPLE, ActorContext>;
 
 /**
- * Demo requests and their mail log (v1.23). Everything goes through the services the application
+ * Demo requests and the bell feed they leave (v1.23, v1.49). Everything goes through the services the application
  * uses, so numbers, history, events, audit and stock moves come out exactly as on the screen.
- * @returns how many requests were created and how many mails the fake driver took.
+ * @returns how many requests were created and how many queue jobs their events took.
  */
-export async function seedDemo(db: Db): Promise<{ requests: number; mailed: number }> {
+export async function seedDemo(db: Db): Promise<{ requests: number; jobs: number }> {
 	const counterpartyId = demoCounterpartyId(db);
-	if (alreadySeeded(db, counterpartyId)) return { requests: 0, mailed: 0 };
+	if (alreadySeeded(db, counterpartyId)) return { requests: 0, jobs: 0 };
 
 	const people = loadPeople(db);
 	assertNoOpenDrafts(people);
@@ -49,7 +44,7 @@ export async function seedDemo(db: Db): Promise<{ requests: number; mailed: numb
 		const id = submit(db, people, counterpartyId, scenario);
 		advance(db, people, id, scenario);
 	}
-	return { requests: DEMO_SCENARIOS.length, mailed: await drainQueue() };
+	return { requests: DEMO_SCENARIOS.length, jobs: await drainQueue() };
 }
 
 function demoCounterpartyId(db: Db): number {
@@ -153,23 +148,10 @@ function advance(db: Db, people: People, id: number, scenario: DemoScenario): vo
 	new RequestTransitionService(people.driver).deliver(id, scenario.stage === 'paid');
 }
 
-/** Mail goes to a fake whatever MAIL_DRIVER says: demo data must never reach a real mailbox. */
+/** Reads the queue out in this process, so the bell of every demo account is filled at once. */
 async function drainQueue(): Promise<number> {
-	const mail = new FakeMailDriver();
-	const worker = new Worker({
-		handlers: [
-			notificationFanoutHandler,
-			createNotificationDispatchHandler({
-				rules: new NotificationRuleRepository(),
-				notifications: new NotificationRepository(),
-				mail: () => mail,
-				origin: config.ORIGIN
-			}),
-			charityRecountHandler
-		]
-	});
-	await worker.drain(1000);
-	return mail.sent.length;
+	const worker = new Worker({ handlers: [notificationFanoutHandler, charityRecountHandler] });
+	return worker.drain(1000);
 }
 
 function variantIdOf(db: Db, sku: string): number {

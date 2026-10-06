@@ -1,5 +1,10 @@
+import type { ResolvedPathname } from '$app/types';
 import type { EventKey } from '$lib/types/events';
-import type { NotificationChannel, NotificationStatus } from '$lib/types/notifications';
+import type {
+	NotificationChannel,
+	NotificationFeedItemDto,
+	NotificationStatus
+} from '$lib/types/notifications';
 import type { StatusTone } from '$lib/ui';
 
 export interface EventLabel {
@@ -23,9 +28,20 @@ export const EVENT_LABEL: Readonly<Record<EventKey, EventLabel>> = {
 	'payroll.week_closed': { title: 'Неделя закрыта', hint: 'Ведомость готова к выплате' }
 };
 
+/** What a feed line is about: the request number, the stock item or the payroll week. */
+export function feedSubject(item: NotificationFeedItemDto): string {
+	if (item.requestNumber !== null) return item.requestNumber;
+	if (item.entityLabel === null) return '—';
+	return item.eventKey === 'payroll.week_closed'
+		? `Неделя с ${item.entityLabel}`
+		: item.entityLabel;
+}
+
+/** Where a feed line leads; null keeps it plain text. Each contour brings its own routes. */
+export type FeedHref = (item: NotificationFeedItemDto) => ResolvedPathname | null;
+
 export const CHANNEL_LABEL: Readonly<Record<NotificationChannel, string>> = {
-	email: 'Почта',
-	push: 'Push',
+	push: 'Пуш',
 	max: 'Бот в МАКС'
 };
 

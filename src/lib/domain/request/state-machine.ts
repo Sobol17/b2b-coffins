@@ -18,15 +18,22 @@ export const TRANSITIONS: readonly Transition[] = [
 		to: 'in_work',
 		roles: ['manager', 'owner'],
 		guards: ['pricesFixed'],
-		effects: ['audit']
+		effects: ['audit', 'emit:request.accepted']
 	},
 	{
 		from: 'new',
 		to: 'cancelled',
 		roles: ['cp_admin', 'cp_employee', 'manager', 'owner'],
-		ownOnly: true
+		ownOnly: true,
+		effects: ['emit:request.cancelled']
 	},
-	{ from: 'new', to: 'rejected', roles: ['manager', 'owner'], requiresReason: true },
+	{
+		from: 'new',
+		to: 'rejected',
+		roles: ['manager', 'owner'],
+		requiresReason: true,
+		effects: ['emit:request.rejected']
+	},
 	{
 		from: 'in_work',
 		to: 'ready',

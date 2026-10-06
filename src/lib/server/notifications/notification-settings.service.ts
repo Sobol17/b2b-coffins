@@ -1,9 +1,8 @@
-import { PolicyService } from '../auth/policy';
-import { NotFoundError, ValidationError } from '../core/errors';
+import { contourAccess, PolicyService } from '../auth/policy';
+import { ValidationError } from '../core/errors';
 import { normalizeListQuery } from '../core/list';
 import { BaseService } from '../core/service';
 import type { Tx } from '../db/client';
-import { ProfileRepository } from '../profile/profile.repository';
 import { NotificationDtoMapper } from './dto';
 import { NotificationRuleRepository } from './notification-rule.repository';
 import { NotificationRepository } from './notification.repository';
@@ -18,27 +17,22 @@ import type { ListQuery } from '$lib/types/list';
 import { NOTIFICATION_CHANNELS, type NotificationSettingsDto } from '$lib/types/notifications';
 import type { NotificationPrefsInput } from '$lib/validation/notifications';
 
-/** Personal notification settings and the delivery log of a portal user (P9). */
+/** Personal notification settings and the delivery log of a user of either contour (P9, C12). */
 export class NotificationSettingsService extends BaseService {
 	constructor(
 		ctx: ActorContext,
 		private readonly rules: NotificationRuleRepository = new NotificationRuleRepository(),
-		private readonly log: NotificationRepository = new NotificationRepository(),
-		private readonly profiles: ProfileRepository = new ProfileRepository()
+		private readonly log: NotificationRepository = new NotificationRepository()
 	) {
 		super(ctx);
 	}
 
-	/** @throws ForbiddenError outside the portal, NotFoundError when the account is filtered out. */
+	/** @throws ForbiddenError for an actor without a contour of its own. */
 	settings(query: Partial<ListQuery> = {}): NotificationSettingsDto {
-		this.assert(PolicyService.can(this.ctx, 'portal.access'), 'portal.access');
-		const profile = this.profiles.findOwn(this.ctx);
-		if (!profile) throw new NotFoundError('profile');
-
+		this.assertContour();
 		const { page, perPage } = normalizeListQuery(query);
 		const log = this.log.logPage(this.ctx, perPage, (page - 1) * perPage);
 		return {
-			email: profile.email,
 			prefs: this.offered().map(NotificationDtoMapper.toPref),
 			log: { rows: log.rows.map(NotificationDtoMapper.toLogItem), total: log.total, page, perPage }
 		};
@@ -47,10 +41,10 @@ export class NotificationSettingsService extends BaseService {
 	/**
 	 * Stores the switches of the form. Every offered pair gets a row, so a later change of the role
 	 * rule leaves the user's choice alone.
-	 * @throws ForbiddenError outside the portal, ValidationError for a pair the user is not offered.
+	 * @throws ForbiddenError without a contour, ValidationError for a pair the user is not offered.
 	 */
 	save(input: NotificationPrefsInput): NotificationSettingsDto['prefs'] {
-		this.assert(PolicyService.can(this.ctx, 'portal.access'), 'portal.access');
+		this.assertContour();
 		return this.audited({ action: 'notifications.prefs.update', entity: 'users' }, (tx) => {
 			const offered = this.offered(tx);
 			const known = new Set(offered.map((choice) => prefKey(choice.eventKey, choice.channel)));
@@ -69,10 +63,16 @@ export class NotificationSettingsService extends BaseService {
 		});
 	}
 
+	/** The settings are personal: each contour opens them by its own access right (v1.49). */
+	private assertContour(): void {
+		const action = contourAccess(this.ctx);
+		this.assert(PolicyService.can(this.ctx, action), action);
+	}
+
 	/**
 	 * Every channel the matrix names for the roles of the user, not only the ones a driver sends
-	 * over today: MAX is chosen here before C16 wires its bot (v1.33). The fanout still sends over
-	 * `LIVE_CHANNELS` alone, so a switch ahead of its driver promises nothing.
+	 * over today: push is chosen here before C15 wires it, MAX before C16. The fanout still sends
+	 * over `LIVE_CHANNELS` alone, so a switch ahead of its driver promises nothing.
 	 */
 	private offered(tx?: Tx): ChannelChoice[] {
 		return channelChoices(

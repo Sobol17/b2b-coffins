@@ -2,9 +2,10 @@
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
-	import DeliveryLog from '$lib/portal/notifications/DeliveryLog.svelte';
-	import FeedList from '$lib/portal/notifications/FeedList.svelte';
-	import NotificationPrefsForm from '$lib/portal/notifications/NotificationPrefsForm.svelte';
+	import DeliveryLog from '$lib/notifications/DeliveryLog.svelte';
+	import FeedList from '$lib/notifications/FeedList.svelte';
+	import NotificationPrefsForm from '$lib/notifications/NotificationPrefsForm.svelte';
+	import { portalFeedHref } from '$lib/portal/feed-href';
 	import { profileNavItems } from '$lib/portal/profile-nav';
 	import ProfileNav from '$lib/portal/ProfileNav.svelte';
 	import { Breadcrumbs, Card } from '$lib/ui';
@@ -54,14 +55,14 @@
 			<div class="px-2">
 				<h1 class="mb-2 text-4xl">Уведомления</h1>
 				<p class="max-w-2xl text-fg-muted">
-					Выберите, о каких событиях по заявкам присылать письма. Администратор получает письма по
-					всем заявкам агентства, сотрудник только по своим.
+					Выберите, о каких событиях по заявкам присылать пуш-уведомления. Администратор получает их
+					по всем заявкам агентства, сотрудник только по своим.
 				</p>
 			</div>
 
 			<Card.Root>
 				<Card.Content>
-					<NotificationPrefsForm {prefs} email={settings.email} />
+					<NotificationPrefsForm {prefs} />
 				</Card.Content>
 			</Card.Root>
 
@@ -69,7 +70,7 @@
 				<h2 class="mb-2 text-3xl">Лента событий</h2>
 				<p class="max-w-2xl text-fg-muted">
 					Всё, что произошло по вашим заявкам. Лента приходит в приложение всегда, выключить её
-					нельзя: переключатели выше управляют только письмами и ботом.
+					нельзя: переключатели выше управляют только пуш-уведомлениями и ботом.
 				</p>
 			</div>
 
@@ -81,6 +82,8 @@
 						query={feedQuery}
 						onQueryChange={(next) => changeQuery(next, 'feed')}
 						timeZone={data.timezone}
+						hrefOf={portalFeedHref}
+						readUrl={resolve('/portal/notifications/read')}
 					/>
 				</Card.Content>
 			</Card.Root>
@@ -88,7 +91,8 @@
 			<div class="px-2">
 				<h2 class="mb-2 text-3xl">Журнал отправок</h2>
 				<p class="max-w-2xl text-fg-muted">
-					Письма, которые портал отправил вам. Если отправка не удалась, портал повторит её сам.
+					Пуш-уведомления, которые портал отправил вам. Если отправка не удалась, портал повторит её
+					сам.
 				</p>
 			</div>
 
@@ -100,6 +104,7 @@
 						{query}
 						onQueryChange={(next) => changeQuery(next)}
 						timeZone={data.timezone}
+						requestHref={(id) => resolve(`/portal/requests/${id}`)}
 					/>
 				</Card.Content>
 			</Card.Root>

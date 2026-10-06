@@ -1,9 +1,11 @@
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { sql } from 'drizzle-orm';
 import { migrate } from 'drizzle-orm/better-sqlite3/migrator';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createDb, type Db } from '../../src/lib/server/db/client';
+import { EVENT_KEYS } from '../../src/lib/types/events';
 import { seedCatalog, seedStockBalances, seedStockItems } from '../../scripts/seed/catalog';
 import {
 	seedCounterparties,
@@ -140,22 +142,37 @@ describe('migrations and seed on a clean database', () => {
 		for (const row of rows) expect(row).toEqual({ kind: 'color', priceDeltaMinor: 0 });
 	});
 
-	// Stock and payroll events get their texts with their slices (C8, C10, C12).
-	it('gives every email rule of a request event a text to send', () => {
+	// Mail left the event channels in v1.49; the texts of push arrive with its driver in C15.
+	it('names somebody for every event of tech.md 7.3 and no mail channel', () => {
 		const rules = db.select().from(notificationRules).all();
-		const texts = new Set(
-			db
-				.select()
-				.from(notificationTemplates)
-				.all()
-				.map((row) => `${row.eventKey}:${row.channel}`)
+
+		for (const eventKey of EVENT_KEYS) {
+			expect(rules.some((rule) => rule.eventKey === eventKey)).toBe(true);
+		}
+		expect(rules.every((rule) => rule.channel === 'push' || rule.channel === 'max')).toBe(true);
+		expect(db.select().from(notificationTemplates).all()).toHaveLength(0);
+	});
+
+	it('clears the mail rows an older database still carries (v1.49)', () => {
+		// The column has no CHECK, so a database seeded before v1.49 holds rows the types deny.
+		db.run(
+			sql`insert into notification_rules (event_key, role_code, channel, enabled)
+				values ('request.ready', 'cp_admin', 'email', 1)`
+		);
+		db.run(
+			sql`insert into notification_templates (event_key, channel, subject, body, is_active)
+				values ('request.ready', 'email', 's', 'b', 1)`
 		);
 
-		const email = rules.filter(
-			(rule) => rule.channel === 'email' && rule.eventKey.startsWith('request.')
-		);
-		expect(email.length).toBeGreaterThan(0);
-		for (const rule of email) expect(texts).toContain(`${rule.eventKey}:email`);
+		seedNotificationRules(db);
+
+		const channels = db
+			.all<{ channel: string }>(
+				sql`select channel from notification_rules union all select channel from notification_templates`
+			)
+			.map((row) => row.channel);
+		expect(channels).not.toContain('email');
+		expect(channels.length).toBeGreaterThan(0);
 	});
 
 	it('gives the payroll works with a price of a unit in whole roubles (v1.48)', () => {

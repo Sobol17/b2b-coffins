@@ -18,6 +18,7 @@ import {
 	numberingFixture,
 	roleFixture
 } from './schema';
+import { retireMailChannel } from './legacy-email';
 
 export function seedRoles(db: Db): number {
 	const rows = loadFixture('roles.json', z.array(roleFixture));
@@ -69,6 +70,7 @@ export function seedNumbering(db: Db): number {
 
 export function seedNotificationRules(db: Db): number {
 	const rows = loadFixture('notification-rules.json', z.array(notificationRuleFixture));
+	retireMailChannel(db);
 	for (const row of rows) {
 		db.insert(notificationRules)
 			.values(row)

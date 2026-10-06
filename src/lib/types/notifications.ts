@@ -1,11 +1,12 @@
 import type { EventKey } from './events';
 import type { Page } from './list';
 
-// notifications.ts — personal settings and the delivery log of a portal user (P9).
-export const NOTIFICATION_CHANNELS = ['email', 'push', 'max'] as const;
+// notifications.ts — personal settings and the delivery log of a user (P9).
+// Mail is not a channel since v1.49: it carries access letters only, events go to the bell and push.
+export const NOTIFICATION_CHANNELS = ['push', 'max'] as const;
 export type NotificationChannel = (typeof NOTIFICATION_CHANNELS)[number];
-/** Channels a driver sends over today. Push joins in C15, the MAX bot in C16. */
-export const LIVE_CHANNELS = ['email'] as const satisfies readonly NotificationChannel[];
+/** Channels a driver sends over today: none. Push joins in C15, the MAX bot in C16. */
+export const LIVE_CHANNELS: readonly NotificationChannel[] = [];
 export const NOTIFICATION_STATUSES = ['queued', 'sent', 'failed'] as const;
 export type NotificationStatus = (typeof NOTIFICATION_STATUSES)[number];
 
@@ -27,7 +28,6 @@ export interface NotificationLogItemDto {
 	sentAt: string | null; // the driver error stays in the database
 }
 export interface NotificationSettingsDto {
-	email: string;
 	prefs: NotificationPrefDto[];
 	log: Page<NotificationLogItemDto>;
 }
@@ -38,6 +38,8 @@ export interface NotificationFeedItemDto {
 	eventKey: EventKey;
 	requestId: number | null;
 	requestNumber: string | null; // null when the row points outside the actor's counterparty
+	entityId: number | null; // stock item or payroll week of a workshop event, null elsewhere
+	entityLabel: string | null;
 	isRead: boolean;
 	createdAt: string;
 }

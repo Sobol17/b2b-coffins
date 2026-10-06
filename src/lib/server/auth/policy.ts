@@ -69,6 +69,11 @@ const GRANTS: Readonly<Record<RoleCode, readonly Action[]>> = {
 	cp_employee: ['portal.access', 'catalog.read', 'request.create', 'request.read.own']
 } as const;
 
+/** The access right of the actor's own contour: what a screen both contours share asks for. */
+export function contourAccess(actor: Pick<ActorContext, 'scope'>): Action {
+	return actor.scope === 'crm' ? 'crm.access' : 'portal.access';
+}
+
 /** Roles that must never see a price field, on any screen or in any response body. */
 const PRICE_BLIND_ROLES: readonly RoleCode[] = ['cp_employee', 'carpenter', 'painter', 'driver'];
 

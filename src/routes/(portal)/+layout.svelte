@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { resolve } from '$app/paths';
-	import NotificationBell from '$lib/portal/notifications/NotificationBell.svelte';
+	import NotificationBell from '$lib/notifications/NotificationBell.svelte';
+	import { portalFeedHref } from '$lib/portal/feed-href';
 	import HeaderSearch from '$lib/portal/search/HeaderSearch.svelte';
 	import ContourShell from '$lib/ui/ContourShell.svelte';
 	import type { LayoutProps } from './$types';
@@ -36,7 +37,13 @@
 		<HeaderSearch rights={{ staff: data.canManageStaff, prices: data.canManagePrices }} />
 	{/snippet}
 	{#snippet bell()}
-		<NotificationBell bell={data.bell} timeZone={data.timezone} />
+		<NotificationBell
+			bell={data.bell}
+			timeZone={data.timezone}
+			hrefOf={portalFeedHref}
+			allHref={resolve('/portal/profile/notifications')}
+			readUrl={resolve('/portal/notifications/read')}
+		/>
 	{/snippet}
 	{@render children()}
 </ContourShell>

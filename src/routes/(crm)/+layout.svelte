@@ -1,6 +1,8 @@
 <script lang="ts">
 	import { resolve } from '$app/paths';
 	import { ROLE_TITLE } from '$lib/crm/labels';
+	import { crmFeedHref } from '$lib/crm/notifications/feed-href';
+	import NotificationBell from '$lib/notifications/NotificationBell.svelte';
 	import ContourShell from '$lib/ui/ContourShell.svelte';
 	import type { ShellLink } from '$lib/ui/shell/types';
 	import type { LayoutProps } from './$types';
@@ -32,6 +34,7 @@
 			? [
 					{ href: resolve('/crm/settings/users'), label: 'Пользователи' },
 					{ href: resolve('/crm/settings/dicts'), label: 'Справочники' },
+					{ href: resolve('/crm/settings/notifications'), label: 'Матрица уведомлений' },
 					{ href: resolve('/crm/settings'), label: 'Настройки' }
 				]
 			: []),
@@ -42,5 +45,14 @@
 </script>
 
 <ContourShell title="Мастерская" userName={data.user.fullName} {roles} {links}>
+	{#snippet bell()}
+		<NotificationBell
+			bell={data.bell}
+			timeZone={data.timezone}
+			hrefOf={crmFeedHref(data.can.requests)}
+			allHref={resolve('/crm/notifications')}
+			readUrl={resolve('/crm/notifications/read')}
+		/>
+	{/snippet}
 	{@render children()}
 </ContourShell>

@@ -2,19 +2,13 @@
 	{
 		"eventKey": "request.submitted",
 		"roleCode": "manager",
-		"channel": "email",
-		"enabled": true
-	},
-	{
-		"eventKey": "request.submitted",
-		"roleCode": "manager",
 		"channel": "push",
 		"enabled": true
 	},
 	{
 		"eventKey": "request.accepted",
 		"roleCode": "cp_admin",
-		"channel": "email",
+		"channel": "push",
 		"enabled": true
 	},
 	{
@@ -26,7 +20,7 @@
 	{
 		"eventKey": "request.accepted",
 		"roleCode": "cp_employee",
-		"channel": "email",
+		"channel": "push",
 		"enabled": true
 	},
 	{
@@ -50,7 +44,7 @@
 	{
 		"eventKey": "request.ready",
 		"roleCode": "cp_admin",
-		"channel": "email",
+		"channel": "push",
 		"enabled": true
 	},
 	{
@@ -62,7 +56,7 @@
 	{
 		"eventKey": "request.ready",
 		"roleCode": "cp_employee",
-		"channel": "email",
+		"channel": "push",
 		"enabled": true
 	},
 	{
@@ -80,7 +74,7 @@
 	{
 		"eventKey": "request.delivered",
 		"roleCode": "cp_admin",
-		"channel": "email",
+		"channel": "push",
 		"enabled": true
 	},
 	{
@@ -92,7 +86,7 @@
 	{
 		"eventKey": "request.delivered",
 		"roleCode": "cp_employee",
-		"channel": "email",
+		"channel": "push",
 		"enabled": true
 	},
 	{
@@ -104,13 +98,13 @@
 	{
 		"eventKey": "request.cancelled",
 		"roleCode": "manager",
-		"channel": "email",
+		"channel": "push",
 		"enabled": true
 	},
 	{
 		"eventKey": "request.rejected",
 		"roleCode": "cp_admin",
-		"channel": "email",
+		"channel": "push",
 		"enabled": true
 	},
 	{
@@ -122,7 +116,7 @@
 	{
 		"eventKey": "request.rejected",
 		"roleCode": "cp_employee",
-		"channel": "email",
+		"channel": "push",
 		"enabled": true
 	},
 	{
@@ -134,7 +128,7 @@
 	{
 		"eventKey": "request.payment_marked",
 		"roleCode": "cp_admin",
-		"channel": "email",
+		"channel": "push",
 		"enabled": true
 	},
 	{
@@ -146,13 +140,13 @@
 	{
 		"eventKey": "request.paid",
 		"roleCode": "manager",
-		"channel": "email",
+		"channel": "push",
 		"enabled": true
 	},
 	{
 		"eventKey": "request.paid",
 		"roleCode": "cp_admin",
-		"channel": "email",
+		"channel": "push",
 		"enabled": true
 	},
 	{
@@ -164,19 +158,19 @@
 	{
 		"eventKey": "stock.below_threshold",
 		"roleCode": "manager",
-		"channel": "email",
+		"channel": "push",
 		"enabled": true
 	},
 	{
 		"eventKey": "stock.below_threshold",
 		"roleCode": "owner",
-		"channel": "email",
+		"channel": "push",
 		"enabled": true
 	},
 	{
 		"eventKey": "payroll.week_closed",
 		"roleCode": "owner",
-		"channel": "email",
+		"channel": "push",
 		"enabled": true
 	}
 ]

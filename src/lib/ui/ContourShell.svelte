@@ -33,7 +33,7 @@
 		footerCaption?: string;
 		/** Portal header search. The kit takes it as a snippet so it never imports portal code. */
 		search?: Snippet | undefined;
-		/** Portal notification bell, a snippet for the same reason: its texts belong to the portal. */
+		/** Notification bell of either contour, a snippet for the same reason: the kit holds the place. */
 		bell?: Snippet | undefined;
 		children: Snippet;
 	} = $props();
@@ -60,6 +60,7 @@
 				{/each}
 			</nav>
 
+			{@render bell?.()}
 			<span data-testid="actor-name" class="text-sm">{userName}</span>
 			<span data-testid="actor-roles" class="text-sm text-fg-muted">{roles.join(', ')}</span>
 

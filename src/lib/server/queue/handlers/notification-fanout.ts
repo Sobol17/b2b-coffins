@@ -2,11 +2,7 @@ import { withTransaction } from '../../core/tx';
 import type { Tx } from '../../db/client';
 import { NotificationFeedRepository } from '../../notifications/notification-feed.repository';
 import { NotificationRuleRepository } from '../../notifications/notification-rule.repository';
-import {
-	NotificationRepository,
-	type Person,
-	type RequestFacts
-} from '../../notifications/notification.repository';
+import { NotificationRepository, type Person } from '../../notifications/notification.repository';
 import { SettingsRepository } from '../../settings/settings.repository';
 import { defineHandler } from '../job-handler';
 import { Queue } from '../queue';
@@ -16,10 +12,12 @@ import {
 	isAddressed,
 	receives,
 	rolesTowardsRequest,
+	workshopRolesTowards,
 	type RoleRule
 } from '$lib/domain/notification/matrix';
-import type { EventKey } from '$lib/types/events';
+import { REQUEST_EVENT_KEYS, type EventKey } from '$lib/types/events';
 import { LIVE_CHANNELS } from '$lib/types/notifications';
+import type { RoleCode } from '$lib/types/roles';
 import { notificationsEnabledSchema } from '$lib/validation/settings';
 
 export interface FanoutDeps {
@@ -29,55 +27,75 @@ export interface FanoutDeps {
 	readonly feed?: NotificationFeedRepository;
 }
 
-/** Request events of tech.md 7.3. Stock and payroll events find their people in C8, C10 and C12. */
-function isRequestEvent(eventKey: EventKey): boolean {
-	return eventKey.startsWith('request.');
+/** One person and the roles they hold towards this very event. */
+interface Addressee {
+	readonly person: Person;
+	readonly roles: readonly RoleCode[];
+}
+
+interface Occurrence {
+	readonly eventKey: EventKey;
+	readonly entityId: number;
 }
 
 /**
- * `notification.fanout` of tech.md 7.2: turns one event into `notifications` rows by the role
- * matrix and personal settings, writes the in-app feed row of every addressee, and queues one
- * dispatch per channel row in the same transaction. P9 finds the portal people of the request;
- * the workshop roles join in C12.
+ * `notification.fanout` of tech.md 7.2: turns one event into the in-app feed row of every
+ * addressee and into `notifications` rows by the role matrix and personal settings, with one
+ * dispatch queued per channel row in the same transaction. Portal people hear about the requests
+ * of their counterparty, workshop people about every event of tech.md 7.3 (v1.49).
  */
 export function createNotificationFanoutHandler(deps: FanoutDeps) {
 	const feed = deps.feed ?? new NotificationFeedRepository();
 	return defineHandler({
 		topic: 'notification.fanout',
 		schema: JOB_PAYLOAD_SCHEMAS['notification.fanout'],
-		async handle({ eventKey, entityId }, ctx) {
+		async handle(event, ctx) {
 			if (!deps.isEnabled()) {
-				ctx.logger.info({ eventKey }, 'notifications are switched off');
+				ctx.logger.info({ eventKey: event.eventKey }, 'notifications are switched off');
 				return;
 			}
-			if (!isRequestEvent(eventKey)) return;
-
-			const created = withTransaction((tx) => {
-				const request = deps.notifications.requestFacts(entityId, tx);
-				// A stock request has no counterparty and so nobody in the portal to tell.
-				if (!request || request.counterpartyId === null) return 0;
-				const rules = deps.rules.rules(eventKey, tx);
-				const people = deps.notifications.portalPeople(request.counterpartyId, tx);
-				return people.reduce(
-					(sum, person) => sum + fanOutTo(person, request, rules, eventKey, tx),
-					0
-				);
+			const counts = withTransaction((tx) => {
+				const rules = deps.rules.rules(event.eventKey, tx);
+				return addresseesOf(event, tx).map((addressee) => fanOutTo(addressee, event, rules, tx));
 			});
-			ctx.logger.info({ eventKey, entityId, created }, 'notification fanout done');
+			const created = counts.reduce((sum, count) => sum + count, 0);
+			ctx.logger.info({ ...event, people: counts.length, created }, 'notification fanout done');
 		}
 	});
 
+	function addresseesOf(event: Occurrence, tx: Tx): Addressee[] {
+		const workshop = deps.notifications.crmPeople(tx);
+		if (!REQUEST_EVENT_KEYS.includes(event.eventKey)) {
+			// Stock and payroll are the workshop's own business: the portal never hears of them.
+			return workshop.map((person) => ({ person, roles: person.roles }));
+		}
+		const request = deps.notifications.requestFacts(event.entityId, tx);
+		if (!request) return [];
+		// A stock request has no counterparty and so nobody in the portal to tell.
+		const { counterpartyId, createdById } = request;
+		const portal =
+			counterpartyId === null ? [] : deps.notifications.portalPeople(counterpartyId, tx);
+		return [
+			...portal.map((person) => ({
+				person,
+				roles: rolesTowardsRequest(person.roles, createdById === person.userId)
+			})),
+			...workshop.map((person) => ({
+				person,
+				roles: workshopRolesTowards(person.roles, counterpartyId === null)
+			}))
+		];
+	}
+
 	function fanOutTo(
-		person: Person,
-		request: RequestFacts,
+		{ person, roles }: Addressee,
+		{ eventKey, entityId }: Occurrence,
 		rules: readonly RoleRule[],
-		eventKey: EventKey,
 		tx: Tx
 	): number {
-		const roles = rolesTowardsRequest(person.roles, request.createdById === person.userId);
 		// The feed is a mirror of events, not a channel: personal switches do not reach it (v1.33).
 		if (isAddressed(rules, roles, eventKey)) {
-			feed.insert({ userId: person.userId, eventKey, entityId: request.id }, tx);
+			feed.insert({ userId: person.userId, eventKey, entityId }, tx);
 		}
 		const choices = channelChoices(
 			rules,
@@ -88,8 +106,8 @@ export function createNotificationFanoutHandler(deps: FanoutDeps) {
 		let created = 0;
 		for (const channel of LIVE_CHANNELS) {
 			if (!receives(choices, eventKey, channel)) continue;
-			const key = { eventKey, entityId: request.id, userId: person.userId, channel };
-			// A rerun after a crash between commit and `done` must not mail the person twice.
+			const key = { eventKey, entityId, userId: person.userId, channel };
+			// A rerun after a crash between commit and `done` must not notify the person twice.
 			if (deps.notifications.exists(key, tx)) continue;
 			const id = deps.notifications.insert(key, tx);
 			Queue.enqueue('notification.dispatch', { notificationId: id }, jobKey.dispatch(id), tx);
@@ -106,7 +124,7 @@ export const notificationFanoutHandler = createNotificationFanoutHandler({
 		const parsed = notificationsEnabledSchema.safeParse(
 			new SettingsRepository().findValue('notifications.enabled')
 		);
-		// A missing or broken switch keeps mail flowing: silence is the harder failure to notice.
+		// A missing or broken switch keeps events flowing: silence is the harder failure to notice.
 		return parsed.success ? parsed.data : true;
 	}
 });
