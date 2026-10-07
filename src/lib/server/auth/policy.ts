@@ -22,6 +22,7 @@ export const ACTIONS = [
 	'payroll.read',
 	'payroll.manage',
 	'reports.read',
+	'charity.manage',
 	'settings.manage',
 	'audit.read'
 ] as const;
@@ -51,8 +52,7 @@ const GRANTS: Readonly<Record<RoleCode, readonly Action[]>> = {
 		'stock.manage',
 		'delivery.work',
 		'payroll.read',
-		'payroll.manage',
-		'reports.read'
+		'payroll.manage'
 	],
 	carpenter: ['crm.access', 'catalog.read', 'request.read.own', 'stock.read'],
 	painter: ['crm.access', 'catalog.read', 'request.read.own', 'stock.read'],

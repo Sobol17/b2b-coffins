@@ -1,7 +1,7 @@
 # tech.md — ядро проекта
 
 **Проект:** B2B-портал + CRM для столярной мастерской (производство гробов)
-**Версия ядра:** v1.50
+**Версия ядра:** v1.51
 **Дата:** 07.10.2026
 **Статус:** этап 1 (портал, P1–P14) завершён 19.09.2026, этап 2 (CRM) начат слайсом C1
 **Владелец файла:** Sobol17 (тимлид и единственный разработчик)
@@ -11,6 +11,7 @@
 
 | Версия | Изменение |
 |---|---|
+| v1.51 | Контракт C13 по решениям владельца от 07.10.2026, дизайн в `docs/superpowers/specs/2026-10-07-crm-reports-design.md`. Раздел отчётов читает только руководитель: `reports.read` снят с `manager`. Новое действие `charity.manage`. `charity_transfers` получила `reversal_of_id`: ошибочное перечисление гасится строкой с минусом, перечислить больше остатка нельзя. Топик `report.export` удалён, выгрузки отчётов синхронные. Продажа это доставленная заявка контрагента по `delivered_at`. Оборачиваемость в штуках, в днях запаса. Новые `types/crm-reports.ts` и `validation/crm-reports.ts`, роуты `/crm/reports/*`. |
 | v1.50 | Контракт C15 по решениям владельца от 07.10.2026, дизайн в `docs/superpowers/specs/2026-10-07-pwa-web-push-design.md`. `push_subscriptions` получила `expired_at`: `notification.dispatch` ставит метку подписке, на которую сервис доставки ответил 404 или 410, `session.cleanup` удаляет помеченные строки. Подписка устройства принадлежит одному человеку: кто подписался на этом браузере последним, тому она и служит, прежний владелец на это устройство больше не получает; выход из приложения отписывает устройство. `LIVE_CHANNELS = ['push']`. Fanout создаёт строку `notifications` канала `push` только человеку с живой подпиской и только при активном шаблоне события, человеку без устройства строка не создаётся, лента пишется всем как раньше. Dispatch шлёт строку на все живые подписки человека: приняла хотя бы одна, строка `sent`; все мертвы или живых нет, строка `failed` с кодом `expired` без ретрая; шаблон выключен или сущность исчезла, `failed` с кодом `driver` без ретрая; ошибка сервиса или таймаут 10 секунд, `failed` с кодом `driver` и ретрай по бэкоффу. `notifications.error` начинается с кода причины (`expired` или `driver`), DTO отдаёт только код. `PushMessage.url` хранит путь без `ORIGIN`, `tag` равен `{eventKey}:{entityId}`, срок жизни пуша 4 часа, `urgency: high`, заголовок режется до 80 символов, текст до 200. В §8 добавлены `types/push.ts` и `validation/push.ts`. Новые роуты: `POST` и `DELETE /api/push/subscription` для любого вошедшего, `/crm/settings/notifications/templates` и `/crm/settings/notifications/log` по праву `settings.manage`. Шаблон один на пару «событие, канал» для обоих контуров, `subject` хранит заголовок пуша; правку пишет действие аудита `notifications.template.update`; тестовая отправка себе идёт мимо таблицы `notifications`. `PUSH_DRIVER=webpush` без ключей VAPID и контакта в `VAPID_SUBJECT` роняет запуск. У человека не больше десяти устройств, новая подписка вытесняет самую старую. При `PUSH_DRIVER=webpush` сервер принимает endpoint только на хостах сервисов доставки Chrome, Safari, Firefox и Edge. Dispatch шлёт на устройства человека параллельно, чтобы молчащий сервис стоил джобу одного таймаута. Отключение пуша на устройстве всегда отписывает браузер, даже если сервер недоступен. В §9 добавлен `InstallPrompt`. Матрицу `notification_rules` по-прежнему меняет сид |
 | v1.49 | Контракт C12 по решениям владельца от 06.10.2026. Почта из событий выведена: о событиях система сообщает колокольчиком в приложении и веб-пушем, письма остаются только под доступ, то есть временный пароль и восстановление пароля, и уходят через `MailDriver` напрямую, как раньше. Канал `email` убран из `NOTIFICATION_CHANNELS` и из enum-ов колонок `channel` четырёх таблиц уведомлений; SQLite хранит enum текстом, поэтому миграции нет, а строки старого канала в `notification_rules`, `notification_templates`, `user_notification_prefs` и `notifications` удаляет сид (`scripts/seed/legacy-email.ts`). Правила email в фикстуре матрицы заменены правилами `push` для тех же ролей. `LIVE_CHANNELS` пуст до C15: fanout пишет только ленту, строк `notifications` не создаёт, `notification.dispatch` отправляет строку неживого канала в `dead`. Фикстура шаблонов пуста, шаблоны push с переменными, предпросмотр, тестовую отправку и журнал отправок руководителя делает C15. Провайдер пушей это Web Push на VAPID через библиотеку `web-push` (§3), внешний сервис не подключаем. C15 переставлен в дорожной карте сразу за C12, раньше C13: на iOS пуш приходит только установленному приложению, поэтому PWA и пуш идут одним слайсом. Переходы `new -> in_work`, `new -> cancelled` и `new -> rejected` получили эффекты `emit:request.accepted`, `emit:request.cancelled` и `emit:request.rejected`, открытый пункт v1.19 закрыт. `notification.fanout` разворачивает каждое событие §7.3 и для людей мастерской: адресаты это активные учётные записи контура CRM, роль к событию человек держит без условий авторства, инициатор действия из адресатов не исключается. Заявка на склад в портал не пишет, мастерская получает её события по правилам, кроме `driver`: на экране доставки таких заявок нет. `stock.below_threshold` и `payroll.week_closed` идут только мастерской. Сигнал порога остаётся одним на позицию за всё время: ключ `fanout:{eventKey}:{entityId}` не меняется, повторное падение остатка видно подсветкой реестра C8; повторное закрытие переоткрытой недели по той же причине второй раз не уведомляет. Колокольчик появился в шапке CRM: `ContourShell` рисует сниппет `bell` в обоих контурах, фид `notification_feed` пишется и людям мастерской, счётчик пересчитывается на переходе между страницами, отметку прочтения принимает `POST /crm/notifications/read`. `NotificationFeedItemDto` получил `entityId` и `entityLabel` для событий склада и выплат; человеку мастерской заявка в ленте видна без забора контрагента. Строка ленты ведёт на `/crm/requests/{id}` при праве `request.read.any` и на `/crm/delivery` без него, событие склада на `/crm/stock/{id}`, событие выплат на `/crm/payroll`. Личный экран `/crm/notifications` по праву `crm.access`: лента событий и переключатели пар матрицы своих ролей; переключатель до C15 только хранит выбор. Экран руководителя `/crm/settings/notifications` по праву `settings.manage` показывает матрицу `notification_rules` на чтение, меняет её сид. `NotificationSettingsDto` потерял `email`. Компоненты ленты, переключателей и журнала переехали из `lib/portal/notifications` в `lib/notifications`, их делят оба контура. Новых действий аудита нет: личные настройки пишут прежний `notifications.prefs.update`. В §8 добавлен `lib/types/crm-notifications.ts`, экраны лежат в `src/lib/crm/notifications/`. Схема БД не менялась |
 | v1.48 | Контракт C10 по решению бизнеса от 05.10.2026. Оплата труда бригадная: в рабочем дне отмечают, кто работал и какие работы сделаны, сумма дня делится поровну между работавшими. Виды работ с ценой за единицу ведутся руками в таблице `work_types` («название работы, стоимость»); импорт и версии расценок выведены: убраны таблицы `work_rate_versions` и `work_rates`, топики `import.rates` и `payroll.calculate`, справочник `work_type` из `DICT_CODES`. Цена замораживается в записи работы: правка цены действует на новые записи, старые дни держат свою. Рабочий день один на дату: `work_days` уникален по `work_date`, состав дня лежит в `work_day_staff`, работы в `work_entries` (одна запись на вид работ в дне, `request_id` убран). Сумма дня `total_minor` равна сумме `qty × rate_minor`, доля работника `share_minor = floor(total / число работавших / 100) × 100`: доля округляется до целого рубля вниз, остаток остаётся у мастерской. День без работавших долю не имеет, работы без работавших сервер отклоняет; день без людей и без работ не хранится. Будущую дату отметить нельзя. «Скопировать прошлый день» переносит в пустой день состав работавших последнего отмеченного дня, работы не переносит. Неделя: `payroll.week_closing_day` это ISO-день недели, в который закрывают прошедшую неделю; период длится 7 дней и начинается в этот день недели в `org.timezone` (при 1 это понедельник–воскресенье). Строка `payroll_periods` создаётся первой записью дня или корректировки. Свод открытой недели считается на лету: дни работника, начислено (сумма долей его дней), корректировка, к выплате `accrued + adjustment`; корректировка со знаком, с обязательным комментарием, выплата не уходит в минус. Закрытие `open -> calculated` замораживает строки `payroll_lines` в своей транзакции и публикует `payroll.week_closed`; неделя без отмеченных дней и корректировок не закрывается. В `calculated` и `paid` дни, работы и корректировки не меняются: `ConflictError`. Переоткрытие `calculated -> open` требует комментарий и пишет `payroll.reopen`; период с отметкой выплаты не переоткрывается, сначала отметку снимают. Выплата отмечается по строке с суммой больше нуля в `calculated`; когда отмечены все такие строки, период становится `paid`; снятие отметки возвращает `calculated`. Ведомость недели отдаётся в XLSX синхронно. Отчёт за произвольные даты: по сотрудникам (дни, начислено) и по видам работ (количество, сумма), корректировки в него не входят. Раздел читают по `payroll.read`, меняют по `payroll.manage`; экраны `/crm/payroll` (неделя), `/crm/payroll/day/[date]`, `/crm/payroll/staff`, `/crm/payroll/works`, `/crm/payroll/reports`, `/crm/payroll/sheet.xlsx`. Чистая логика в `lib/domain/payroll/calc.ts`, код в `server/crm-payroll/`, типы в `lib/types/crm-payroll.ts`. Действия в `audit_log`: `staff.create`, `staff.update`, `staff.enable`, `staff.disable`, `work_type.create`, `work_type.update`, `work_type.enable`, `work_type.disable`, `payroll.day.save`, `payroll.adjust`, `payroll.close`, `payroll.reopen`, `payroll.pay`, `payroll.unpay`. Себестоимость варианта: право `catalog.cost.read` получил `manager`, `canSeeCost` истинен для `owner` и `manager`, оба видят и правят её в форме варианта C2 |
@@ -235,7 +236,8 @@ src/
     (crm)/                        контур мастерской, адреса /crm/*
       +layout.server.ts           guard: только роли CRM
       crm/
-        board/ , requests/ , catalog/ , counterparties/ , stock/ , payroll/ , reports/ , settings/
+        board/ , requests/ , catalog/ , counterparties/ , stock/ , payroll/ , settings/
+        reports/                  дашборд; sales/, stock/, funnel/, lost/, charity/, у каждого export.xlsx (v1.51)
         shop/                     цех: очередь выпуска позиций и наполнение заявок (v1.41)
         delivery/                 доставка: погрузка по строкам, «Доставлено», заявки в работе для плана (v1.43)
         notifications/            личная лента, переключатели и журнал; read/ отмечает прочтение (v1.49)
@@ -708,10 +710,12 @@ export const payrollLines = sqliteTable('payroll_lines', {
 ```ts
 export const charityTransfers = sqliteTable('charity_transfers', {
   id: pk(),
-  amountMinor: money('amount_minor'),
+  amountMinor: money('amount_minor'),              // negative on a reversal row
   transferredAt: ts('transferred_at').notNull(),
   documentRef: text('document_ref'),
   comment: text('comment'),
+  // Set on a row that cancels an earlier transfer; the original is never edited (v1.51).
+  reversalOfId: integer('reversal_of_id').references((): AnySQLiteColumn => charityTransfers.id),
   createdById: integer('created_by_id').notNull().references(() => users.id),
   createdAt: createdAt()
 });
@@ -927,7 +931,6 @@ export interface JobHandler<T> {
 | `notification.fanout` | `{ eventKey: EventKey, entityId: number }` | `fanout:{eventKey}:{entityId}` | Разворачивает событие в строки `notifications` по матрице ролей и личным настройкам и в строки `notification_feed` по одной на адресата |
 | `charity.recount` | `{ scope: string }` | `charity:{scope}:{requestId}` | Пересборка `charity_totals`, публикация в SSE-топик `charity` |
 | `stock.threshold.check` | `{ stockItemId: number }` | `threshold:{id}:{yyyymmdd}` | Сравнение остатка позиции (все цвета вместе) с порогом, событие `stock.below_threshold`; ставит движение, оставившее остаток ниже порога (v1.45) |
-| `report.export` | `{ reportKey: string, filters: object, userId: number }` | `report:{sha256(reportKey+filters+userId)}` | XLSX в `media`, уведомление автору |
 | `session.cleanup` | `{}` | `cleanup:{yyyymmdd}` | Удаление протухших сессий, токенов, мёртвых push-подписок |
 
 ### 7.3 Доменные события
@@ -1446,13 +1449,175 @@ export interface PayrollReportDto {
   worksTotalMinor: number; accruedTotalMinor: number;  // they differ by the rounding remainder
 }
 
+// crm-reports.ts — the owner's reports and the fund registry (C13, v1.51). Read by reports.read only.
+export const REPORT_MAX_DAYS = 366;
+export const REPORT_PRESETS = ['week', 'month', 'quarter', 'year'] as const;
+export const SALES_GROUPS = ['counterparty', 'model', 'period'] as const;
+export const SALES_BUCKETS = ['day', 'week', 'month'] as const;
+export const LOST_STATUSES = ['cancelled', 'rejected'] as const;
+export const FUNNEL_STAGES = ['new', 'in_work', 'ready', 'delivered', 'paid'] as const;
+export const CHARITY_TRANSFER_MAX_MINOR = 10_000_000_000; // 100 000 000 roubles
+export type SalesGroup = (typeof SALES_GROUPS)[number];
+export type SalesBucket = (typeof SALES_BUCKETS)[number];
+export type LostStatus = (typeof LOST_STATUSES)[number];
+export type FunnelStage = (typeof FUNNEL_STAGES)[number];
+
+/** 'YYYY-MM-DD' in org.timezone, both inclusive. */
+export interface ReportRangeDto {
+  from: string;
+  to: string;
+}
+
+export interface SalesTotalsDto {
+  requestCount: number;
+  qty: number;
+  itemsTotalMinor: number;
+  discountMinor: number;
+  totalMinor: number;
+  paidMinor: number; // paid so far on these requests
+}
+export interface SalesByCounterpartyRowDto extends SalesTotalsDto {
+  counterpartyId: number;
+  title: string;
+}
+export interface SalesByModelRowDto {
+  modelId: number;
+  title: string;
+  requestCount: number;
+  qty: number;
+  linesTotalMinor: number; // sum of line totals, before the request discount
+}
+export interface SalesByPeriodRowDto extends SalesTotalsDto {
+  bucketFrom: string;
+  bucketTo: string;
+}
+export type SalesRowsDto =
+  | { group: 'counterparty'; rows: SalesByCounterpartyRowDto[] }
+  | { group: 'model'; rows: SalesByModelRowDto[] }
+  | { group: 'period'; bucket: SalesBucket; rows: SalesByPeriodRowDto[] };
+export type SalesReportDto = SalesRowsDto & {
+  range: ReportRangeDto;
+  counterpartyId: number | null;
+  totals: SalesTotalsDto;
+};
+
+export interface StockTurnoverRowDto {
+  stockItemId: number;
+  optionId: number | null;
+  code: string;
+  title: string;
+  optionTitle: string | null;
+  unitTitle: string;
+  openingQty: number;
+  incomeQty: number;
+  outcomeQty: number;
+  closingQty: number;
+  shippedQty: number; // shipments net of their reversals
+  turnoverDays: number | null; // null when nothing was shipped
+}
+export interface StockTurnoverReportDto {
+  range: ReportRangeDto;
+  kind: StockKind | null;
+  rows: StockTurnoverRowDto[];
+}
+
+export interface FunnelStageDto {
+  stage: FunnelStage;
+  count: number;
+  shareOfPreviousBp: number | null; // null on the first stage and after an empty one
+  shareOfFirstBp: number | null;
+}
+export interface FunnelReportDto {
+  range: ReportRangeDto;
+  stages: FunnelStageDto[];
+  cancelledCount: number;
+  rejectedCount: number;
+}
+
+export interface LostRequestRowDto {
+  requestId: number;
+  number: string;
+  status: LostStatus;
+  at: string; // moment of the terminal transition
+  counterpartyId: number | null;
+  counterpartyTitle: string | null;
+  reasonTitle: string | null;
+  comment: string | null;
+  totalMinor: number;
+}
+export interface LostReasonRowDto {
+  reasonId: number | null;
+  title: string;
+  count: number;
+  totalMinor: number;
+}
+export interface LostReportDto {
+  range: ReportRangeDto;
+  status: LostStatus | null;
+  cancelledCount: number;
+  rejectedCount: number;
+  totalMinor: number;
+  reasons: LostReasonRowDto[];
+  page: Page<LostRequestRowDto>;
+}
+
+export interface CharityTransferDto {
+  id: number;
+  amountMinor: number;
+  transferredOn: string; // 'YYYY-MM-DD' in org.timezone
+  documentRef: string | null;
+  comment: string | null;
+  createdByName: string;
+  createdAt: string;
+  reversalOfId: number | null; // this row cancels another one
+  isReversed: boolean; // another row cancels this one
+}
+export interface CharityAccrualRowDto {
+  counterpartyId: number;
+  title: string;
+  requestCount: number;
+  amountMinor: number;
+}
+export interface CharityReportDto {
+  range: ReportRangeDto;
+  accruedAllMinor: number; // equals the banner's all-time figure
+  transferredAllMinor: number;
+  remainderMinor: number;
+  accruedInRangeMinor: number;
+  transferredInRangeMinor: number;
+  accruals: CharityAccrualRowDto[];
+  transfers: Page<CharityTransferDto>;
+  canManage: boolean;
+}
+
+export interface DashboardDto {
+  range: ReportRangeDto;
+  sales: SalesTotalsDto;
+  debtMinor: number; // current debt of all counterparties
+  statusCounts: Record<Exclude<RequestStatus, 'draft'>, number>; // as of now
+  payrollAccruedMinor: number; // accrued to the crew for days of the range
+  charityAccruedInRangeMinor: number;
+  charityRemainderMinor: number;
+  belowThresholdCount: number;
+  topCounterparties: SalesByCounterpartyRowDto[]; // five by totalMinor
+  topModels: SalesByModelRowDto[]; // five by linesTotalMinor
+}
+// validation/crm-reports.ts
+// reportRangeSchema            = object({ from, to }): 'YYYY-MM-DD', from <= to, not longer than REPORT_MAX_DAYS
+// salesReportSchema            = range + { group: SalesGroup = 'counterparty', bucket: SalesBucket = 'month', counterpartyId?: id }
+// stockTurnoverSchema          = range + { kind?: StockKind }
+// lostReportSchema             = range + { status?: LostStatus }; the registry page comes from parseListQuery
+// charityTransferSchema        = object({ amountMinor: 1..CHARITY_TRANSFER_MAX_MINOR, transferredOn, documentRef?: ..100, comment?: ..500 })
+// charityTransferReverseSchema = object({ transferId: id, comment: 1..500 })
+// The fund report takes reportRangeSchema; the service refuses a transfer dated after today in org.timezone.
+
 // money.ts — branded type, blocks accidental mixing with plain numbers
 export type Minor = number & { readonly __brand: 'minor' };
 
 // dicts.ts
 export const DICT_CODES = ['material','finish','fabric','hardware','unit','refusal_reason','stock_move_reason','transport'] as const;
 export const STOCK_MOVE_TYPES = ['production','shipment','adjustment','inventory','reversal','purchase'] as const;
-export const JOB_TOPICS = ['notification.dispatch','notification.fanout','charity.recount','stock.threshold.check','report.export','session.cleanup'] as const;
+export const JOB_TOPICS = ['notification.dispatch','notification.fanout','charity.recount','stock.threshold.check','session.cleanup'] as const;
 ```
 
 ### 8.1 Проекции по ролям
@@ -1587,7 +1752,7 @@ CD нет. Мёрдж в `main` ничего не разворачивает, с
 Требования обязательны к каждому слайсу, не выносятся в отдельную задачу «сделать безопасность в конце».
 
 - **Аутентификация.** Пароли argon2id (`memoryCost >= 19456`, `timeCost >= 2`). Сессия на сервере, в куку кладём случайный идентификатор, в БД его хеш. Кука `httpOnly`, `secure`, `sameSite=lax`, срок 30 дней с продлением. Смена пароля и блокировка убивают все сессии пользователя.
-- **Права.** Проверка на сервере на каждое действие и каждый переход статуса, а не только на отрисовку экрана. Единая точка: `PolicyService.can(actor, action, subject)`. Скрытие кнопки в UI защитой не считается.
+- **Права.** Проверка на сервере на каждое действие и каждый переход статуса, а не только на отрисовку экрана. Единая точка: `PolicyService.can(actor, action, subject)`. Скрытие кнопки в UI защитой не считается. Раздел отчётов читает только `owner` по `reports.read`; перечисление в фонд и его сторно пишутся по `charity.manage`, оно тоже только у `owner` (v1.51).
 - **Row-level.** Каждый репозиторий портального домена принимает `counterpartyId` из `ActorContext` и подмешивает его в `where`. Метод без этого фильтра не проходит ревью. Работник мастерской без `request.read.any` видит заявки только в статусах, из которых его роль делает переход (v1.42). Экран доставки по праву `delivery.work` показывает заявки контрагентов в `ready` и, только на чтение, в `in_work` (v1.43).
 - **Цены.** Роль `cp_employee` не получает ценовые поля из БД. Проверяется e2e-тестом на теле ответа, а не глазами.
 - **ПДн третьего лица.** `requests.deceased_name` видно всем, кому видна заявка, но не подставляется в шаблоны уведомлений и не уходит в SSE (v1.33).
@@ -1838,7 +2003,7 @@ CONTRACT GAP
 **C15. PWA и Web Push** (бывший K6, перенесён в v1.8, идёт сразу за C12 с v1.49, контракт v1.50). `manifest.webmanifest` с иконками и shortcuts, регистрация push-only service worker по §17, обработчики `push` и `notificationclick`, кнопка установки и инструкция для iOS. Реальный драйвер Web Push на VAPID-ключах, подписки в `push_subscriptions`, канал push в матрице уведомлений портала и CRM, шаблоны push с переменными по событию (§7.3), их правка, предпросмотр и тестовая отправка себе, журнал отправок всех людей для руководителя, push водителю при переходе в `ready`, отзыв протухших подписок джобом `session.cleanup`. Кеширование, офлайн-фолбэк и фоновая синхронизация не делаются.
 **DoD:** приложение ставится на домашний экран Android и iOS и открывается в standalone-режиме, водитель получает push в момент готовности и открывает карточку заявки из уведомления, Cache Storage пуст.
 
-**C13. Отчёты и аналитика.** Дашборд руководителя, продажи по контрагентам, моделям и периодам, складские движения и оборачиваемость, выплаты, воронка заявок, отменённые и отклонённые заявки, отчёт по благотворительности с реестром перечислений и остатком «начислено, но не перечислено», фильтры и экспорт.
+**C13. Отчёты и аналитика (контракт v1.51).** Дашборд руководителя, продажи по контрагентам, моделям и периодам, складские движения и оборачиваемость, выплаты, воронка заявок, отменённые и отклонённые заявки, отчёт по благотворительности с реестром перечислений и остатком «начислено, но не перечислено», фильтры и экспорт. Раздел видит только руководитель, перечисление гасится сторно, выгрузка синхронная.
 **DoD:** руководитель получает цифры за период без выгрузки в Excel вручную, сумма на баннере сходится с отчётом.
 
 **C14. Стабилизация и приёмка.** Сквозное e2e по всем семи ролям, нагрузочная проверка реестров на 10 тыс. заявок и 50 тыс. движений, аудит безопасности (права на переходы, прямые ссылки, сокрытие цен, загрузка файлов), правки UX по итогам пилота, инструкции по ролям, первичное наполнение справочников, каталога и видов работ. Стенд разворачивается по `docs/deploy.md` (v1.21).

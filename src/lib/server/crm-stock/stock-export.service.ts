@@ -13,8 +13,8 @@ import type { StockJournalFilters } from '$lib/validation/crm-stock';
 export const XLSX_MIME = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
 
 /**
- * The registry and the journal of an item as sheets (C8). Built on the click, like the registry of
- * requests: the queued `report.export` belongs to the reports of C13.
+ * The registry and the journal of an item as sheets (C8).
+ * Built on the click: exports are synchronous, there is no export job (tech.md v1.51).
  */
 export class StockExportService extends StockBaseService {
 	constructor(

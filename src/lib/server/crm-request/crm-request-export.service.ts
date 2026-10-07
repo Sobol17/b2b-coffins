@@ -13,8 +13,8 @@ import { fromMinor, roundHalfUp } from '$lib/utils/money';
 export const XLSX_MIME = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
 
 /**
- * The registry of the workshop as a sheet (C4). Built on the click, like the price list: the query
- * already caps the rows, and the queued `report.export` belongs to the reports of C13.
+ * The registry of the workshop as a sheet (C4). The query already caps the rows.
+ * Built on the click: exports are synchronous, there is no export job (tech.md v1.51).
  */
 export class CrmRequestExportService extends CrmRequestBaseService {
 	constructor(
