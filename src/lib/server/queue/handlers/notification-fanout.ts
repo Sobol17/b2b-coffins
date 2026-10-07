@@ -3,6 +3,7 @@ import type { Tx } from '../../db/client';
 import { NotificationFeedRepository } from '../../notifications/notification-feed.repository';
 import { NotificationRuleRepository } from '../../notifications/notification-rule.repository';
 import { NotificationRepository, type Person } from '../../notifications/notification.repository';
+import { PushSubscriptionRepository } from '../../notifications/push-subscription.repository';
 import { SettingsRepository } from '../../settings/settings.repository';
 import { defineHandler } from '../job-handler';
 import { Queue } from '../queue';
@@ -23,6 +24,7 @@ import { notificationsEnabledSchema } from '$lib/validation/settings';
 export interface FanoutDeps {
 	readonly rules: NotificationRuleRepository;
 	readonly notifications: NotificationRepository;
+	readonly subscriptions: Pick<PushSubscriptionRepository, 'hasLive'>;
 	readonly isEnabled: () => boolean;
 	readonly feed?: NotificationFeedRepository;
 }
@@ -38,11 +40,18 @@ interface Occurrence {
 	readonly entityId: number;
 }
 
+/** What one event needs to know once, whoever it is told to. */
+interface Plan {
+	readonly rules: readonly RoleRule[];
+	readonly hasPushText: boolean;
+}
+
 /**
  * `notification.fanout` of tech.md 7.2: turns one event into the in-app feed row of every
  * addressee and into `notifications` rows by the role matrix and personal settings, with one
- * dispatch queued per channel row in the same transaction. Portal people hear about the requests
- * of their counterparty, workshop people about every event of tech.md 7.3 (v1.49).
+ * dispatch queued per channel row in the same transaction. A push row goes only to a person with
+ * a live device (v1.50). Portal people hear about the requests of their counterparty, workshop
+ * people about every event of tech.md 7.3 (v1.49).
  */
 export function createNotificationFanoutHandler(deps: FanoutDeps) {
 	const feed = deps.feed ?? new NotificationFeedRepository();
@@ -55,8 +64,11 @@ export function createNotificationFanoutHandler(deps: FanoutDeps) {
 				return;
 			}
 			const counts = withTransaction((tx) => {
-				const rules = deps.rules.rules(event.eventKey, tx);
-				return addresseesOf(event, tx).map((addressee) => fanOutTo(addressee, event, rules, tx));
+				const plan = {
+					rules: deps.rules.rules(event.eventKey, tx),
+					hasPushText: deps.rules.activeTemplate(event.eventKey, 'push', tx) !== undefined
+				};
+				return addresseesOf(event, tx).map((addressee) => fanOutTo(addressee, event, plan, tx));
 			});
 			const created = counts.reduce((sum, count) => sum + count, 0);
 			ctx.logger.info({ ...event, people: counts.length, created }, 'notification fanout done');
@@ -90,7 +102,7 @@ export function createNotificationFanoutHandler(deps: FanoutDeps) {
 	function fanOutTo(
 		{ person, roles }: Addressee,
 		{ eventKey, entityId }: Occurrence,
-		rules: readonly RoleRule[],
+		{ rules, hasPushText }: Plan,
 		tx: Tx
 	): number {
 		// The feed is a mirror of events, not a channel: personal switches do not reach it (v1.33).
@@ -106,6 +118,9 @@ export function createNotificationFanoutHandler(deps: FanoutDeps) {
 		let created = 0;
 		for (const channel of LIVE_CHANNELS) {
 			if (!receives(choices, eventKey, channel)) continue;
+			// A push nobody can receive is not a delivery: without a device or a text there is no row.
+			const reachable = hasPushText && deps.subscriptions.hasLive(person.userId, tx);
+			if (channel === 'push' && !reachable) continue;
 			const key = { eventKey, entityId, userId: person.userId, channel };
 			// A rerun after a crash between commit and `done` must not notify the person twice.
 			if (deps.notifications.exists(key, tx)) continue;
@@ -120,6 +135,7 @@ export function createNotificationFanoutHandler(deps: FanoutDeps) {
 export const notificationFanoutHandler = createNotificationFanoutHandler({
 	rules: new NotificationRuleRepository(),
 	notifications: new NotificationRepository(),
+	subscriptions: new PushSubscriptionRepository(),
 	isEnabled: () => {
 		const parsed = notificationsEnabledSchema.safeParse(
 			new SettingsRepository().findValue('notifications.enabled')

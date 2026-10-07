@@ -213,11 +213,11 @@ describe('NotificationMatrixService (C12)', () => {
 			roleCode: 'manager',
 			channel: 'push',
 			enabled: true,
-			isLive: false
+			isLive: true
 		});
 		expect(cells.every((cell) => cell.channel === 'push' || cell.channel === 'max')).toBe(true);
-		// No channel has a driver before C15.
-		expect(cells.some((cell) => cell.isLive)).toBe(false);
+		// Push has a driver since C15, the MAX bot waits for C16.
+		expect(cells.every((cell) => cell.isLive === (cell.channel === 'push'))).toBe(true);
 	});
 
 	it('refuses everybody but the owner', () => {

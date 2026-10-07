@@ -1,6 +1,11 @@
 import pino from 'pino';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { jobQueue, passwordResetTokens, sessions } from '../../src/lib/server/db/schema';
+import {
+	jobQueue,
+	passwordResetTokens,
+	pushSubscriptions,
+	sessions
+} from '../../src/lib/server/db/schema';
 import { sessionCleanupHandler } from '../../src/lib/server/queue/handlers/session-cleanup';
 import { dailyCleanupScheduler } from '../../src/lib/server/queue/runtime';
 import { insertUser, migratedDatabase } from './helpers/db';
@@ -29,28 +34,40 @@ function seedAuthRows(): void {
 			{ userId, tokenHash: 'usable', expiresAt: new Date(now.getTime() + hour) }
 		])
 		.run();
+	db.insert(pushSubscriptions)
+		.values([
+			{ userId, endpoint: 'https://push.example/gone', p256dh: 'k', auth: 'a', expiredAt: now },
+			{ userId, endpoint: 'https://push.example/alive', p256dh: 'k', auth: 'a' }
+		])
+		.run();
 }
 
 function snapshot() {
 	return {
 		sessions: db.select({ id: sessions.id }).from(sessions).all(),
-		tokens: db.select({ hash: passwordResetTokens.tokenHash }).from(passwordResetTokens).all()
+		tokens: db.select({ hash: passwordResetTokens.tokenHash }).from(passwordResetTokens).all(),
+		devices: db.select({ endpoint: pushSubscriptions.endpoint }).from(pushSubscriptions).all()
 	};
 }
 
 beforeEach(() => {
 	db.delete(sessions).run();
 	db.delete(passwordResetTokens).run();
+	db.delete(pushSubscriptions).run();
 	db.delete(jobQueue).run();
 });
 
 describe('session.cleanup', () => {
-	it('removes expired sessions and spent tokens and keeps live ones', async () => {
+	it('removes expired sessions, spent tokens and dead push devices and keeps live ones', async () => {
 		seedAuthRows();
 
 		await sessionCleanupHandler.run({}, ctx);
 
-		expect(snapshot()).toEqual({ sessions: [{ id: 'alive' }], tokens: [{ hash: 'usable' }] });
+		expect(snapshot()).toEqual({
+			sessions: [{ id: 'alive' }],
+			tokens: [{ hash: 'usable' }],
+			devices: [{ endpoint: 'https://push.example/alive' }]
+		});
 	});
 
 	it('gives exactly one effect when the same payload runs twice', async () => {

@@ -5,8 +5,8 @@ import type { Page } from './list';
 // Mail is not a channel since v1.49: it carries access letters only, events go to the bell and push.
 export const NOTIFICATION_CHANNELS = ['push', 'max'] as const;
 export type NotificationChannel = (typeof NOTIFICATION_CHANNELS)[number];
-/** Channels a driver sends over today: none. Push joins in C15, the MAX bot in C16. */
-export const LIVE_CHANNELS: readonly NotificationChannel[] = [];
+/** Channels a driver sends over today (v1.50). The MAX bot joins in C16. */
+export const LIVE_CHANNELS: readonly NotificationChannel[] = ['push'];
 export const NOTIFICATION_STATUSES = ['queued', 'sent', 'failed'] as const;
 export type NotificationStatus = (typeof NOTIFICATION_STATUSES)[number];
 
