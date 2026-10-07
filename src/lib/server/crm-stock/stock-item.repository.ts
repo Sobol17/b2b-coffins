@@ -33,7 +33,7 @@ export interface StockItemPatch {
 const BALANCE = sql<number>`coalesce((select sum(m.qty) from stock_moves m where m.stock_item_id = stock_items.id), 0)`;
 // One colour in the red is enough, the sum over colours could hide it (tech.md v1.45).
 const IS_NEGATIVE = sql<number>`exists (select 1 from stock_moves m where m.stock_item_id = stock_items.id group by m.option_id having sum(m.qty) < 0)`;
-const BELOW_THRESHOLD = sql`(stock_items.min_threshold > 0 and ${BALANCE} < stock_items.min_threshold)`;
+export const BELOW_THRESHOLD = sql`(stock_items.min_threshold > 0 and ${BALANCE} < stock_items.min_threshold)`;
 
 const COLUMNS = {
 	id: stockItems.id,
