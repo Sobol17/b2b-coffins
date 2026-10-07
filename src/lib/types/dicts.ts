@@ -25,7 +25,6 @@ export const JOB_TOPICS = [
 	'notification.fanout',
 	'charity.recount',
 	'stock.threshold.check',
-	'report.export',
 	'session.cleanup'
 ] as const;
 export type JobTopic = (typeof JOB_TOPICS)[number];

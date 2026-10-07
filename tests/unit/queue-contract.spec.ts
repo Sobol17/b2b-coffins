@@ -8,7 +8,6 @@ const DOCUMENTED = {
 	'notification.fanout': { eventKey: 'request.submitted', entityId: 7 },
 	'charity.recount': { scope: 'year:2026' },
 	'stock.threshold.check': { stockItemId: 4 },
-	'report.export': { reportKey: 'sales', filters: { year: 2026 }, userId: 2 },
 	'session.cleanup': {}
 } as const;
 

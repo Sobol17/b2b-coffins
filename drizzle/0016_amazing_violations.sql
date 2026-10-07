@@ -1,0 +1,1 @@
+ALTER TABLE `charity_transfers` ADD `reversal_of_id` integer REFERENCES charity_transfers(id);

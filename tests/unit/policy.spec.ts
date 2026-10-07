@@ -58,3 +58,12 @@ describe('PolicyService, the single point of permission checks', () => {
 		expect(PolicyService.canSeePrices([])).toBe(false);
 	});
 });
+
+describe('reports and the fund (C13, tech.md v1.51)', () => {
+	it('opens the reports to the owner only', () => {
+		for (const role of ROLE_CODES) {
+			expect(PolicyService.can({ roles: [role] }, 'reports.read')).toBe(role === 'owner');
+			expect(PolicyService.can({ roles: [role] }, 'charity.manage')).toBe(role === 'owner');
+		}
+	});
+});

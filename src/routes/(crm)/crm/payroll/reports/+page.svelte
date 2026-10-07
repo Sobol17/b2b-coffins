@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { resolve } from '$app/paths';
-	import ReportTable from '$lib/crm/payroll/ReportTable.svelte';
+	import ReportTable from '$lib/crm/ReportTable.svelte';
 	import { roubles } from '$lib/crm/payroll/labels';
 	import {
 		Breadcrumbs,

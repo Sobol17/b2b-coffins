@@ -1,4 +1,5 @@
 import {
+	type AnySQLiteColumn,
 	index,
 	integer,
 	primaryKey,
@@ -19,6 +20,8 @@ export const charityTransfers = sqliteTable('charity_transfers', {
 	transferredAt: ts('transferred_at').notNull(),
 	documentRef: text('document_ref'),
 	comment: text('comment'),
+	// Set on a row that cancels an earlier transfer; the original is never edited (tech.md v1.51).
+	reversalOfId: integer('reversal_of_id').references((): AnySQLiteColumn => charityTransfers.id),
 	createdById: integer('created_by_id')
 		.notNull()
 		.references(() => users.id),

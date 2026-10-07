@@ -19,8 +19,8 @@ export interface PriceListLine {
 export const PRICE_LIST_MIME = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
 
 /**
- * Personal price list of a counterparty as XLSX (P3). The sheet is small and built on request:
- * the queued `report.export` job is for reports that take longer than a click.
+ * Personal price list of a counterparty as XLSX (P3).
+ * Built on the click: exports are synchronous, there is no export job (tech.md v1.51).
  */
 export class PriceListExportService extends BaseService {
 	constructor(

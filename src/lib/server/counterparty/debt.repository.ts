@@ -48,6 +48,18 @@ export class DebtRepository extends BaseRepository<typeof requests> {
 		return debts;
 	}
 
+	/** What all counterparties owe together: the tile of the owner's dashboard (C13). */
+	total(tx?: Tx): number {
+		const { paid, rest } = this.rest(tx);
+		const [row] = this.db(tx)
+			.select({ debtMinor: sql<number>`coalesce(sum(${rest}), 0)` })
+			.from(requests)
+			.leftJoin(paid, eq(paid.requestId, requests.id))
+			.where(inArray(requests.status, [...DEBT_STATUSES]))
+			.all();
+		return row?.debtMinor ?? 0;
+	}
+
 	/** `counterparties.id` of those who owe something: the "with debt" filter of the registry. */
 	debtorsWhere(tx?: Tx): SQL {
 		const { paid, rest } = this.rest(tx);
