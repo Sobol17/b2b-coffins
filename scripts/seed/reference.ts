@@ -86,7 +86,7 @@ export function seedNotificationRules(db: Db): number {
 export function seedNotificationTemplates(db: Db): number {
 	const rows = loadFixture('notification-templates.json', z.array(notificationTemplateFixture));
 	for (const row of rows) {
-		// Operator-owned after the first run, like settings: C12 edits the texts in the CRM.
+		// Operator-owned after the first run, like settings: the owner edits the texts in the CRM.
 		db.insert(notificationTemplates).values(row).onConflictDoNothing().run();
 	}
 	return rows.length;

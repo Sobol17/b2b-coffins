@@ -1,1 +1,62 @@
-[]
+[
+	{
+		"eventKey": "request.submitted",
+		"channel": "push",
+		"subject": "Новая заявка {{number}}",
+		"body": "Заказчик: {{counterparty}}"
+	},
+	{
+		"eventKey": "request.accepted",
+		"channel": "push",
+		"subject": "Заявка {{number}} принята",
+		"body": "Мастерская взяла заявку в работу"
+	},
+	{
+		"eventKey": "request.ready",
+		"channel": "push",
+		"subject": "Заявка {{number}} готова",
+		"body": "Изделия готовы к выдаче"
+	},
+	{
+		"eventKey": "request.delivered",
+		"channel": "push",
+		"subject": "Заявка {{number}} доставлена",
+		"body": "Водитель передал изделия"
+	},
+	{
+		"eventKey": "request.cancelled",
+		"channel": "push",
+		"subject": "Заявка {{number}} отменена",
+		"body": "Заказчик: {{counterparty}}"
+	},
+	{
+		"eventKey": "request.rejected",
+		"channel": "push",
+		"subject": "Заявка {{number}} отклонена",
+		"body": "Мастерская не приняла заявку"
+	},
+	{
+		"eventKey": "request.payment_marked",
+		"channel": "push",
+		"subject": "Оплата по заявке {{number}}",
+		"body": "Мастерская отметила платёж"
+	},
+	{
+		"eventKey": "request.paid",
+		"channel": "push",
+		"subject": "Заявка {{number}} оплачена",
+		"body": "Оплата покрыла всю сумму"
+	},
+	{
+		"eventKey": "stock.below_threshold",
+		"channel": "push",
+		"subject": "Остаток ниже порога",
+		"body": "{{item}}: {{balance}} {{unit}}, порог {{threshold}}"
+	},
+	{
+		"eventKey": "payroll.week_closed",
+		"channel": "push",
+		"subject": "Неделя закрыта",
+		"body": "Ведомость за {{period}} готова к выплате"
+	}
+]
