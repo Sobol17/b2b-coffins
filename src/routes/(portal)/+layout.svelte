@@ -1,12 +1,21 @@
 <script lang="ts">
 	import { resolve } from '$app/paths';
 	import NotificationBell from '$lib/notifications/NotificationBell.svelte';
+	import { leaveOnLogout, pushStateFor } from '$lib/notifications/push-state.svelte';
 	import { portalFeedHref } from '$lib/portal/feed-href';
 	import HeaderSearch from '$lib/portal/search/HeaderSearch.svelte';
 	import ContourShell from '$lib/ui/ContourShell.svelte';
 	import type { LayoutProps } from './$types';
 
 	let { data, children }: LayoutProps = $props();
+
+	const push = $derived(pushStateFor(data.push.publicKey));
+
+	// On every app open: a subscription iOS re-issued after a pause is sent again without a tap.
+	$effect(() => {
+		// A failed sync leaves the toggle off; the person can still enable push by hand.
+		push.sync().catch(() => undefined);
+	});
 
 	// Only routes that exist: Заявки arrive with P6 (tech.md 18.5).
 	const links = [
@@ -22,6 +31,8 @@
 			.join(' · ');
 	});
 </script>
+
+<svelte:document onsubmit={(event) => void leaveOnLogout(event, push)} />
 
 <ContourShell
 	variant="portal"

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import PushBanner from '$lib/notifications/PushBanner.svelte';
 	import ProductionQueue from '$lib/crm/shop/ProductionQueue.svelte';
 	import RequestFill from '$lib/crm/shop/RequestFill.svelte';
 	import { Button, Input, InstallPrompt } from '$lib/ui';
@@ -12,6 +13,7 @@
 
 <div class="mx-auto flex w-full max-w-6xl flex-col gap-6">
 	<InstallPrompt />
+	<PushBanner publicKey={data.push.publicKey} />
 	<div>
 		<h1 class="mb-2 text-3xl">Цех</h1>
 		<p class="max-w-2xl text-fg-muted">

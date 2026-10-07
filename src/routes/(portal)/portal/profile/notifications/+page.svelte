@@ -1,4 +1,5 @@
 <script lang="ts">
+	import PushToggle from '$lib/notifications/PushToggle.svelte';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
@@ -59,6 +60,12 @@
 					по всем заявкам агентства, сотрудник только по своим.
 				</p>
 			</div>
+
+			<Card.Root>
+				<Card.Content>
+					<PushToggle publicKey={data.push.publicKey} />
+				</Card.Content>
+			</Card.Root>
 
 			<Card.Root>
 				<Card.Content>

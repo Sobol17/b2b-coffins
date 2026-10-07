@@ -1,4 +1,5 @@
 <script lang="ts">
+	import PushBanner from '$lib/notifications/PushBanner.svelte';
 	import PlannedStop from '$lib/crm/delivery/PlannedStop.svelte';
 	import ReadyStop from '$lib/crm/delivery/ReadyStop.svelte';
 	import { Card, EmptyState, InstallPrompt } from '$lib/ui';
@@ -11,6 +12,7 @@
 
 <div class="mx-auto flex w-full max-w-6xl flex-col gap-6">
 	<InstallPrompt />
+	<PushBanner publicKey={data.push.publicKey} />
 	<div>
 		<h1 class="mb-2 text-3xl">Доставка</h1>
 		<p class="max-w-2xl text-fg-muted">
