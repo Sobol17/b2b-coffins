@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { FakePushDriver } from '../../src/lib/server/notifications/drivers/push';
+import { FakePushDriver, PushGoneError } from '../../src/lib/server/notifications/drivers/push';
 
 const target = { endpoint: 'https://push.example/sub/1', p256dh: 'key', auth: 'secret' };
 const message = {
@@ -44,6 +44,15 @@ describe('fake push driver', () => {
 		driver.failOnce();
 
 		await expect(driver.send(target, message)).rejects.toThrow('failure');
+		await driver.send(target, message);
+
+		expect(driver.sent).toHaveLength(1);
+	});
+
+	it('reports a gone subscription once on request', async () => {
+		driver.goneOnce();
+
+		await expect(driver.send(target, message)).rejects.toBeInstanceOf(PushGoneError);
 		await driver.send(target, message);
 
 		expect(driver.sent).toHaveLength(1);

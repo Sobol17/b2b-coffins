@@ -25,11 +25,34 @@ const envSchema = z
 	})
 	.superRefine((env, issues) => {
 		// Real mail without a server or a sender fails every job later; better to refuse the boot.
-		if (env.MAIL_DRIVER !== 'smtp') return;
-		for (const key of ['SMTP_HOST', 'MAIL_FROM'] as const) {
-			if (env[key] === '') {
-				issues.addIssue({ code: 'custom', path: [key], message: 'required when MAIL_DRIVER=smtp' });
+		if (env.MAIL_DRIVER === 'smtp') {
+			for (const key of ['SMTP_HOST', 'MAIL_FROM'] as const) {
+				if (env[key] === '') {
+					issues.addIssue({
+						code: 'custom',
+						path: [key],
+						message: 'required when MAIL_DRIVER=smtp'
+					});
+				}
 			}
+		}
+		if (env.PUSH_DRIVER !== 'webpush') return;
+		for (const key of ['VAPID_PUBLIC_KEY', 'VAPID_PRIVATE_KEY'] as const) {
+			if (env[key] === '') {
+				issues.addIssue({
+					code: 'custom',
+					path: [key],
+					message: 'required when PUSH_DRIVER=webpush'
+				});
+			}
+		}
+		// A push service may write to this contact, and Apple refuses a push without a real one.
+		if (!/^(mailto:.+@.+|https:\/\/.+)/.test(env.VAPID_SUBJECT)) {
+			issues.addIssue({
+				code: 'custom',
+				path: ['VAPID_SUBJECT'],
+				message: 'a mailto: address or an https URL is required when PUSH_DRIVER=webpush'
+			});
 		}
 	});
 
