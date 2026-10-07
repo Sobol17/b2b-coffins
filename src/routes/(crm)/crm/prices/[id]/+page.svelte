@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import { resolve } from '$app/paths';
-	import { Button, Card, MoneyInput, Select, withToast } from '$lib/ui';
+	import { Breadcrumbs, Button, Card, MoneyInput, Select, withToast } from '$lib/ui';
 	import { formatMinor } from '$lib/utils/format';
 	import type { PageProps } from './$types';
 
@@ -17,10 +17,10 @@
 <svelte:head><title>{data.list.title} · CRM</title></svelte:head>
 
 <div class="mx-auto flex w-full max-w-5xl flex-col gap-6">
-	<div>
-		<a href={resolve('/crm/prices')} class="text-sm text-link">← Прайсы и скидки</a>
-		<h1 class="mt-2 text-3xl">{data.list.title}</h1>
-	</div>
+	<Breadcrumbs
+		items={[{ label: 'Прайсы и скидки', href: resolve('/crm/prices') }, { label: data.list.title }]}
+	/>
+	<h1 class="text-3xl">{data.list.title}</h1>
 	<Card.Root
 		><Card.Content class="flex flex-col gap-4">
 			<h2 class="text-2xl">Цена варианта</h2>

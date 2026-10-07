@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { login, logout } from './fixtures';
+import { crmNavLink, login, logout } from './fixtures';
 
 /**
  * The newest journal entry of one action. Filters live in the url (FilterBar), so the spec opens
@@ -18,7 +18,7 @@ test.describe('the owner runs the workshop without a developer (C1)', () => {
 		// global-setup disables e2e.* accounts, so earlier runs leave nothing active behind.
 		const email = `e2e.crm.${Date.now()}@workshop.example`;
 		await login(page, 'owner');
-		await page.getByRole('link', { name: 'Пользователи' }).click();
+		await crmNavLink(page, 'Пользователи').click();
 		await expect(page).toHaveURL('/crm/settings/users');
 
 		await page.getByRole('button', { name: 'Добавить пользователя' }).click();
@@ -70,7 +70,7 @@ test.describe('the owner runs the workshop without a developer (C1)', () => {
 
 	test('changes a setting and sees the old and the new value in the journal', async ({ page }) => {
 		await login(page, 'owner');
-		await page.getByRole('link', { name: 'Настройки' }).click();
+		await crmNavLink(page, 'Настройки').click();
 		const form = page.getByTestId('staff-limit-form');
 		const field = form.locator('input[name="staffLimitDefault"]');
 		const before = await field.inputValue();
@@ -112,8 +112,8 @@ test.describe('owner sections stay closed to everyone else', () => {
 
 	test('a manager sees no owner links and gets 403 on a direct link', async ({ page }) => {
 		await login(page, 'manager');
-		await expect(page.getByRole('link', { name: 'Пользователи' })).toHaveCount(0);
-		await expect(page.getByRole('link', { name: 'Журнал' })).toHaveCount(0);
+		await expect(crmNavLink(page, 'Пользователи')).toHaveCount(0);
+		await expect(crmNavLink(page, 'Журнал')).toHaveCount(0);
 		for (const path of SECTIONS) {
 			expect((await page.goto(path))?.status(), path).toBe(403);
 		}

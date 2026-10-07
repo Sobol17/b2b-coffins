@@ -1,4 +1,4 @@
-import type { Page } from '@playwright/test';
+import { expect, type Page } from '@playwright/test';
 
 /** Same credentials the seed writes, so e2e and dev never drift onto different data. */
 export const ACCOUNTS = {
@@ -49,7 +49,19 @@ export async function login(page: Page, role: RoleKey): Promise<void> {
 	await page.waitForURL(HOME_BY_SCOPE[account.scope]);
 }
 
-/** The portal logs out from the profile side menu, the CRM from its header. */
+/** A section link of the CRM sidebar. The home tiles carry the same names, so the scope matters. */
+export const crmNavLink = (page: Page, name: string) =>
+	page.getByRole('navigation', { name: 'Разделы' }).getByRole('link', { name, exact: true });
+
+/** On a phone the sections sit in a sheet. The click is retried until hydration wires the button. */
+export async function openCrmMenu(page: Page): Promise<void> {
+	await expect(async () => {
+		await page.getByRole('button', { name: 'Меню разделов' }).click();
+		await expect(page.getByRole('navigation', { name: 'Разделы' })).toBeVisible({ timeout: 1000 });
+	}).toPass();
+}
+
+/** The portal logs out from the profile side menu, the CRM from its sidebar. */
 export async function logout(page: Page): Promise<void> {
 	if (new URL(page.url()).pathname.startsWith('/portal')) await page.goto('/portal/profile');
 	await page.click('button:has-text("Выйти")');

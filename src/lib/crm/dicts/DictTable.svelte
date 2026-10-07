@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
-	import { Button, DataTable, TONE_CLASS, withToast, type DataTableColumn } from '$lib/ui';
+	import EntityList from '$lib/crm/EntityList.svelte';
+	import { Button, TONE_CLASS, withToast } from '$lib/ui';
 	import type { DictItemDto } from '$lib/types/crm';
 	import type { ListQuery } from '$lib/types/list';
 
@@ -17,55 +18,44 @@
 		onQueryChange: (next: ListQuery) => void;
 		onEdit: (item: DictItemDto) => void;
 	} = $props();
-
-	const columns: DataTableColumn[] = [
-		{ key: 'title', label: 'Название', sortable: true },
-		{ key: 'code', label: 'Код', sortable: true },
-		{ key: 'sortOrder', label: 'Порядок', sortable: true },
-		{ key: 'isActive', label: 'Статус' },
-		{ key: 'actions', label: 'Действия', align: 'end' }
-	];
 </script>
 
-<DataTable {columns} {rows} {total} {query} {onQueryChange} emptyTitle="Записей нет">
-	{#snippet cell(row: DictItemDto, column: DataTableColumn)}
-		{#if column.key === 'title'}
-			{row.title}
-		{:else if column.key === 'code'}
-			<code class="font-mono text-sm">{row.code}</code>
-		{:else if column.key === 'sortOrder'}
-			{row.sortOrder}
-		{:else if column.key === 'isActive'}
+<EntityList {rows} paging={{ total, query, onQueryChange }} emptyTitle="Записей нет">
+	{#snippet item(row: DictItemDto)}
+		<div class="flex flex-wrap items-center gap-x-3 gap-y-1">
+			<span class="font-medium">{row.title}</span>
 			<span
 				data-testid="dict-status"
 				class={[
-					'inline-flex rounded-pill px-3 py-1 text-xs',
+					'inline-flex rounded-pill px-2.5 py-0.5 text-xs',
 					TONE_CLASS[row.isActive ? 'success' : 'neutral']
 				]}
 			>
 				{row.isActive ? 'Используется' : 'Выключена'}
 			</span>
-		{:else if column.key === 'actions'}
-			<div class="flex flex-wrap justify-end gap-2">
-				<Button variant="secondary" size="sm" onclick={() => onEdit(row)}>Изменить</Button>
-				<form
-					method="POST"
-					action={row.isActive ? '?/disable' : '?/enable'}
-					use:enhance={withToast({
-						success: row.isActive ? `Выключена: ${row.title}` : `Включена: ${row.title}`
-					})}
-				>
-					<input type="hidden" name="id" value={row.id} />
-					<Button
-						type="submit"
-						variant="ghost"
-						size="sm"
-						class={row.isActive ? 'text-danger' : undefined}
-					>
-						{row.isActive ? 'Выключить' : 'Включить'}
-					</Button>
-				</form>
-			</div>
-		{/if}
+		</div>
+		<div class="text-xs text-fg-faint">
+			Код <code class="font-mono">{row.code}</code> · порядок {row.sortOrder}
+		</div>
 	{/snippet}
-</DataTable>
+	{#snippet actions(row: DictItemDto)}
+		<Button variant="secondary" size="sm" onclick={() => onEdit(row)}>Изменить</Button>
+		<form
+			method="POST"
+			action={row.isActive ? '?/disable' : '?/enable'}
+			use:enhance={withToast({
+				success: row.isActive ? `Выключена: ${row.title}` : `Включена: ${row.title}`
+			})}
+		>
+			<input type="hidden" name="id" value={row.id} />
+			<Button
+				type="submit"
+				variant="ghost"
+				size="sm"
+				class={row.isActive ? 'text-danger' : undefined}
+			>
+				{row.isActive ? 'Выключить' : 'Включить'}
+			</Button>
+		</form>
+	{/snippet}
+</EntityList>

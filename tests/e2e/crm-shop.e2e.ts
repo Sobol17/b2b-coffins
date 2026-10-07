@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import { enterRequest } from './crm-flow';
-import { login, purchaseMoneyKeys } from './fixtures';
+import { crmNavLink, login, purchaseMoneyKeys } from './fixtures';
 import { e2eDb, statusOf } from './transitions';
 
 const ORIGIN = 'http://localhost:4173';
@@ -90,7 +90,7 @@ test('C5: the crew, the driver and the portal get 403 on the shop floor', async 
 		});
 		expect(forged.status()).toBe(403);
 		await page.goto('/crm');
-		await expect(page.getByRole('link', { name: 'Цех' })).toHaveCount(0);
+		await expect(crmNavLink(page, 'Цех')).toHaveCount(0);
 		await page.context().clearCookies();
 	}
 
