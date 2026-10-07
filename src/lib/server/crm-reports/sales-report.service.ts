@@ -1,8 +1,10 @@
+import { CrmRequestChoicesRepository } from '../crm-request/crm-request-choices.repository';
 import { OrgService } from '../settings/org.service';
 import { ReportBaseService } from './report-base.service';
 import { SalesReportRepository, type SaleRow } from './sales-report.repository';
 import { bucketOf, bucketsOf, type ReportRange } from '$lib/domain/report/period';
 import type { ActorContext } from '$lib/types/actor';
+import type { CrmRequestChoicesDto } from '$lib/types/crm-request';
 import type {
 	SalesBucket,
 	SalesByCounterpartyRowDto,
@@ -40,9 +42,15 @@ export class SalesReportService extends ReportBaseService {
 		ctx: ActorContext,
 		private readonly repo: SalesReportRepository = new SalesReportRepository(),
 		timeZone: string = OrgService.timezone(),
-		now: () => Date = () => new Date()
+		now: () => Date = () => new Date(),
+		private readonly choices: CrmRequestChoicesRepository = new CrmRequestChoicesRepository()
 	) {
 		super(ctx, timeZone, now);
+	}
+
+	/** Live counterparties for the filter of the report. */
+	counterparties(): CrmRequestChoicesDto['counterparties'] {
+		return this.choices.counterparties();
 	}
 
 	report(input: SalesReportInput): SalesReportDto {
