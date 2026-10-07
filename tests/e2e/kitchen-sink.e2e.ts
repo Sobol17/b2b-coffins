@@ -38,7 +38,8 @@ const PRIMITIVES = [
 	'PhotoGallery',
 	'PhotoUploader',
 	'PriceCell',
-	'Stepper'
+	'Stepper',
+	'InstallPrompt'
 ] as const;
 
 async function openKitchenSink(page: Page): Promise<void> {

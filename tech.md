@@ -1503,6 +1503,7 @@ export class RequestDtoMapper {
 | `PriceCell` | `valueMinor?`, рисует прочерк, когда значение не пришло |
 | `Stepper` | история статусов заявки |
 | `ContourShell` | `variant: 'crm'\|'portal'`, `title`, `userName`, `roles`, `links`, `accountHref`, `cart`, `bell?: Snippet` (колокольчик уведомлений, рисуется в обоих контурах с v1.49), `footerCaption`, `search?: Snippet` (поиск в шапке портала, v1.30) |
+| `InstallPrompt` | без пропсов: кнопка «Установить приложение» по `beforeinstallprompt`, на iOS инструкция «Поделиться, На экран Домой», в standalone пусто (v1.50) |
 
 Токены: цвета, радиусы, тени и шкала отступов в `src/app.css` как CSS-переменные. Хардкод цвета в компоненте слайса — повод для отката.
 

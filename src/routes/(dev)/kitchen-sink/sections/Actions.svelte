@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Button, TouchButton } from '$lib/ui';
+	import { Button, InstallPrompt, TouchButton } from '$lib/ui';
 	import Showcase from '../Showcase.svelte';
 </script>
 
@@ -18,4 +18,11 @@
 <Showcase name="TouchButton">
 	<TouchButton>Готово</TouchButton>
 	<TouchButton variant="secondary">Отмена</TouchButton>
+</Showcase>
+
+<Showcase name="InstallPrompt">
+	<InstallPrompt />
+	<span class="text-sm text-fg-faint">
+		Кнопка появляется, когда браузер предлагает установку; на iOS вместо неё инструкция.
+	</span>
 </Showcase>
