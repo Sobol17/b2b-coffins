@@ -1,6 +1,6 @@
 import { eq } from 'drizzle-orm';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { ForbiddenError, NotFoundError } from '../../src/lib/server/core/errors';
+import { ForbiddenError, NotFoundError, ValidationError } from '../../src/lib/server/core/errors';
 import { pushSubscriptions, users } from '../../src/lib/server/db/schema';
 import { PushSubscriptionRepository } from '../../src/lib/server/notifications/push-subscription.repository';
 import { PushSubscriptionService } from '../../src/lib/server/notifications/push-subscription.service';
@@ -122,5 +122,33 @@ describe('push subscriptions (C15)', () => {
 		expect(repo.purgeExpired()).toBe(1);
 		expect(repo.purgeExpired()).toBe(0);
 		expect(db.select().from(pushSubscriptions).all()).toHaveLength(1);
+	});
+
+	it('keeps the ten freshest devices of a person and drops the oldest', () => {
+		for (let i = 1; i <= 11; i += 1) {
+			service(driver).subscribe({ ...phone, endpoint: `https://push.example/sub/${i}` });
+		}
+
+		const kept = repo.liveOf(driverId).map((row) => row.endpoint);
+		expect(kept).toHaveLength(10);
+		expect(kept).not.toContain('https://push.example/sub/1');
+		expect(kept).toContain('https://push.example/sub/11');
+	});
+
+	it('takes only the hosts of real push services when real pushes are on', () => {
+		const strict = new PushSubscriptionService(driver, repo, 'public-key', true);
+
+		expect(() => strict.subscribe(phone)).toThrow(ValidationError);
+		expect(() =>
+			strict.subscribe({ ...phone, endpoint: 'https://fcm.googleapis.com.evil.example/x' })
+		).toThrow(ValidationError);
+		for (const endpoint of [
+			'https://fcm.googleapis.com/fcm/send/abc',
+			'https://web.push.apple.com/abc',
+			'https://updates.push.services.mozilla.com/wpush/v2/abc',
+			'https://wns2-par02p.notify.windows.com/w/?token=abc'
+		]) {
+			expect(strict.subscribe({ ...phone, endpoint }).deviceCount).toBeGreaterThan(0);
+		}
 	});
 });

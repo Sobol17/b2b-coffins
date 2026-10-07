@@ -1,4 +1,4 @@
-import { and, eq, isNotNull, isNull } from 'drizzle-orm';
+import { and, desc, eq, isNotNull, isNull, notInArray, sql } from 'drizzle-orm';
 import { BaseRepository } from '../core/repository';
 import type { Tx } from '../db/client';
 import { pushSubscriptions, users } from '../db/schema';
@@ -29,6 +29,26 @@ export class PushSubscriptionRepository extends BaseRepository<typeof pushSubscr
 				target: pushSubscriptions.endpoint,
 				set: { userId, p256dh: input.p256dh, auth: input.auth, expiredAt: null }
 			})
+			.run();
+	}
+
+	/**
+	 * Keeps the freshest devices of a person. Dispatch sends to every one of them, so a person
+	 * who could add rows without end would slow every push that goes to them.
+	 */
+	trim(userId: number, keep: number, tx?: Tx): void {
+		const freshest = this.db(tx)
+			.select({ id: pushSubscriptions.id })
+			.from(pushSubscriptions)
+			.where(eq(pushSubscriptions.userId, userId))
+			.orderBy(
+				desc(sql`coalesce(${pushSubscriptions.lastUsedAt}, ${pushSubscriptions.createdAt})`),
+				desc(pushSubscriptions.id)
+			)
+			.limit(keep);
+		this.db(tx)
+			.delete(pushSubscriptions)
+			.where(and(eq(pushSubscriptions.userId, userId), notInArray(pushSubscriptions.id, freshest)))
 			.run();
 	}
 

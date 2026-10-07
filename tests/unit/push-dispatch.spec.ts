@@ -205,6 +205,25 @@ describe('notification.dispatch over the push channel (C15)', () => {
 		expect(job()?.status).toBe('pending');
 	});
 
+	it('waits one timeout for a person with many silent devices, not one per device', async () => {
+		for (let i = 0; i < 6; i += 1) subscriptions.save(ids.driver, device(`silent-${i}`));
+		const silent = { send: () => new Promise<void>(() => undefined) };
+		const handler = createNotificationDispatchHandler({
+			notifications: new NotificationRepository(),
+			subscriptions,
+			messages: new PushMessageService(),
+			driver: () => silent,
+			timeoutMs: 50
+		});
+		const id = queued();
+		const started = Date.now();
+
+		await new Worker({ handlers: [handler] }).drain();
+
+		expect(Date.now() - started).toBeLessThan(200);
+		expect(rowOf(id)?.error).toMatch(/^driver: .*timed out/);
+	});
+
 	it('gives the job up as dead after the last attempt', async () => {
 		subscriptions.save(ids.driver, device('phone'));
 		const id = queued();

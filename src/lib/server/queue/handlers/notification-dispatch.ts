@@ -32,23 +32,30 @@ interface Outcome {
 export function createNotificationDispatchHandler(deps: DispatchDeps) {
 	const timeoutMs = deps.timeoutMs ?? PUSH_TIMEOUT_MS;
 
+	// All devices at once: one silent push service costs the job a single timeout, not one each.
 	async function sendToAll(
 		targets: readonly LiveSubscription[],
 		message: PushMessage,
 		now: Date
 	): Promise<Outcome> {
+		const results = await Promise.allSettled(
+			targets.map((target) => withTimeout(deps.driver().send(target, message), timeoutMs))
+		);
 		const errors: string[] = [];
 		let accepted = 0;
-		for (const target of targets) {
-			try {
-				await withTimeout(deps.driver().send(target, message), timeoutMs);
+		results.forEach((result, index) => {
+			const target = targets[index];
+			if (!target) return;
+			if (result.status === 'fulfilled') {
 				deps.subscriptions.touch(target.id, now);
 				accepted += 1;
-			} catch (err) {
-				if (err instanceof PushGoneError) deps.subscriptions.markExpired(target.id, now);
-				else errors.push(err instanceof Error ? err.message : String(err));
+			} else if (result.reason instanceof PushGoneError) {
+				deps.subscriptions.markExpired(target.id, now);
+			} else {
+				const reason: unknown = result.reason;
+				errors.push(reason instanceof Error ? reason.message : String(reason));
 			}
-		}
+		});
 		return { accepted, errors };
 	}
 

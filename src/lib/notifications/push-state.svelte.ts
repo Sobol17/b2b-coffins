@@ -51,15 +51,24 @@ export class PushState {
 		});
 	}
 
+	/**
+	 * Never throws: whatever the server answers, the browser stops listening, and an endpoint
+	 * the browser dropped answers 410 on the next push, so the server retires the row itself.
+	 */
 	async disable(): Promise<void> {
 		const endpoint = this.endpoint;
 		if (endpoint === null) return;
 		await this.run(async () => {
-			// Server first: a row left behind would keep ringing a device that no longer listens.
-			await this.browser.send('DELETE', { endpoint });
-			await this.browser.unsubscribe();
-			this.endpoint = null;
-			this.subscribed = false;
+			try {
+				// Server first: when it answers, the row is gone before the next event fans out.
+				await this.browser.send('DELETE', { endpoint });
+			} catch {
+				// Offline or the row is already gone; the unsubscribe below still frees the device.
+			} finally {
+				await this.browser.unsubscribe();
+				this.endpoint = null;
+				this.subscribed = false;
+			}
 		});
 	}
 
@@ -117,16 +126,16 @@ function logoutFormOf(target: unknown): { submit(): void } | null {
 
 /**
  * A shared phone must not ring for the person who signed out, so the logout form waits for the
- * device to be removed. A failed removal never blocks the sign-out itself.
+ * device to be released. A server that cannot be reached never blocks the sign-out itself.
  */
 export async function leaveOnLogout(event: FormSubmit, state: PushState): Promise<void> {
 	const form = logoutFormOf(event.target);
 	if (!form || state.status !== 'on') return;
 	event.preventDefault();
+	// A second tap while the first is on its way must not send the form twice.
+	if (state.busy) return;
 	try {
 		await state.disable();
-	} catch {
-		// The server drops the device anyway once the push service reports it gone.
 	} finally {
 		form.submit();
 	}

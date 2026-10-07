@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'vitest';
+import { isIosDevice } from '../../src/lib/ui/install.svelte';
+import { detectPush } from '../../src/lib/notifications/push-browser';
 import {
 	leaveOnLogout,
 	PushState,
@@ -119,6 +121,20 @@ describe('push state of a device (C15)', () => {
 		expect(state.busy).toBe(false);
 	});
 
+	it('stops the browser listening even when the server cannot be reached', async () => {
+		const { fake, calls } = browser(granted);
+		const state = new PushState(fake, 'public-key');
+		await state.sync();
+		calls.length = 0;
+		fake.send = () => Promise.reject(new Error('offline'));
+
+		await state.disable();
+
+		// The dead endpoint answers 410 on the next push and the server retires the row itself.
+		expect(calls).toEqual(['unsubscribe']);
+		expect(state.status).toBe('off');
+	});
+
 	it('has nothing to remove on a device that was never subscribed', async () => {
 		const { fake, calls } = browser();
 
@@ -164,6 +180,30 @@ describe('sign-out releases the device (C15)', () => {
 		expect(log).toEqual(['prevent', 'submit']);
 	});
 
+	it('ignores a second tap while the first sign-out is on its way', async () => {
+		let release = (): void => undefined;
+		const held = new Promise<void>((resolve) => (release = resolve));
+		const { fake, calls } = browser({ ...granted });
+		const state = new PushState(fake, 'public-key');
+		await state.sync();
+		calls.length = 0;
+		fake.send = (method) => {
+			calls.push(method);
+			return held;
+		};
+		const first = logoutForm('http://localhost/logout');
+		const second = logoutForm('http://localhost/logout');
+
+		const leaving = leaveOnLogout(first.event, state);
+		await leaveOnLogout(second.event, state);
+		release();
+		await leaving;
+
+		expect(calls.filter((call) => call === 'DELETE')).toHaveLength(1);
+		expect(first.log).toEqual(['prevent', 'submit']);
+		expect(second.log).toEqual(['prevent']);
+	});
+
 	it('leaves other forms and a device without push alone', async () => {
 		const subscribed = new PushState(browser(granted).fake, 'public-key');
 		await subscribed.sync();
@@ -174,5 +214,33 @@ describe('sign-out releases the device (C15)', () => {
 		const logout = logoutForm('http://localhost/logout');
 		await leaveOnLogout(logout.event, new PushState(browser().fake, 'public-key'));
 		expect(logout.log).toEqual([]);
+	});
+});
+
+describe('what a browser can do with push (C15)', () => {
+	it('asks an iPhone in a Safari tab to install first, though the tab has no Push API', () => {
+		expect(detectPush({ ios: true, standalone: false, hasApis: false })).toEqual({
+			supported: true,
+			needsInstall: true
+		});
+	});
+
+	it('offers push to an installed iPhone app and to a desktop browser', () => {
+		const ready = { supported: true, needsInstall: false };
+		expect(detectPush({ ios: true, standalone: true, hasApis: true })).toEqual(ready);
+		expect(detectPush({ ios: false, standalone: false, hasApis: true })).toEqual(ready);
+	});
+
+	it('reports a browser without the Push API as unsupported', () => {
+		expect(detectPush({ ios: false, standalone: false, hasApis: false }).supported).toBe(false);
+		expect(detectPush({ ios: true, standalone: true, hasApis: false }).supported).toBe(false);
+	});
+
+	it('knows an iPad that introduces itself as a Mac', () => {
+		const mac = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 Safari/605';
+		expect(isIosDevice(mac, 5)).toBe(true);
+		expect(isIosDevice(mac, 0)).toBe(false);
+		expect(isIosDevice('Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X)', 5)).toBe(true);
+		expect(isIosDevice('Mozilla/5.0 (Linux; Android 14) Chrome/126', 5)).toBe(false);
 	});
 });

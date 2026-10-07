@@ -2,9 +2,16 @@ interface InstallEvent extends Event {
 	prompt(): Promise<void>;
 }
 
-/** iOS has no install event and delivers a push to an installed app only (tech.md 17.4). */
+/**
+ * iOS has no install event and delivers a push to an installed app only (tech.md 17.4). An iPad
+ * introduces itself as a Mac, so a Mac with a touch screen is read as one.
+ */
+export function isIosDevice(userAgent: string, maxTouchPoints: number): boolean {
+	return /iPad|iPhone|iPod/.test(userAgent) || (/Macintosh/.test(userAgent) && maxTouchPoints > 1);
+}
+
 export function isIos(): boolean {
-	return /iPad|iPhone|iPod/.test(navigator.userAgent);
+	return isIosDevice(navigator.userAgent, navigator.maxTouchPoints);
 }
 
 export function isStandalone(): boolean {
