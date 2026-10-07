@@ -36,6 +36,7 @@
 ### Task 1: Контракт v1.51, права и удаление `report.export`
 
 **Files:**
+
 - Modify: `tech.md` (шапка, changelog, §4.4, §5.9, §7.2, §8, §12, §14 C13)
 - Modify: `src/lib/server/auth/policy.ts`
 - Modify: `src/lib/types/dicts.ts` (`JOB_TOPICS`)
@@ -45,6 +46,7 @@
 - Create: `src/lib/types/crm-reports.ts`
 
 **Interfaces:**
+
 - Produces: действие `'charity.manage'` в `ACTIONS`; все типы из раздела «Типы» спеки в `$lib/types/crm-reports`.
 
 - [ ] **Step 1: Падающий тест прав** в `tests/unit/policy.spec.ts`
@@ -92,16 +94,25 @@ git add -A && git commit -m "docs(crm): contract of the reports slice, v1.51"
 ### Task 2: Домен периода
 
 **Files:**
+
 - Create: `src/lib/domain/report/period.ts`
 - Test: `tests/domain/report-period.spec.ts`
 
 **Interfaces:**
+
 - Consumes: `addDays` из `$lib/domain/payroll/calc`, `startOfDayInZone` из `$lib/domain/time/zone`.
 - Produces:
 
 ```ts
-export interface ReportRange { readonly from: string; readonly to: string }
-export interface ReportWindow { readonly from: Date; readonly to: Date; readonly days: number } // `to` is exclusive
+export interface ReportRange {
+	readonly from: string;
+	readonly to: string;
+}
+export interface ReportWindow {
+	readonly from: Date;
+	readonly to: Date;
+	readonly days: number;
+} // `to` is exclusive
 export type RangeProblem = 'not_a_date' | 'reversed' | 'too_long';
 export function rangeDays(range: ReportRange): number;
 export function rangeProblem(range: ReportRange, maxDays: number): RangeProblem | null;
@@ -117,13 +128,19 @@ export function bucketsOf(range: ReportRange, bucket: SalesBucket): ReportRange[
 import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 import {
-	bucketOf, bucketsOf, presetRange, rangeDays, rangeProblem, reportWindow
+	bucketOf,
+	bucketsOf,
+	presetRange,
+	rangeDays,
+	rangeProblem,
+	reportWindow
 } from '../../src/lib/domain/report/period';
 import { addDays } from '../../src/lib/domain/payroll/calc';
 import { SALES_BUCKETS } from '../../src/lib/types/crm-reports';
 
 const day = fc.integer({ min: 0, max: 3650 }).map((n) => addDays('2020-01-01', n));
-const range = fc.tuple(day, fc.integer({ min: 0, max: 365 }))
+const range = fc
+	.tuple(day, fc.integer({ min: 0, max: 365 }))
 	.map(([from, len]) => ({ from, to: addDays(from, len) }));
 
 describe('report period (C13)', () => {
@@ -149,24 +166,28 @@ describe('report period (C13)', () => {
 	});
 
 	it('covers the range with buckets, no gaps and no overlaps', () => {
-		fc.assert(fc.property(range, fc.constantFrom(...SALES_BUCKETS), (r, bucket) => {
-			const buckets = bucketsOf(r, bucket);
-			expect(buckets[0]?.from).toBe(r.from);
-			expect(buckets.at(-1)?.to).toBe(r.to);
-			for (let i = 1; i < buckets.length; i += 1) {
-				expect(buckets[i]?.from).toBe(addDays(buckets[i - 1]?.to ?? '', 1));
-			}
-			expect(buckets.reduce((sum, b) => sum + rangeDays(b), 0)).toBe(rangeDays(r));
-		}));
+		fc.assert(
+			fc.property(range, fc.constantFrom(...SALES_BUCKETS), (r, bucket) => {
+				const buckets = bucketsOf(r, bucket);
+				expect(buckets[0]?.from).toBe(r.from);
+				expect(buckets.at(-1)?.to).toBe(r.to);
+				for (let i = 1; i < buckets.length; i += 1) {
+					expect(buckets[i]?.from).toBe(addDays(buckets[i - 1]?.to ?? '', 1));
+				}
+				expect(buckets.reduce((sum, b) => sum + rangeDays(b), 0)).toBe(rangeDays(r));
+			})
+		);
 	});
 
 	it('puts every day of the range into the bucket that holds it', () => {
-		fc.assert(fc.property(range, fc.constantFrom(...SALES_BUCKETS), fc.nat(), (r, bucket, n) => {
-			const d = addDays(r.from, n % rangeDays(r));
-			const b = bucketOf(d, bucket, r);
-			expect(b.from <= d && d <= b.to).toBe(true);
-			expect(bucketsOf(r, bucket)).toContainEqual(b);
-		}));
+		fc.assert(
+			fc.property(range, fc.constantFrom(...SALES_BUCKETS), fc.nat(), (r, bucket, n) => {
+				const d = addDays(r.from, n % rangeDays(r));
+				const b = bucketOf(d, bucket, r);
+				expect(b.from <= d && d <= b.to).toBe(true);
+				expect(bucketsOf(r, bucket)).toContainEqual(b);
+			})
+		);
 	});
 });
 ```
@@ -182,9 +203,16 @@ import type { ReportPreset, SalesBucket } from '$lib/types/crm-reports';
 
 const DAY_MS = 86_400_000;
 
-export interface ReportRange { readonly from: string; readonly to: string }
+export interface ReportRange {
+	readonly from: string;
+	readonly to: string;
+}
 /** `to` is the first instant after the range: every filter is a half-open window. */
-export interface ReportWindow { readonly from: Date; readonly to: Date; readonly days: number }
+export interface ReportWindow {
+	readonly from: Date;
+	readonly to: Date;
+	readonly days: number;
+}
 export type RangeProblem = 'not_a_date' | 'reversed' | 'too_long';
 
 const utc = (isoDate: string): number => Date.parse(`${isoDate}T00:00:00.000Z`);
@@ -217,11 +245,16 @@ function weekStart(isoDate: string): string {
 function spanStart(isoDate: string, span: ReportPreset | SalesBucket): string {
 	const [year, month] = [isoDate.slice(0, 4), Number(isoDate.slice(5, 7))];
 	switch (span) {
-		case 'day': return isoDate;
-		case 'week': return weekStart(isoDate);
-		case 'month': return `${isoDate.slice(0, 7)}-01`;
-		case 'quarter': return `${year}-${String(month - ((month - 1) % 3)).padStart(2, '0')}-01`;
-		case 'year': return `${year}-01-01`;
+		case 'day':
+			return isoDate;
+		case 'week':
+			return weekStart(isoDate);
+		case 'month':
+			return `${isoDate.slice(0, 7)}-01`;
+		case 'quarter':
+			return `${year}-${String(month - ((month - 1) % 3)).padStart(2, '0')}-01`;
+		case 'year':
+			return `${year}-01-01`;
 	}
 }
 
@@ -248,7 +281,7 @@ export function bucketOf(day: string, bucket: SalesBucket, range: ReportRange): 
 
 export function bucketsOf(range: ReportRange, bucket: SalesBucket): ReportRange[] {
 	const buckets: ReportRange[] = [];
-	for (let day = range.from; day <= range.to; ) {
+	for (let day = range.from; day <= range.to;) {
 		const next = bucketOf(day, bucket, range);
 		buckets.push(next);
 		day = addDays(next.to, 1);
@@ -268,24 +301,40 @@ export function bucketsOf(range: ReportRange, bucket: SalesBucket): ReportRange[
 ### Task 3: Домен оборачиваемости, воронки и остатка фонда
 
 **Files:**
+
 - Create: `src/lib/domain/stock/turnover.ts`, `src/lib/domain/report/funnel.ts`, `src/lib/domain/charity/balance.ts`
 - Test: `tests/domain/stock-turnover.spec.ts`, `tests/domain/report-funnel.spec.ts`, `tests/domain/charity-balance.spec.ts`
 
 **Interfaces:**
+
 - Produces:
 
 ```ts
 // stock/turnover.ts
-export interface PositionMoves { readonly opening: number; readonly income: number; readonly outcome: number; readonly shipped: number }
+export interface PositionMoves {
+	readonly opening: number;
+	readonly income: number;
+	readonly outcome: number;
+	readonly shipped: number;
+}
 export function closingQty(moves: PositionMoves): number;
 export function turnoverDays(moves: PositionMoves, days: number): number | null;
 // report/funnel.ts
-export interface StageShare { readonly shareOfPreviousBp: number | null; readonly shareOfFirstBp: number | null }
+export interface StageShare {
+	readonly shareOfPreviousBp: number | null;
+	readonly shareOfFirstBp: number | null;
+}
 export function funnelShares(counts: readonly number[]): StageShare[];
 // charity/balance.ts
-export function fundRemainderMinor(accruedMinor: number, transferAmounts: readonly number[]): number;
+export function fundRemainderMinor(
+	accruedMinor: number,
+	transferAmounts: readonly number[]
+): number;
 export function fitsRemainder(remainderMinor: number, amountMinor: number): boolean;
-export function isTransferReversible(row: { readonly reversalOfId: number | null; readonly isReversed: boolean }): boolean;
+export function isTransferReversible(row: {
+	readonly reversalOfId: number | null;
+	readonly isReversed: boolean;
+}): boolean;
 ```
 
 - [ ] **Step 1: Падающие тесты**
@@ -297,7 +346,12 @@ import { describe, expect, it } from 'vitest';
 import { closingQty, turnoverDays } from '../../src/lib/domain/stock/turnover';
 
 const qty = fc.integer({ min: 0, max: 10_000 });
-const moves = fc.record({ opening: fc.integer({ min: -100, max: 10_000 }), income: qty, outcome: qty, shipped: fc.integer({ min: -50, max: 10_000 }) });
+const moves = fc.record({
+	opening: fc.integer({ min: -100, max: 10_000 }),
+	income: qty,
+	outcome: qty,
+	shipped: fc.integer({ min: -50, max: 10_000 })
+});
 
 describe('stock turnover (C13)', () => {
 	it('counts days of stock from the average balance', () => {
@@ -306,13 +360,15 @@ describe('stock turnover (C13)', () => {
 	});
 
 	it('gives days only when something was shipped from a positive shelf', () => {
-		fc.assert(fc.property(moves, fc.integer({ min: 1, max: 366 }), (m, days) => {
-			const result = turnoverDays(m, days);
-			const average = (m.opening + closingQty(m)) / 2;
-			expect(result === null).toBe(m.shipped <= 0 || average <= 0);
-			if (result !== null) expect(result).toBeGreaterThanOrEqual(0);
-			expect(closingQty(m)).toBe(m.opening + m.income - m.outcome);
-		}));
+		fc.assert(
+			fc.property(moves, fc.integer({ min: 1, max: 366 }), (m, days) => {
+				const result = turnoverDays(m, days);
+				const average = (m.opening + closingQty(m)) / 2;
+				expect(result === null).toBe(m.shipped <= 0 || average <= 0);
+				if (result !== null) expect(result).toBeGreaterThanOrEqual(0);
+				expect(closingQty(m)).toBe(m.opening + m.income - m.outcome);
+			})
+		);
 	});
 });
 ```
@@ -323,8 +379,11 @@ import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 import { funnelShares } from '../../src/lib/domain/report/funnel';
 
-const falling = fc.array(fc.nat(1000), { minLength: 5, maxLength: 5 })
-	.map((steps) => steps.reduce<number[]>((acc, step) => [...acc, Math.max(0, (acc.at(-1) ?? 5000) - step)], []));
+const falling = fc
+	.array(fc.nat(1000), { minLength: 5, maxLength: 5 })
+	.map((steps) =>
+		steps.reduce<number[]>((acc, step) => [...acc, Math.max(0, (acc.at(-1) ?? 5000) - step)], [])
+	);
 
 describe('funnel shares (C13)', () => {
 	it('counts shares in basis points', () => {
@@ -345,13 +404,15 @@ describe('funnel shares (C13)', () => {
 	});
 
 	it('stays within 0..10000 while the counts do not grow', () => {
-		fc.assert(fc.property(falling, (counts) => {
-			for (const share of funnelShares(counts)) {
-				for (const bp of [share.shareOfPreviousBp, share.shareOfFirstBp]) {
-					if (bp !== null) expect(bp >= 0 && bp <= 10_000).toBe(true);
+		fc.assert(
+			fc.property(falling, (counts) => {
+				for (const share of funnelShares(counts)) {
+					for (const bp of [share.shareOfPreviousBp, share.shareOfFirstBp]) {
+						if (bp !== null) expect(bp >= 0 && bp <= 10_000).toBe(true);
+					}
 				}
-			}
-		}));
+			})
+		);
 	});
 });
 ```
@@ -360,15 +421,26 @@ describe('funnel shares (C13)', () => {
 // tests/domain/charity-balance.spec.ts
 import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
-import { fitsRemainder, fundRemainderMinor, isTransferReversible } from '../../src/lib/domain/charity/balance';
+import {
+	fitsRemainder,
+	fundRemainderMinor,
+	isTransferReversible
+} from '../../src/lib/domain/charity/balance';
 
 describe('fund balance (C13)', () => {
 	it('returns to the same remainder after a reversal', () => {
-		fc.assert(fc.property(fc.nat(1e9), fc.array(fc.integer({ min: 1, max: 1e6 })), fc.integer({ min: 1, max: 1e6 }), (accrued, sent, amount) => {
-			const before = fundRemainderMinor(accrued, sent);
-			expect(fundRemainderMinor(accrued, [...sent, amount, -amount])).toBe(before);
-			expect(before).toBe(accrued - sent.reduce((sum, value) => sum + value, 0));
-		}));
+		fc.assert(
+			fc.property(
+				fc.nat(1e9),
+				fc.array(fc.integer({ min: 1, max: 1e6 })),
+				fc.integer({ min: 1, max: 1e6 }),
+				(accrued, sent, amount) => {
+					const before = fundRemainderMinor(accrued, sent);
+					expect(fundRemainderMinor(accrued, [...sent, amount, -amount])).toBe(before);
+					expect(before).toBe(accrued - sent.reduce((sum, value) => sum + value, 0));
+				}
+			)
+		);
 	});
 
 	it('takes exactly the remainder and not a kopeck more', () => {
@@ -436,7 +508,10 @@ export function funnelShares(counts: readonly number[]): StageShare[] {
 ```ts
 // src/lib/domain/charity/balance.ts
 /** Accrued but not sent to the fund yet. A reversal row carries a negative amount. */
-export function fundRemainderMinor(accruedMinor: number, transferAmounts: readonly number[]): number {
+export function fundRemainderMinor(
+	accruedMinor: number,
+	transferAmounts: readonly number[]
+): number {
 	return accruedMinor - transferAmounts.reduce((sum, amount) => sum + amount, 0);
 }
 
@@ -462,21 +537,36 @@ export function isTransferReversible(row: {
 ### Task 4: Миграция `reversal_of_id` и схемы входа
 
 **Files:**
+
 - Modify: `src/lib/server/db/schema/system.ts`
 - Create: миграция в `drizzle/` командой, `src/lib/validation/crm-reports.ts`
 - Test: `tests/unit/crm-reports-validation.spec.ts`
 
 **Interfaces:**
+
 - Produces: колонка `charityTransfers.reversalOfId`; схемы и типы входа:
 
 ```ts
-export const reportRangeSchema, salesReportSchema, stockTurnoverSchema, lostReportSchema,
-	charityTransferSchema, charityTransferReverseSchema;
+export const reportRangeSchema,
+	salesReportSchema,
+	stockTurnoverSchema,
+	lostReportSchema,
+	charityTransferSchema,
+	charityTransferReverseSchema;
 export type ReportRangeInput = { from: string; to: string };
-export type SalesReportInput = ReportRangeInput & { group: SalesGroup; bucket: SalesBucket; counterpartyId: number | null };
+export type SalesReportInput = ReportRangeInput & {
+	group: SalesGroup;
+	bucket: SalesBucket;
+	counterpartyId: number | null;
+};
 export type StockTurnoverInput = ReportRangeInput & { kind: StockKind | null };
 export type LostReportInput = ReportRangeInput & { status: LostStatus | null };
-export type CharityTransferInput = { amountMinor: number; transferredOn: string; documentRef: string | null; comment: string | null };
+export type CharityTransferInput = {
+	amountMinor: number;
+	transferredOn: string;
+	documentRef: string | null;
+	comment: string | null;
+};
 export type CharityTransferReverseInput = { transferId: number; comment: string };
 ```
 
@@ -504,35 +594,75 @@ DATABASE_URL=/tmp/c13-clean.db pnpm db:migrate && cp data/app.db /tmp/c13-dev.db
 ```ts
 import { describe, expect, it } from 'vitest';
 import {
-	charityTransferReverseSchema, charityTransferSchema, reportRangeSchema, salesReportSchema
+	charityTransferReverseSchema,
+	charityTransferSchema,
+	reportRangeSchema,
+	salesReportSchema
 } from '../../src/lib/validation/crm-reports';
 
 describe('report input (C13)', () => {
 	it('refuses a reversed range and one longer than a year', () => {
-		expect(reportRangeSchema.safeParse({ from: '2026-03-02', to: '2026-03-01' }).success).toBe(false);
-		expect(reportRangeSchema.safeParse({ from: '2025-01-01', to: '2026-01-02' }).success).toBe(false);
-		expect(reportRangeSchema.safeParse({ from: '2026-02-31', to: '2026-03-01' }).success).toBe(false);
-		expect(reportRangeSchema.parse({ from: '2026-10-01', to: '2026-10-31' })).toEqual({ from: '2026-10-01', to: '2026-10-31' });
+		expect(reportRangeSchema.safeParse({ from: '2026-03-02', to: '2026-03-01' }).success).toBe(
+			false
+		);
+		expect(reportRangeSchema.safeParse({ from: '2025-01-01', to: '2026-01-02' }).success).toBe(
+			false
+		);
+		expect(reportRangeSchema.safeParse({ from: '2026-02-31', to: '2026-03-01' }).success).toBe(
+			false
+		);
+		expect(reportRangeSchema.parse({ from: '2026-10-01', to: '2026-10-31' })).toEqual({
+			from: '2026-10-01',
+			to: '2026-10-31'
+		});
 	});
 
 	it('fills the grouping of the sales report in', () => {
-		expect(salesReportSchema.parse({ from: '2026-10-01', to: '2026-10-31' }))
-			.toMatchObject({ group: 'counterparty', bucket: 'month', counterpartyId: null });
-		expect(salesReportSchema.parse({ from: '2026-10-01', to: '2026-10-31', group: 'period', bucket: 'week', counterpartyId: '4' }))
-			.toMatchObject({ group: 'period', bucket: 'week', counterpartyId: 4 });
+		expect(salesReportSchema.parse({ from: '2026-10-01', to: '2026-10-31' })).toMatchObject({
+			group: 'counterparty',
+			bucket: 'month',
+			counterpartyId: null
+		});
+		expect(
+			salesReportSchema.parse({
+				from: '2026-10-01',
+				to: '2026-10-31',
+				group: 'period',
+				bucket: 'week',
+				counterpartyId: '4'
+			})
+		).toMatchObject({ group: 'period', bucket: 'week', counterpartyId: 4 });
 	});
 
 	it('takes a transfer in whole kopecks and trims its texts', () => {
-		expect(charityTransferSchema.parse({ amountMinor: '150000', transferredOn: '2026-10-07', documentRef: ' ПП 15 ', comment: '' }))
-			.toEqual({ amountMinor: 150000, transferredOn: '2026-10-07', documentRef: 'ПП 15', comment: null });
-		expect(charityTransferSchema.safeParse({ amountMinor: '0', transferredOn: '2026-10-07' }).success).toBe(false);
-		expect(charityTransferSchema.safeParse({ amountMinor: '10.5', transferredOn: '2026-10-07' }).success).toBe(false);
+		expect(
+			charityTransferSchema.parse({
+				amountMinor: '150000',
+				transferredOn: '2026-10-07',
+				documentRef: ' ПП 15 ',
+				comment: ''
+			})
+		).toEqual({
+			amountMinor: 150000,
+			transferredOn: '2026-10-07',
+			documentRef: 'ПП 15',
+			comment: null
+		});
+		expect(
+			charityTransferSchema.safeParse({ amountMinor: '0', transferredOn: '2026-10-07' }).success
+		).toBe(false);
+		expect(
+			charityTransferSchema.safeParse({ amountMinor: '10.5', transferredOn: '2026-10-07' }).success
+		).toBe(false);
 	});
 
 	it('wants a reason for a reversal', () => {
-		expect(charityTransferReverseSchema.safeParse({ transferId: '3', comment: '  ' }).success).toBe(false);
-		expect(charityTransferReverseSchema.parse({ transferId: '3', comment: ' Не тот счёт ' }))
-			.toEqual({ transferId: 3, comment: 'Не тот счёт' });
+		expect(charityTransferReverseSchema.safeParse({ transferId: '3', comment: '  ' }).success).toBe(
+			false
+		);
+		expect(
+			charityTransferReverseSchema.parse({ transferId: '3', comment: ' Не тот счёт ' })
+		).toEqual({ transferId: 3, comment: 'Не тот счёт' });
 	});
 });
 ```
@@ -545,7 +675,11 @@ describe('report input (C13)', () => {
 import { z } from 'zod';
 import { rangeProblem, type RangeProblem } from '$lib/domain/report/period';
 import {
-	CHARITY_TRANSFER_MAX_MINOR, LOST_STATUSES, REPORT_MAX_DAYS, SALES_BUCKETS, SALES_GROUPS
+	CHARITY_TRANSFER_MAX_MINOR,
+	LOST_STATUSES,
+	REPORT_MAX_DAYS,
+	SALES_BUCKETS,
+	SALES_GROUPS
 } from '$lib/types/crm-reports';
 import { STOCK_KINDS } from '$lib/types/crm-stock';
 
@@ -562,13 +696,17 @@ const blankToNull = (value: unknown) => (value === '' || value === undefined ? n
 const optionalText = (max: number) =>
 	z.preprocess(
 		(value) => (typeof value === 'string' && value.trim() !== '' ? value.trim() : null),
-		z.string().max(max, { error: `Не длиннее ${max} символов` }).nullable()
+		z
+			.string()
+			.max(max, { error: `Не длиннее ${max} символов` })
+			.nullable()
 	);
 
 const rangeShape = { from: day, to: day };
 const checkRange = (value: { from: string; to: string }, ctx: z.RefinementCtx): void => {
 	const problem = rangeProblem(value, REPORT_MAX_DAYS);
-	if (problem !== null) ctx.addIssue({ code: 'custom', path: ['to'], message: RANGE_MESSAGE[problem] });
+	if (problem !== null)
+		ctx.addIssue({ code: 'custom', path: ['to'], message: RANGE_MESSAGE[problem] });
 };
 
 export const reportRangeSchema = z.object(rangeShape).superRefine(checkRange);
@@ -625,11 +763,13 @@ export type CharityTransferReverseInput = z.infer<typeof charityTransferReverseS
 ### Task 5: Отчёт продаж
 
 **Files:**
+
 - Create: `src/lib/server/crm-reports/report-base.service.ts`, `sales-report.repository.ts`, `sales-report.service.ts`
 - Create: `tests/unit/helpers/crm-reports.ts`
 - Test: `tests/unit/crm-reports-sales.spec.ts`
 
 **Interfaces:**
+
 - Consumes: `reportWindow`, `bucketOf`, `bucketsOf` (задача 2); `SalesReportInput` (задача 4).
 - Produces:
 
@@ -698,14 +838,16 @@ const TZ = 'Europe/Moscow';
 const OCTOBER = { from: '2026-10-01', to: '2026-10-31' };
 const at = (iso: string) => new Date(iso);
 const report = (patch: Record<string, string> = {}) =>
-	new SalesReportService(owner, undefined, TZ).report(salesReportSchema.parse({ ...OCTOBER, ...patch }));
+	new SalesReportService(owner, undefined, TZ).report(
+		salesReportSchema.parse({ ...OCTOBER, ...patch })
+	);
 
 beforeEach(() => resetRequests(db));
 
 describe('sales report (C13, tech.md v1.51)', () => {
 	it('counts delivered counterparty requests by the day of delivery in the workshop zone', () => {
-		const inside = delivered(2, at('2026-10-31T20:30:00Z'));   // 23:30 Moscow on the 31st
-		delivered(1, at('2026-10-31T21:10:00Z'));                  // 00:10 Moscow on November 1st
+		const inside = delivered(2, at('2026-10-31T20:30:00Z')); // 23:30 Moscow on the 31st
+		delivered(1, at('2026-10-31T21:10:00Z')); // 00:10 Moscow on November 1st
 		const stock = delivered(3, at('2026-10-10T09:00:00Z'));
 		toStock(stock);
 		inWork(5);
@@ -714,7 +856,11 @@ describe('sales report (C13, tech.md v1.51)', () => {
 
 		expect(result.totals).toMatchObject({ requestCount: 1, qty: 2, totalMinor: totalOf(inside) });
 		expect(result.group === 'counterparty' && result.rows).toEqual([
-			expect.objectContaining({ counterpartyId: world.cpId, requestCount: 1, totalMinor: totalOf(inside) })
+			expect.objectContaining({
+				counterpartyId: world.cpId,
+				requestCount: 1,
+				totalMinor: totalOf(inside)
+			})
 		]);
 	});
 
@@ -728,14 +874,24 @@ describe('sales report (C13, tech.md v1.51)', () => {
 
 		expect(byModel.totals).toEqual(byCp.totals);
 		expect(byPeriod.totals).toEqual(byCp.totals);
-		const sum = (rows: readonly { totalMinor: number }[]) => rows.reduce((s, r) => s + r.totalMinor, 0);
-		if (byCp.group !== 'counterparty' || byModel.group !== 'model' || byPeriod.group !== 'period') throw new Error('group');
+		const sum = (rows: readonly { totalMinor: number }[]) =>
+			rows.reduce((s, r) => s + r.totalMinor, 0);
+		if (byCp.group !== 'counterparty' || byModel.group !== 'model' || byPeriod.group !== 'period')
+			throw new Error('group');
 		expect(sum(byCp.rows)).toBe(byCp.totals.totalMinor);
 		expect(sum(byPeriod.rows)).toBe(byCp.totals.totalMinor);
-		expect(byModel.rows.reduce((s, r) => s + r.linesTotalMinor, 0)).toBe(byCp.totals.itemsTotalMinor);
+		expect(byModel.rows.reduce((s, r) => s + r.linesTotalMinor, 0)).toBe(
+			byCp.totals.itemsTotalMinor
+		);
 		expect(byModel.rows.reduce((s, r) => s + r.qty, 0)).toBe(byCp.totals.qty);
 		// Every week of the range is a row, an empty one too: the owner reads the gaps as well.
-		expect(byPeriod.rows.map((r) => r.bucketFrom)).toEqual(['2026-10-01', '2026-10-05', '2026-10-12', '2026-10-19', '2026-10-26']);
+		expect(byPeriod.rows.map((r) => r.bucketFrom)).toEqual([
+			'2026-10-01',
+			'2026-10-05',
+			'2026-10-12',
+			'2026-10-19',
+			'2026-10-26'
+		]);
 	});
 
 	it('narrows to one counterparty', () => {
@@ -745,7 +901,14 @@ describe('sales report (C13, tech.md v1.51)', () => {
 	});
 
 	it('answers an empty period with zeros', () => {
-		expect(report().totals).toEqual({ requestCount: 0, qty: 0, itemsTotalMinor: 0, discountMinor: 0, totalMinor: 0, paidMinor: 0 });
+		expect(report().totals).toEqual({
+			requestCount: 0,
+			qty: 0,
+			itemsTotalMinor: 0,
+			discountMinor: 0,
+			totalMinor: 0,
+			paidMinor: 0
+		});
 		expect(report({ group: 'model' }).rows).toEqual([]);
 	});
 
@@ -763,7 +926,12 @@ describe('sales report (C13, tech.md v1.51)', () => {
 import { PolicyService } from '../auth/policy';
 import { ValidationError } from '../core/errors';
 import { BaseService } from '../core/service';
-import { presetRange, reportWindow, type ReportRange, type ReportWindow } from '$lib/domain/report/period';
+import {
+	presetRange,
+	reportWindow,
+	type ReportRange,
+	type ReportWindow
+} from '$lib/domain/report/period';
 import type { ActorContext } from '$lib/types/actor';
 import { isoDay } from '$lib/utils/format';
 
@@ -903,14 +1071,23 @@ import { SalesReportRepository, type SaleRow } from './sales-report.repository';
 import { bucketOf, bucketsOf, type ReportRange } from '$lib/domain/report/period';
 import type { ActorContext } from '$lib/types/actor';
 import type {
-	SalesBucket, SalesByCounterpartyRowDto, SalesByModelRowDto, SalesByPeriodRowDto,
-	SalesReportDto, SalesTotalsDto
+	SalesBucket,
+	SalesByCounterpartyRowDto,
+	SalesByModelRowDto,
+	SalesByPeriodRowDto,
+	SalesReportDto,
+	SalesTotalsDto
 } from '$lib/types/crm-reports';
 import { isoDay } from '$lib/utils/format';
 import type { SalesReportInput } from '$lib/validation/crm-reports';
 
 const ZERO: SalesTotalsDto = {
-	requestCount: 0, qty: 0, itemsTotalMinor: 0, discountMinor: 0, totalMinor: 0, paidMinor: 0
+	requestCount: 0,
+	qty: 0,
+	itemsTotalMinor: 0,
+	discountMinor: 0,
+	totalMinor: 0,
+	paidMinor: 0
 };
 
 function add(sum: SalesTotalsDto, row: SaleRow): SalesTotalsDto {
@@ -946,7 +1123,12 @@ export class SalesReportService extends ReportBaseService {
 			case 'model':
 				return { ...head, group: 'model', rows: this.repo.byModel(window, input.counterpartyId) };
 			case 'period':
-				return { ...head, group: 'period', bucket: input.bucket, rows: this.byPeriod(sales, range, input.bucket) };
+				return {
+					...head,
+					group: 'period',
+					bucket: input.bucket,
+					rows: this.byPeriod(sales, range, input.bucket)
+				};
 		}
 	}
 
@@ -966,7 +1148,9 @@ export class SalesReportService extends ReportBaseService {
 		const rows = new Map<number, SalesByCounterpartyRowDto>();
 		for (const sale of sales) {
 			const seen = rows.get(sale.counterpartyId) ?? {
-				...ZERO, counterpartyId: sale.counterpartyId, title: sale.counterpartyName
+				...ZERO,
+				counterpartyId: sale.counterpartyId,
+				title: sale.counterpartyName
 			};
 			rows.set(sale.counterpartyId, { ...seen, ...add(seen, sale) });
 		}
@@ -975,7 +1159,11 @@ export class SalesReportService extends ReportBaseService {
 		);
 	}
 
-	private byPeriod(sales: readonly SaleRow[], range: ReportRange, bucket: SalesBucket): SalesByPeriodRowDto[] {
+	private byPeriod(
+		sales: readonly SaleRow[],
+		range: ReportRange,
+		bucket: SalesBucket
+	): SalesByPeriodRowDto[] {
 		const sums = new Map<string, SalesTotalsDto>();
 		for (const sale of sales) {
 			const day = isoDay(sale.deliveredAt.toISOString(), this.timeZone);
@@ -983,7 +1171,9 @@ export class SalesReportService extends ReportBaseService {
 			sums.set(key, add(sums.get(key) ?? ZERO, sale));
 		}
 		return bucketsOf(range, bucket).map((b) => ({
-			bucketFrom: b.from, bucketTo: b.to, ...(sums.get(b.from) ?? ZERO)
+			bucketFrom: b.from,
+			bucketTo: b.to,
+			...(sums.get(b.from) ?? ZERO)
 		}));
 	}
 }
@@ -1000,10 +1190,12 @@ export class SalesReportService extends ReportBaseService {
 ### Task 6: Оборотная ведомость склада
 
 **Files:**
+
 - Create: `src/lib/server/crm-reports/stock-turnover.repository.ts`, `stock-turnover.service.ts`
 - Test: `tests/unit/crm-reports-stock.spec.ts`
 
 **Interfaces:**
+
 - Consumes: `closingQty`, `turnoverDays` (задача 3), `ReportBaseService` (задача 5).
 - Produces: `class StockTurnoverService { constructor(ctx, repo?, timeZone?, now?); report(input: StockTurnoverInput): StockTurnoverReportDto }`.
 
@@ -1025,7 +1217,11 @@ const report = (from: string, to: string) =>
 	new StockTurnoverService(owner, undefined, TZ).report(stockTurnoverSchema.parse({ from, to }));
 const today = () => new Date().toISOString().slice(0, 10);
 /** Moves every move of the shelf to one instant: the test owns the calendar. */
-const stamp = (iso: string) => db.update(stockMoves).set({ occurredAt: new Date(iso) }).run();
+const stamp = (iso: string) =>
+	db
+		.update(stockMoves)
+		.set({ occurredAt: new Date(iso) })
+		.run();
 
 beforeEach(() => {
 	resetRequests(db);
@@ -1036,13 +1232,19 @@ describe('stock turnover report (C13)', () => {
 	it('splits the shelf into opening, income, outcome and closing', () => {
 		produce(10);
 		stamp('2026-09-15T09:00:00Z');
-		const id = assembled(4);                       // makes 4 more and holds them for the request
+		const id = assembled(4); // makes 4 more and holds them for the request
 		const line = lineOf(id);
 		delivery().load({ itemId: line.itemId, qty: 4 });
 
 		const [row] = report(today(), today()).rows;
 
-		expect(row).toMatchObject({ openingQty: 10, incomeQty: 4, outcomeQty: 4, closingQty: 10, shippedQty: 4 });
+		expect(row).toMatchObject({
+			openingQty: 10,
+			incomeQty: 4,
+			outcomeQty: 4,
+			closingQty: 10,
+			shippedQty: 4
+		});
 		// Average shelf 10, one day, 4 shipped: 10 * 1 / 4 rounds to 3 days.
 		expect(row?.turnoverDays).toBe(3);
 	});
@@ -1126,7 +1328,12 @@ export class StockTurnoverRepository extends BaseRepository<typeof stockMoves> {
 			.innerJoin(dictItems, eq(dictItems.id, stockItems.unitId))
 			.leftJoin(options, eq(options.id, stockMoves.optionId))
 			.leftJoin(undone, eq(undone.id, stockMoves.reversalOfId))
-			.where(and(lt(stockMoves.occurredAt, window.to), kind === null ? undefined : eq(stockItems.kind, kind)))
+			.where(
+				and(
+					lt(stockMoves.occurredAt, window.to),
+					kind === null ? undefined : eq(stockItems.kind, kind)
+				)
+			)
 			.groupBy(stockMoves.stockItemId, stockMoves.optionId)
 			.orderBy(stockItems.title, options.title)
 			.all();
@@ -1188,17 +1395,21 @@ export class StockTurnoverService extends ReportBaseService {
 ### Task 7: Воронка и потерянные заявки
 
 **Files:**
+
 - Create: `src/lib/server/crm-reports/funnel-report.repository.ts`, `funnel-report.service.ts`, `lost-report.repository.ts`, `lost-report.service.ts`
 - Test: `tests/unit/crm-reports-funnel.spec.ts`, `tests/unit/crm-reports-lost.spec.ts`
 
 **Interfaces:**
+
 - Produces:
 
 ```ts
-export class FunnelReportService { report(range: ReportRangeInput): FunnelReportDto }
+export class FunnelReportService {
+	report(range: ReportRangeInput): FunnelReportDto;
+}
 export class LostReportService {
 	report(input: LostReportInput, query: ListQuery<unknown>): LostReportDto;
-	exportRows(input: LostReportInput): LostRequestRowDto[];   // up to LOST_EXPORT_LIMIT = 10_000 rows
+	exportRows(input: LostReportInput): LostRequestRowDto[]; // up to LOST_EXPORT_LIMIT = 10_000 rows
 }
 ```
 
@@ -1229,7 +1440,11 @@ describe('request funnel (C13)', () => {
 		const result = report();
 
 		expect(result.stages.map((s) => [s.stage, s.count])).toEqual([
-			['new', 3], ['in_work', 3], ['ready', 2], ['delivered', 1], ['paid', 0]
+			['new', 3],
+			['in_work', 3],
+			['ready', 2],
+			['delivered', 1],
+			['paid', 0]
 		]);
 		expect(result.stages[2]).toMatchObject({ shareOfPreviousBp: 6667, shareOfFirstBp: 6667 });
 	});
@@ -1257,7 +1472,10 @@ import { move, totalOf } from './helpers/transitions';
 
 const db = migratedDatabase();
 const { actors, sent } = seedCharityWorld(db);
-const owner = crmActor('owner', insertUser({ email: 'own@lost.example', role: 'owner', counterpartyId: null }));
+const owner = crmActor(
+	'owner',
+	insertUser({ email: 'own@lost.example', role: 'owner', counterpartyId: null })
+);
 const today = new Date().toISOString().slice(0, 10);
 const report = (patch: Record<string, string> = {}) =>
 	new LostReportService(owner).report(
@@ -1277,18 +1495,35 @@ describe('cancelled and rejected requests (C13)', () => {
 
 		const result = report();
 
-		expect(result).toMatchObject({ cancelledCount: 1, rejectedCount: 1, totalMinor: totalOf(cancelled) + totalOf(rejected) });
-		expect(result.page.rows).toEqual(expect.arrayContaining([
-			expect.objectContaining({ requestId: rejected, status: 'rejected', comment: 'Нет материала', totalMinor: totalOf(rejected) }),
-			expect.objectContaining({ requestId: cancelled, status: 'cancelled', reasonTitle: null })
-		]));
-		expect(result.reasons.find((r) => r.reasonId === null)).toMatchObject({ title: 'Без причины', count: 1 });
+		expect(result).toMatchObject({
+			cancelledCount: 1,
+			rejectedCount: 1,
+			totalMinor: totalOf(cancelled) + totalOf(rejected)
+		});
+		expect(result.page.rows).toEqual(
+			expect.arrayContaining([
+				expect.objectContaining({
+					requestId: rejected,
+					status: 'rejected',
+					comment: 'Нет материала',
+					totalMinor: totalOf(rejected)
+				}),
+				expect.objectContaining({ requestId: cancelled, status: 'cancelled', reasonTitle: null })
+			])
+		);
+		expect(result.reasons.find((r) => r.reasonId === null)).toMatchObject({
+			title: 'Без причины',
+			count: 1
+		});
 		expect(report({ status: 'rejected' }).page.total).toBe(1);
 	});
 
 	it('is empty for a period without losses', () => {
 		expect(report({ from: '2020-01-01', to: '2020-01-31' })).toMatchObject({
-			cancelledCount: 0, rejectedCount: 0, totalMinor: 0, reasons: []
+			cancelledCount: 0,
+			rejectedCount: 0,
+			totalMinor: 0,
+			reasons: []
 		});
 	});
 });
@@ -1308,9 +1543,13 @@ import { requests } from '../db/schema';
 import type { ReportWindow } from '$lib/domain/report/period';
 
 export interface FunnelCounts {
-	readonly new: number; readonly in_work: number; readonly ready: number;
-	readonly delivered: number; readonly paid: number;
-	readonly cancelled: number; readonly rejected: number;
+	readonly new: number;
+	readonly in_work: number;
+	readonly ready: number;
+	readonly delivered: number;
+	readonly paid: number;
+	readonly cancelled: number;
+	readonly rejected: number;
 }
 
 const inStatus = (status: 'cancelled' | 'rejected') =>
@@ -1335,13 +1574,17 @@ export class FunnelReportRepository extends BaseRepository<typeof requests> {
 				rejected: inStatus('rejected')
 			})
 			.from(requests)
-			.where(and(
-				eq(requests.isStockRequest, false),
-				gte(requests.submittedAt, window.from),
-				lt(requests.submittedAt, window.to)
-			))
+			.where(
+				and(
+					eq(requests.isStockRequest, false),
+					gte(requests.submittedAt, window.from),
+					lt(requests.submittedAt, window.to)
+				)
+			)
 			.all();
-		return row ?? { new: 0, in_work: 0, ready: 0, delivered: 0, paid: 0, cancelled: 0, rejected: 0 };
+		return (
+			row ?? { new: 0, in_work: 0, ready: 0, delivered: 0, paid: 0, cancelled: 0, rejected: 0 }
+		);
 	}
 }
 ```
@@ -1398,13 +1641,23 @@ import { LOST_STATUSES, type LostStatus } from '$lib/types/crm-reports';
 import type { ListQuery } from '$lib/types/list';
 
 export interface LostRow {
-	readonly requestId: number; readonly number: string; readonly status: LostStatus;
+	readonly requestId: number;
+	readonly number: string;
+	readonly status: LostStatus;
 	readonly at: Date;
-	readonly counterpartyId: number | null; readonly counterpartyTitle: string | null;
-	readonly reasonTitle: string | null; readonly comment: string | null;
+	readonly counterpartyId: number | null;
+	readonly counterpartyTitle: string | null;
+	readonly reasonTitle: string | null;
+	readonly comment: string | null;
 	readonly totalMinor: number;
 }
-export interface LostReasonRow { readonly reasonId: number | null; readonly title: string | null; readonly status: LostStatus; readonly count: number; readonly totalMinor: number }
+export interface LostReasonRow {
+	readonly reasonId: number | null;
+	readonly title: string | null;
+	readonly status: LostStatus;
+	readonly count: number;
+	readonly totalMinor: number;
+}
 
 /** Terminal transitions of the period with the request each one closed (C13). */
 export class LostReportRepository extends BaseRepository<typeof requestStatusHistory> {
@@ -1445,8 +1698,11 @@ export class LostReportRepository extends BaseRepository<typeof requestStatusHis
 	}
 
 	total(window: ReportWindow, status: LostStatus | null): number {
-		const [row] = this.db().select({ total: countExpression }).from(requestStatusHistory)
-			.where(this.lost(window, status)).all();
+		const [row] = this.db()
+			.select({ total: countExpression })
+			.from(requestStatusHistory)
+			.where(this.lost(window, status))
+			.all();
 		return row?.total ?? 0;
 	}
 
@@ -1503,10 +1759,20 @@ export class LostReportService extends ReportBaseService {
 		const grouped = this.repo.reasons(window, input.status);
 		const reasons = new Map<number | null, LostReasonRowDto>();
 		for (const row of grouped) {
-			const seen = reasons.get(row.reasonId) ?? { reasonId: row.reasonId, title: row.title ?? NO_REASON, count: 0, totalMinor: 0 };
-			reasons.set(row.reasonId, { ...seen, count: seen.count + row.count, totalMinor: seen.totalMinor + row.totalMinor });
+			const seen = reasons.get(row.reasonId) ?? {
+				reasonId: row.reasonId,
+				title: row.title ?? NO_REASON,
+				count: 0,
+				totalMinor: 0
+			};
+			reasons.set(row.reasonId, {
+				...seen,
+				count: seen.count + row.count,
+				totalMinor: seen.totalMinor + row.totalMinor
+			});
 		}
-		const countOf = (status: string) => grouped.filter((r) => r.status === status).reduce((s, r) => s + r.count, 0);
+		const countOf = (status: string) =>
+			grouped.filter((r) => r.status === status).reduce((s, r) => s + r.count, 0);
 		return {
 			range: { from: input.from, to: input.to },
 			status: input.status,
@@ -1542,10 +1808,12 @@ export class LostReportService extends ReportBaseService {
 ### Task 8: Фонд: отчёт, перечисление и сторно
 
 **Files:**
+
 - Create: `src/lib/server/crm-reports/charity-transfer.repository.ts`, `charity-transfer.service.ts`, `charity-report.service.ts`
 - Test: `tests/unit/crm-reports-charity.spec.ts`
 
 **Interfaces:**
+
 - Consumes: `fundRemainderMinor`, `fitsRemainder`, `isTransferReversible` (задача 3); `CharityRepository.frozenRows`, `tallyCharity`, `countsTowardFund`.
 - Produces:
 
@@ -1554,8 +1822,9 @@ export class CharityReportService {
 	report(range: ReportRangeInput, query: ListQuery<unknown>): CharityReportDto;
 	summary(range: ReportRange): { accruedInRangeMinor: number; remainderMinor: number };
 }
-export class CharityTransferService {          // asserts charity.manage in the constructor
-	transfer(input: CharityTransferInput): number;             // id of the new row
+export class CharityTransferService {
+	// asserts charity.manage in the constructor
+	transfer(input: CharityTransferInput): number; // id of the new row
 	reverse(input: CharityTransferReverseInput): void;
 }
 ```
@@ -1574,7 +1843,10 @@ import { CharityReportService } from '../../src/lib/server/crm-reports/charity-r
 import { CharityTransferService } from '../../src/lib/server/crm-reports/charity-transfer.service';
 import { auditLog, charityTransfers } from '../../src/lib/server/db/schema';
 import { tallyCharity } from '../../src/lib/domain/charity/rate';
-import { charityTransferReverseSchema, charityTransferSchema } from '../../src/lib/validation/crm-reports';
+import {
+	charityTransferReverseSchema,
+	charityTransferSchema
+} from '../../src/lib/validation/crm-reports';
 import { charityOf } from './helpers/charity';
 import { seedReportWorld } from './helpers/crm-reports';
 import { migratedDatabase } from './helpers/db';
@@ -1585,14 +1857,24 @@ const { owner, actors, delivered, toStock, world } = seedReportWorld(db);
 const TZ = 'Europe/Moscow';
 const today = new Date().toISOString().slice(0, 10);
 const report = (from = today, to = today) =>
-	new CharityReportService(owner, undefined, undefined, TZ).report({ from, to }, normalizeListQuery({}));
+	new CharityReportService(owner, undefined, undefined, TZ).report(
+		{ from, to },
+		normalizeListQuery({})
+	);
 const transfer = (amountMinor: number, patch: Record<string, string> = {}) =>
 	new CharityTransferService(owner).transfer(
-		charityTransferSchema.parse({ amountMinor: String(amountMinor), transferredOn: today, ...patch })
+		charityTransferSchema.parse({
+			amountMinor: String(amountMinor),
+			transferredOn: today,
+			...patch
+		})
 	);
 const reverse = (transferId: number, comment = 'Не тот счёт') =>
-	new CharityTransferService(owner).reverse(charityTransferReverseSchema.parse({ transferId: String(transferId), comment }));
-const audit = (action: string) => db.select().from(auditLog).where(eq(auditLog.action, action)).all();
+	new CharityTransferService(owner).reverse(
+		charityTransferReverseSchema.parse({ transferId: String(transferId), comment })
+	);
+const audit = (action: string) =>
+	db.select().from(auditLog).where(eq(auditLog.action, action)).all();
 
 beforeEach(() => {
 	db.delete(charityTransfers).run();
@@ -1605,7 +1887,11 @@ describe('fund report and transfers (C13, tech.md v1.51)', () => {
 		delivered(1);
 		toStock(delivered(1));
 		const banner = withTransaction((tx) => {
-			const tally = tallyCharity(new CharityRepository().frozenRows({ kind: 'all' }, tx), { kind: 'all' }, TZ);
+			const tally = tallyCharity(
+				new CharityRepository().frozenRows({ kind: 'all' }, tx),
+				{ kind: 'all' },
+				TZ
+			);
 			new CharityTotalsRepository().put('all', tally, tx);
 			return tally;
 		});
@@ -1613,10 +1899,17 @@ describe('fund report and transfers (C13, tech.md v1.51)', () => {
 		const result = report();
 
 		expect(result.accruedAllMinor).toBe(banner.amountMinor);
-		expect(result.accruedAllMinor).toBe(new CharityTotalsRepository().findByScope('all')?.amountMinor);
+		expect(result.accruedAllMinor).toBe(
+			new CharityTotalsRepository().findByScope('all')?.amountMinor
+		);
 		expect(result.accruedInRangeMinor).toBe(result.accruedAllMinor);
 		expect(result.accruals).toEqual([
-			{ counterpartyId: world.cpId, title: expect.any(String), requestCount: 2, amountMinor: result.accruedAllMinor }
+			{
+				counterpartyId: world.cpId,
+				title: expect.any(String),
+				requestCount: 2,
+				amountMinor: result.accruedAllMinor
+			}
 		]);
 		expect(charityOf(db, a).amountMinor).toBeGreaterThan(0);
 	});
@@ -1628,9 +1921,20 @@ describe('fund report and transfers (C13, tech.md v1.51)', () => {
 		expect(() => transfer(due + 1)).toThrow(ConflictError);
 		const id = transfer(due, { documentRef: 'ПП 15' });
 
-		expect(report()).toMatchObject({ transferredAllMinor: due, remainderMinor: 0, transferredInRangeMinor: due });
+		expect(report()).toMatchObject({
+			transferredAllMinor: due,
+			remainderMinor: 0,
+			transferredInRangeMinor: due
+		});
 		expect(report().transfers.rows).toEqual([
-			expect.objectContaining({ id, amountMinor: due, transferredOn: today, documentRef: 'ПП 15', reversalOfId: null, isReversed: false })
+			expect.objectContaining({
+				id,
+				amountMinor: due,
+				transferredOn: today,
+				documentRef: 'ПП 15',
+				reversalOfId: null,
+				isReversed: false
+			})
 		]);
 		expect(audit('charity.transfer')).toHaveLength(1);
 	});
@@ -1642,7 +1946,11 @@ describe('fund report and transfers (C13, tech.md v1.51)', () => {
 
 		reverse(id);
 
-		expect(report()).toMatchObject({ transferredAllMinor: 0, remainderMinor: due, transferredInRangeMinor: 0 });
+		expect(report()).toMatchObject({
+			transferredAllMinor: 0,
+			remainderMinor: due,
+			transferredInRangeMinor: 0
+		});
 		const rows = report().transfers.rows;
 		expect(rows).toHaveLength(2);
 		expect(rows.find((r) => r.id === id)?.isReversed).toBe(true);
@@ -1661,7 +1969,12 @@ describe('fund report and transfers (C13, tech.md v1.51)', () => {
 	});
 
 	it('shows zeros with nothing delivered and keeps the manager out', () => {
-		expect(report()).toMatchObject({ accruedAllMinor: 0, transferredAllMinor: 0, remainderMinor: 0, accruals: [] });
+		expect(report()).toMatchObject({
+			accruedAllMinor: 0,
+			transferredAllMinor: 0,
+			remainderMinor: 0,
+			accruals: []
+		});
 		expect(() => new CharityReportService(actors.manager)).toThrow(ForbiddenError);
 		expect(() => new CharityTransferService(actors.manager)).toThrow(ForbiddenError);
 	});
@@ -1682,23 +1995,35 @@ import type { ReportWindow } from '$lib/domain/report/period';
 import type { ListQuery } from '$lib/types/list';
 
 export interface TransferRow {
-	readonly id: number; readonly amountMinor: number; readonly transferredAt: Date;
-	readonly documentRef: string | null; readonly comment: string | null;
-	readonly createdByName: string; readonly createdAt: Date;
-	readonly reversalOfId: number | null; readonly isReversed: boolean;
+	readonly id: number;
+	readonly amountMinor: number;
+	readonly transferredAt: Date;
+	readonly documentRef: string | null;
+	readonly comment: string | null;
+	readonly createdByName: string;
+	readonly createdAt: Date;
+	readonly reversalOfId: number | null;
+	readonly isReversed: boolean;
 }
 export interface NewTransfer {
-	readonly amountMinor: number; readonly transferredAt: Date;
-	readonly documentRef: string | null; readonly comment: string | null;
-	readonly createdById: number; readonly reversalOfId?: number;
+	readonly amountMinor: number;
+	readonly transferredAt: Date;
+	readonly documentRef: string | null;
+	readonly comment: string | null;
+	readonly createdById: number;
+	readonly reversalOfId?: number;
 }
 
 const IS_REVERSED = sql<number>`exists (select 1 from charity_transfers as undo where undo.reversal_of_id = ${charityTransfers.id})`;
 const COLUMNS = {
-	id: charityTransfers.id, amountMinor: charityTransfers.amountMinor,
-	transferredAt: charityTransfers.transferredAt, documentRef: charityTransfers.documentRef,
-	comment: charityTransfers.comment, createdByName: users.fullName,
-	createdAt: charityTransfers.createdAt, reversalOfId: charityTransfers.reversalOfId,
+	id: charityTransfers.id,
+	amountMinor: charityTransfers.amountMinor,
+	transferredAt: charityTransfers.transferredAt,
+	documentRef: charityTransfers.documentRef,
+	comment: charityTransfers.comment,
+	createdByName: users.fullName,
+	createdAt: charityTransfers.createdAt,
+	reversalOfId: charityTransfers.reversalOfId,
 	isReversed: IS_REVERSED.mapWith(Boolean)
 };
 
@@ -1709,43 +2034,64 @@ export class CharityTransferRepository extends BaseRepository<typeof charityTran
 	}
 
 	private within(window: ReportWindow) {
-		return and(gte(charityTransfers.transferredAt, window.from), lt(charityTransfers.transferredAt, window.to));
+		return and(
+			gte(charityTransfers.transferredAt, window.from),
+			lt(charityTransfers.transferredAt, window.to)
+		);
 	}
 
 	find(id: number, tx?: Tx): TransferRow | undefined {
-		const [row] = this.db(tx).select(COLUMNS).from(charityTransfers)
+		const [row] = this.db(tx)
+			.select(COLUMNS)
+			.from(charityTransfers)
 			.innerJoin(users, eq(users.id, charityTransfers.createdById))
-			.where(eq(charityTransfers.id, id)).all();
+			.where(eq(charityTransfers.id, id))
+			.all();
 		return row;
 	}
 
 	/** Signed amounts of the whole registry: a reversal carries the negated amount. */
 	amounts(tx?: Tx): number[] {
-		return this.db(tx).select({ amount: charityTransfers.amountMinor }).from(charityTransfers).all()
+		return this.db(tx)
+			.select({ amount: charityTransfers.amountMinor })
+			.from(charityTransfers)
+			.all()
 			.map((row) => row.amount);
 	}
 
 	sumWithin(window: ReportWindow): number {
 		const [row] = this.db()
 			.select({ sum: sql<number>`coalesce(sum(${charityTransfers.amountMinor}), 0)` })
-			.from(charityTransfers).where(this.within(window)).all();
+			.from(charityTransfers)
+			.where(this.within(window))
+			.all();
 		return row?.sum ?? 0;
 	}
 
 	page(window: ReportWindow, query: ListQuery<unknown>): { rows: TransferRow[]; total: number } {
-		const rows = this.db().select(COLUMNS).from(charityTransfers)
+		const rows = this.db()
+			.select(COLUMNS)
+			.from(charityTransfers)
 			.innerJoin(users, eq(users.id, charityTransfers.createdById))
 			.where(this.within(window))
 			.orderBy(desc(charityTransfers.transferredAt), desc(charityTransfers.id))
-			.limit(query.perPage).offset(offsetFor(query)).all();
-		const [count] = this.db().select({ total: countExpression }).from(charityTransfers)
-			.where(this.within(window)).all();
+			.limit(query.perPage)
+			.offset(offsetFor(query))
+			.all();
+		const [count] = this.db()
+			.select({ total: countExpression })
+			.from(charityTransfers)
+			.where(this.within(window))
+			.all();
 		return { rows, total: count?.total ?? 0 };
 	}
 
 	insert(transfer: NewTransfer, tx: Tx): number {
-		const [row] = this.db(tx).insert(charityTransfers).values(transfer)
-			.returning({ id: charityTransfers.id }).all();
+		const [row] = this.db(tx)
+			.insert(charityTransfers)
+			.values(transfer)
+			.returning({ id: charityTransfers.id })
+			.all();
 		if (!row) throw new Error('failed to write a fund transfer');
 		return row.id;
 	}
@@ -1753,8 +2099,12 @@ export class CharityTransferRepository extends BaseRepository<typeof charityTran
 	counterpartyNames(ids: readonly number[]): Map<number, string> {
 		if (ids.length === 0) return new Map();
 		return new Map(
-			this.db().select({ id: counterparties.id, name: counterparties.name }).from(counterparties)
-				.where(inArray(counterparties.id, [...ids])).all().map((row) => [row.id, row.name])
+			this.db()
+				.select({ id: counterparties.id, name: counterparties.name })
+				.from(counterparties)
+				.where(inArray(counterparties.id, [...ids]))
+				.all()
+				.map((row) => [row.id, row.name])
 		);
 	}
 }
@@ -1770,11 +2120,18 @@ import { BaseService } from '../core/service';
 import type { Tx } from '../db/client';
 import { OrgService } from '../settings/org.service';
 import { CharityTransferRepository } from './charity-transfer.repository';
-import { fitsRemainder, fundRemainderMinor, isTransferReversible } from '$lib/domain/charity/balance';
+import {
+	fitsRemainder,
+	fundRemainderMinor,
+	isTransferReversible
+} from '$lib/domain/charity/balance';
 import { tallyCharity } from '$lib/domain/charity/rate';
 import { startOfDayInZone } from '$lib/domain/time/zone';
 import type { ActorContext } from '$lib/types/actor';
-import type { CharityTransferInput, CharityTransferReverseInput } from '$lib/validation/crm-reports';
+import type {
+	CharityTransferInput,
+	CharityTransferReverseInput
+} from '$lib/validation/crm-reports';
 
 /**
  * The registry of transfers to the fund (C13, tech.md v1.51). A row is never edited: a mistake is
@@ -1802,12 +2159,19 @@ export class CharityTransferService extends BaseService {
 			}
 			const id = this.transfers.insert(
 				{
-					amountMinor: input.amountMinor, transferredAt,
-					documentRef: input.documentRef, comment: input.comment, createdById: this.ctx.userId
+					amountMinor: input.amountMinor,
+					transferredAt,
+					documentRef: input.documentRef,
+					comment: input.comment,
+					createdById: this.ctx.userId
 				},
 				tx
 			);
-			return { result: id, entityId: id, after: { amountMinor: input.amountMinor, transferredOn: input.transferredOn } };
+			return {
+				result: id,
+				entityId: id,
+				after: { amountMinor: input.amountMinor, transferredOn: input.transferredOn }
+			};
 		});
 	}
 
@@ -1816,17 +2180,22 @@ export class CharityTransferService extends BaseService {
 		this.audited({ action: 'charity.transfer.reverse', entity: 'charity_transfers' }, (tx) => {
 			const row = this.transfers.find(input.transferId, tx);
 			if (!row) throw new NotFoundError('charity_transfer');
-			if (!isTransferReversible(row)) throw new ConflictError('Это перечисление нельзя сторнировать');
+			if (!isTransferReversible(row))
+				throw new ConflictError('Это перечисление нельзя сторнировать');
 			const id = this.transfers.insert(
 				{
-					amountMinor: -row.amountMinor, transferredAt: row.transferredAt,
-					documentRef: row.documentRef, comment: input.comment,
-					createdById: this.ctx.userId, reversalOfId: row.id
+					amountMinor: -row.amountMinor,
+					transferredAt: row.transferredAt,
+					documentRef: row.documentRef,
+					comment: input.comment,
+					createdById: this.ctx.userId,
+					reversalOfId: row.id
 				},
 				tx
 			);
 			return {
-				result: undefined, entityId: id,
+				result: undefined,
+				entityId: id,
 				before: { amountMinor: row.amountMinor },
 				after: { reversalOfId: row.id, amountMinor: -row.amountMinor }
 			};
@@ -1842,9 +2211,12 @@ export class CharityTransferService extends BaseService {
 	/** The day of the transfer in the workshop zone; money cannot leave tomorrow. */
 	private transferredAt(isoDate: string): Date {
 		const at = startOfDayInZone(isoDate, this.timeZone);
-		if (at === null) throw new ValidationError('Выберите дату перечисления', { field: 'transferredOn' });
+		if (at === null)
+			throw new ValidationError('Выберите дату перечисления', { field: 'transferredOn' });
 		if (at.getTime() > this.now().getTime()) {
-			throw new ValidationError('Дата перечисления не может быть позже сегодняшней', { field: 'transferredOn' });
+			throw new ValidationError('Дата перечисления не может быть позже сегодняшней', {
+				field: 'transferredOn'
+			});
 		}
 		return at;
 	}
@@ -1863,7 +2235,11 @@ import { fundRemainderMinor } from '$lib/domain/charity/balance';
 import { countsTowardFund, tallyCharity, type DeliveredCharityRow } from '$lib/domain/charity/rate';
 import type { ReportRange, ReportWindow } from '$lib/domain/report/period';
 import type { ActorContext } from '$lib/types/actor';
-import type { CharityAccrualRowDto, CharityReportDto, CharityTransferDto } from '$lib/types/crm-reports';
+import type {
+	CharityAccrualRowDto,
+	CharityReportDto,
+	CharityTransferDto
+} from '$lib/types/crm-reports';
 import type { ListQuery } from '$lib/types/list';
 import { isoDay } from '$lib/utils/format';
 
@@ -1899,7 +2275,12 @@ export class CharityReportService extends ReportBaseService {
 			accruedInRangeMinor: accruals.reduce((sum, row) => sum + row.amountMinor, 0),
 			transferredInRangeMinor: this.transfers.sumWithin(window),
 			accruals,
-			transfers: { rows: page.rows.map((row) => this.toDto(row)), total: page.total, page: query.page, perPage: query.perPage },
+			transfers: {
+				rows: page.rows.map((row) => this.toDto(row)),
+				total: page.total,
+				page: query.page,
+				perPage: query.perPage
+			},
 			canManage: PolicyService.can(this.ctx, 'charity.manage')
 		};
 	}
@@ -1908,12 +2289,18 @@ export class CharityReportService extends ReportBaseService {
 		const rows = this.accrued.frozenRows(ALL);
 		const accruedAll = tallyCharity(rows, ALL, this.timeZone).amountMinor;
 		return {
-			accruedInRangeMinor: this.accruals(rows, this.window(range)).reduce((sum, row) => sum + row.amountMinor, 0),
+			accruedInRangeMinor: this.accruals(rows, this.window(range)).reduce(
+				(sum, row) => sum + row.amountMinor,
+				0
+			),
 			remainderMinor: fundRemainderMinor(accruedAll, this.transfers.amounts())
 		};
 	}
 
-	private accruals(rows: readonly DeliveredCharityRow[], window: ReportWindow): CharityAccrualRowDto[] {
+	private accruals(
+		rows: readonly DeliveredCharityRow[],
+		window: ReportWindow
+	): CharityAccrualRowDto[] {
 		const sums = new Map<number, { requestCount: number; amountMinor: number }>();
 		for (const row of rows) {
 			const at = row.deliveredAt?.getTime();
@@ -1927,7 +2314,11 @@ export class CharityReportService extends ReportBaseService {
 		}
 		const names = this.transfers.counterpartyNames([...sums.keys()]);
 		return [...sums.entries()]
-			.map(([counterpartyId, sum]) => ({ counterpartyId, title: names.get(counterpartyId) ?? '', ...sum }))
+			.map(([counterpartyId, sum]) => ({
+				counterpartyId,
+				title: names.get(counterpartyId) ?? '',
+				...sum
+			}))
 			.sort((a, b) => b.amountMinor - a.amountMinor);
 	}
 
@@ -1953,11 +2344,13 @@ export class CharityReportService extends ReportBaseService {
 ### Task 9: Дашборд
 
 **Files:**
+
 - Create: `src/lib/server/crm-reports/dashboard.repository.ts`, `dashboard.service.ts`
 - Modify: `src/lib/server/counterparty/debt.repository.ts` (метод `total`)
 - Test: `tests/unit/crm-reports-dashboard.spec.ts`
 
 **Interfaces:**
+
 - Consumes: `SalesReportService.totals/top`, `CharityReportService.summary`, `PayrollReportService.report`.
 - Produces: `class DashboardService { constructor(ctx, ...); dashboard(range: ReportRangeInput): DashboardDto }`, `DebtRepository.total(tx?): number`.
 
@@ -1988,10 +2381,18 @@ describe('owner dashboard (C13)', () => {
 
 		expect(result.sales).toMatchObject({ requestCount: 1, totalMinor: totalOf(sold) });
 		expect(result.debtMinor).toBe(totalOf(sold));
-		expect(result.statusCounts).toMatchObject({ new: 0, in_work: 1, ready: 1, awaiting_payment: 1, paid: 0 });
+		expect(result.statusCounts).toMatchObject({
+			new: 0,
+			in_work: 1,
+			ready: 1,
+			awaiting_payment: 1,
+			paid: 0
+		});
 		expect(result.charityAccruedInRangeMinor).toBeGreaterThan(0);
 		expect(result.charityRemainderMinor).toBe(result.charityAccruedInRangeMinor);
-		expect(result.topCounterparties).toEqual([expect.objectContaining({ counterpartyId: world.cpId })]);
+		expect(result.topCounterparties).toEqual([
+			expect.objectContaining({ counterpartyId: world.cpId })
+		]);
 		expect(result.topModels).toHaveLength(1);
 		expect(result.payrollAccruedMinor).toBe(0);
 	});
@@ -2044,15 +2445,22 @@ export class DashboardRepository extends BaseRepository<typeof requests> {
 
 	statusCounts(): Map<RequestStatus, number> {
 		return new Map(
-			this.db().select({ status: requests.status, count: countExpression }).from(requests)
-				.where(ne(requests.status, 'draft')).groupBy(requests.status).all()
+			this.db()
+				.select({ status: requests.status, count: countExpression })
+				.from(requests)
+				.where(ne(requests.status, 'draft'))
+				.groupBy(requests.status)
+				.all()
 				.map((row) => [row.status, row.count])
 		);
 	}
 
 	belowThresholdCount(): number {
-		const [row] = this.db().select({ count: countExpression }).from(stockItems)
-			.where(and(eq(stockItems.isActive, true), BELOW_THRESHOLD)).all();
+		const [row] = this.db()
+			.select({ count: countExpression })
+			.from(stockItems)
+			.where(and(eq(stockItems.isActive, true), BELOW_THRESHOLD))
+			.all();
 		return row?.count ?? 0;
 	}
 }
@@ -2098,7 +2506,10 @@ export class DashboardService extends ReportBaseService {
 		const top = this.sales.top(range, TOP);
 		const fund = this.charity.summary(range);
 		const statusCounts = Object.fromEntries(
-			REQUEST_STATUSES.filter((status) => status !== 'draft').map((status) => [status, counts.get(status) ?? 0])
+			REQUEST_STATUSES.filter((status) => status !== 'draft').map((status) => [
+				status,
+				counts.get(status) ?? 0
+			])
 		) as DashboardDto['statusCounts'];
 		return {
 			range,
@@ -2127,21 +2538,30 @@ export class DashboardService extends ReportBaseService {
 ### Task 10: Выгрузки и серверная часть роутов
 
 **Files:**
+
 - Create: `src/lib/server/crm-reports/route.ts`, `report-export.service.ts`, `src/lib/crm/reports/labels.ts`
 - Create: `src/routes/(crm)/crm/reports/+page.server.ts` и `+page.server.ts` плюс `export.xlsx/+server.ts` в `sales/`, `stock/`, `funnel/`, `lost/`, `charity/`
 - Modify: `src/routes/(crm)/+layout.server.ts` (`can.reports`)
 - Test: `tests/unit/crm-reports-export.spec.ts`
 
 **Interfaces:**
+
 - Consumes: сервисы задач 5–9, `xlsxResponse` из `$lib/server/crm-stock/route`, `formAction`, `rethrowAsHttp`, `parseListQuery`.
 - Produces:
 
 ```ts
 // route.ts
-export function reportsActor(event: { readonly locals: App.Locals; readonly url: URL }): ActorContext;
-export function loadReport<I extends ReportRange, R>(url: URL, schema: ZodType<I>, fallback: ReportRange, run: (input: I) => R):
-	{ filters: Record<string, string>; report: R | null; problem: string | null };
-export function parseOr422<I>(schema: ZodType<I>, url: URL): I;   // throws ValidationError
+export function reportsActor(event: {
+	readonly locals: App.Locals;
+	readonly url: URL;
+}): ActorContext;
+export function loadReport<I extends ReportRange, R>(
+	url: URL,
+	schema: ZodType<I>,
+	fallback: ReportRange,
+	run: (input: I) => R
+): { filters: Record<string, string>; report: R | null; problem: string | null };
+export function parseOr422<I>(schema: ZodType<I>, url: URL): I; // throws ValidationError
 // report-export.service.ts
 export class ReportExportService {
 	sales(dto: SalesReportDto): Promise<Buffer>;
@@ -2155,7 +2575,7 @@ export const FUNNEL_STAGE_TITLE: Record<FunnelStage, string>;
 export const LOST_STATUS_TITLE: Record<LostStatus, string>;
 export const SALES_GROUP_TITLE: Record<SalesGroup, string>;
 export const SALES_BUCKET_TITLE: Record<SalesBucket, string>;
-export function percentOfBp(bp: number | null): string;      // '66,7 %' or the dash
+export function percentOfBp(bp: number | null): string; // '66,7 %' or the dash
 export function daysOrDash(days: number | null): string;
 ```
 
@@ -2175,24 +2595,54 @@ async function sheetOf(body: Buffer) {
 	return sheet;
 }
 const range = { from: '2026-10-01', to: '2026-10-31' };
-const totals = { requestCount: 2, qty: 3, itemsTotalMinor: 300_000, discountMinor: 30_000, totalMinor: 270_000, paidMinor: 100_000 };
+const totals = {
+	requestCount: 2,
+	qty: 3,
+	itemsTotalMinor: 300_000,
+	discountMinor: 30_000,
+	totalMinor: 270_000,
+	paidMinor: 100_000
+};
 
 describe('report sheets (C13)', () => {
 	it('writes sales in roubles with a total row', async () => {
 		const dto: SalesReportDto = {
-			range, counterpartyId: null, totals, group: 'counterparty',
+			range,
+			counterpartyId: null,
+			totals,
+			group: 'counterparty',
 			rows: [{ ...totals, counterpartyId: 1, title: 'Ритуал-Сервис' }]
 		};
 		const sheet = await sheetOf(await new ReportExportService('Europe/Moscow').sales(dto));
-		expect(sheet.getRow(1).values).toEqual(expect.arrayContaining(['Контрагент', 'Заявок', 'Итог, ₽', 'Оплачено, ₽']));
-		expect(sheet.getRow(2).values).toEqual(expect.arrayContaining(['Ритуал-Сервис', 2, 2700, 1000]));
+		expect(sheet.getRow(1).values).toEqual(
+			expect.arrayContaining(['Контрагент', 'Заявок', 'Итог, ₽', 'Оплачено, ₽'])
+		);
+		expect(sheet.getRow(2).values).toEqual(
+			expect.arrayContaining(['Ритуал-Сервис', 2, 2700, 1000])
+		);
 		expect(sheet.getRow(3).getCell(1).value).toBe('Итого');
 	});
 
 	it('leaves the days of stock empty when nothing was shipped', async () => {
 		const dto: StockTurnoverReportDto = {
-			range, kind: null,
-			rows: [{ stockItemId: 1, optionId: 2, code: 'ST-1', title: 'Волга', optionTitle: 'Орех', unitTitle: 'шт', openingQty: 4, incomeQty: 0, outcomeQty: 0, closingQty: 4, shippedQty: 0, turnoverDays: null }]
+			range,
+			kind: null,
+			rows: [
+				{
+					stockItemId: 1,
+					optionId: 2,
+					code: 'ST-1',
+					title: 'Волга',
+					optionTitle: 'Орех',
+					unitTitle: 'шт',
+					openingQty: 4,
+					incomeQty: 0,
+					outcomeQty: 0,
+					closingQty: 4,
+					shippedQty: 0,
+					turnoverDays: null
+				}
+			]
 		};
 		const sheet = await sheetOf(await new ReportExportService('Europe/Moscow').stock(dto));
 		expect(sheet.getRow(2).values).toEqual(expect.arrayContaining(['ST-1', 'Волга', 'Орех', 4]));
@@ -2210,17 +2660,32 @@ import type { FunnelStage, LostStatus, SalesBucket, SalesGroup } from '$lib/type
 import { PRICE_DASH } from '$lib/utils/format';
 
 export const FUNNEL_STAGE_TITLE: Readonly<Record<FunnelStage, string>> = {
-	new: 'Отправлено', in_work: 'Принято в работу', ready: 'Готово', delivered: 'Доставлено', paid: 'Оплачено'
+	new: 'Отправлено',
+	in_work: 'Принято в работу',
+	ready: 'Готово',
+	delivered: 'Доставлено',
+	paid: 'Оплачено'
 };
-export const LOST_STATUS_TITLE: Readonly<Record<LostStatus, string>> = { cancelled: 'Отменена', rejected: 'Отклонена' };
+export const LOST_STATUS_TITLE: Readonly<Record<LostStatus, string>> = {
+	cancelled: 'Отменена',
+	rejected: 'Отклонена'
+};
 export const SALES_GROUP_TITLE: Readonly<Record<SalesGroup, string>> = {
-	counterparty: 'По контрагентам', model: 'По моделям', period: 'По периодам'
+	counterparty: 'По контрагентам',
+	model: 'По моделям',
+	period: 'По периодам'
 };
-export const SALES_BUCKET_TITLE: Readonly<Record<SalesBucket, string>> = { day: 'По дням', week: 'По неделям', month: 'По месяцам' };
+export const SALES_BUCKET_TITLE: Readonly<Record<SalesBucket, string>> = {
+	day: 'По дням',
+	week: 'По неделям',
+	month: 'По месяцам'
+};
 
 /** Basis points as a percent with one decimal: a funnel of ten requests needs it. */
 export function percentOfBp(bp: number | null): string {
-	return bp === null ? PRICE_DASH : `${(bp / 100).toLocaleString('ru-RU', { maximumFractionDigits: 1 })} %`;
+	return bp === null
+		? PRICE_DASH
+		: `${(bp / 100).toLocaleString('ru-RU', { maximumFractionDigits: 1 })} %`;
 }
 
 export function daysOrDash(days: number | null): string {
@@ -2234,8 +2699,13 @@ export function daysOrDash(days: number | null): string {
 import ExcelJS from 'exceljs';
 import { FUNNEL_STAGE_TITLE, LOST_STATUS_TITLE } from '$lib/crm/reports/labels';
 import type {
-	CharityReportDto, FunnelReportDto, LostReportDto, LostRequestRowDto, SalesReportDto,
-	SalesTotalsDto, StockTurnoverReportDto
+	CharityReportDto,
+	FunnelReportDto,
+	LostReportDto,
+	LostRequestRowDto,
+	SalesReportDto,
+	SalesTotalsDto,
+	StockTurnoverReportDto
 } from '$lib/types/crm-reports';
 import { formatDateTime } from '$lib/utils/format';
 import { fromMinor } from '$lib/utils/money';
@@ -2244,8 +2714,12 @@ const MONEY = { numFmt: '#,##0.00' };
 type Column = { header: string; key: string; width: number; style?: typeof MONEY };
 
 const totalsCells = (t: SalesTotalsDto) => ({
-	requests: t.requestCount, qty: t.qty, items: fromMinor(t.itemsTotalMinor),
-	discount: fromMinor(t.discountMinor), total: fromMinor(t.totalMinor), paid: fromMinor(t.paidMinor)
+	requests: t.requestCount,
+	qty: t.qty,
+	items: fromMinor(t.itemsTotalMinor),
+	discount: fromMinor(t.discountMinor),
+	total: fromMinor(t.totalMinor),
+	paid: fromMinor(t.paidMinor)
 });
 const TOTALS_COLUMNS: Column[] = [
 	{ header: 'Заявок', key: 'requests', width: 9 },
@@ -2264,7 +2738,10 @@ export class ReportExportService {
 	constructor(private readonly timeZone: string) {}
 
 	private async build(
-		title: string, columns: Column[], rows: readonly Record<string, unknown>[], total?: Record<string, unknown>
+		title: string,
+		columns: Column[],
+		rows: readonly Record<string, unknown>[],
+		total?: Record<string, unknown>
 	): Promise<Buffer> {
 		const workbook = new ExcelJS.Workbook();
 		const sheet = workbook.addWorksheet(title);
@@ -2279,70 +2756,141 @@ export class ReportExportService {
 		const total = { name: 'Итого', ...totalsCells(dto.totals) };
 		switch (dto.group) {
 			case 'counterparty':
-				return this.build('Продажи', [{ header: 'Контрагент', key: 'name', width: 36 }, ...TOTALS_COLUMNS],
-					dto.rows.map((row) => ({ name: row.title, ...totalsCells(row) })), total);
+				return this.build(
+					'Продажи',
+					[{ header: 'Контрагент', key: 'name', width: 36 }, ...TOTALS_COLUMNS],
+					dto.rows.map((row) => ({ name: row.title, ...totalsCells(row) })),
+					total
+				);
 			case 'period':
-				return this.build('Продажи', [{ header: 'Период', key: 'name', width: 26 }, ...TOTALS_COLUMNS],
-					dto.rows.map((row) => ({ name: `${row.bucketFrom} – ${row.bucketTo}`, ...totalsCells(row) })), total);
+				return this.build(
+					'Продажи',
+					[{ header: 'Период', key: 'name', width: 26 }, ...TOTALS_COLUMNS],
+					dto.rows.map((row) => ({
+						name: `${row.bucketFrom} – ${row.bucketTo}`,
+						...totalsCells(row)
+					})),
+					total
+				);
 			case 'model':
-				return this.build('Продажи', [
-					{ header: 'Модель', key: 'name', width: 36 },
-					{ header: 'Заявок', key: 'requests', width: 9 },
-					{ header: 'Штук', key: 'qty', width: 8 },
-					{ header: 'Сумма до скидки, ₽', key: 'items', width: 20, style: MONEY }
-				], dto.rows.map((row) => ({ name: row.title, requests: row.requestCount, qty: row.qty, items: fromMinor(row.linesTotalMinor) })),
-				{ name: 'Итого', qty: dto.totals.qty, items: fromMinor(dto.totals.itemsTotalMinor) });
+				return this.build(
+					'Продажи',
+					[
+						{ header: 'Модель', key: 'name', width: 36 },
+						{ header: 'Заявок', key: 'requests', width: 9 },
+						{ header: 'Штук', key: 'qty', width: 8 },
+						{ header: 'Сумма до скидки, ₽', key: 'items', width: 20, style: MONEY }
+					],
+					dto.rows.map((row) => ({
+						name: row.title,
+						requests: row.requestCount,
+						qty: row.qty,
+						items: fromMinor(row.linesTotalMinor)
+					})),
+					{ name: 'Итого', qty: dto.totals.qty, items: fromMinor(dto.totals.itemsTotalMinor) }
+				);
 		}
 	}
 
 	stock(dto: StockTurnoverReportDto): Promise<Buffer> {
-		return this.build('Оборачиваемость', [
-			{ header: 'Код', key: 'code', width: 20 }, { header: 'Позиция', key: 'title', width: 36 },
-			{ header: 'Цвет', key: 'color', width: 16 }, { header: 'Ед.', key: 'unit', width: 8 },
-			{ header: 'Начало', key: 'opening', width: 10 }, { header: 'Приход', key: 'income', width: 10 },
-			{ header: 'Расход', key: 'outcome', width: 10 }, { header: 'Конец', key: 'closing', width: 10 },
-			{ header: 'Отгружено', key: 'shipped', width: 12 }, { header: 'Дни запаса', key: 'days', width: 12 }
-		], dto.rows.map((row) => ({
-			code: row.code, title: row.title, color: row.optionTitle ?? '', unit: row.unitTitle,
-			opening: row.openingQty, income: row.incomeQty, outcome: row.outcomeQty, closing: row.closingQty,
-			shipped: row.shippedQty, days: row.turnoverDays ?? ''
-		})));
+		return this.build(
+			'Оборачиваемость',
+			[
+				{ header: 'Код', key: 'code', width: 20 },
+				{ header: 'Позиция', key: 'title', width: 36 },
+				{ header: 'Цвет', key: 'color', width: 16 },
+				{ header: 'Ед.', key: 'unit', width: 8 },
+				{ header: 'Начало', key: 'opening', width: 10 },
+				{ header: 'Приход', key: 'income', width: 10 },
+				{ header: 'Расход', key: 'outcome', width: 10 },
+				{ header: 'Конец', key: 'closing', width: 10 },
+				{ header: 'Отгружено', key: 'shipped', width: 12 },
+				{ header: 'Дни запаса', key: 'days', width: 12 }
+			],
+			dto.rows.map((row) => ({
+				code: row.code,
+				title: row.title,
+				color: row.optionTitle ?? '',
+				unit: row.unitTitle,
+				opening: row.openingQty,
+				income: row.incomeQty,
+				outcome: row.outcomeQty,
+				closing: row.closingQty,
+				shipped: row.shippedQty,
+				days: row.turnoverDays ?? ''
+			}))
+		);
 	}
 
 	funnel(dto: FunnelReportDto): Promise<Buffer> {
 		const percent = (bp: number | null) => (bp === null ? '' : bp / 100);
-		return this.build('Воронка', [
-			{ header: 'Стадия', key: 'stage', width: 24 }, { header: 'Заявок', key: 'count', width: 10 },
-			{ header: 'От предыдущей, %', key: 'previous', width: 18 }, { header: 'От отправленных, %', key: 'first', width: 20 }
-		], [
-			...dto.stages.map((s) => ({ stage: FUNNEL_STAGE_TITLE[s.stage], count: s.count, previous: percent(s.shareOfPreviousBp), first: percent(s.shareOfFirstBp) })),
-			{ stage: LOST_STATUS_TITLE.cancelled, count: dto.cancelledCount },
-			{ stage: LOST_STATUS_TITLE.rejected, count: dto.rejectedCount }
-		]);
+		return this.build(
+			'Воронка',
+			[
+				{ header: 'Стадия', key: 'stage', width: 24 },
+				{ header: 'Заявок', key: 'count', width: 10 },
+				{ header: 'От предыдущей, %', key: 'previous', width: 18 },
+				{ header: 'От отправленных, %', key: 'first', width: 20 }
+			],
+			[
+				...dto.stages.map((s) => ({
+					stage: FUNNEL_STAGE_TITLE[s.stage],
+					count: s.count,
+					previous: percent(s.shareOfPreviousBp),
+					first: percent(s.shareOfFirstBp)
+				})),
+				{ stage: LOST_STATUS_TITLE.cancelled, count: dto.cancelledCount },
+				{ stage: LOST_STATUS_TITLE.rejected, count: dto.rejectedCount }
+			]
+		);
 	}
 
 	lost(dto: LostReportDto, rows: readonly LostRequestRowDto[]): Promise<Buffer> {
-		return this.build('Потерянные заявки', [
-			{ header: 'Дата', key: 'at', width: 17 }, { header: 'Заявка', key: 'number', width: 16 },
-			{ header: 'Статус', key: 'status', width: 12 }, { header: 'Контрагент', key: 'cp', width: 32 },
-			{ header: 'Причина', key: 'reason', width: 26 }, { header: 'Комментарий', key: 'comment', width: 36 },
-			{ header: 'Сумма, ₽', key: 'total', width: 16, style: MONEY }
-		], rows.map((row) => ({
-			at: formatDateTime(row.at, this.timeZone), number: row.number, status: LOST_STATUS_TITLE[row.status],
-			cp: row.counterpartyTitle ?? '', reason: row.reasonTitle ?? '', comment: row.comment ?? '', total: fromMinor(row.totalMinor)
-		})), { at: 'Итого', total: fromMinor(dto.totalMinor) });
+		return this.build(
+			'Потерянные заявки',
+			[
+				{ header: 'Дата', key: 'at', width: 17 },
+				{ header: 'Заявка', key: 'number', width: 16 },
+				{ header: 'Статус', key: 'status', width: 12 },
+				{ header: 'Контрагент', key: 'cp', width: 32 },
+				{ header: 'Причина', key: 'reason', width: 26 },
+				{ header: 'Комментарий', key: 'comment', width: 36 },
+				{ header: 'Сумма, ₽', key: 'total', width: 16, style: MONEY }
+			],
+			rows.map((row) => ({
+				at: formatDateTime(row.at, this.timeZone),
+				number: row.number,
+				status: LOST_STATUS_TITLE[row.status],
+				cp: row.counterpartyTitle ?? '',
+				reason: row.reasonTitle ?? '',
+				comment: row.comment ?? '',
+				total: fromMinor(row.totalMinor)
+			})),
+			{ at: 'Итого', total: fromMinor(dto.totalMinor) }
+		);
 	}
 
 	charity(dto: CharityReportDto): Promise<Buffer> {
-		return this.build('Фонд', [
-			{ header: 'Дата', key: 'date', width: 14 }, { header: 'Сумма, ₽', key: 'amount', width: 16, style: MONEY },
-			{ header: 'Документ', key: 'document', width: 22 }, { header: 'Комментарий', key: 'comment', width: 36 },
-			{ header: 'Кто записал', key: 'author', width: 26 }, { header: 'Сторно', key: 'reversal', width: 10 }
-		], dto.transfers.rows.map((row) => ({
-			date: row.transferredOn, amount: fromMinor(row.amountMinor), document: row.documentRef ?? '',
-			comment: row.comment ?? '', author: row.createdByName,
-			reversal: row.reversalOfId !== null ? 'сторно' : row.isReversed ? 'сторнировано' : ''
-		})), { date: 'Остаток', amount: fromMinor(dto.remainderMinor) });
+		return this.build(
+			'Фонд',
+			[
+				{ header: 'Дата', key: 'date', width: 14 },
+				{ header: 'Сумма, ₽', key: 'amount', width: 16, style: MONEY },
+				{ header: 'Документ', key: 'document', width: 22 },
+				{ header: 'Комментарий', key: 'comment', width: 36 },
+				{ header: 'Кто записал', key: 'author', width: 26 },
+				{ header: 'Сторно', key: 'reversal', width: 10 }
+			],
+			dto.transfers.rows.map((row) => ({
+				date: row.transferredOn,
+				amount: fromMinor(row.amountMinor),
+				document: row.documentRef ?? '',
+				comment: row.comment ?? '',
+				author: row.createdByName,
+				reversal: row.reversalOfId !== null ? 'сторно' : row.isReversed ? 'сторнировано' : ''
+			})),
+			{ date: 'Остаток', amount: fromMinor(dto.remainderMinor) }
+		);
 	}
 }
 ```
@@ -2362,19 +2910,29 @@ import type { ActorContext } from '$lib/types/actor';
  * Layout guards do not run for actions and endpoints, so every entry point of the reports checks
  * the contour and `reports.read` itself; the transfer service checks `charity.manage` again.
  */
-export function reportsActor(event: { readonly locals: App.Locals; readonly url: URL }): ActorContext {
+export function reportsActor(event: {
+	readonly locals: App.Locals;
+	readonly url: URL;
+}): ActorContext {
 	return requireAction(requireScope(event.locals.actor, 'crm', event.url.pathname), 'reports.read');
 }
 
 /** A range the report refuses still opens the page: the filter stays to be corrected. */
 export function loadReport<I extends ReportRange, R>(
-	url: URL, schema: ZodType<I>, fallback: ReportRange, run: (input: I) => R
+	url: URL,
+	schema: ZodType<I>,
+	fallback: ReportRange,
+	run: (input: I) => R
 ) {
 	const asked = Object.fromEntries(url.searchParams);
 	const filters = { ...fallback, ...asked };
 	const parsed = schema.safeParse(filters);
 	if (!parsed.success) {
-		return { filters, report: null, problem: parsed.error.issues[0]?.message ?? 'Выберите даты периода' };
+		return {
+			filters,
+			report: null,
+			problem: parsed.error.issues[0]?.message ?? 'Выберите даты периода'
+		};
 	}
 	try {
 		return { filters, report: run(parsed.data), problem: null };
@@ -2395,7 +2953,9 @@ import type { PageServerLoad } from './$types';
 
 export const load: PageServerLoad = (event) => {
 	const service = new SalesReportService(reportsActor(event));
-	return loadReport(event.url, salesReportSchema, service.defaultRange(), (input) => service.report(input));
+	return loadReport(event.url, salesReportSchema, service.defaultRange(), (input) =>
+		service.report(input)
+	);
 };
 ```
 
@@ -2410,7 +2970,9 @@ import { CharityReportService } from '$lib/server/crm-reports/charity-report.ser
 import { CharityTransferService } from '$lib/server/crm-reports/charity-transfer.service';
 import { loadReport, reportsActor } from '$lib/server/crm-reports/route';
 import {
-	charityTransferReverseSchema, charityTransferSchema, reportRangeSchema
+	charityTransferReverseSchema,
+	charityTransferSchema,
+	reportRangeSchema
 } from '$lib/validation/crm-reports';
 import type { Actions, PageServerLoad } from './$types';
 
@@ -2460,7 +3022,8 @@ export const GET: RequestHandler = async (event) => {
 	try {
 		const parsed = salesReportSchema.safeParse(Object.fromEntries(event.url.searchParams));
 		// A sheet has no filter to correct: a broken range is a 422, not a 500.
-		if (!parsed.success) throw new ValidationError(parsed.error.issues[0]?.message ?? 'Выберите даты периода');
+		if (!parsed.success)
+			throw new ValidationError(parsed.error.issues[0]?.message ?? 'Выберите даты периода');
 		const dto = new SalesReportService(actor).report(parsed.data);
 		body = await new ReportExportService(OrgService.timezone()).sales(dto);
 	} catch (err) {
@@ -2496,12 +3059,14 @@ export function parseOr422<I>(schema: ZodType<I>, url: URL): I {
 ### Task 11: Экраны раздела
 
 **Files:**
+
 - Create: `src/routes/(crm)/crm/reports/+layout.svelte`, `+page.svelte`, `sales/+page.svelte`, `stock/+page.svelte`, `funnel/+page.svelte`, `lost/+page.svelte`, `charity/+page.svelte`
 - Create: `src/lib/crm/reports/ReportFilters.svelte`, `StatTile.svelte`, `TransferModal.svelte`, `ReverseModal.svelte`
 - Modify: `src/routes/(crm)/+layout.svelte` (пункт «Отчёты»)
 - Move: `src/lib/crm/payroll/ReportTable.svelte` в `src/lib/crm/ReportTable.svelte` (второй потребитель), поправить импорт в `payroll/reports/+page.svelte`
 
 **Interfaces:**
+
 - Consumes: данные загрузчиков задачи 10 (`filters`, `report`, `problem`), `labels.ts`.
 
 - [ ] **Step 1: Пункт меню.** В `links` после «Выплаты»:
@@ -2532,7 +3097,10 @@ export function parseOr422<I>(schema: ZodType<I>, url: URL): I {
 	} = $props();
 
 	const PRESET_TITLE: Readonly<Record<ReportPreset, string>> = {
-		week: 'Неделя', month: 'Месяц', quarter: 'Квартал', year: 'Год'
+		week: 'Неделя',
+		month: 'Месяц',
+		quarter: 'Квартал',
+		year: 'Год'
 	};
 	const fields = $derived<FilterField[]>([
 		{ key: 'from', label: 'С', type: 'date', placeholder: 'Выберите дату' },
@@ -2540,7 +3108,9 @@ export function parseOr422<I>(schema: ZodType<I>, url: URL): I {
 		...extra
 	]);
 	// The sheet takes the query string of the page: the file is what the owner is looking at.
-	const exportUrl = $derived(exportHref === undefined ? undefined : `${exportHref}${page.url.search}`);
+	const exportUrl = $derived(
+		exportHref === undefined ? undefined : `${exportHref}${page.url.search}`
+	);
 	const presetHref = (preset: ReportPreset): string => {
 		const params = new URLSearchParams(page.url.searchParams);
 		const range = presetRange(preset, today);
@@ -2559,7 +3129,13 @@ export function parseOr422<I>(schema: ZodType<I>, url: URL): I {
 			</Button>
 		{/each}
 		{#if exportUrl}
-			<Button variant="secondary" size="sm" href={exportUrl} data-testid="report-export" class="ms-auto">
+			<Button
+				variant="secondary"
+				size="sm"
+				href={exportUrl}
+				data-testid="report-export"
+				class="ms-auto"
+			>
 				Выгрузить в XLSX
 			</Button>
 		{/if}
@@ -2575,8 +3151,18 @@ export function parseOr422<I>(schema: ZodType<I>, url: URL): I {
 <script lang="ts">
 	import { Card } from '$lib/ui';
 
-	let { label, value, hint, href, testid }: {
-		label: string; value: string; hint?: string; href?: string; testid: string;
+	let {
+		label,
+		value,
+		hint,
+		href,
+		testid
+	}: {
+		label: string;
+		value: string;
+		hint?: string;
+		href?: string;
+		testid: string;
 	} = $props();
 </script>
 
@@ -2618,7 +3204,9 @@ export function parseOr422<I>(schema: ZodType<I>, url: URL): I {
 		{#each sections as section (section.href)}
 			<a
 				href={section.href}
-				class="rounded-full px-3 py-1 text-sm {page.url.pathname === section.href ? 'bg-surface-strong font-medium' : 'text-fg-muted'}"
+				class="rounded-full px-3 py-1 text-sm {page.url.pathname === section.href
+					? 'bg-surface-strong font-medium'
+					: 'text-fg-muted'}"
 				aria-current={page.url.pathname === section.href ? 'page' : undefined}
 			>
 				{section.label}
@@ -2653,28 +3241,73 @@ export function parseOr422<I>(schema: ZodType<I>, url: URL): I {
 		{ key: 'qty', label: 'Штук', align: 'end' },
 		{ key: 'total', label: 'Сумма', align: 'end' }
 	];
-	const counterparties = $derived((data.report?.topCounterparties ?? []).map((r) => ({ id: r.counterpartyId, title: r.title, qty: r.qty, total: r.totalMinor })));
-	const models = $derived((data.report?.topModels ?? []).map((r) => ({ id: r.modelId, title: r.title, qty: r.qty, total: r.linesTotalMinor })));
+	const counterparties = $derived(
+		(data.report?.topCounterparties ?? []).map((r) => ({
+			id: r.counterpartyId,
+			title: r.title,
+			qty: r.qty,
+			total: r.totalMinor
+		}))
+	);
+	const models = $derived(
+		(data.report?.topModels ?? []).map((r) => ({
+			id: r.modelId,
+			title: r.title,
+			qty: r.qty,
+			total: r.linesTotalMinor
+		}))
+	);
 	type Row = (typeof counterparties)[number];
 </script>
 
 <svelte:head><title>Отчёты</title></svelte:head>
 
 <h1 class="text-3xl">Сводка</h1>
-<Card.Root><Card.Content><ReportFilters bind:filters today={data.today} /></Card.Content></Card.Root>
+<Card.Root><Card.Content><ReportFilters bind:filters today={data.today} /></Card.Content></Card.Root
+>
 
 {#if data.problem}
 	<div data-testid="report-problem"><ErrorState title={data.problem} /></div>
 {:else if data.report}
 	{@const r = data.report}
 	<div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-		<StatTile testid="tile-sales" label="Продажи за период" value={formatMinor(r.sales.totalMinor)} hint={`Заявок: ${r.sales.requestCount}, штук: ${r.sales.qty}`} href={`${resolve('/crm/reports/sales')}${query}`} />
+		<StatTile
+			testid="tile-sales"
+			label="Продажи за период"
+			value={formatMinor(r.sales.totalMinor)}
+			hint={`Заявок: ${r.sales.requestCount}, штук: ${r.sales.qty}`}
+			href={`${resolve('/crm/reports/sales')}${query}`}
+		/>
 		<StatTile testid="tile-paid" label="Оплачено по ним" value={formatMinor(r.sales.paidMinor)} />
-		<StatTile testid="tile-debt" label="Долг контрагентов сейчас" value={formatMinor(r.debtMinor)} href={resolve('/crm/counterparties')} />
-		<StatTile testid="tile-payroll" label="Начислено бригаде" value={formatMinor(r.payrollAccruedMinor)} href={`${resolve('/crm/payroll/reports')}${query}`} />
-		<StatTile testid="tile-charity" label="Начислено фонду за период" value={formatMinor(r.charityAccruedInRangeMinor)} href={`${resolve('/crm/reports/charity')}${query}`} />
-		<StatTile testid="tile-remainder" label="К перечислению фонду" value={formatMinor(r.charityRemainderMinor)} />
-		<StatTile testid="tile-threshold" label="Позиций ниже порога" value={String(r.belowThresholdCount)} href={`${resolve('/crm/stock')}?belowThreshold=1`} />
+		<StatTile
+			testid="tile-debt"
+			label="Долг контрагентов сейчас"
+			value={formatMinor(r.debtMinor)}
+			href={resolve('/crm/counterparties')}
+		/>
+		<StatTile
+			testid="tile-payroll"
+			label="Начислено бригаде"
+			value={formatMinor(r.payrollAccruedMinor)}
+			href={`${resolve('/crm/payroll/reports')}${query}`}
+		/>
+		<StatTile
+			testid="tile-charity"
+			label="Начислено фонду за период"
+			value={formatMinor(r.charityAccruedInRangeMinor)}
+			href={`${resolve('/crm/reports/charity')}${query}`}
+		/>
+		<StatTile
+			testid="tile-remainder"
+			label="К перечислению фонду"
+			value={formatMinor(r.charityRemainderMinor)}
+		/>
+		<StatTile
+			testid="tile-threshold"
+			label="Позиций ниже порога"
+			value={String(r.belowThresholdCount)}
+			href={`${resolve('/crm/stock')}?belowThreshold=1`}
+		/>
 	</div>
 
 	<Card.Root>
@@ -2682,7 +3315,12 @@ export function parseOr422<I>(schema: ZodType<I>, url: URL): I {
 			<h2 class="text-2xl">Заявки сейчас</h2>
 			<dl class="grid gap-3 sm:grid-cols-4" data-testid="status-counts">
 				{#each Object.entries(r.statusCounts) as [status, count] (status)}
-					<div><dt class="text-sm text-fg-muted">{STATUS_TITLE[status as keyof typeof r.statusCounts]}</dt><dd class="text-xl tabular-nums">{count}</dd></div>
+					<div>
+						<dt class="text-sm text-fg-muted">
+							{STATUS_TITLE[status as keyof typeof r.statusCounts]}
+						</dt>
+						<dd class="text-xl tabular-nums">{count}</dd>
+					</div>
 				{/each}
 			</dl>
 		</Card.Content>
@@ -2694,14 +3332,18 @@ export function parseOr422<I>(schema: ZodType<I>, url: URL): I {
 		{:else}<span class="tabular-nums">{formatMinor(row.total)}</span>{/if}
 	{/snippet}
 	<div class="grid gap-4 lg:grid-cols-2">
-		<Card.Root><Card.Content class="flex flex-col gap-3">
-			<h2 class="text-2xl">Контрагенты</h2>
-			<ReportTable rows={counterparties} {columns} emptyTitle="За эти даты продаж нет" {cell} />
-		</Card.Content></Card.Root>
-		<Card.Root><Card.Content class="flex flex-col gap-3">
-			<h2 class="text-2xl">Модели</h2>
-			<ReportTable rows={models} {columns} emptyTitle="За эти даты продаж нет" {cell} />
-		</Card.Content></Card.Root>
+		<Card.Root
+			><Card.Content class="flex flex-col gap-3">
+				<h2 class="text-2xl">Контрагенты</h2>
+				<ReportTable rows={counterparties} {columns} emptyTitle="За эти даты продаж нет" {cell} />
+			</Card.Content></Card.Root
+		>
+		<Card.Root
+			><Card.Content class="flex flex-col gap-3">
+				<h2 class="text-2xl">Модели</h2>
+				<ReportTable rows={models} {columns} emptyTitle="За эти даты продаж нет" {cell} />
+			</Card.Content></Card.Root
+		>
 	</div>
 {/if}
 ```
@@ -2710,12 +3352,12 @@ export function parseOr422<I>(schema: ZodType<I>, url: URL): I {
 
 - [ ] **Step 6: Страницы продаж, склада, воронки и потерянных.** Каждая повторяет каркас дашборда: заголовок, `Card` с `ReportFilters` (с `exportHref` своего роута), `ErrorState` по `data.problem`, таблица на `ReportTable` (у потерянных `DataTable` с серверной пагинацией: `rows`, `total`, `query`, `onQueryChange` как в реестре заявок `/crm/requests`). Колонки и содержимое ячеек:
 
-| Страница | `extra` фильтра | Колонки |
-|---|---|---|
-| `sales` | `group` (`select`, три значения из `SALES_GROUP_TITLE`), `bucket` (`select`, показывается при `group=period`), `counterpartyId` (`select` из `data.counterparties`, плейсхолдер «Выберите контрагента») | контрагент или период: название, «Заявок», «Штук», «Сумма», «Скидка», «Итог», «Оплачено»; модель: «Модель», «Заявок», «Штук», «Сумма до скидки». Под таблицей строка «Итого» с `data-testid="sales-total"` и `formatMinor(report.totals.totalMinor)` |
-| `stock` | `kind` (`select`: «Изделия», «Комплектующие» из `KIND_TITLE`) | «Код», «Позиция», «Цвет», «Начало», «Приход», «Расход», «Конец», «Отгружено», «Дни запаса» (`daysOrDash`) |
-| `funnel` | нет | «Стадия» (`FUNNEL_STAGE_TITLE`), «Заявок», «От предыдущей», «От отправленных» (`percentOfBp`); под таблицей два числа: отменено, отклонено |
-| `lost` | `status` (`select` из `LOST_STATUS_TITLE`, плейсхолдер «Выберите статус») | свод по причинам: «Причина», «Заявок», «Сумма»; реестр: «Дата» (`formatDateTime` в `data.timezone`), «Заявка» (ссылка на `/crm/requests/[id]`), «Статус», «Контрагент», «Причина», «Комментарий», «Сумма» |
+| Страница | `extra` фильтра                                                                                                                                                                                         | Колонки                                                                                                                                                                                                                                              |
+| -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `sales`  | `group` (`select`, три значения из `SALES_GROUP_TITLE`), `bucket` (`select`, показывается при `group=period`), `counterpartyId` (`select` из `data.counterparties`, плейсхолдер «Выберите контрагента») | контрагент или период: название, «Заявок», «Штук», «Сумма», «Скидка», «Итог», «Оплачено»; модель: «Модель», «Заявок», «Штук», «Сумма до скидки». Под таблицей строка «Итого» с `data-testid="sales-total"` и `formatMinor(report.totals.totalMinor)` |
+| `stock`  | `kind` (`select`: «Изделия», «Комплектующие» из `KIND_TITLE`)                                                                                                                                           | «Код», «Позиция», «Цвет», «Начало», «Приход», «Расход», «Конец», «Отгружено», «Дни запаса» (`daysOrDash`)                                                                                                                                            |
+| `funnel` | нет                                                                                                                                                                                                     | «Стадия» (`FUNNEL_STAGE_TITLE`), «Заявок», «От предыдущей», «От отправленных» (`percentOfBp`); под таблицей два числа: отменено, отклонено                                                                                                           |
+| `lost`   | `status` (`select` из `LOST_STATUS_TITLE`, плейсхолдер «Выберите статус»)                                                                                                                               | свод по причинам: «Причина», «Заявок», «Сумма»; реестр: «Дата» (`formatDateTime` в `data.timezone`), «Заявка» (ссылка на `/crm/requests/[id]`), «Статус», «Контрагент», «Причина», «Комментарий», «Сумма»                                            |
 
 Группировку на странице продаж переключает `Tabs` поверх ссылок с `group` в адресе, а не локальное состояние: выгрузка и перезагрузка страницы обязаны видеть ту же вкладку. Числа в ячейках с классом `tabular-nums`, деньги через `formatMinor`, пустое значение через `PriceCell` или `PRICE_DASH`.
 
@@ -2729,8 +3371,16 @@ export function parseOr422<I>(schema: ZodType<I>, url: URL): I {
 	import { Button, DatePicker, Input, Modal, MoneyInput, Textarea } from '$lib/ui';
 	import { formatMinor } from '$lib/utils/format';
 
-	let { open = $bindable(), today, remainderMinor, error }: {
-		open: boolean; today: string; remainderMinor: number; error: string | null;
+	let {
+		open = $bindable(),
+		today,
+		remainderMinor,
+		error
+	}: {
+		open: boolean;
+		today: string;
+		remainderMinor: number;
+		error: string | null;
 	} = $props();
 	let amountMinor = $state<number | null>(null);
 	// svelte-ignore state_referenced_locally
@@ -2741,7 +3391,12 @@ export function parseOr422<I>(schema: ZodType<I>, url: URL): I {
 	{#snippet body()}
 		<form method="POST" action="?/transfer" use:enhance class="flex flex-col gap-4">
 			<p class="text-sm text-fg-muted">К перечислению: {formatMinor(remainderMinor)}</p>
-			<MoneyInput label="Сумма, ₽" placeholder="Введите сумму" bind:valueMinor={amountMinor} required />
+			<MoneyInput
+				label="Сумма, ₽"
+				placeholder="Введите сумму"
+				bind:valueMinor={amountMinor}
+				required
+			/>
 			<input type="hidden" name="amountMinor" value={amountMinor ?? ''} />
 			<DatePicker label="Дата перечисления" bind:value={transferredOn} />
 			<input type="hidden" name="transferredOn" value={transferredOn} />
@@ -2765,6 +3420,7 @@ export function parseOr422<I>(schema: ZodType<I>, url: URL): I {
 ### Task 12: e2e, гейт и демонстрация DoD
 
 **Files:**
+
 - Create: `tests/e2e/crm-reports.e2e.ts`
 - Modify: `scripts/seed-demo.ts` только если на демо-данных нет ни одной доставленной заявки (проверить `pnpm seed:demo`)
 
@@ -2776,8 +3432,17 @@ import { charityTransfers } from '../../src/lib/server/db/schema';
 import { login } from './fixtures';
 import { e2eDb } from './transitions';
 
-const PATHS = ['/crm/reports', '/crm/reports/sales', '/crm/reports/stock', '/crm/reports/funnel', '/crm/reports/lost', '/crm/reports/charity'];
-const SHEETS = ['sales', 'stock', 'funnel', 'lost', 'charity'].map((name) => `/crm/reports/${name}/export.xlsx`);
+const PATHS = [
+	'/crm/reports',
+	'/crm/reports/sales',
+	'/crm/reports/stock',
+	'/crm/reports/funnel',
+	'/crm/reports/lost',
+	'/crm/reports/charity'
+];
+const SHEETS = ['sales', 'stock', 'funnel', 'lost', 'charity'].map(
+	(name) => `/crm/reports/${name}/export.xlsx`
+);
 const RANGE = '?from=2026-01-01&to=2026-12-31';
 
 // The file outlives a run: a transfer left by an earlier run would eat the remainder of this one.
@@ -2785,7 +3450,9 @@ test.beforeAll(() => {
 	e2eDb().delete(charityTransfers).run();
 });
 
-test('C13: the owner reads the period, downloads a sheet and records a transfer', async ({ page }) => {
+test('C13: the owner reads the period, downloads a sheet and records a transfer', async ({
+	page
+}) => {
 	await login(page, 'owner');
 	await page.getByRole('link', { name: 'Отчёты', exact: true }).click();
 	await expect(page.getByTestId('tile-sales')).toBeVisible();
@@ -2817,7 +3484,11 @@ test('C13: a broken period keeps the page and refuses the sheet', async ({ page 
 	await login(page, 'owner');
 	await page.goto('/crm/reports/sales?from=2026-03-02&to=2026-03-01');
 	await expect(page.getByTestId('report-problem')).toBeVisible();
-	expect((await page.request.get('/crm/reports/sales/export.xlsx?from=2026-03-02&to=2026-03-01')).status()).toBe(422);
+	expect(
+		(
+			await page.request.get('/crm/reports/sales/export.xlsx?from=2026-03-02&to=2026-03-01')
+		).status()
+	).toBe(422);
 });
 
 for (const role of ['manager', 'driver', 'cp_admin'] as const) {

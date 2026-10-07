@@ -46,7 +46,7 @@
 ```ts
 export const charityTransfers = sqliteTable('charity_transfers', {
 	id: pk(),
-	amountMinor: money('amount_minor'),              // negative on a reversal row
+	amountMinor: money('amount_minor'), // negative on a reversal row
 	transferredAt: ts('transferred_at').notNull(),
 	documentRef: text('document_ref'),
 	comment: text('comment'),
@@ -80,75 +80,128 @@ export type SalesBucket = (typeof SALES_BUCKETS)[number];
 export type LostStatus = (typeof LOST_STATUSES)[number];
 export type FunnelStage = (typeof FUNNEL_STAGES)[number];
 
-export interface ReportRangeDto { from: string; to: string; }   // 'YYYY-MM-DD' in org.timezone, both inclusive
+export interface ReportRangeDto {
+	from: string;
+	to: string;
+} // 'YYYY-MM-DD' in org.timezone, both inclusive
 
 export interface SalesTotalsDto {
-	requestCount: number; qty: number;
-	itemsTotalMinor: number; discountMinor: number; totalMinor: number;
-	paidMinor: number;                             // paid so far on these requests
+	requestCount: number;
+	qty: number;
+	itemsTotalMinor: number;
+	discountMinor: number;
+	totalMinor: number;
+	paidMinor: number; // paid so far on these requests
 }
-export interface SalesByCounterpartyRowDto extends SalesTotalsDto { counterpartyId: number; title: string; }
+export interface SalesByCounterpartyRowDto extends SalesTotalsDto {
+	counterpartyId: number;
+	title: string;
+}
 export interface SalesByModelRowDto {
-	modelId: number; title: string;
-	requestCount: number; qty: number;
-	linesTotalMinor: number;                       // sum of line totals, before the request discount
+	modelId: number;
+	title: string;
+	requestCount: number;
+	qty: number;
+	linesTotalMinor: number; // sum of line totals, before the request discount
 }
-export interface SalesByPeriodRowDto extends SalesTotalsDto { bucketFrom: string; bucketTo: string; }
+export interface SalesByPeriodRowDto extends SalesTotalsDto {
+	bucketFrom: string;
+	bucketTo: string;
+}
 export type SalesRowsDto =
 	| { group: 'counterparty'; rows: SalesByCounterpartyRowDto[] }
 	| { group: 'model'; rows: SalesByModelRowDto[] }
 	| { group: 'period'; bucket: SalesBucket; rows: SalesByPeriodRowDto[] };
 export type SalesReportDto = SalesRowsDto & {
-	range: ReportRangeDto; counterpartyId: number | null; totals: SalesTotalsDto;
+	range: ReportRangeDto;
+	counterpartyId: number | null;
+	totals: SalesTotalsDto;
 };
 
 export interface StockTurnoverRowDto {
-	stockItemId: number; optionId: number | null;
-	code: string; title: string; optionTitle: string | null; unitTitle: string;
-	openingQty: number; incomeQty: number; outcomeQty: number; closingQty: number;
-	shippedQty: number;                            // shipments net of their reversals
-	turnoverDays: number | null;                   // null when nothing was shipped
+	stockItemId: number;
+	optionId: number | null;
+	code: string;
+	title: string;
+	optionTitle: string | null;
+	unitTitle: string;
+	openingQty: number;
+	incomeQty: number;
+	outcomeQty: number;
+	closingQty: number;
+	shippedQty: number; // shipments net of their reversals
+	turnoverDays: number | null; // null when nothing was shipped
 }
-export interface StockTurnoverReportDto { range: ReportRangeDto; kind: StockKind | null; rows: StockTurnoverRowDto[]; }
+export interface StockTurnoverReportDto {
+	range: ReportRangeDto;
+	kind: StockKind | null;
+	rows: StockTurnoverRowDto[];
+}
 
 export interface FunnelStageDto {
-	stage: FunnelStage; count: number;
-	shareOfPreviousBp: number | null;              // null on the first stage and after an empty one
+	stage: FunnelStage;
+	count: number;
+	shareOfPreviousBp: number | null; // null on the first stage and after an empty one
 	shareOfFirstBp: number | null;
 }
 export interface FunnelReportDto {
-	range: ReportRangeDto; stages: FunnelStageDto[];
-	cancelledCount: number; rejectedCount: number;
+	range: ReportRangeDto;
+	stages: FunnelStageDto[];
+	cancelledCount: number;
+	rejectedCount: number;
 }
 
 export interface LostRequestRowDto {
-	requestId: number; number: string; status: LostStatus;
-	at: string;                                    // moment of the terminal transition
-	counterpartyId: number | null; counterpartyTitle: string | null;
-	reasonTitle: string | null; comment: string | null;
+	requestId: number;
+	number: string;
+	status: LostStatus;
+	at: string; // moment of the terminal transition
+	counterpartyId: number | null;
+	counterpartyTitle: string | null;
+	reasonTitle: string | null;
+	comment: string | null;
 	totalMinor: number;
 }
-export interface LostReasonRowDto { reasonId: number | null; title: string; count: number; totalMinor: number; }
+export interface LostReasonRowDto {
+	reasonId: number | null;
+	title: string;
+	count: number;
+	totalMinor: number;
+}
 export interface LostReportDto {
-	range: ReportRangeDto; status: LostStatus | null;
-	cancelledCount: number; rejectedCount: number; totalMinor: number;
-	reasons: LostReasonRowDto[]; page: Page<LostRequestRowDto>;
+	range: ReportRangeDto;
+	status: LostStatus | null;
+	cancelledCount: number;
+	rejectedCount: number;
+	totalMinor: number;
+	reasons: LostReasonRowDto[];
+	page: Page<LostRequestRowDto>;
 }
 
 export interface CharityTransferDto {
-	id: number; amountMinor: number;
-	transferredOn: string;                         // 'YYYY-MM-DD' in org.timezone
-	documentRef: string | null; comment: string | null;
-	createdByName: string; createdAt: string;
-	reversalOfId: number | null;                   // this row cancels another one
-	isReversed: boolean;                           // another row cancels this one
+	id: number;
+	amountMinor: number;
+	transferredOn: string; // 'YYYY-MM-DD' in org.timezone
+	documentRef: string | null;
+	comment: string | null;
+	createdByName: string;
+	createdAt: string;
+	reversalOfId: number | null; // this row cancels another one
+	isReversed: boolean; // another row cancels this one
 }
-export interface CharityAccrualRowDto { counterpartyId: number; title: string; requestCount: number; amountMinor: number; }
+export interface CharityAccrualRowDto {
+	counterpartyId: number;
+	title: string;
+	requestCount: number;
+	amountMinor: number;
+}
 export interface CharityReportDto {
 	range: ReportRangeDto;
-	accruedAllMinor: number;                       // equals the banner's all-time figure
-	transferredAllMinor: number; remainderMinor: number;
-	accruedInRangeMinor: number; transferredInRangeMinor: number;
+	accruedAllMinor: number; // equals the banner's all-time figure
+	transferredAllMinor: number;
+	remainderMinor: number;
+	accruedInRangeMinor: number;
+	transferredInRangeMinor: number;
 	accruals: CharityAccrualRowDto[];
 	transfers: Page<CharityTransferDto>;
 	canManage: boolean;
@@ -157,13 +210,14 @@ export interface CharityReportDto {
 export interface DashboardDto {
 	range: ReportRangeDto;
 	sales: SalesTotalsDto;
-	debtMinor: number;                             // current debt of all counterparties
-	statusCounts: Record<Exclude<RequestStatus, 'draft'>, number>;   // as of now
-	payrollAccruedMinor: number;                   // accrued to the crew for days of the range
-	charityAccruedInRangeMinor: number; charityRemainderMinor: number;
+	debtMinor: number; // current debt of all counterparties
+	statusCounts: Record<Exclude<RequestStatus, 'draft'>, number>; // as of now
+	payrollAccruedMinor: number; // accrued to the crew for days of the range
+	charityAccruedInRangeMinor: number;
+	charityRemainderMinor: number;
 	belowThresholdCount: number;
-	topCounterparties: SalesByCounterpartyRowDto[];  // five by totalMinor
-	topModels: SalesByModelRowDto[];                 // five by linesTotalMinor
+	topCounterparties: SalesByCounterpartyRowDto[]; // five by totalMinor
+	topModels: SalesByModelRowDto[]; // five by linesTotalMinor
 }
 ```
 
@@ -181,15 +235,15 @@ export interface DashboardDto {
 
 ### Роуты (§4.4)
 
-| Роут | Право | Назначение |
-|---|---|---|
-| `/crm/reports` | `reports.read` | Дашборд |
-| `/crm/reports/sales`, `/sales/export.xlsx` | `reports.read` | Продажи по контрагентам, моделям, периодам |
-| `/crm/reports/stock`, `/stock/export.xlsx` | `reports.read` | Оборотная ведомость и дни запаса |
-| `/crm/reports/funnel`, `/funnel/export.xlsx` | `reports.read` | Воронка заявок |
-| `/crm/reports/lost`, `/lost/export.xlsx` | `reports.read` | Отменённые и отклонённые |
-| `/crm/reports/charity`, `/charity/export.xlsx` | `reports.read` | Фонд: начисления, перечисления, остаток |
-| `/crm/reports/charity` actions `transfer`, `reverse` | `charity.manage` | Запись и сторно перечисления |
+| Роут                                                 | Право            | Назначение                                 |
+| ---------------------------------------------------- | ---------------- | ------------------------------------------ |
+| `/crm/reports`                                       | `reports.read`   | Дашборд                                    |
+| `/crm/reports/sales`, `/sales/export.xlsx`           | `reports.read`   | Продажи по контрагентам, моделям, периодам |
+| `/crm/reports/stock`, `/stock/export.xlsx`           | `reports.read`   | Оборотная ведомость и дни запаса           |
+| `/crm/reports/funnel`, `/funnel/export.xlsx`         | `reports.read`   | Воронка заявок                             |
+| `/crm/reports/lost`, `/lost/export.xlsx`             | `reports.read`   | Отменённые и отклонённые                   |
+| `/crm/reports/charity`, `/charity/export.xlsx`       | `reports.read`   | Фонд: начисления, перечисления, остаток    |
+| `/crm/reports/charity` actions `transfer`, `reverse` | `charity.manage` | Запись и сторно перечисления               |
 
 Пункт «Отчёты» в навигации CRM появляется по `reports.read`. Плитка выплат на дашборде и пункт в меню раздела ведут на `/crm/payroll/reports`.
 
