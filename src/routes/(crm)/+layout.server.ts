@@ -3,9 +3,10 @@ import { PolicyService } from '$lib/server/auth/policy';
 import { NotificationFeedService } from '$lib/server/notifications/notification-feed.service';
 import { PushSubscriptionService } from '$lib/server/notifications/push-subscription.service';
 import { OrgService } from '$lib/server/settings/org.service';
+import { SIDEBAR_COOKIE_NAME } from '$lib/ui/base/sidebar/constants';
 import type { LayoutServerLoad } from './$types';
 
-export const load: LayoutServerLoad = ({ locals, url }) => {
+export const load: LayoutServerLoad = ({ locals, url, cookies }) => {
 	const actor = requireScope(locals.actor, 'crm', url.pathname);
 	requireAction(actor, 'crm.access');
 
@@ -17,6 +18,8 @@ export const load: LayoutServerLoad = ({ locals, url }) => {
 			canSeePrices: actor.canSeePrices
 		},
 		timezone: OrgService.timezone(),
+		// The sidebar writes its fold state itself; reading it here keeps the first paint in place.
+		sidebarOpen: cookies.get(SIDEBAR_COOKIE_NAME) !== 'false',
 		// The bell counts on every navigation: tech.md 7.4 has no personal stream to push it (v1.49).
 		bell: new NotificationFeedService(actor).bell(),
 		// The public key and the device count: the client offers push on this device from them.

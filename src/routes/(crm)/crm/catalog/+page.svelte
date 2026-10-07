@@ -1,4 +1,7 @@
 <script lang="ts">
+	import EntityList from '$lib/crm/EntityList.svelte';
+	import SectionTabs from '$lib/crm/SectionTabs.svelte';
+	import { CATALOG_TABS } from '$lib/crm/sections';
 	import { enhance } from '$app/forms';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
@@ -6,12 +9,13 @@
 	import {
 		Button,
 		Card,
-		DataTable,
 		Input,
 		NumberInput,
+		Modal,
 		Select,
-		withToast,
-		type DataTableColumn
+		TONE_CLASS,
+		buttonVariants,
+		withToast
 	} from '$lib/ui';
 	import type { CrmProductListItemDto } from '$lib/types/crm-catalog';
 	import type { ListQuery } from '$lib/types/list';
@@ -24,13 +28,7 @@
 	const categories = $derived(
 		data.categories.map((row) => ({ value: String(row.id), label: row.title }))
 	);
-	const columns: DataTableColumn[] = [
-		{ key: 'sku', label: 'Артикул', sortable: true },
-		{ key: 'title', label: 'Модель', sortable: true },
-		{ key: 'variantCount', label: 'Вариантов' },
-		{ key: 'isPublished', label: 'Статус' },
-		{ key: 'actions', label: 'Действия', align: 'end' }
-	];
+	let createOpen = $state(false);
 	function changeQuery(next: ListQuery): void {
 		// eslint-disable-next-line svelte/no-navigation-without-resolve
 		void goto(withListQuery(page.url, next), { keepFocus: true, noScroll: true });
@@ -48,49 +46,14 @@
 <svelte:head><title>Каталог CRM</title></svelte:head>
 
 <div class="mx-auto flex w-full max-w-6xl flex-col gap-6">
-	<div class="flex flex-wrap items-end gap-3">
-		<div class="flex-1">
-			<h1 class="text-3xl">Каталог</h1>
-			<p class="mt-2 text-fg-muted">Модели и варианты, которые публикуются в портале.</p>
+	<SectionTabs tabs={CATALOG_TABS} label="Каталог" />
+	<div class="flex flex-wrap items-end gap-4">
+		<div>
+			<h1 class="mb-2 text-3xl">Каталог</h1>
+			<p class="max-w-2xl text-fg-muted">Модели и варианты, которые публикуются в портале.</p>
 		</div>
-		<a href={resolve('/crm/catalog/categories')} class="text-link">Категории</a>
-		<a href={resolve('/crm/catalog/options')} class="text-link">Цвета</a>
-		<a href={resolve('/crm/prices')} class="text-link">Прайсы и скидки</a>
+		<Button class="sm:ml-auto" onclick={() => (createOpen = true)}>Добавить модель</Button>
 	</div>
-	<Card.Root
-		><Card.Content class="flex flex-col gap-4">
-			<h2 class="text-2xl">Новая модель</h2>
-			{#if categories.length === 0}<p class="text-fg-muted">Сначала добавьте категорию.</p>{/if}
-			<form
-				method="POST"
-				action="?/create"
-				class="grid gap-4 sm:grid-cols-2"
-				use:enhance={withToast({ success: 'Модель добавлена' })}
-			>
-				<input type="hidden" name="isPublished" value="false" />
-				<Input name="sku" label="Артикул" placeholder="Введите артикул" required />
-				<Input name="title" label="Название" placeholder="Введите название" required />
-				<Select
-					name="categoryId"
-					label="Категория"
-					placeholder="Выберите категорию"
-					options={categories}
-					required
-				/>
-				<NumberInput
-					name="sortOrder"
-					label="Порядок"
-					placeholder="Введите число"
-					value={0}
-					min={0}
-				/>
-				<Input name="description" label="Описание" placeholder="Введите описание" />
-				<div class="flex items-end">
-					<Button type="submit" disabled={categories.length === 0}>Добавить модель</Button>
-				</div>
-			</form>
-		</Card.Content></Card.Root
-	>
 	<Card.Root
 		><Card.Content class="flex flex-col gap-4">
 			<div class="flex flex-wrap items-end gap-2">
@@ -99,29 +62,70 @@
 				</div>
 				<Button variant="secondary" onclick={searchNow}>Найти</Button>
 			</div>
-			<DataTable
-				{columns}
+			<EntityList
 				rows={data.products.rows}
-				total={data.products.total}
-				{query}
-				onQueryChange={changeQuery}
+				paging={{ total: data.products.total, query, onQueryChange: changeQuery }}
 				emptyTitle="Моделей пока нет"
 			>
-				{#snippet cell(row: CrmProductListItemDto, column: DataTableColumn)}
-					{#if column.key === 'sku'}<code>{row.sku}</code>
-					{:else if column.key === 'title'}{row.title}
-					{:else if column.key === 'variantCount'}{row.variantCount}
-					{:else if column.key === 'isPublished'}{row.isDeleted
-							? 'Удалена'
-							: row.isPublished
-								? 'Опубликована'
-								: 'Скрыта'}
-					{:else if column.key === 'actions'}<a
-							class="text-link"
-							href={resolve(`/crm/catalog/${row.id}`)}>Открыть</a
-						>{/if}
+				{#snippet item(row: CrmProductListItemDto)}
+					<div class="flex flex-wrap items-center gap-x-3 gap-y-1">
+						<a class="font-medium text-link" href={resolve(`/crm/catalog/${row.id}`)}>{row.title}</a
+						>
+						<span
+							class={[
+								'inline-flex rounded-pill px-2.5 py-0.5 text-xs',
+								TONE_CLASS[row.isDeleted ? 'danger' : row.isPublished ? 'success' : 'neutral']
+							]}
+						>
+							{row.isDeleted ? 'Удалена' : row.isPublished ? 'Опубликована' : 'Скрыта'}
+						</span>
+					</div>
+					<div class="text-xs text-fg-faint">
+						<code class="font-mono">{row.sku}</code> · вариантов: {row.variantCount}
+					</div>
 				{/snippet}
-			</DataTable>
+				{#snippet actions(row: CrmProductListItemDto)}
+					<a
+						class={buttonVariants({ variant: 'secondary', size: 'sm' })}
+						href={resolve(`/crm/catalog/${row.id}`)}
+					>
+						Открыть
+					</a>
+				{/snippet}
+			</EntityList>
 		</Card.Content></Card.Root
 	>
 </div>
+
+<Modal bind:open={createOpen} title="Новая модель">
+	{#snippet body()}
+		{#if categories.length === 0}
+			<p class="mb-4 text-fg-muted">Сначала добавьте категорию.</p>
+		{/if}
+		<form
+			method="POST"
+			action="?/create"
+			class="grid gap-4"
+			use:enhance={withToast({
+				success: 'Модель добавлена',
+				onSuccess: () => (createOpen = false)
+			})}
+		>
+			<input type="hidden" name="isPublished" value="false" />
+			<Input name="sku" label="Артикул" placeholder="Введите артикул" required />
+			<Input name="title" label="Название" placeholder="Введите название" required />
+			<Select
+				name="categoryId"
+				label="Категория"
+				placeholder="Выберите категорию"
+				options={categories}
+				required
+			/>
+			<NumberInput name="sortOrder" label="Порядок" placeholder="Введите число" value={0} min={0} />
+			<Input name="description" label="Описание" placeholder="Введите описание" />
+			<div class="flex items-end">
+				<Button type="submit" disabled={categories.length === 0}>Добавить модель</Button>
+			</div>
+		</form>
+	{/snippet}
+</Modal>

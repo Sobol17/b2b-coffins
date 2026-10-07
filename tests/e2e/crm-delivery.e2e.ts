@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import { enterRequest } from './crm-flow';
-import { login } from './fixtures';
+import { crmNavLink, login, openCrmMenu } from './fixtures';
 import { e2eDb, statusChain, statusOf, stockUp, transition } from './transitions';
 
 const ORIGIN = 'http://localhost:4173';
@@ -40,7 +40,8 @@ test.describe('the delivery screen on a phone', () => {
 		const { number } = await assembledRequest(page, 2);
 		await login(page, 'driver');
 
-		await page.getByRole('link', { name: 'Доставка' }).first().click();
+		await openCrmMenu(page);
+		await crmNavLink(page, 'Доставка').click();
 		const stop = stopOf(page, number);
 		await expect(stop.getByTestId('delivery-loaded')).toHaveText('Погружено 0 из 2');
 		await expect(stop.getByTestId('delivery-route')).toHaveAttribute('href', /yandex\.ru\/maps/);
@@ -119,7 +120,7 @@ test('C6: the shop crew and the portal get 403, the driver still has no board', 
 	});
 	expect(forged.status()).toBe(403);
 	await page.goto('/crm');
-	await expect(page.getByRole('link', { name: 'Доставка' })).toHaveCount(0);
+	await expect(crmNavLink(page, 'Доставка')).toHaveCount(0);
 	await page.context().clearCookies();
 
 	await login(page, 'cp_admin');

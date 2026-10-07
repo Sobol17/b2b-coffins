@@ -1,11 +1,12 @@
 <script lang="ts">
+	import SectionTabs from '$lib/crm/SectionTabs.svelte';
+	import { STOCK_TABS } from '$lib/crm/sections';
 	import { enhance } from '$app/forms';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
-	import { resolve } from '$app/paths';
 	import InventoriesTable from '$lib/crm/stock/InventoriesTable.svelte';
 	import { KIND_OPTIONS } from '$lib/crm/stock/labels';
-	import { Breadcrumbs, Button, Card, Modal, Select, Textarea, withToast } from '$lib/ui';
+	import { Button, Card, Modal, Select, Textarea, withToast } from '$lib/ui';
 	import type { ListQuery } from '$lib/types/list';
 	import { listQueryOf, withListQuery } from '$lib/utils/list-url';
 	import type { PageProps } from './$types';
@@ -27,9 +28,7 @@
 <svelte:head><title>Инвентаризации</title></svelte:head>
 
 <div class="mx-auto flex w-full max-w-6xl flex-col gap-6">
-	<Breadcrumbs
-		items={[{ label: 'Склад', href: resolve('/crm/stock') }, { label: 'Инвентаризации' }]}
-	/>
+	<SectionTabs tabs={STOCK_TABS} label="Склад" />
 	<div class="flex flex-wrap items-end gap-4">
 		<div>
 			<h1 class="mb-2 text-3xl">Инвентаризации</h1>

@@ -1,15 +1,9 @@
 <script lang="ts">
-	import { resolve } from '$app/paths';
+	import SectionTabs from '$lib/crm/SectionTabs.svelte';
+	import { PAYROLL_TABS } from '$lib/crm/sections';
 	import ReportTable from '$lib/crm/ReportTable.svelte';
 	import { roubles } from '$lib/crm/payroll/labels';
-	import {
-		Breadcrumbs,
-		Card,
-		ErrorState,
-		FilterBar,
-		type DataTableColumn,
-		type FilterField
-	} from '$lib/ui';
+	import { Card, ErrorState, FilterBar, type DataTableColumn, type FilterField } from '$lib/ui';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
@@ -44,7 +38,7 @@
 <svelte:head><title>Отчёт по выплатам</title></svelte:head>
 
 <div class="mx-auto flex w-full max-w-6xl flex-col gap-6">
-	<Breadcrumbs items={[{ label: 'Выплаты', href: resolve('/crm/payroll') }, { label: 'Отчёт' }]} />
+	<SectionTabs tabs={PAYROLL_TABS} label="Выплаты" />
 	<div>
 		<h1 class="mb-2 text-3xl">Отчёт по выплатам</h1>
 		<p class="max-w-2xl text-fg-muted">

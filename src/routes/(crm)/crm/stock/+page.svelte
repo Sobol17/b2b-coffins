@@ -1,11 +1,13 @@
 <script lang="ts">
+	import SectionTabs from '$lib/crm/SectionTabs.svelte';
+	import { STOCK_TABS } from '$lib/crm/sections';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
 	import StockItemModal from '$lib/crm/stock/StockItemModal.svelte';
 	import StockTable from '$lib/crm/stock/StockTable.svelte';
 	import { KIND_OPTIONS } from '$lib/crm/stock/labels';
-	import { Button, Card, FilterBar, buttonVariants, type FilterField } from '$lib/ui';
+	import { Button, Card, FilterBar, type FilterField } from '$lib/ui';
 	import type { ListQuery } from '$lib/types/list';
 	import { filtersOf, listQueryOf, withListQuery } from '$lib/utils/list-url';
 	import type { PageProps } from './$types';
@@ -57,6 +59,7 @@
 <svelte:head><title>Склад</title></svelte:head>
 
 <div class="mx-auto flex w-full max-w-6xl flex-col gap-6">
+	<SectionTabs tabs={STOCK_TABS} label="Склад" />
 	<div class="flex flex-wrap items-end gap-4">
 		<div>
 			<h1 class="mb-2 text-3xl">Склад</h1>
@@ -65,9 +68,6 @@
 			</p>
 		</div>
 		<div class="flex flex-wrap gap-2 sm:ml-auto">
-			<a class={buttonVariants({ variant: 'secondary' })} href={resolve('/crm/stock/inventories')}>
-				Инвентаризации
-			</a>
 			{#if data.canManage}
 				<Button onclick={() => (createOpen = true)}>Новая позиция</Button>
 			{/if}

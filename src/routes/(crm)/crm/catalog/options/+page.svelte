@@ -1,12 +1,15 @@
 <script lang="ts">
+	import SectionTabs from '$lib/crm/SectionTabs.svelte';
+	import { CATALOG_TABS } from '$lib/crm/sections';
 	import { enhance } from '$app/forms';
-	import { resolve } from '$app/paths';
-	import { Button, Card, Input, Select, withToast } from '$lib/ui';
+	import { Button, Card, Modal, Input, Select, withToast } from '$lib/ui';
 	import type { CrmOptionDto } from '$lib/types/crm-catalog';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
-	let editing = $state<CrmOptionDto | null>(null);
+	// null: closed; 'new': a new colour; a colour: the edit of that one.
+	let editing = $state<CrmOptionDto | 'new' | null>(null);
+	const current = $derived(editing === 'new' ? null : editing);
 	const stockChoices = $derived([
 		{ value: '', label: 'Без учётной позиции' },
 		...data.choices.stockComponents.map((row) => ({
@@ -19,52 +22,16 @@
 <svelte:head><title>Цвета каталога</title></svelte:head>
 
 <div class="mx-auto flex w-full max-w-5xl flex-col gap-6">
-	<div>
-		<a href={resolve('/crm/catalog')} class="text-sm text-link">← Каталог</a>
-		<h1 class="mt-2 text-3xl">Цвета</h1>
+	<SectionTabs tabs={CATALOG_TABS} label="Каталог" />
+	<div class="flex flex-wrap items-end gap-4">
+		<div>
+			<h1 class="mb-2 text-3xl">Цвета</h1>
+			<p class="max-w-2xl text-fg-muted">Цвета, которые контрагент выбирает у варианта модели.</p>
+		</div>
+		<Button class="sm:ml-auto" onclick={() => (editing = 'new')}>Добавить цвет</Button>
 	</div>
 	<Card.Root
-		><Card.Content class="flex flex-col gap-4">
-			<h2 class="text-2xl">{editing ? 'Изменить цвет' : 'Новый цвет'}</h2>
-			{#key editing?.id}
-				<form
-					method="POST"
-					action={editing ? '?/update' : '?/create'}
-					class="grid gap-4 sm:grid-cols-2"
-					use:enhance={withToast({
-						success: editing ? 'Цвет сохранён' : 'Цвет добавлен',
-						onSuccess: () => (editing = null)
-					})}
-				>
-					{#if editing}<input type="hidden" name="id" value={editing.id} />{/if}
-					<input type="hidden" name="priceDeltaMinor" value="0" />
-					<input type="hidden" name="isActive" value={String(editing?.isActive ?? true)} />
-					<Input
-						name="title"
-						label="Название"
-						placeholder="Введите цвет"
-						value={editing?.title ?? ''}
-						required
-					/>
-					<Select
-						name="stockItemId"
-						label="Комплектующее"
-						placeholder="Выберите позицию"
-						options={stockChoices}
-						value={String(editing?.stockItemId ?? '')}
-					/>
-					<div class="flex items-end gap-2">
-						<Button type="submit">{editing ? 'Сохранить' : 'Добавить'}</Button>
-						{#if editing}<Button variant="secondary" onclick={() => (editing = null)}>Отмена</Button
-							>{/if}
-					</div>
-				</form>
-			{/key}
-		</Card.Content></Card.Root
-	>
-	<Card.Root
 		><Card.Content>
-			<h2 class="mb-4 text-2xl">Все цвета</h2>
 			{#if data.options.length === 0}<p class="text-fg-muted">Цветов пока нет.</p>{/if}
 			<ul class="divide-y divide-border">
 				{#each data.options as option (option.id)}
@@ -88,7 +55,11 @@
 								name="isActive"
 								value={String(!option.isActive)}
 							/>
-							<Button type="submit" size="sm" variant={option.isActive ? 'danger' : 'secondary'}
+							<Button
+								type="submit"
+								size="sm"
+								variant="ghost"
+								class={option.isActive ? 'text-danger' : undefined}
 								>{option.isActive ? 'Выключить' : 'Включить'}</Button
 							>
 						</form>
@@ -98,3 +69,44 @@
 		</Card.Content></Card.Root
 	>
 </div>
+
+<Modal
+	open={editing !== null}
+	title={current ? 'Изменить цвет' : 'Новый цвет'}
+	onClose={() => (editing = null)}
+>
+	{#snippet body()}
+		{#key current?.id}
+			<form
+				method="POST"
+				action={current ? '?/update' : '?/create'}
+				class="grid gap-4"
+				use:enhance={withToast({
+					success: current ? 'Цвет сохранён' : 'Цвет добавлен',
+					onSuccess: () => (editing = null)
+				})}
+			>
+				{#if current}<input type="hidden" name="id" value={current.id} />{/if}
+				<input type="hidden" name="priceDeltaMinor" value="0" />
+				<input type="hidden" name="isActive" value={String(current?.isActive ?? true)} />
+				<Input
+					name="title"
+					label="Название"
+					placeholder="Введите цвет"
+					value={current?.title ?? ''}
+					required
+				/>
+				<Select
+					name="stockItemId"
+					label="Комплектующее"
+					placeholder="Выберите позицию"
+					options={stockChoices}
+					value={String(current?.stockItemId ?? '')}
+				/>
+				<div class="flex items-end gap-2">
+					<Button type="submit">{current ? 'Сохранить' : 'Добавить'}</Button>
+				</div>
+			</form>
+		{/key}
+	{/snippet}
+</Modal>

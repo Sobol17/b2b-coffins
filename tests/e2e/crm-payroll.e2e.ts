@@ -9,7 +9,7 @@ import {
 	workEntries,
 	workTypes
 } from '../../src/lib/server/db/schema';
-import { login } from './fixtures';
+import { crmNavLink, login } from './fixtures';
 import { e2eDb } from './transitions';
 
 const ORIGIN = 'http://localhost:4173';
@@ -42,7 +42,7 @@ async function addWork(page: Page, title: string, roubles: number): Promise<void
 	await modal.getByLabel('Стоимость за единицу, ₽').fill(String(roubles));
 	await modal.getByRole('button', { name: 'Добавить', exact: true }).click();
 	await expect(page.getByTestId('modal')).toHaveCount(0);
-	await expect(page.getByRole('row', { name: new RegExp(title) })).toBeVisible();
+	await expect(page.getByTestId('data-table-row').filter({ hasText: title })).toBeVisible();
 }
 
 async function addWorker(page: Page, fullName: string): Promise<void> {
@@ -53,7 +53,7 @@ async function addWorker(page: Page, fullName: string): Promise<void> {
 	await modal.getByLabel('Должность').fill('Столяр');
 	await modal.getByRole('button', { name: 'Добавить', exact: true }).click();
 	await expect(page.getByTestId('modal')).toHaveCount(0);
-	await expect(page.getByRole('row', { name: new RegExp(fullName) })).toBeVisible();
+	await expect(page.getByTestId('data-table-row').filter({ hasText: fullName })).toBeVisible();
 }
 
 const lineOf = (page: Page, fullName: string) =>
@@ -168,7 +168,7 @@ test('C10: the driver and the portal get 403 on the payroll', async ({ page }) =
 	});
 	expect(forged.status()).toBe(403);
 	await page.goto('/crm');
-	await expect(page.getByRole('link', { name: 'Выплаты' })).toHaveCount(0);
+	await expect(crmNavLink(page, 'Выплаты')).toHaveCount(0);
 
 	await page.context().clearCookies();
 	await login(page, 'cp_admin');

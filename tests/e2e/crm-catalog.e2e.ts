@@ -1,5 +1,13 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 import { login, logout } from './fixtures';
+
+// The server render shows the button before hydration wires it, so the click is retried.
+async function openModal(page: Page, button: string): Promise<void> {
+	await expect(async () => {
+		await page.getByRole('button', { name: button }).click();
+		await expect(page.getByTestId('modal')).toBeVisible({ timeout: 1000 });
+	}).toPass();
+}
 
 test('C2 fills and publishes a model through CRM; the portal never receives cost', async ({
 	page
@@ -11,11 +19,13 @@ test('C2 fills and publishes a model through CRM; the portal never receives cost
 
 	await login(page, 'owner');
 	await page.goto('/crm/catalog/categories');
+	await openModal(page, 'Добавить категорию');
 	await page.locator('form[action="?/create"] input[name="title"]').fill(category);
 	await page.locator('form[action="?/create"] button[type="submit"]').click();
 	await expect(page.getByText(category)).toBeVisible();
 
 	await page.goto('/crm/catalog');
+	await openModal(page, 'Добавить модель');
 	const create = page.locator('form[action="?/create"]');
 	await create.locator('input[name="sku"]').fill(sku);
 	await create.locator('input[name="title"]').fill(title);
@@ -61,6 +71,7 @@ test('C2 fills and publishes a model through CRM; the portal never receives cost
 	await expect(page.getByText('Обложка')).toBeVisible();
 	await page.goto('/crm/prices');
 	const listTitle = `Прайс C2 ${suffix}`;
+	await openModal(page, 'Добавить прайс-лист');
 	const listForm = page.locator('form[action="?/createList"]');
 	await listForm.getByLabel('Название прайс-листа').fill(listTitle);
 	await listForm.getByRole('button', { name: 'Добавить', exact: true }).click();
@@ -75,6 +86,7 @@ test('C2 fills and publishes a model through CRM; the portal never receives cost
 	await itemForm.getByRole('button', { name: 'Сохранить цену' }).click();
 	await expect(page.getByText(`${sku}-190 · 1 100`)).toBeVisible();
 	await page.goto('/crm/prices');
+	await openModal(page, 'Добавить скидку');
 	const ruleForm = page.locator('form[action="?/createRule"]');
 	await ruleForm.locator('[data-slot="select-trigger"]').nth(1).click();
 	await page.getByRole('option', { name: category }).click();

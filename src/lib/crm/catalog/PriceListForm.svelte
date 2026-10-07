@@ -9,7 +9,7 @@
 <form
 	method="POST"
 	action={list ? '?/updateList' : '?/createList'}
-	class="grid gap-4 sm:grid-cols-2"
+	class="grid gap-4"
 	use:enhance={withToast({
 		success: list ? 'Прайс-лист сохранён' : 'Прайс-лист добавлен',
 		onSuccess: onDone

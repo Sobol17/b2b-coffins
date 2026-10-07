@@ -6,7 +6,7 @@ import {
 	stockItems,
 	stockMoves
 } from '../../src/lib/server/db/schema';
-import { login, purchaseMoneyKeys } from './fixtures';
+import { crmNavLink, login, purchaseMoneyKeys } from './fixtures';
 import { e2eDb } from './transitions';
 
 const ORIGIN = 'http://localhost:4173';
@@ -208,7 +208,7 @@ test('C8: the driver and the portal get 403 on the warehouse', async ({ page }) 
 	});
 	expect(forged.status()).toBe(403);
 	await page.goto('/crm');
-	await expect(page.getByRole('link', { name: 'Склад' })).toHaveCount(0);
+	await expect(crmNavLink(page, 'Склад')).toHaveCount(0);
 	await page.context().clearCookies();
 
 	await login(page, 'cp_admin');

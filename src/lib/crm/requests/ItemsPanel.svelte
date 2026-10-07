@@ -1,6 +1,7 @@
 <script lang="ts">
 	import LineModal from './LineModal.svelte';
-	import { Button, Card, DataTable, PriceCell, type DataTableColumn } from '$lib/ui';
+	import EntityList from '$lib/crm/EntityList.svelte';
+	import { Button, Card, PriceCell } from '$lib/ui';
 	import type { CrmRequestCardDto, CrmRequestVariantChoice } from '$lib/types/crm-request';
 	import type { RequestItemDto } from '$lib/types/request';
 
@@ -15,18 +16,6 @@
 	} = $props();
 
 	const editable = $derived(card.itemsEdit !== 'closed');
-	const columns = $derived<DataTableColumn[]>([
-		{ key: 'productTitle', label: 'Позиция' },
-		{ key: 'options', label: 'Параметры' },
-		{ key: 'qty', label: 'Кол-во', align: 'end' },
-		...(withMoney
-			? [
-					{ key: 'unitPriceMinor', label: 'Цена', align: 'end' as const },
-					{ key: 'lineTotalMinor', label: 'Сумма', align: 'end' as const }
-				]
-			: []),
-		...(editable ? [{ key: 'edit', label: '' }] : [])
-	]);
 	const rows = $derived([...card.items]);
 
 	let modalOpen = $state(false);
@@ -57,37 +46,30 @@
 		{/if}
 	</Card.Header>
 	<Card.Content>
-		<DataTable
-			{columns}
-			{rows}
-			total={rows.length}
-			query={{ page: 1, perPage: rows.length || 1 }}
-			onQueryChange={() => {}}
-			emptyTitle="В заявке нет позиций"
-		>
-			{#snippet cell(row, column)}
-				{#if column.key === 'productTitle'}
-					<span class="flex flex-col">
-						<span>{row.productTitle}</span>
-						<span class="text-xs text-fg-muted">{row.sku}</span>
-					</span>
-				{:else if column.key === 'options'}
-					<span class="text-sm text-fg-muted">
-						{[row.sizeCode, row.materialTitle, ...row.options.map((option) => option.title)].join(
-							' · '
-						)}
-					</span>
-				{:else if column.key === 'qty'}
-					{row.qty} шт
-				{:else if column.key === 'unitPriceMinor'}
-					<PriceCell valueMinor={row.unitPriceMinor} />
-				{:else if column.key === 'lineTotalMinor'}
-					<PriceCell valueMinor={row.lineTotalMinor} />
-				{:else}
-					<Button variant="ghost" size="sm" onclick={() => openLine(row)}>Изменить</Button>
-				{/if}
+		<EntityList {rows} emptyTitle="В заявке нет позиций" actions={editable ? edit : undefined}>
+			{#snippet item(row: RequestItemDto)}
+				<div class="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1">
+					<div class="min-w-0">
+						<div class="font-medium">{row.productTitle}</div>
+						<div class="text-sm text-fg-muted">
+							{[row.sizeCode, row.materialTitle, ...row.options.map((option) => option.title)].join(
+								' · '
+							)}
+						</div>
+						<div class="text-xs text-fg-faint">{row.sku}</div>
+					</div>
+					<div class="text-right tabular-nums">
+						<div class="font-medium">{row.qty} шт</div>
+						{#if withMoney}
+							<div class="text-sm text-fg-muted">
+								<PriceCell valueMinor={row.unitPriceMinor} /> за штуку
+							</div>
+							<div><PriceCell valueMinor={row.lineTotalMinor} /></div>
+						{/if}
+					</div>
+				</div>
 			{/snippet}
-		</DataTable>
+		</EntityList>
 		{#if withMoney}
 			<dl
 				class="mt-4 grid max-w-sm grid-cols-[1fr_auto] gap-x-6 gap-y-1 text-sm"
@@ -105,6 +87,10 @@
 		{/if}
 	</Card.Content>
 </Card.Root>
+
+{#snippet edit(row: RequestItemDto)}
+	<Button variant="ghost" size="sm" onclick={() => openLine(row)}>Изменить</Button>
+{/snippet}
 
 {#key editing}
 	<LineModal bind:open={modalOpen} line={editing} mode={card.itemsEdit} {variants} />

@@ -1,7 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import { eq } from 'drizzle-orm';
 import { counterparties, paymentMarks, requests, users } from '../../src/lib/server/db/schema';
-import { ACCOUNTS, login, logout } from './fixtures';
+import { crmNavLink, login, logout, ACCOUNTS } from './fixtures';
 import { e2eDb } from './transitions';
 
 const ORIGIN = 'http://localhost:4173';
@@ -178,7 +178,7 @@ test('a workshop role without the right and a portal role get 403', async ({ pag
 	});
 	expect(forged.status()).toBe(403);
 	await page.goto('/crm');
-	await expect(page.getByRole('link', { name: 'Контрагенты' })).toHaveCount(0);
+	await expect(crmNavLink(page, 'Контрагенты')).toHaveCount(0);
 	await logout(page);
 
 	await login(page, 'cp_admin');

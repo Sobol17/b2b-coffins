@@ -5,7 +5,7 @@
 	import ProductMedia from '$lib/crm/catalog/ProductMedia.svelte';
 	import VariantForm from '$lib/crm/catalog/VariantForm.svelte';
 	import VariantOptions from '$lib/crm/catalog/VariantOptions.svelte';
-	import { Button, Card, withToast } from '$lib/ui';
+	import { Breadcrumbs, Button, Card, withToast } from '$lib/ui';
 	import type { CrmVariantDto } from '$lib/types/crm-catalog';
 	import { formatMinor } from '$lib/utils/format';
 	import type { PageProps } from './$types';
@@ -18,9 +18,11 @@
 <svelte:head><title>{data.product.title} · Каталог CRM</title></svelte:head>
 
 <div class="mx-auto flex w-full max-w-6xl flex-col gap-6">
+	<Breadcrumbs
+		items={[{ label: 'Каталог', href: resolve('/crm/catalog') }, { label: data.product.title }]}
+	/>
 	<div>
-		<a href={resolve('/crm/catalog')} class="text-sm text-link">← Каталог</a>
-		<h1 class="mt-2 text-3xl">{data.product.title}</h1>
+		<h1 class="text-3xl">{data.product.title}</h1>
 		<p class="text-fg-muted">{data.product.sku}</p>
 	</div>
 	<ProductForm product={data.product} categories={data.categories} />

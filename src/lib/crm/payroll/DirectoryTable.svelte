@@ -1,15 +1,15 @@
 <script lang="ts" generics="TRow extends { id: number; isActive: boolean }">
 	import { enhance } from '$app/forms';
-	import { Button, DataTable, TONE_CLASS, withToast, type DataTableColumn } from '$lib/ui';
+	import EntityList from '$lib/crm/EntityList.svelte';
+	import { Button, TONE_CLASS, withToast } from '$lib/ui';
 	import type { Snippet } from 'svelte';
 
 	/*
 	 * The crew and the works are short lists with the same actions: edit, switch off, switch on.
-	 * The page gives the columns of its own rows; the status and the actions are drawn here.
+	 * The page draws what a row says about itself; the status and the actions are drawn here.
 	 */
 	let {
 		rows,
-		columns,
 		canManage,
 		emptyTitle,
 		statusTitle,
@@ -18,68 +18,52 @@
 		own
 	}: {
 		rows: readonly TRow[];
-		columns: readonly DataTableColumn[];
 		canManage: boolean;
 		emptyTitle: string;
 		/** How the page words an active and a switched-off row. */
 		statusTitle: { readonly on: string; readonly off: string };
 		nameOf: (row: TRow) => string;
 		onEdit: (row: TRow) => void;
-		/** Cells of the page's own columns. */
-		own: Snippet<[TRow, DataTableColumn]>;
+		/** The second line of a row: the page's own facts about it. */
+		own: Snippet<[TRow]>;
 	} = $props();
-
-	const allColumns = $derived<DataTableColumn[]>([
-		...columns,
-		{ key: 'isActive', label: 'Статус' },
-		...(canManage ? [{ key: 'actions', label: 'Действия', align: 'end' as const }] : [])
-	]);
-	// Every row is on the screen: the lists of a workshop are a few dozen lines.
-	const query = $derived({ page: 1, perPage: Math.max(1, rows.length) });
 </script>
 
-<DataTable
-	columns={allColumns}
-	{rows}
-	total={rows.length}
-	{query}
-	onQueryChange={() => undefined}
-	{emptyTitle}
->
-	{#snippet cell(row: TRow, column: DataTableColumn)}
-		{#if column.key === 'isActive'}
+<EntityList {rows} {emptyTitle} actions={canManage ? actions : undefined}>
+	{#snippet item(row: TRow)}
+		<div class="flex flex-wrap items-center gap-x-3 gap-y-1">
+			<span class="font-medium" data-testid="directory-name">{nameOf(row)}</span>
 			<span
 				data-testid="directory-status"
 				class={[
-					'inline-flex rounded-pill px-3 py-1 text-xs',
+					'inline-flex rounded-pill px-2.5 py-0.5 text-xs',
 					TONE_CLASS[row.isActive ? 'success' : 'neutral']
 				]}
 			>
 				{row.isActive ? statusTitle.on : statusTitle.off}
 			</span>
-		{:else if column.key === 'actions'}
-			<div class="flex flex-wrap justify-end gap-2">
-				<Button variant="secondary" size="sm" onclick={() => onEdit(row)}>Изменить</Button>
-				<form
-					method="POST"
-					action={row.isActive ? '?/disable' : '?/enable'}
-					use:enhance={withToast({
-						success: row.isActive ? `Выключено: ${nameOf(row)}` : `Включено: ${nameOf(row)}`
-					})}
-				>
-					<input type="hidden" name="id" value={row.id} />
-					<Button
-						type="submit"
-						variant="ghost"
-						size="sm"
-						class={row.isActive ? 'text-danger' : undefined}
-					>
-						{row.isActive ? 'Выключить' : 'Включить'}
-					</Button>
-				</form>
-			</div>
-		{:else}
-			{@render own(row, column)}
-		{/if}
+		</div>
+		<div class="text-sm text-fg-muted">{@render own(row)}</div>
 	{/snippet}
-</DataTable>
+</EntityList>
+
+{#snippet actions(row: TRow)}
+	<Button variant="secondary" size="sm" onclick={() => onEdit(row)}>Изменить</Button>
+	<form
+		method="POST"
+		action={row.isActive ? '?/disable' : '?/enable'}
+		use:enhance={withToast({
+			success: row.isActive ? `Выключено: ${nameOf(row)}` : `Включено: ${nameOf(row)}`
+		})}
+	>
+		<input type="hidden" name="id" value={row.id} />
+		<Button
+			type="submit"
+			variant="ghost"
+			size="sm"
+			class={row.isActive ? 'text-danger' : undefined}
+		>
+			{row.isActive ? 'Выключить' : 'Включить'}
+		</Button>
+	</form>
+{/snippet}

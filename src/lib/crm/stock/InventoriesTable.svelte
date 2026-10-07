@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { resolve } from '$app/paths';
-	import { DataTable, TONE_CLASS, type DataTableColumn } from '$lib/ui';
+	import EntityList from '$lib/crm/EntityList.svelte';
+	import { TONE_CLASS, buttonVariants } from '$lib/ui';
 	import type { InventoryRowDto } from '$lib/types/crm-stock';
 	import type { ListQuery } from '$lib/types/list';
 	import { formatDateTime } from '$lib/utils/format';
@@ -19,44 +20,36 @@
 		onQueryChange: (next: ListQuery) => void;
 		timeZone: string;
 	} = $props();
-
-	const columns: DataTableColumn[] = [
-		{ key: 'id', label: 'Номер' },
-		{ key: 'kind', label: 'Вид' },
-		{ key: 'status', label: 'Статус' },
-		{ key: 'createdAt', label: 'Открыта' },
-		{ key: 'appliedAt', label: 'Проведена' },
-		{ key: 'diff', label: 'Расхождений', align: 'end' },
-		{ key: 'author', label: 'Кто открыл' },
-		{ key: 'actions', label: 'Действия', align: 'end' }
-	];
 </script>
 
-<DataTable {columns} {rows} {total} {query} {onQueryChange} emptyTitle="Инвентаризаций ещё не было">
-	{#snippet cell(row: InventoryRowDto, column: DataTableColumn)}
-		{#if column.key === 'id'}
-			№ {row.id}
-		{:else if column.key === 'kind'}
-			{KIND_PLURAL[row.kind]}
-		{:else if column.key === 'status'}
+<EntityList {rows} paging={{ total, query, onQueryChange }} emptyTitle="Инвентаризаций ещё не было">
+	{#snippet item(row: InventoryRowDto)}
+		<div class="flex flex-wrap items-center gap-x-3 gap-y-1">
+			<span class="font-medium">№ {row.id} · {KIND_PLURAL[row.kind]}</span>
 			<span
 				class={[
-					'rounded-pill px-2 py-0.5 text-xs',
+					'rounded-pill px-2.5 py-0.5 text-xs',
 					row.status === 'draft' ? TONE_CLASS.progress : TONE_CLASS.success
 				]}
 			>
 				{INVENTORY_STATUS_TITLE[row.status]}
 			</span>
-		{:else if column.key === 'createdAt'}
-			{formatDateTime(row.createdAt, timeZone)}
-		{:else if column.key === 'appliedAt'}
-			{row.appliedAt === null ? '—' : formatDateTime(row.appliedAt, timeZone)}
-		{:else if column.key === 'diff'}
-			{row.diffCount} из {row.lineCount}
-		{:else if column.key === 'author'}
-			{row.createdByName}
-		{:else if column.key === 'actions'}
-			<a class="text-link" href={resolve(`/crm/stock/inventories/${row.id}`)}>Открыть</a>
-		{/if}
+		</div>
+		<div class="text-sm text-fg-muted">
+			Расхождений {row.diffCount} из {row.lineCount}
+		</div>
+		<div class="text-xs text-fg-faint">
+			Открыл {row.createdByName}, {formatDateTime(row.createdAt, timeZone)}{row.appliedAt === null
+				? ''
+				: ` · проведена ${formatDateTime(row.appliedAt, timeZone)}`}
+		</div>
 	{/snippet}
-</DataTable>
+	{#snippet actions(row: InventoryRowDto)}
+		<a
+			class={buttonVariants({ variant: 'secondary', size: 'sm' })}
+			href={resolve(`/crm/stock/inventories/${row.id}`)}
+		>
+			Открыть
+		</a>
+	{/snippet}
+</EntityList>

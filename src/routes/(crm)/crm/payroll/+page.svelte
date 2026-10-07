@@ -1,4 +1,6 @@
 <script lang="ts">
+	import SectionTabs from '$lib/crm/SectionTabs.svelte';
+	import { PAYROLL_TABS } from '$lib/crm/sections';
 	import { resolve } from '$app/paths';
 	import AdjustModal from '$lib/crm/payroll/AdjustModal.svelte';
 	import WeekActionModal from '$lib/crm/payroll/WeekActionModal.svelte';
@@ -30,6 +32,7 @@
 <svelte:head><title>Выплаты</title></svelte:head>
 
 <div class="mx-auto flex w-full max-w-6xl flex-col gap-6">
+	<SectionTabs tabs={PAYROLL_TABS} label="Выплаты" />
 	<div class="flex flex-wrap items-end gap-4">
 		<div>
 			<h1 class="mb-2 text-3xl">Выплаты</h1>
@@ -39,15 +42,6 @@
 			</p>
 		</div>
 		<div class="flex flex-wrap gap-2 sm:ml-auto">
-			<a class={buttonVariants({ variant: 'secondary' })} href={resolve('/crm/payroll/staff')}>
-				Сотрудники
-			</a>
-			<a class={buttonVariants({ variant: 'secondary' })} href={resolve('/crm/payroll/works')}>
-				Работы и стоимость
-			</a>
-			<a class={buttonVariants({ variant: 'secondary' })} href={resolve('/crm/payroll/reports')}>
-				Отчёт
-			</a>
 			<a
 				class={buttonVariants()}
 				href={resolve(`/crm/payroll/day/${data.today}`)}

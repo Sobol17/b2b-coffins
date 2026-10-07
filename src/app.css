@@ -129,6 +129,15 @@
 	--color-destructive-foreground: var(--color-danger-fg);
 	--color-input: var(--color-border);
 	--color-ring: var(--color-brand);
+
+	/* CRM sidebar (shadcn sidebar): a white rail on the sky field, the current item in pale brand. */
+	--color-sidebar: var(--color-surface-raised);
+	--color-sidebar-foreground: var(--color-fg);
+	--color-sidebar-accent: var(--color-brand-100);
+	--color-sidebar-accent-foreground: var(--color-brand-800);
+	/* Softer than the panel border: the rail edge sits against the sky field, not against white. */
+	--color-sidebar-border: color-mix(in srgb, var(--color-neutral-900) 6%, transparent);
+	--color-sidebar-ring: var(--color-brand);
 }
 
 @layer base {

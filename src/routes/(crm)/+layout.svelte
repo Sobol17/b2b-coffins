@@ -1,6 +1,8 @@
 <script lang="ts">
 	import { resolve } from '$app/paths';
+	import KeyRoundIcon from '@lucide/svelte/icons/key-round';
 	import { ROLE_TITLE } from '$lib/crm/labels';
+	import { CRM_HOME_LINK, crmNav } from '$lib/crm/nav';
 	import { crmFeedHref } from '$lib/crm/notifications/feed-href';
 	import NotificationBell from '$lib/notifications/NotificationBell.svelte';
 	import { leaveOnLogout, pushStateFor } from '$lib/notifications/push-state.svelte';
@@ -18,45 +20,23 @@
 		push.sync().catch(() => undefined);
 	});
 
-	const links = $derived.by((): ShellLink[] => [
-		{ href: resolve('/crm'), label: 'Главная' },
-		...(data.can.requests
-			? [
-					{ href: resolve('/crm/board'), label: 'Доска' },
-					{ href: resolve('/crm/requests'), label: 'Заявки' }
-				]
-			: []),
-		...(data.can.shop ? [{ href: resolve('/crm/shop'), label: 'Цех' }] : []),
-		...(data.can.delivery ? [{ href: resolve('/crm/delivery'), label: 'Доставка' }] : []),
-		...(data.can.stock ? [{ href: resolve('/crm/stock'), label: 'Склад' }] : []),
-		...(data.can.payroll ? [{ href: resolve('/crm/payroll'), label: 'Выплаты' }] : []),
-		...(data.can.reports ? [{ href: resolve('/crm/reports'), label: 'Отчёты' }] : []),
-		...(data.can.catalog
-			? [
-					{ href: resolve('/crm/catalog'), label: 'Каталог' },
-					{ href: resolve('/crm/prices'), label: 'Прайсы и скидки' }
-				]
-			: []),
-		...(data.can.counterparties
-			? [{ href: resolve('/crm/counterparties'), label: 'Контрагенты' }]
-			: []),
-		...(data.can.settings
-			? [
-					{ href: resolve('/crm/settings/users'), label: 'Пользователи' },
-					{ href: resolve('/crm/settings/dicts'), label: 'Справочники' },
-					{ href: resolve('/crm/settings/notifications'), label: 'Уведомления' },
-					{ href: resolve('/crm/settings'), label: 'Настройки' }
-				]
-			: []),
-		...(data.can.audit ? [{ href: resolve('/crm/settings/audit'), label: 'Журнал' }] : []),
-		{ href: resolve('/password/change'), label: 'Сменить пароль' }
+	const links = $derived<ShellLink[]>([
+		CRM_HOME_LINK,
+		...crmNav(data.can),
+		{ href: resolve('/password/change'), label: 'Сменить пароль', icon: KeyRoundIcon }
 	]);
 	const roles = $derived(data.user.roles.map((role) => ROLE_TITLE[role]));
 </script>
 
 <svelte:document onsubmit={(event) => void leaveOnLogout(event, push)} />
 
-<ContourShell title="Мастерская" userName={data.user.fullName} {roles} {links}>
+<ContourShell
+	title="Мастерская"
+	userName={data.user.fullName}
+	{roles}
+	{links}
+	sidebarOpen={data.sidebarOpen}
+>
 	{#snippet bell()}
 		<NotificationBell
 			bell={data.bell}

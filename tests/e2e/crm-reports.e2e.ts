@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { charityTransfers } from '../../src/lib/server/db/schema';
-import { login, logout } from './fixtures';
+import { crmNavLink, login, logout } from './fixtures';
 import { sendRequest } from './portal-flow';
 import { e2eDb, loadUp, stockUp, transition } from './transitions';
 
@@ -38,7 +38,7 @@ test('C13: the owner reads the period, downloads a sheet and records a transfer'
 	await logout(page);
 
 	await login(page, 'owner');
-	await page.getByRole('link', { name: 'Отчёты', exact: true }).click();
+	await crmNavLink(page, 'Отчёты').click();
 	await expect(page.getByTestId('tile-sales')).toBeVisible();
 
 	await page.goto(`/crm/reports/sales${RANGE}`);
@@ -78,7 +78,7 @@ test('C13: a broken period keeps the page and refuses the sheet', async ({ page 
 for (const role of ['manager', 'driver', 'cp_admin'] as const) {
 	test(`C13: ${role} gets 403 on every report, sheet and action`, async ({ page }) => {
 		await login(page, role);
-		await expect(page.getByRole('link', { name: 'Отчёты', exact: true })).toHaveCount(0);
+		await expect(crmNavLink(page, 'Отчёты')).toHaveCount(0);
 		for (const path of PATHS) expect((await page.goto(path))?.status()).toBe(403);
 		for (const sheet of SHEETS) expect((await page.request.get(sheet + RANGE)).status()).toBe(403);
 		const forged = {
