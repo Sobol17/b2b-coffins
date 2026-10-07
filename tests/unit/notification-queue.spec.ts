@@ -12,10 +12,9 @@ import {
 import { bus } from '../../src/lib/server/events/bus';
 import { NotificationRuleRepository } from '../../src/lib/server/notifications/notification-rule.repository';
 import { NotificationRepository } from '../../src/lib/server/notifications/notification.repository';
-import { createNotificationDispatchHandler } from '../../src/lib/server/queue/handlers/notification-dispatch';
+import { PushSubscriptionRepository } from '../../src/lib/server/notifications/push-subscription.repository';
 import { createNotificationFanoutHandler } from '../../src/lib/server/queue/handlers/notification-fanout';
-import { Queue } from '../../src/lib/server/queue/queue';
-import { JOB_PAYLOAD_SCHEMAS, jobKey } from '../../src/lib/server/queue/topics';
+import { JOB_PAYLOAD_SCHEMAS } from '../../src/lib/server/queue/topics';
 import { Worker } from '../../src/lib/server/queue/worker';
 import type { EventKey } from '../../src/lib/types/events';
 import { seedCharityWorld } from './helpers/charity';
@@ -31,15 +30,14 @@ seedNotificationRules(db);
 let switchedOn = true;
 
 function worker(): Worker {
-	const rows = new NotificationRepository();
 	return new Worker({
 		handlers: [
 			createNotificationFanoutHandler({
 				rules: new NotificationRuleRepository(),
-				notifications: rows,
+				notifications: new NotificationRepository(),
+				subscriptions: new PushSubscriptionRepository(),
 				isEnabled: () => switchedOn
-			}),
-			createNotificationDispatchHandler({ notifications: rows })
+			})
 		]
 	});
 }
@@ -174,21 +172,7 @@ describe('notification.fanout reaches the workshop (C12)', () => {
 	});
 });
 
-describe('no channel is live before C15', () => {
-	it('writes the feed and sends nothing: no channel row, no dispatch job', async () => {
-		db.insert(userNotificationPrefs)
-			.values({ userId: world.adminId, eventKey: 'request.ready', channel: 'push', enabled: true })
-			.run();
-		const id = sent(actors.admin);
-		drive(id, 'ready');
-
-		await worker().drain();
-
-		expect(heard('request.ready', id)).toContain(world.adminId);
-		expect(db.select().from(notifications).all()).toHaveLength(0);
-		expect(jobs('notification.dispatch')).toHaveLength(0);
-	});
-
+describe('contract of the fanout job', () => {
 	it('queues payloads that match the contract of tech.md 7.2', async () => {
 		drive(sent(actors.admin), 'ready');
 		await worker().drain();
@@ -221,61 +205,4 @@ describe('idempotency of the notification jobs', () => {
 		expect(heard('request.ready', id)).toEqual(before);
 		expect(before).toHaveLength(3);
 	});
-
-	it('leaves a sent row alone when its dispatch runs twice', async () => {
-		const id = pushRow('sent');
-		Queue.enqueue('notification.dispatch', { notificationId: id }, jobKey.dispatch(id));
-		await worker().drain();
-		db.update(jobQueue).set({ status: 'pending', finishedAt: null }).run();
-
-		await worker().drain();
-
-		expect(rowOf(id)).toMatchObject({ status: 'sent', attempts: 1, error: null });
-		expect(jobs('notification.dispatch')[0]?.status).toBe('done');
-	});
 });
-
-describe('the error path of the dispatch', () => {
-	it('marks a row of a channel without a driver failed and gives the job up as dead', async () => {
-		const id = pushRow('queued');
-		Queue.enqueue('notification.dispatch', { notificationId: id }, jobKey.dispatch(id));
-
-		await worker().drain();
-
-		expect(rowOf(id)).toMatchObject({
-			status: 'failed',
-			attempts: 1,
-			error: 'channel push is not live'
-		});
-		// A retry cannot help: the driver arrives with a release, not with time.
-		expect(jobs('notification.dispatch')[0]).toMatchObject({ status: 'dead', attempts: 1 });
-	});
-
-	it('gives up at once on a row that does not exist', async () => {
-		Queue.enqueue('notification.dispatch', { notificationId: 999_999 }, jobKey.dispatch(999_999));
-
-		await worker().drain();
-
-		expect(jobs('notification.dispatch')[0]?.status).toBe('dead');
-	});
-});
-
-function pushRow(status: 'queued' | 'sent'): number {
-	const [row] = db
-		.insert(notifications)
-		.values({
-			eventKey: 'request.ready',
-			userId: world.adminId,
-			channel: 'push',
-			payload: { entityId: 1 },
-			status,
-			attempts: status === 'sent' ? 1 : 0
-		})
-		.returning()
-		.all();
-	return row?.id ?? 0;
-}
-
-function rowOf(id: number) {
-	return db.select().from(notifications).where(eq(notifications.id, id)).all()[0];
-}

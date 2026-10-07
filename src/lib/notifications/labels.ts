@@ -5,6 +5,7 @@ import type {
 	NotificationFeedItemDto,
 	NotificationStatus
 } from '$lib/types/notifications';
+import type { DeliveryFailure } from '$lib/types/push';
 import type { StatusTone } from '$lib/ui';
 
 export interface EventLabel {
@@ -56,4 +57,10 @@ export const DELIVERY_TONE: Readonly<Record<NotificationStatus, StatusTone>> = {
 	queued: 'neutral',
 	sent: 'success',
 	failed: 'warning'
+};
+
+/** Why a push did not arrive, as the owner reads it: the raw answer of the service stays out. */
+export const FAILURE_LABEL: Readonly<Record<DeliveryFailure, string>> = {
+	expired: 'Подписка устарела',
+	driver: 'Ошибка сервиса доставки'
 };

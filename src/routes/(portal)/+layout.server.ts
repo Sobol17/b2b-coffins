@@ -2,6 +2,7 @@ import { requireAction, requireScope } from '$lib/server/auth/guard';
 import { PolicyService } from '$lib/server/auth/policy';
 import { CounterpartyService } from '$lib/server/counterparty/counterparty.service';
 import { NotificationFeedService } from '$lib/server/notifications/notification-feed.service';
+import { PushSubscriptionService } from '$lib/server/notifications/push-subscription.service';
 import { DraftService } from '$lib/server/request/draft.service';
 import { OrgService } from '$lib/server/settings/org.service';
 import type { LayoutServerLoad } from './$types';
@@ -22,6 +23,8 @@ export const load: LayoutServerLoad = ({ locals, url }) => {
 		cartUnits: new DraftService(actor).unitCount(),
 		// The bell counts on every navigation: tech.md 7.4 has no personal stream to push it (v1.33).
 		bell: new NotificationFeedService(actor).bell(),
+		// The public key and the device count: the client offers push on this device from them.
+		push: new PushSubscriptionService(actor).state(),
 		// Menu hints only: every page and action checks the right again on the server.
 		canManageStaff: PolicyService.can(actor, 'counterparty.staff.manage'),
 		canManagePrices: PolicyService.can(actor, 'prices.manage')

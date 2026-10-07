@@ -13,6 +13,7 @@ import { bus } from '../../src/lib/server/events/bus';
 import { NotificationFeedService } from '../../src/lib/server/notifications/notification-feed.service';
 import { NotificationRuleRepository } from '../../src/lib/server/notifications/notification-rule.repository';
 import { NotificationRepository } from '../../src/lib/server/notifications/notification.repository';
+import { PushSubscriptionRepository } from '../../src/lib/server/notifications/push-subscription.repository';
 import { createNotificationFanoutHandler } from '../../src/lib/server/queue/handlers/notification-fanout';
 import { Worker } from '../../src/lib/server/queue/worker';
 import type { EventKey } from '../../src/lib/types/events';
@@ -35,6 +36,7 @@ function fanout(): Worker {
 			createNotificationFanoutHandler({
 				rules: new NotificationRuleRepository(),
 				notifications: new NotificationRepository(),
+				subscriptions: new PushSubscriptionRepository(),
 				isEnabled: () => true
 			})
 		]

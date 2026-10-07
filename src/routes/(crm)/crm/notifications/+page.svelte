@@ -1,4 +1,5 @@
 <script lang="ts">
+	import PushToggle from '$lib/notifications/PushToggle.svelte';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
@@ -52,6 +53,12 @@
 		<h2 class="mb-2 text-2xl">Каналы</h2>
 		<p class="max-w-2xl text-fg-muted">Выберите, о каких событиях присылать пуш-уведомления.</p>
 	</div>
+
+	<Card.Root>
+		<Card.Content>
+			<PushToggle publicKey={data.push.publicKey} />
+		</Card.Content>
+	</Card.Root>
 
 	<Card.Root>
 		<Card.Content>

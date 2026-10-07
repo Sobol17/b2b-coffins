@@ -32,18 +32,18 @@ export const notificationRuleFixture = z.object({
 	enabled: z.boolean()
 });
 
-// A placeholder the renderer does not know would fail every send, so the seed refuses it up front.
-const templateText = z
-	.string()
-	.min(1)
-	.refine((text) => unknownVariables(text).length === 0, 'unknown template variable');
-
-export const notificationTemplateFixture = z.object({
-	eventKey: z.enum(EVENT_KEYS),
-	channel: z.enum(NOTIFICATION_CHANNELS),
-	subject: templateText,
-	body: templateText
-});
+// A placeholder the event does not offer would fail every send, so the seed refuses it up front.
+export const notificationTemplateFixture = z
+	.object({
+		eventKey: z.enum(EVENT_KEYS),
+		channel: z.enum(NOTIFICATION_CHANNELS),
+		subject: z.string().min(1).max(80),
+		body: z.string().min(1).max(200)
+	})
+	.refine(
+		(row) => unknownVariables(row.eventKey, `${row.subject} ${row.body}`).length === 0,
+		'unknown template variable'
+	);
 
 const variantFixture = z.object({
 	sku: z.string().min(1),

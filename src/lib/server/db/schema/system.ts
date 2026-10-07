@@ -134,7 +134,9 @@ export const pushSubscriptions = sqliteTable(
 		p256dh: text('p256dh').notNull(),
 		auth: text('auth').notNull(),
 		createdAt: createdAt(),
-		lastUsedAt: ts('last_used_at')
+		lastUsedAt: ts('last_used_at'),
+		// Set by dispatch on 404 or 410 from the push service; session.cleanup deletes the row.
+		expiredAt: ts('expired_at')
 	},
 	(t) => [uniqueIndex('push_endpoint_uq').on(t.endpoint)]
 );

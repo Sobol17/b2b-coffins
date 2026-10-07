@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { logger } from '../../../logger';
-import type { PushDriver, PushMessage, PushTarget } from './index';
+import { PushGoneError, type PushDriver, type PushMessage, type PushTarget } from './index';
 
 const targetSchema = z.object({
 	endpoint: z.url({ protocol: /^https$/ }),
@@ -21,11 +21,12 @@ export interface SentPush {
 	readonly message: PushMessage;
 }
 
-/** Same shape as the mail fake: validates input, fails or hangs on request, records what it sent. */
+/** Same shape as the mail fake: validates input, fails, hangs or reports a gone device on request, records what it sent. */
 export class FakePushDriver implements PushDriver {
 	readonly sent: SentPush[] = [];
 	private failNext = false;
 	private hangNext = false;
+	private goneNext = false;
 
 	failOnce(): void {
 		this.failNext = true;
@@ -33,6 +34,10 @@ export class FakePushDriver implements PushDriver {
 
 	hangOnce(): void {
 		this.hangNext = true;
+	}
+
+	goneOnce(): void {
+		this.goneNext = true;
 	}
 
 	async send(target: PushTarget, message: PushMessage): Promise<void> {
@@ -45,6 +50,10 @@ export class FakePushDriver implements PushDriver {
 		if (this.failNext) {
 			this.failNext = false;
 			throw new Error('fake push driver failure');
+		}
+		if (this.goneNext) {
+			this.goneNext = false;
+			throw new PushGoneError(target.endpoint);
 		}
 		if (this.hangNext) {
 			this.hangNext = false;
@@ -59,6 +68,7 @@ export class FakePushDriver implements PushDriver {
 		this.sent.length = 0;
 		this.failNext = false;
 		this.hangNext = false;
+		this.goneNext = false;
 	}
 }
 

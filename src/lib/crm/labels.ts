@@ -75,6 +75,7 @@ export const AUDIT_ACTION_TITLE: Readonly<Record<string, string>> = {
 	'profile.update': 'Профиль изменён',
 	'agency_price.set': 'Цена агентства изменена',
 	'notifications.prefs.update': 'Настройки уведомлений изменены',
+	'notifications.template.update': 'Шаблон уведомления изменён',
 	'request.draft_item_add': 'Позиция добавлена в черновик',
 	'request.draft_item_qty': 'Количество в черновике изменено',
 	'request.draft_item_remove': 'Позиция удалена из черновика',
@@ -119,7 +120,8 @@ export const AUDIT_ENTITY_TITLE: Readonly<Record<string, string>> = {
 	counterparty_product_price: 'Цена агентства',
 	counterparties: 'Контрагент',
 	contracts: 'Договор',
-	delivery_addresses: 'Адрес доставки'
+	delivery_addresses: 'Адрес доставки',
+	notification_templates: 'Шаблон уведомления'
 };
 
 export const SCHEME_OPTIONS: readonly (SelectOption & { value: SettlementScheme })[] = [

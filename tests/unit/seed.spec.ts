@@ -150,7 +150,10 @@ describe('migrations and seed on a clean database', () => {
 			expect(rules.some((rule) => rule.eventKey === eventKey)).toBe(true);
 		}
 		expect(rules.every((rule) => rule.channel === 'push' || rule.channel === 'max')).toBe(true);
-		expect(db.select().from(notificationTemplates).all()).toHaveLength(0);
+		// One push text per event since C15; the MAX bot brings its own in C16.
+		const templates = db.select().from(notificationTemplates).all();
+		expect(templates.map((row) => row.eventKey).sort()).toEqual([...EVENT_KEYS].sort());
+		expect(templates.every((row) => row.channel === 'push')).toBe(true);
 	});
 
 	it('clears the mail rows an older database still carries (v1.49)', () => {

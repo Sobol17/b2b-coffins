@@ -19,4 +19,12 @@ export interface PushDriver {
 	send(target: PushTarget, message: PushMessage): Promise<void>;
 }
 
+/** The push service answered 404 or 410: the subscription will never accept a message again. */
+export class PushGoneError extends Error {
+	constructor(readonly endpoint: string) {
+		super('push subscription is gone');
+		this.name = 'PushGoneError';
+	}
+}
+
 export { FakePushDriver, fakePushDriver } from './fake';

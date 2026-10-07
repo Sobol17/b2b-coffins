@@ -1,8 +1,9 @@
 <script lang="ts">
+	import PushBanner from '$lib/notifications/PushBanner.svelte';
 	import { resolve } from '$app/paths';
 	import ActiveRequests from '$lib/portal/requests/ActiveRequests.svelte';
 	import CharityBanner from '$lib/portal/charity/CharityBanner.svelte';
-	import { Button, Card, PriceCell } from '$lib/ui';
+	import { Button, Card, InstallPrompt, PriceCell } from '$lib/ui';
 	import { formatDate } from '$lib/utils/format';
 	import type { PageProps } from './$types';
 
@@ -13,6 +14,8 @@
 
 <div class="flex flex-col gap-6">
 	<h1 data-testid="portal-home" class="px-2 pt-4 text-4xl sm:text-5xl">Портал контрагента</h1>
+	<InstallPrompt />
+	<PushBanner publicKey={data.push.publicKey} />
 
 	{#if data.charity}
 		<CharityBanner banner={data.charity} />

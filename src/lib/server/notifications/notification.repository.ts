@@ -27,6 +27,7 @@ export interface Person {
 
 export interface DispatchRow {
 	readonly id: number;
+	readonly userId: number;
 	readonly eventKey: EventKey;
 	readonly channel: NotificationChannel;
 	readonly status: NotificationStatus;
@@ -147,6 +148,7 @@ export class NotificationRepository extends BaseRepository<typeof notifications>
 		const [row] = this.db(tx)
 			.select({
 				id: notifications.id,
+				userId: notifications.userId,
 				eventKey: notifications.eventKey,
 				channel: notifications.channel,
 				status: notifications.status,
