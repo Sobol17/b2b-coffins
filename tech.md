@@ -1457,6 +1457,7 @@ export const SALES_BUCKETS = ['day', 'week', 'month'] as const;
 export const LOST_STATUSES = ['cancelled', 'rejected'] as const;
 export const FUNNEL_STAGES = ['new', 'in_work', 'ready', 'delivered', 'paid'] as const;
 export const CHARITY_TRANSFER_MAX_MINOR = 10_000_000_000; // 100 000 000 roubles
+export type ReportPreset = (typeof REPORT_PRESETS)[number];
 export type SalesGroup = (typeof SALES_GROUPS)[number];
 export type SalesBucket = (typeof SALES_BUCKETS)[number];
 export type LostStatus = (typeof LOST_STATUSES)[number];
