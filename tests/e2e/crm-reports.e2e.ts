@@ -81,10 +81,16 @@ for (const role of ['manager', 'driver', 'cp_admin'] as const) {
 		await expect(page.getByRole('link', { name: 'Отчёты', exact: true })).toHaveCount(0);
 		for (const path of PATHS) expect((await page.goto(path))?.status()).toBe(403);
 		for (const sheet of SHEETS) expect((await page.request.get(sheet + RANGE)).status()).toBe(403);
-		const forged = await page.request.post('/crm/reports/charity?/transfer', {
-			form: { amountMinor: '100', transferredOn: `${YEAR}-01-01` },
-			headers: { origin: 'http://localhost:4173' }
-		});
-		expect(forged.status()).toBe(403);
+		const forged = {
+			transfer: { amountMinor: '100', transferredOn: `${YEAR}-01-01` },
+			reverse: { transferId: '1', comment: 'forged' }
+		};
+		for (const [action, form] of Object.entries(forged)) {
+			const answer = await page.request.post(`/crm/reports/charity?/${action}`, {
+				form,
+				headers: { origin: 'http://localhost:4173' }
+			});
+			expect(answer.status()).toBe(403);
+		}
 	});
 }
