@@ -34,7 +34,7 @@
 			? [
 					{ href: resolve('/crm/settings/users'), label: 'Пользователи' },
 					{ href: resolve('/crm/settings/dicts'), label: 'Справочники' },
-					{ href: resolve('/crm/settings/notifications'), label: 'Матрица уведомлений' },
+					{ href: resolve('/crm/settings/notifications'), label: 'Уведомления' },
 					{ href: resolve('/crm/settings'), label: 'Настройки' }
 				]
 			: []),
