@@ -172,8 +172,8 @@ export interface DashboardDto {
 - `reportRangeSchema`: `from` и `to` датами `YYYY-MM-DD`, `from <= to`, длина не больше `REPORT_MAX_DAYS`.
 - `salesReportSchema`: период, `group`, `bucket` (по умолчанию `month`), необязательный `counterpartyId`.
 - `stockTurnoverSchema`: период и необязательный `kind`.
-- `lostReportSchema`: период, необязательный `status`, поля `ListQuery`.
-- `charityReportSchema`: период и поля `ListQuery` реестра перечислений.
+- `lostReportSchema`: период и необязательный `status`; пагинацию реестра разбирает `parseListQuery`.
+- Отчёт по фонду берёт `reportRangeSchema`, пагинацию реестра перечислений разбирает `parseListQuery`. Отдельной схемы у него нет.
 - `charityTransferSchema`: `amountMinor` целое от 1 до `CHARITY_TRANSFER_MAX_MINOR`, `transferredOn` датой не позже сегодняшнего дня в `org.timezone`, `documentRef` до 100 символов, `comment` до 500.
 - `charityTransferReverseSchema`: `transferId` и обязательный `comment` от 1 до 500 символов.
 
