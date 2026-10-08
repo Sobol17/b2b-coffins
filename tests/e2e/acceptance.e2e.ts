@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { crmNavLink, login, purchaseMoneyKeys, type RoleKey } from './fixtures';
+import { crmNavLink, login, openBell, purchaseMoneyKeys, type RoleKey } from './fixtures';
 import { openCard, sendRequest } from './portal-flow';
 import { e2eDb, moneyOf, statusChain, statusOf, stockUp } from './transitions';
 
@@ -19,7 +19,7 @@ const shared = { number: '', card: '' };
 async function expectInBell(page: Page, home: string, title: string): Promise<void> {
 	await expect(async () => {
 		await page.goto(home);
-		await page.getByTestId('bell-button').click();
+		await openBell(page);
 		const item = page.getByTestId('bell-item').filter({ hasText: shared.number });
 		await expect(item.filter({ hasText: title }).first()).toBeVisible({ timeout: 1000 });
 	}).toPass({ timeout: QUEUE_TIMEOUT });

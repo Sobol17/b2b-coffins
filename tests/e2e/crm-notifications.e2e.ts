@@ -1,7 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import { isNull } from 'drizzle-orm';
 import { notificationFeed, notifications } from '../../src/lib/server/db/schema';
-import { login, logout, purchaseMoneyKeys, type RoleKey } from './fixtures';
+import { login, logout, openBell, purchaseMoneyKeys, type RoleKey } from './fixtures';
 import { sendRequest } from './portal-flow';
 import { e2eDb, stockUp, transition } from './transitions';
 
@@ -46,7 +46,7 @@ test('C12: the administrator sees a new request in the bell and opens its card',
 	const number = await freshRequest(page, 'manager');
 
 	await expectBell(page, '1');
-	await page.getByTestId('bell-button').click();
+	await openBell(page);
 	const item = page.getByTestId('bell-item').filter({ hasText: number }).first();
 	await expect(item).toContainText('Новая заявка');
 	await expect(page.getByTestId('bell-count')).toBeHidden();
@@ -67,7 +67,7 @@ test('C12: a ready request reaches the driver, and the line leads to the deliver
 
 	// The driver hears of the request once: only when there is something to carry.
 	await expectBell(page, '1');
-	await page.getByTestId('bell-button').click();
+	await openBell(page);
 	const item = page.getByTestId('bell-item').filter({ hasText: number });
 	await expect(item).toContainText('Заявка готова к выдаче');
 	await expect(item).toHaveAttribute('href', '/crm/delivery');
