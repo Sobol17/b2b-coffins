@@ -27,8 +27,12 @@ test('an administrator gives access to an employee who replaces the temporary pa
 	await login(page, 'cp_admin');
 	await page.goto('/portal/staff');
 
-	await page.getByRole('button', { name: 'Добавить сотрудника' }).click();
 	const modal = page.getByTestId('modal');
+	// A click before hydration lands on the server markup: repeat until the dialog opens.
+	await expect(async () => {
+		await page.getByRole('button', { name: 'Добавить сотрудника' }).click();
+		await expect(modal).toBeVisible({ timeout: 1000 });
+	}).toPass();
 	await modal.locator('input[name="fullName"]').fill('Анна Белова');
 	await modal.locator('input[name="email"]').fill(email);
 	await modal.getByRole('button', { name: 'Создать доступ' }).click();

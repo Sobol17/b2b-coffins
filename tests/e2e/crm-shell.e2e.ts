@@ -46,6 +46,8 @@ test('shell: the home screen offers a tile for every section of the role', async
 		.evaluateAll((nodes) => nodes.map((node) => node.getAttribute('href')));
 	// Every section but the home screen itself.
 	expect(tiles).toEqual(links.filter((href) => href !== '/crm'));
+	// A screen reader jumps to the one main landmark of the page.
+	await expect(page.getByRole('main')).toHaveCount(1);
 });
 
 test('shell: a driver sees only the sections of the role and gets 403 on the rest', async ({

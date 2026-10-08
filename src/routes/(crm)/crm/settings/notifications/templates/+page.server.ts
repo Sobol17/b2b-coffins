@@ -15,8 +15,13 @@ export const load: PageServerLoad = ({ locals, url }) => ({
 });
 
 export const actions = {
-	save: ({ request, locals, url }) =>
-		formAction(request, 'save', pushTemplateSchema, (input) => service(locals, url).save(input)),
-	test: ({ request, locals, url }) =>
-		formAction(request, 'test', pushTemplateSchema, (input) => service(locals, url).sendTest(input))
+	// The right is checked before the form is read: a stranger learns nothing from its validation.
+	save: ({ request, locals, url }) => {
+		const templates = service(locals, url);
+		return formAction(request, 'save', pushTemplateSchema, (input) => templates.save(input));
+	},
+	test: ({ request, locals, url }) => {
+		const templates = service(locals, url);
+		return formAction(request, 'test', pushTemplateSchema, (input) => templates.sendTest(input));
+	}
 } satisfies Actions;

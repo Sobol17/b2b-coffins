@@ -61,6 +61,15 @@ export async function openCrmMenu(page: Page): Promise<void> {
 	}).toPass();
 }
 
+/** The bell of both contours. A click before hydration does nothing, so it is repeated. */
+export async function openBell(page: Page): Promise<void> {
+	const panel = page.getByRole('heading', { name: 'Уведомления', level: 2 });
+	await expect(async () => {
+		if (!(await panel.isVisible())) await page.getByTestId('bell-button').click();
+		await expect(panel).toBeVisible({ timeout: 1000 });
+	}).toPass();
+}
+
 /** The portal logs out from the profile side menu, the CRM from its sidebar. */
 export async function logout(page: Page): Promise<void> {
 	if (new URL(page.url()).pathname.startsWith('/portal')) await page.goto('/portal/profile');

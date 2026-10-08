@@ -137,6 +137,19 @@ describe('portal thread with the manager (P6)', () => {
 		).rejects.toThrow();
 	});
 
+	it('refuses a page sent under the type of a picture and stores nothing', async () => {
+		const id = send(adminCtx, VOLGA_180);
+
+		await expect(
+			attachments().attach(id, {
+				name: 'photo.png',
+				mime: 'image/png',
+				bytes: Buffer.from('<!doctype html><script>alert(1)</script>')
+			})
+		).rejects.toThrow('Такой тип файла не принимается');
+		expect(card(id).attachments).toEqual([]);
+	});
+
 	it('lets an employee attach a file to the own request', async () => {
 		const id = send(employeeCtx, VOLGA_180);
 

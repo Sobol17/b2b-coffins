@@ -1,7 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import { isNull } from 'drizzle-orm';
 import { notificationFeed } from '../../src/lib/server/db/schema';
-import { login, logout } from './fixtures';
+import { login, logout, openBell } from './fixtures';
 import { sendRequest } from './portal-flow';
 import { e2eDb, stockUp, transition } from './transitions';
 
@@ -58,7 +58,7 @@ test('the bell counts a new event and the open panel clears it', async ({ page }
 		await expect(page.getByTestId('bell-count')).toHaveText('2', { timeout: 500 });
 	}).toPass({ timeout: QUEUE_TIMEOUT });
 
-	await page.getByTestId('bell-button').click();
+	await openBell(page);
 	const item = page.getByTestId('bell-item').filter({ hasText: number }).first();
 	await expect(item).toContainText('Заявка готова к выдаче');
 	await expect(page.getByTestId('bell-count')).toBeHidden();
