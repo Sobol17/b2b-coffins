@@ -1,3 +1,5 @@
+import { matchesSignature } from '../files/signature';
+
 /** What a counterparty attaches to a request: a drawing, a scan or a photo (tech.md 14 P6). */
 export const ATTACHMENT_MIMES: readonly string[] = [
 	'application/pdf',
@@ -13,12 +15,16 @@ export type AttachmentRefusal = 'mime' | 'size';
 export interface AttachmentFacts {
 	readonly mime: string;
 	readonly sizeBytes: number;
+	/** The leading bytes of the file, at least `SIGNATURE_HEAD_BYTES` of them when it is that long. */
+	readonly head: Uint8Array;
 }
 
 /** @returns null when the file may be stored, otherwise what is wrong with it. */
 export function checkAttachment(file: AttachmentFacts): AttachmentRefusal | null {
 	if (!ATTACHMENT_MIMES.includes(file.mime)) return 'mime';
 	if (file.sizeBytes <= 0 || file.sizeBytes > ATTACHMENT_MAX_BYTES) return 'size';
+	// The declared type comes from the client: a page renamed to a picture is not a picture.
+	if (!matchesSignature(file.mime, file.head)) return 'mime';
 	return null;
 }
 

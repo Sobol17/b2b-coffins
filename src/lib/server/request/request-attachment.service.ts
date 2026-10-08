@@ -6,6 +6,7 @@ import { writeStoredFile } from '../files/storage';
 import { CardDtoMapper } from './card.dto';
 import { RequestCardRepository } from './request-card.repository';
 import { SentRequestService } from './sent-request.service';
+import { SIGNATURE_HEAD_BYTES } from '$lib/domain/files/signature';
 import {
 	ATTACHMENT_MAX_BYTES,
 	checkAttachment,
@@ -41,7 +42,11 @@ export class RequestAttachmentService extends SentRequestService {
 	 */
 	async attach(requestId: number, file: AttachmentUpload): Promise<RequestAttachmentDto> {
 		this.requireReader();
-		const refusal = checkAttachment({ mime: file.mime, sizeBytes: file.bytes.length });
+		const refusal = checkAttachment({
+			mime: file.mime,
+			sizeBytes: file.bytes.length,
+			head: file.bytes.subarray(0, SIGNATURE_HEAD_BYTES)
+		});
 		if (refusal !== null) throw new ValidationError(REFUSALS[refusal], { field: 'file' });
 
 		const request = this.reach(requestId);
