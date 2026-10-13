@@ -57,7 +57,10 @@ export function transition(
 		return { ok: true, output };
 	} catch (err) {
 		const failed = err as { stdout?: string; stderr?: string };
-		return { ok: false, output: `${failed.stdout ?? ''}${failed.stderr ?? ''}` };
+		const output = `${failed.stdout ?? ''}${failed.stderr ?? ''}`;
+		// Specs assert on `ok` alone; the reason of an unexpected refusal belongs in the run log.
+		console.error(`request:transition ${number} -> ${to} failed:\n${output}`);
+		return { ok: false, output };
 	}
 }
 
