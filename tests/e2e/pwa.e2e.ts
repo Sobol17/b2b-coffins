@@ -20,8 +20,8 @@ test('C15: the manifest is served, valid and points at real icons', async ({ pag
 	expect(response.status()).toBe(200);
 	const manifest = (await response.json()) as Record<string, unknown> & { icons: ManifestIcon[] };
 	expect(manifest).toMatchObject({
-		name: 'Столярная мастерская: заявки',
-		short_name: 'Заявки',
+		name: 'Ангел: заявки мастерской',
+		short_name: 'Ангел',
 		start_url: '/',
 		scope: '/',
 		display: 'standalone',
@@ -36,6 +36,29 @@ test('C15: the manifest is served, valid and points at real icons', async ({ pag
 		const image = await request.get(icon.src);
 		expect(image.status()).toBe(200);
 		expect(image.headers()['content-type']).toBe('image/png');
+	}
+});
+
+test('the tab and the home screen of an iPhone get the mark and the name', async ({
+	page,
+	request
+}) => {
+	await page.goto('/login');
+	// iOS reads the name and the icon from the page, not from the manifest.
+	await expect(page.locator('meta[name="apple-mobile-web-app-title"]')).toHaveAttribute(
+		'content',
+		'Ангел'
+	);
+	const icons = [
+		{ selector: 'link[rel="apple-touch-icon"]', type: 'image/png' },
+		{ selector: 'link[rel="icon"][type="image/svg+xml"]', type: 'image/svg+xml' },
+		{ selector: 'link[rel="icon"][type="image/png"]', type: 'image/png' }
+	];
+	for (const { selector, type } of icons) {
+		const href = await page.locator(selector).evaluate((link) => (link as HTMLLinkElement).href);
+		const image = await request.get(href);
+		expect(image.status(), selector).toBe(200);
+		expect(image.headers()['content-type'], selector).toBe(type);
 	}
 });
 

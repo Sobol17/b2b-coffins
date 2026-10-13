@@ -1,6 +1,6 @@
 {
-	"name": "Столярная мастерская: заявки",
-	"short_name": "Заявки",
+	"name": "Ангел: заявки мастерской",
+	"short_name": "Ангел",
 	"start_url": "/",
 	"scope": "/",
 	"display": "standalone",
