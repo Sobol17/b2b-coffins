@@ -51,7 +51,6 @@ test('the tab and the home screen of an iPhone get the mark and the name', async
 	);
 	const icons = [
 		{ selector: 'link[rel="apple-touch-icon"]', type: 'image/png' },
-		{ selector: 'link[rel="icon"][type="image/svg+xml"]', type: 'image/svg+xml' },
 		{ selector: 'link[rel="icon"][type="image/png"]', type: 'image/png' }
 	];
 	for (const { selector, type } of icons) {

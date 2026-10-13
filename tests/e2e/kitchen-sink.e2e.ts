@@ -39,6 +39,7 @@ const PRIMITIVES = [
 	'PhotoUploader',
 	'PriceCell',
 	'Stepper',
+	'BrandMark',
 	'InstallBanner',
 	'InstallPrompt'
 ] as const;

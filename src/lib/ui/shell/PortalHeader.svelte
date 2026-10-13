@@ -7,6 +7,7 @@
 	import type { Snippet } from 'svelte';
 	import Button from '../base/button/button.svelte';
 	import Drawer from '../Drawer.svelte';
+	import BrandMark from '../BrandMark.svelte';
 	import type { CartLink, ShellLink } from './types';
 
 	let {
@@ -53,8 +54,10 @@
 		<a
 			href={resolve('/portal')}
 			data-testid="home-logo"
-			class="flex items-baseline gap-2.5 rounded-sm hover:text-link"
+			class="flex items-center gap-2.5 rounded-sm hover:text-link"
 		>
+			<!-- A phone header has no room for it: the icons of the right side take the whole row. -->
+			<BrandMark class="hidden size-11 sm:block" />
 			<span
 				class="font-heading text-xl font-semibold tracking-[0.12em] sm:text-2xl sm:tracking-[0.14em]"
 				>АНГЕЛ</span
