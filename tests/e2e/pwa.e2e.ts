@@ -49,6 +49,8 @@ test('the tab and the home screen of an iPhone get the mark and the name', async
 		'content',
 		'Ангел'
 	);
+	// One tab icon: a second link would win over the mark in some browsers.
+	await expect(page.locator('link[rel="icon"]')).toHaveCount(1);
 	const icons = [
 		{ selector: 'link[rel="apple-touch-icon"]', type: 'image/png' },
 		{ selector: 'link[rel="icon"][type="image/png"]', type: 'image/png' }
