@@ -61,6 +61,24 @@ export async function openCrmMenu(page: Page): Promise<void> {
 	}).toPass();
 }
 
+/**
+ * Events of an earlier spec are fanned out in the background and may land seconds later. A spec
+ * that counts the bell waits for the queue to drain first, or a stray event counts as its own.
+ */
+export async function queueIdle(page: Page): Promise<void> {
+	await expect
+		.poll(
+			async () => {
+				const health = (await (await page.request.get('/api/health')).json()) as {
+					queue: { pending: number; running: number };
+				};
+				return health.queue.pending + health.queue.running;
+			},
+			{ timeout: 15_000 }
+		)
+		.toBe(0);
+}
+
 /** The bell of both contours. A click before hydration does nothing, so it is repeated. */
 export async function openBell(page: Page): Promise<void> {
 	const panel = page.getByRole('heading', { name: 'Уведомления', level: 2 });

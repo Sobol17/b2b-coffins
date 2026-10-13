@@ -69,4 +69,6 @@ export { default as PhotoUploader } from './PhotoUploader.svelte';
 export { default as PriceCell } from './PriceCell.svelte';
 
 export { default as ContourShell } from './ContourShell.svelte';
+export { default as BrandMark } from './BrandMark.svelte';
+export { default as InstallBanner } from './InstallBanner.svelte';
 export { default as InstallPrompt } from './InstallPrompt.svelte';

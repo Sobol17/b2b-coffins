@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { resolve } from '$app/paths';
-	import { Button, buttonVariants } from '$lib/ui';
+	import { BrandMark, Button, buttonVariants } from '$lib/ui';
 	import TelLink from './TelLink.svelte';
 
 	let { phone, telHref }: { phone: string | null; telHref: `tel:${string}` | null } = $props();
@@ -15,8 +15,9 @@
 		<a
 			href={resolve('/')}
 			data-testid="home-logo"
-			class="flex items-baseline gap-2.5 rounded-sm hover:text-link"
+			class="flex items-center gap-2.5 rounded-sm hover:text-link"
 		>
+			<BrandMark class="size-9 sm:size-11" />
 			<span class="font-heading text-2xl font-semibold tracking-[0.14em]">АНГЕЛ</span>
 			<span class="hidden text-[0.6875rem] tracking-[0.1em] text-fg-faint uppercase sm:inline">
 				мастерская

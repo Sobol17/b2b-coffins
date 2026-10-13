@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Button, InstallPrompt, TouchButton } from '$lib/ui';
+	import { BrandMark, Button, InstallBanner, InstallPrompt, TouchButton } from '$lib/ui';
 	import Showcase from '../Showcase.svelte';
 </script>
 
@@ -18,6 +18,18 @@
 <Showcase name="TouchButton">
 	<TouchButton>Готово</TouchButton>
 	<TouchButton variant="secondary">Отмена</TouchButton>
+</Showcase>
+
+<Showcase name="BrandMark">
+	<BrandMark />
+	<BrandMark class="size-16" alt="Мастерская «Ангел»" />
+</Showcase>
+
+<Showcase name="InstallBanner">
+	<InstallBanner />
+	<span class="text-sm text-fg-faint">
+		Полоса над шапкой обоих контуров: показывается там же, где InstallPrompt, пока её не закрыли.
+	</span>
 </Showcase>
 
 <Showcase name="InstallPrompt">

@@ -3,6 +3,8 @@
 	import LogOutIcon from '@lucide/svelte/icons/log-out';
 	import type { Snippet } from 'svelte';
 	import * as Sidebar from '../base/sidebar/index.js';
+	import BrandMark from '../BrandMark.svelte';
+	import InstallBanner from '../InstallBanner.svelte';
 	import CrmSidebarLink from './CrmSidebarLink.svelte';
 	import { groupLinks } from './groups';
 	import type { ShellLink } from './types';
@@ -47,15 +49,12 @@
 
 <Sidebar.Provider open={sidebarOpen}>
 	<Sidebar.Root collapsible="icon" class="border-sidebar-border">
-		<Sidebar.Header class="h-14 justify-center px-4 group-data-[collapsible=icon]:px-2">
+		<Sidebar.Header
+			class="h-14 flex-row items-center gap-2.5 px-3 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0"
+		>
+			<BrandMark class="size-8" />
 			<strong class="truncate font-heading text-xl group-data-[collapsible=icon]:hidden">
 				{title}
-			</strong>
-			<strong
-				class="hidden text-center font-heading text-xl group-data-[collapsible=icon]:block"
-				aria-hidden="true"
-			>
-				{title.slice(0, 1)}
 			</strong>
 		</Sidebar.Header>
 
@@ -108,6 +107,7 @@
 	</Sidebar.Root>
 
 	<Sidebar.Inset class="min-w-0 bg-surface">
+		<InstallBanner />
 		<header
 			class="sticky top-0 z-10 flex h-14 items-center gap-2 border-b border-border bg-surface-raised px-2 sm:px-4"
 		>
