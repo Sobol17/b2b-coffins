@@ -4,6 +4,7 @@ import { setSessionCookie } from '$lib/server/auth/cookies';
 import { SESSION_TTL_DAYS } from '$lib/server/auth/session.service';
 import { AppError, userMessage } from '$lib/server/core/errors';
 import { mailDriver } from '$lib/server/notifications/drivers/mail/select';
+import { isLocalPath } from '$lib/utils/local-path';
 import { loginSchema } from '$lib/validation/auth';
 import type { Actions, PageServerLoad } from './$types';
 
@@ -41,6 +42,6 @@ export const actions = {
 		const home = result.scope === 'crm' ? '/crm' : '/portal';
 		// Only a same-site path is honoured, so ?redirectTo cannot bounce the user off the host.
 		const target = parsed.data.redirectTo;
-		redirect(303, target?.startsWith('/') ? target : home);
+		redirect(303, target && isLocalPath(target) ? target : home);
 	}
 } satisfies Actions;

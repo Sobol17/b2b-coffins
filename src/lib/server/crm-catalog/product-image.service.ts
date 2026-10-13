@@ -7,29 +7,16 @@ import { config } from '../config';
 import { writeStoredFile } from '../files/storage';
 import { ProductRepository } from './product.repository';
 import { ProductImageRepository } from './product-image.repository';
+import { matchesSignature } from '$lib/domain/files/signature';
 import type { ActorContext } from '$lib/types/actor';
 import type { CrmMediaDto } from '$lib/types/crm-catalog';
 
 const MAX_BYTES = 10 * 1024 * 1024;
-const SIGNATURES = {
-	'image/jpeg': {
-		extension: 'jpg',
-		matches: (bytes: Buffer) =>
-			bytes.length >= 4 && bytes.subarray(0, 3).equals(Buffer.from([0xff, 0xd8, 0xff]))
-	},
-	'image/png': {
-		extension: 'png',
-		matches: (bytes: Buffer) =>
-			bytes.length >= 16 && bytes.subarray(0, 8).equals(Buffer.from('89504e470d0a1a0a', 'hex'))
-	},
-	'image/webp': {
-		extension: 'webp',
-		matches: (bytes: Buffer) =>
-			bytes.length >= 12 &&
-			bytes.toString('ascii', 0, 4) === 'RIFF' &&
-			bytes.toString('ascii', 8, 12) === 'WEBP'
-	}
-} as const;
+const EXTENSIONS: Readonly<Record<string, string>> = {
+	'image/jpeg': 'jpg',
+	'image/png': 'png',
+	'image/webp': 'webp'
+};
 
 export interface ProductImageUpload {
 	readonly mime: string;
@@ -55,17 +42,17 @@ export class ProductImageService extends BaseService {
 
 	async upload(productId: number, file: ProductImageUpload): Promise<CrmMediaDto> {
 		this.requireProduct(productId);
-		const signature = SIGNATURES[file.mime as keyof typeof SIGNATURES];
+		const extension = Object.hasOwn(EXTENSIONS, file.mime) ? EXTENSIONS[file.mime] : undefined;
 		if (
-			!signature ||
+			!extension ||
 			file.bytes.length === 0 ||
 			file.bytes.length > MAX_BYTES ||
-			!signature.matches(file.bytes)
+			!matchesSignature(file.mime, file.bytes)
 		) {
 			throw new ValidationError('Нужен JPEG, PNG или WebP не больше 10 МБ');
 		}
 		consumeRateLimit('file.upload', String(this.ctx.userId));
-		const path = `product/${productId}/${randomBytes(12).toString('hex')}.${signature.extension}`;
+		const path = `product/${productId}/${randomBytes(12).toString('hex')}.${extension}`;
 		await writeStoredFile(path, file.bytes, this.root);
 		return this.audited({ action: 'catalog.media.add', entity: 'media' }, (tx) => {
 			const id = this.images.insert(

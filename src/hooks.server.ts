@@ -29,6 +29,7 @@ const SECURITY_HEADERS: ReadonlyArray<readonly [string, string]> = [
 
 /** Paths a signed-in user may reach while the account still owes a password change. */
 const PASSWORD_CHANGE_EXEMPT = ['/password/change', '/logout', '/api/health'];
+const READ_METHODS = ['GET', 'HEAD'];
 
 const withRequestId: Handle = async ({ event, resolve }) => {
 	event.locals.requestId = crypto.randomUUID();
@@ -69,10 +70,15 @@ const withActor: Handle = async ({ event, resolve }) => {
 	// A temporary password must be replaced before the account can reach anything else.
 	if (
 		session?.user.mustChangePassword &&
-		event.request.method === 'GET' &&
 		!PASSWORD_CHANGE_EXEMPT.some((path) => event.url.pathname.startsWith(path))
 	) {
-		redirect(303, '/password/change');
+		if (READ_METHODS.includes(event.request.method)) redirect(303, '/password/change');
+		// A form action or an endpoint posted past the redirect would work with the temporary
+		// password, so a write is refused outright rather than sent to a page it cannot follow.
+		return json(
+			{ code: 'forbidden', message: 'Сначала смените временный пароль' },
+			{ status: 403 }
+		);
 	}
 
 	return resolve(event);

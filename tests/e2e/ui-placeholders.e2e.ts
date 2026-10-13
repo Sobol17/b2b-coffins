@@ -40,8 +40,11 @@ test('the portal forms and filters give every field a placeholder', async ({ pag
 	}
 
 	await page.goto('/portal/staff');
-	await page.getByRole('button', { name: 'Добавить сотрудника' }).click();
-	await expect(page.getByRole('dialog')).toBeVisible();
+	// A click before hydration lands on the server markup: repeat until the dialog opens.
+	await expect(async () => {
+		await page.getByRole('button', { name: 'Добавить сотрудника' }).click();
+		await expect(page.getByRole('dialog')).toBeVisible({ timeout: 1000 });
+	}).toPass();
 	await expectPlaceholders(page);
 });
 

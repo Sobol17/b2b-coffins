@@ -3,6 +3,19 @@ import type { ZodType } from 'zod';
 import { AppError, NotFoundError, httpStatusFor, publicErrorBody, userMessage } from './errors';
 
 /**
+ * For mutations over `+server.ts` (tech.md 12). SvelteKit checks the origin of form posts only, so
+ * an endpoint asks for both: a marker header a plain form cannot carry and an origin that is ours.
+ */
+export function requireOwnCall(request: Request, url: URL, marker: string): void {
+	if (
+		request.headers.get('x-requested-with') !== marker ||
+		request.headers.get('origin') !== url.origin
+	) {
+		error(403, { code: 'forbidden', message: 'Доступ запрещён' });
+	}
+}
+
+/**
  * For page loads: a missing object renders the SvelteKit 404 page. Left alone, SvelteKit would turn
  * the NotFoundError into a 500 before the hooks handler ever sees it.
  */

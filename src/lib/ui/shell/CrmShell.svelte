@@ -121,6 +121,7 @@
 			{@render bell?.()}
 		</header>
 
-		<main class="mx-auto w-full max-w-shell flex-1 p-4 sm:p-6">{@render children()}</main>
+		<!-- Sidebar.Inset is the main landmark already: a page holds one. -->
+		<div class="mx-auto w-full max-w-shell flex-1 p-4 sm:p-6">{@render children()}</div>
 	</Sidebar.Inset>
 </Sidebar.Provider>

@@ -1,7 +1,7 @@
 import { error, json } from '@sveltejs/kit';
 import { requireAction, requireScope } from '$lib/server/auth/guard';
 import { ProductImageService } from '$lib/server/crm-catalog/product-image.service';
-import { rethrowAsHttp } from '$lib/server/core/http';
+import { requireOwnCall, rethrowAsHttp } from '$lib/server/core/http';
 import { RequestAttachmentService } from '$lib/server/request/request-attachment.service';
 import { attachmentUploadSchema, productImageUploadSchema } from '$lib/validation/files';
 import type { RequestAttachmentDto } from '$lib/types/request';
@@ -9,12 +9,7 @@ import type { RequestHandler } from './$types';
 
 /** Portal request attachments and CRM product photos share the guarded file collection. */
 export const POST: RequestHandler = async ({ request, locals, url }) => {
-	if (
-		request.headers.get('x-requested-with') !== 'XMLHttpRequest' ||
-		request.headers.get('origin') !== url.origin
-	) {
-		error(403, { code: 'forbidden', message: 'Доступ запрещён' });
-	}
+	requireOwnCall(request, url, 'XMLHttpRequest');
 	const form = Object.fromEntries(await request.formData());
 	if ('productId' in form) {
 		const actor = requireAction(requireScope(locals.actor, 'crm', url.pathname), 'catalog.manage');
