@@ -1,7 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import { isNull } from 'drizzle-orm';
 import { notificationFeed, notifications } from '../../src/lib/server/db/schema';
-import { login, logout, openBell, purchaseMoneyKeys, type RoleKey } from './fixtures';
+import { login, logout, openBell, purchaseMoneyKeys, queueIdle, type RoleKey } from './fixtures';
 import { sendRequest } from './portal-flow';
 import { e2eDb, stockUp, transition } from './transitions';
 
@@ -25,6 +25,7 @@ function emptyBells(): void {
 
 /** A request the portal has just sent, with the workshop account signed in afterwards. */
 async function freshRequest(page: Page, reader: RoleKey): Promise<string> {
+	await queueIdle(page);
 	emptyBells();
 	const number = await sendRequest(page, 'cp_admin');
 	await logout(page);
