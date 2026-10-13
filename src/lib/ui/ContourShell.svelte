@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { ResolvedPathname } from '$app/types';
 	import type { Snippet } from 'svelte';
+	import InstallBanner from './InstallBanner.svelte';
 	import CrmShell from './shell/CrmShell.svelte';
 	import PortalHeader from './shell/PortalHeader.svelte';
 	import ShellFooter from './shell/ShellFooter.svelte';
@@ -45,6 +46,7 @@
 
 {#if variant === 'portal'}
 	<div class="flex min-h-screen flex-col">
+		<InstallBanner />
 		<PortalHeader {title} {userName} {roles} {links} {accountHref} {cart} {search} {bell} />
 		<main class="mx-auto w-full max-w-shell flex-1 px-4 pt-4 pb-10 sm:px-6">
 			{@render children()}
