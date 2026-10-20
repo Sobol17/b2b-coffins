@@ -19,6 +19,10 @@
 	const day = $derived(data.day);
 	const title = $derived(`${dayTitle(day.date)}, ${weekdayTitle(day.date)}`);
 	const present = $derived(day.staff.filter((row) => row.present));
+	const nameOf = (staffId: number) => day.staff.find((row) => row.id === staffId)?.fullName ?? '';
+	const shares = $derived(
+		day.shares.map((share) => ({ ...share, fullName: nameOf(share.staffId) }))
+	);
 	const dayHref = (date: string) => resolve(`/crm/payroll/day/${date}`);
 </script>
 
@@ -80,21 +84,17 @@
 							<p class="text-fg-muted">Работы не внесены.</p>
 						{:else}
 							<ul class="flex flex-col gap-1">
-								{#each day.entries as entry (entry.workTypeId)}
+								{#each day.entries as entry, index (index)}
 									<li class="tabular-nums">
 										{entry.title}: {entry.qty} × {roubles(entry.rateMinor)} = {roubles(
 											entry.amountMinor
-										)}
+										)}. Сделали: {entry.staffIds.map(nameOf).join(', ')}
 									</li>
 								{/each}
 							</ul>
 						{/if}
 					</section>
-					<DaySummary
-						presentCount={day.presentCount}
-						totalMinor={day.totalMinor}
-						shareMinor={day.shareMinor}
-					/>
+					<DaySummary presentCount={day.presentCount} totalMinor={day.totalMinor} {shares} />
 				</div>
 			{/if}
 		</Card.Content>
