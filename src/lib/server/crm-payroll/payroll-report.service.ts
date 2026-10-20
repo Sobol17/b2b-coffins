@@ -2,6 +2,7 @@ import { ValidationError } from '../core/errors';
 import { PayrollBaseService } from './payroll-base.service';
 import { PayrollCalendar } from './payroll-calendar';
 import { PayrollStaffRepository } from './payroll-staff.repository';
+import { withShares } from './payroll-week.reader';
 import { WorkDayRepository } from './work-day.repository';
 import { addDays, weekAccruals } from '$lib/domain/payroll/calc';
 import type { ActorContext } from '$lib/types/actor';
@@ -38,7 +39,7 @@ export class PayrollReportService extends PayrollBaseService {
 		}
 		const from = this.calendar.instantOf(input.from);
 		const to = this.calendar.instantOf(input.to);
-		const accruals = weekAccruals(this.days.between(from, to));
+		const accruals = weekAccruals(this.days.between(from, to).map(withShares));
 		const names = new Map(
 			this.staff.byIds(accruals.map((line) => line.staffId)).map((row) => [row.id, row.fullName])
 		);

@@ -6,14 +6,14 @@ import { PayrollPeriodGate } from './payroll-period-gate';
 import { PayrollStaffRepository } from './payroll-staff.repository';
 import { WorkDayRepository } from './work-day.repository';
 import { WorkTypeRepository } from './work-type.repository';
-import { dayShareMinor, dayTotalMinor } from '$lib/domain/payroll/calc';
+import { dayShares, dayTotalMinor } from '$lib/domain/payroll/calc';
 import type { ActorContext } from '$lib/types/actor';
 import type { WorkDayDto } from '$lib/types/crm-payroll';
 import type { WorkDaySaveInput } from '$lib/validation/crm-payroll';
 
 /**
- * One work day of the crew (tech.md v1.48): who worked, what was done, and the day's sum split
- * equally among those people.
+ * One work day (tech.md v1.48, v1.55): who came, what was done and by whom. Each work is split
+ * equally among its crew, and a worker's day is the sum of their parts down to a whole rouble.
  */
 export class WorkDayService extends PayrollBaseService {
 	constructor(
@@ -56,14 +56,15 @@ export class WorkDayService extends PayrollBaseService {
 			entries,
 			presentCount: staffIds.length,
 			totalMinor: day?.totalMinor ?? 0,
-			shareMinor: day?.shareMinor ?? 0
+			shares: dayShares(staffIds, entries)
 		};
 	}
 
 	/**
 	 * Writes the whole day at once.
 	 * @throws ValidationError for a future date, unknown or switched-off people and works, and
-	 * works without anybody to split them; ConflictError when the week is closed.
+	 * works without anybody to split them; ConflictError when the week is closed. The input
+	 * schema already holds every crew to the people who came.
 	 */
 	save(input: WorkDaySaveInput): WorkDayDto {
 		this.assertManage();
@@ -114,14 +115,14 @@ export class WorkDayService extends PayrollBaseService {
 		this.assertStaff(input.staffIds, day ? this.days.staffIdsOf(day.id, tx) : [], tx);
 		const entries = this.priced(input.entries, day ? this.days.entriesOf(day.id, tx) : [], tx);
 		const totalMinor = dayTotalMinor(entries);
-		const shareMinor = dayShareMinor(totalMinor, input.staffIds.length);
+		const shares = dayShares(input.staffIds, entries);
 		const dayId = this.days.save(
-			{ workDate: instant, totalMinor, shareMinor, createdById: this.ctx.userId },
+			{ workDate: instant, totalMinor, createdById: this.ctx.userId },
 			tx
 		);
 		this.days.replaceStaff(dayId, input.staffIds, tx);
 		this.days.replaceEntries(dayId, entries, tx);
-		return { result: undefined, entityId: dayId, after: { ...after, totalMinor, shareMinor } };
+		return { result: undefined, entityId: dayId, after: { ...after, totalMinor, shares } };
 	}
 
 	/** A switched-off worker stays on a day they are already on, but cannot be added to one. */
@@ -135,7 +136,10 @@ export class WorkDayService extends PayrollBaseService {
 		}
 	}
 
-	/** An entry already on the day keeps its frozen price; a new one takes today's price. */
+	/**
+	 * A work already on the day keeps its frozen price in all its entries, a new one takes today's
+	 * price.
+	 */
 	private priced(
 		input: WorkDaySaveInput['entries'],
 		kept: readonly { workTypeId: number; rateMinor: number }[],
