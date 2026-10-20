@@ -7,6 +7,7 @@ import {
 	workDayStaff,
 	workDays,
 	workEntries,
+	workEntryStaff,
 	workTypes
 } from '../../src/lib/server/db/schema';
 import { crmNavLink, login } from './fixtures';
@@ -19,6 +20,7 @@ test.beforeAll(() => {
 	const db = e2eDb();
 	db.delete(payrollLines).run();
 	db.delete(payrollPeriods).run();
+	db.delete(workEntryStaff).run();
 	db.delete(workEntries).run();
 	db.delete(workDayStaff).run();
 	db.delete(workDays).run();
@@ -56,6 +58,9 @@ async function addWorker(page: Page, fullName: string): Promise<void> {
 	await expect(page.getByTestId('data-table-row').filter({ hasText: fullName })).toBeVisible();
 }
 
+const shareOf = (page: Page, fullName: string) =>
+	page.getByTestId('day-share').filter({ hasText: fullName });
+
 const lineOf = (page: Page, fullName: string) =>
 	page.getByRole('row', { name: new RegExp(fullName) });
 
@@ -65,34 +70,50 @@ test('C10: the administrator marks a day, closes the week and pays it out', asyn
 	const crew = [`E2E Анна ${suffix}`, `E2E Борис ${suffix}`, `E2E Виктор ${suffix}`];
 
 	await login(page, 'manager');
-	await addWork(page, work, 200);
+	await addWork(page, work, 850);
 	for (const fullName of crew) await addWorker(page, fullName);
+	const [anna = '', boris = '', viktor = ''] = crew;
 
-	// The business sample: three people, 10 boxes at 200 roubles, 2000 / 3 goes down to 666.
+	// The customer sample: three joiners came, Anna and Boris made one box for 850 roubles.
 	await page.goto('/crm/payroll');
 	await page.getByTestId('mark-today').click();
 	await expect(page).toHaveURL(/\/crm\/payroll\/day\/\d{4}-\d{2}-\d{2}$/);
 	const dayUrl = page.url();
+	const present = page.getByTestId('day-staff');
 	await expect(async () => {
 		for (const fullName of crew) {
-			const box = page.getByRole('checkbox', { name: new RegExp(fullName) });
+			const box = present.getByRole('checkbox', { name: new RegExp(fullName) });
 			if ((await box.getAttribute('aria-checked')) !== 'true') await box.click();
 			await expect(box).toHaveAttribute('aria-checked', 'true', { timeout: 1000 });
 		}
 	}).toPass();
-	await page.getByLabel(work).fill('10');
-	await expect(page.getByTestId('day-total')).toHaveText(/^2\s000 ₽$/);
-	await expect(page.getByTestId('day-share')).toHaveText('666 ₽');
+	await page.getByRole('button', { name: 'Добавить работу' }).click();
+	const entry = page.getByTestId('day-entry');
+	await entry.getByLabel('Работа').click();
+	await page.getByRole('option', { name: new RegExp(work) }).click();
+	// The closing list swallows the next click: tick the crew only once it is gone.
+	await expect(page.getByRole('listbox')).toHaveCount(0);
+	await entry.getByLabel('Количество').fill('1');
+	for (const fullName of [anna, boris]) {
+		const box = entry.getByRole('checkbox', { name: fullName });
+		await box.click();
+		await expect(box).toHaveAttribute('aria-checked', 'true');
+	}
+	await expect(page.getByTestId('day-total')).toHaveText('850 ₽');
+	await expect(shareOf(page, anna)).toContainText('425 ₽');
+	await expect(shareOf(page, viktor)).toContainText('0 ₽');
 	await page.getByRole('button', { name: 'Сохранить день' }).click();
 	await expect(page.getByText('День сохранён').first()).toBeVisible();
 	await page.reload();
 	await expect(page.getByTestId('day-present')).toHaveText('3');
-	await expect(page.getByTestId('day-share')).toHaveText('666 ₽');
+	await expect(shareOf(page, boris)).toContainText('425 ₽');
+	await expect(shareOf(page, viktor)).toContainText('0 ₽');
 
 	await page.goto('/crm/payroll');
 	await expect(page.getByTestId('week-status')).toHaveText('Открыта');
-	await expect(lineOf(page, crew[0] ?? '').getByTestId('line-payout')).toHaveText('666 ₽');
-	await expect(page.getByTestId('week-total')).toHaveText(/^1\s998 ₽$/);
+	await expect(lineOf(page, anna).getByTestId('line-payout')).toHaveText('425 ₽');
+	await expect(lineOf(page, viktor).getByTestId('line-payout')).toHaveText('0 ₽');
+	await expect(page.getByTestId('week-total')).toHaveText('850 ₽');
 
 	await expect(async () => {
 		await lineOf(page, crew[0] ?? '')
@@ -104,7 +125,7 @@ test('C10: the administrator marks a day, closes the week and pays it out', asyn
 	await page.getByTestId('modal').getByLabel('Комментарий').fill('Премия');
 	await page.getByTestId('modal').getByRole('button', { name: 'Сохранить' }).click();
 	await expect(page.getByTestId('modal')).toHaveCount(0);
-	await expect(lineOf(page, crew[0] ?? '').getByTestId('line-payout')).toHaveText('766 ₽');
+	await expect(lineOf(page, crew[0] ?? '').getByTestId('line-payout')).toHaveText('525 ₽');
 
 	await openModal(page, 'Закрыть неделю');
 	await page.getByTestId('modal').getByRole('button', { name: 'Закрыть неделю' }).click();
@@ -146,8 +167,8 @@ test('C10: the administrator marks a day, closes the week and pays it out', asyn
 	await expect(page.getByTestId('week-status')).toHaveText('Открыта');
 
 	await page.goto('/crm/payroll/reports');
-	await expect(page.getByRole('row', { name: new RegExp(work) })).toContainText(/2\s000 ₽/);
-	await expect(page.getByTestId('report-accrued')).toHaveText(/^1\s998 ₽$/);
+	await expect(page.getByRole('row', { name: new RegExp(work) })).toContainText('850 ₽');
+	await expect(page.getByTestId('report-accrued')).toHaveText('850 ₽');
 });
 
 test('C10: the driver and the portal get 403 on the payroll', async ({ page }) => {
