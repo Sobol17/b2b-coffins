@@ -7,9 +7,21 @@ export interface EntryAmount {
 	readonly rateMinor: number;
 }
 
-export interface DayShare {
+/** One entry of a day: its sum and the crew that did it. */
+export interface CrewEntry {
+	readonly amountMinor: number;
 	readonly staffIds: readonly number[];
+}
+
+export interface StaffShare {
+	readonly staffId: number;
 	readonly shareMinor: number;
+}
+
+/** A marked day: who came and what each of them earned. */
+export interface DayShares {
+	readonly staffIds: readonly number[];
+	readonly shares: readonly StaffShare[];
 }
 
 export interface WeekAccrual {
@@ -26,24 +38,57 @@ export function dayTotalMinor(entries: readonly EntryAmount[]): number {
 	return entries.reduce((sum, entry) => sum + entryAmountMinor(entry), 0);
 }
 
+/** An exact sum of fractions: a crew of three splits 200 roubles into thirds of a kopeck. */
+interface Fraction {
+	readonly num: bigint;
+	readonly den: bigint;
+}
+
+function gcd(a: bigint, b: bigint): bigint {
+	return b === 0n ? a : gcd(b, a % b);
+}
+
+function addFraction(sum: Fraction, num: bigint, den: bigint): Fraction {
+	const nextNum = sum.num * den + num * sum.den;
+	const nextDen = sum.den * den;
+	const divisor = gcd(nextNum, nextDen) || 1n;
+	return { num: nextNum / divisor, den: nextDen / divisor };
+}
+
 /**
- * One worker's pay for the day (tech.md v1.48): the day's sum split equally, down to a whole
- * rouble. The remainder stays with the workshop, so the shares never exceed what the day made.
+ * Each present worker's pay for the day (tech.md v1.55): every entry is split equally among its
+ * crew, a worker's parts are summed exactly, and the sum goes down to a whole rouble once. The
+ * remainder stays with the workshop, so the day never pays out more than it made. A worker in no
+ * crew gets 0; the result follows the order of `presentIds`.
  */
-export function dayShareMinor(totalMinor: number, headcount: number): number {
-	if (headcount <= 0) return 0;
-	const step = PAYROLL_SHARE_STEP_MINOR;
-	return Math.floor(totalMinor / headcount / step) * step;
+export function dayShares(
+	presentIds: readonly number[],
+	entries: readonly CrewEntry[]
+): StaffShare[] {
+	const sums = new Map<number, Fraction>(presentIds.map((id) => [id, { num: 0n, den: 1n }]));
+	for (const entry of entries) {
+		const crew = BigInt(entry.staffIds.length);
+		for (const staffId of entry.staffIds) {
+			const sum = sums.get(staffId);
+			if (sum) sums.set(staffId, addFraction(sum, BigInt(entry.amountMinor), crew));
+		}
+	}
+	const step = BigInt(PAYROLL_SHARE_STEP_MINOR);
+	return presentIds.map((staffId) => {
+		const sum = sums.get(staffId) ?? { num: 0n, den: 1n };
+		return { staffId, shareMinor: Number((sum.num / (sum.den * step)) * step) };
+	});
 }
 
 /** Days and accrual per worker over the days given, in the order workers first appear. */
-export function weekAccruals(days: readonly DayShare[]): WeekAccrual[] {
+export function weekAccruals(days: readonly DayShares[]): WeekAccrual[] {
 	const byStaff = new Map<number, { daysWorked: number; accruedMinor: number }>();
 	for (const day of days) {
+		const shares = new Map(day.shares.map((row) => [row.staffId, row.shareMinor]));
 		for (const staffId of day.staffIds) {
 			const line = byStaff.get(staffId) ?? { daysWorked: 0, accruedMinor: 0 };
 			line.daysWorked += 1;
-			line.accruedMinor += day.shareMinor;
+			line.accruedMinor += shares.get(staffId) ?? 0;
 			byStaff.set(staffId, line);
 		}
 	}
