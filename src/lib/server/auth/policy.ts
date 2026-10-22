@@ -24,7 +24,10 @@ export const ACTIONS = [
 	'reports.read',
 	'charity.manage',
 	'settings.manage',
-	'audit.read'
+	'audit.read',
+	// Counterparty questions (tech.md v1.57): the own fence of P6 in the portal, all in the workshop.
+	'support.own',
+	'support.any'
 ] as const;
 export type Action = (typeof ACTIONS)[number];
 
@@ -35,7 +38,9 @@ export type Action = (typeof ACTIONS)[number];
 const GRANTS: Readonly<Record<RoleCode, readonly Action[]>> = {
 	// Owner holds every action except the portal ones: that contour belongs to counterparties, and
 	// the agency price is the counterparty's own number, not a workshop setting.
-	owner: ACTIONS.filter((action) => action !== 'portal.access' && action !== 'prices.manage'),
+	owner: ACTIONS.filter(
+		(action) => action !== 'portal.access' && action !== 'prices.manage' && action !== 'support.own'
+	),
 	manager: [
 		'crm.access',
 		'catalog.read',
@@ -52,7 +57,8 @@ const GRANTS: Readonly<Record<RoleCode, readonly Action[]>> = {
 		'stock.manage',
 		'delivery.work',
 		'payroll.read',
-		'payroll.manage'
+		'payroll.manage',
+		'support.any'
 	],
 	carpenter: ['crm.access', 'catalog.read', 'request.read.own', 'stock.read'],
 	painter: ['crm.access', 'catalog.read', 'request.read.own', 'stock.read'],
@@ -64,9 +70,16 @@ const GRANTS: Readonly<Record<RoleCode, readonly Action[]>> = {
 		'request.create',
 		'request.read.own',
 		'counterparty.staff.manage',
-		'prices.manage'
+		'prices.manage',
+		'support.own'
 	],
-	cp_employee: ['portal.access', 'catalog.read', 'request.create', 'request.read.own']
+	cp_employee: [
+		'portal.access',
+		'catalog.read',
+		'request.create',
+		'request.read.own',
+		'support.own'
+	]
 } as const;
 
 /** The access right of the actor's own contour: what a screen both contours share asks for. */

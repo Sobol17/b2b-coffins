@@ -7,3 +7,4 @@ export * from './requests';
 export * from './stock';
 export * from './system';
 export * from './users';
+export * from './support';
