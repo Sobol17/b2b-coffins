@@ -58,9 +58,27 @@ describe('supportRecipients (tech.md 7.3, v1.57)', () => {
 				const portalAct = { ...a, actorSide: 'portal' as const };
 				const got = supportRecipients(portalAct, cs);
 				const portalOnes = got.filter((c) => c.side === 'portal');
-				const workshop = cs.filter((c) => c.side === 'crm' && c.userId !== a.actorId);
+				const workshop = cs.filter(
+					(c) =>
+						c.side === 'crm' &&
+						c.userId !== a.actorId &&
+						c.roles.some((r) => r === 'manager' || r === 'owner')
+				);
 				for (const c of portalOnes) expect(c.userId).toBe(a.threadAuthorId);
 				for (const w of workshop) expect(got).toContain(w);
+			})
+		);
+	});
+
+	it('addresses only the workshop heads on the CRM side, never a driver or a carpenter', () => {
+		fc.assert(
+			fc.property(act, candidates, (a, cs) => {
+				const workshop = supportRecipients({ ...a, actorSide: 'portal' }, cs).filter(
+					(c) => c.side === 'crm'
+				);
+				for (const c of workshop) {
+					expect(c.roles.some((r) => r === 'manager' || r === 'owner')).toBe(true);
+				}
 			})
 		);
 	});

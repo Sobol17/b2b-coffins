@@ -1,6 +1,9 @@
 import type { RoleCode } from '$lib/types/roles';
 import type { SupportSide } from '$lib/types/support';
 
+/** The CRM roles that hold `support.any` and answer threads. */
+const WORKSHOP_HEADS: ReadonlySet<RoleCode> = new Set(['manager', 'owner']);
+
 export interface SupportCandidate {
 	readonly userId: number;
 	readonly side: SupportSide;
@@ -30,7 +33,8 @@ export function supportRecipients<C extends SupportCandidate>(
 		if (candidate.side === act.actorSide) {
 			return candidate.side === 'portal' && candidate.userId === act.threadAuthorId;
 		}
-		if (candidate.side === 'crm') return true;
+		// The fence lives here, not in the rule matrix: a stray rule row must not leak the text.
+		if (candidate.side === 'crm') return candidate.roles.some((role) => WORKSHOP_HEADS.has(role));
 		return candidate.roles.includes('cp_admin') || candidate.userId === act.threadAuthorId;
 	});
 }
