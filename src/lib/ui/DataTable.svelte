@@ -70,10 +70,16 @@
 		</div>
 	{/if}
 
-	<!-- The mockup rows (.trow): no frame and no rules, a row shows itself only on hover. -->
+	<!--
+		The mockup rows (.trow): no frame and no rules, a row shows itself only on hover. Below `sm`
+		the same markup folds into cards: a clipped column on a phone hides a value without a hint,
+		and a second copy of the rows would send every form field twice.
+	-->
 	<div class="overflow-x-auto">
-		<Table.Root class="border-separate border-spacing-0 text-[14.5px]">
-			<Table.Header class="[&_tr]:border-0">
+		<Table.Root
+			class="border-separate border-spacing-0 text-[14.5px] max-sm:block max-sm:[&_tbody]:block"
+		>
+			<Table.Header class="max-sm:hidden [&_tr]:border-0">
 				<Table.Row class="border-0 hover:bg-transparent">
 					{#each columns as column (column.key)}
 						<Table.Head
@@ -107,15 +113,25 @@
 			</Table.Header>
 			<Table.Body>
 				{#each rows as row (row.id)}
-					<Table.Row data-testid="data-table-row" class="border-0 hover:bg-surface-muted">
+					<Table.Row
+						data-testid="data-table-row"
+						class="border-0 hover:bg-surface-muted max-sm:flex max-sm:flex-col max-sm:gap-1 max-sm:border-b max-sm:border-border max-sm:py-3 max-sm:last:border-b-0 max-sm:hover:bg-transparent"
+					>
 						{#each columns as column (column.key)}
 							<Table.Cell
+								data-label={column.label}
 								class={[
 									'px-2.5 py-4 first:rounded-l-[12px] first:pl-2 last:rounded-r-[12px] last:pr-2',
-									column.align === 'end' && 'text-right'
+									column.align === 'end' && 'text-right',
+									'max-sm:flex max-sm:items-center max-sm:justify-between max-sm:gap-4 max-sm:rounded-none max-sm:px-1 max-sm:py-0.5 max-sm:text-right max-sm:whitespace-normal max-sm:before:shrink-0 max-sm:before:text-left max-sm:before:text-xs max-sm:before:text-fg-faint max-sm:before:content-[attr(data-label)] max-sm:has-[>div:empty]:hidden max-sm:has-[>div>:only-child:empty]:hidden',
+									// The first column names the row: on a card it is the title, without a label.
+									'max-sm:first:block max-sm:first:pb-1 max-sm:first:text-left max-sm:first:text-base max-sm:first:before:hidden'
 								]}
 							>
-								{@render cell(row, column)}
+								<!-- One box for the value: its parts stay together on a card. An empty one hides the line. -->
+								<div class="contents max-sm:block max-sm:min-w-0 max-sm:break-words">
+									{@render cell(row, column)}
+								</div>
 							</Table.Cell>
 						{/each}
 					</Table.Row>
