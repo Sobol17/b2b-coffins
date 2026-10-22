@@ -12,3 +12,17 @@ export interface LandingCharityDto {
 	fundUrl: string | null;
 	ratePercent: number; // basis points of `charity.rate_bp` as a percent; collected sums stay inside
 }
+
+/** Who runs the site. A seller and an operator of personal data must be named to a guest (v1.56). */
+export interface PublicOperator {
+	readonly name: string;
+	readonly inn: string | null;
+	readonly ogrn: string | null;
+	readonly email: string | null;
+}
+
+export interface PublicContacts {
+	readonly phone: string | null;
+	readonly address: string | null;
+	readonly operator: PublicOperator | null;
+}

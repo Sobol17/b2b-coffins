@@ -13,6 +13,7 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
+	import SlidersHorizontalIcon from '@lucide/svelte/icons/sliders-horizontal';
 	import Button from '$lib/ui/base/button/button.svelte';
 	import DatePicker from './DatePicker.svelte';
 	import Input from './Input.svelte';
@@ -25,11 +26,14 @@
 	let {
 		fields,
 		filters = $bindable({}),
-		syncToUrl = true
+		syncToUrl = true,
+		pageKey = 'page'
 	}: {
 		fields: readonly FilterField[];
 		filters?: Record<string, string>;
 		syncToUrl?: boolean;
+		/** Paging key of the registry the filters drive: a second table on a page has its own. */
+		pageKey?: string;
 	} = $props();
 
 	function apply(): void {
@@ -41,7 +45,7 @@
 			else url.searchParams.set(field.key, value);
 		}
 		// A filter change resets paging: page 3 of the old result set means nothing for the new one.
-		url.searchParams.delete('page');
+		url.searchParams.delete(pageKey);
 		// The target is this page's url with a rewritten query, so there is no route to resolve.
 		// eslint-disable-next-line svelte/no-navigation-without-resolve
 		void goto(url, { replaceState: true, keepFocus: true, noScroll: true });
@@ -52,37 +56,54 @@
 		apply();
 	}
 
+	// On a phone the fields wait behind one button, so the list starts on the first screen.
+	let expanded = $state(false);
+	const active = $derived(fields.filter((field) => (filters[field.key] ?? '') !== '').length);
+
 	function reset(): void {
 		filters = {};
 		apply();
 	}
 </script>
 
-<div data-slot="filter-bar" class="flex flex-wrap items-end gap-3">
-	{#each fields as field (field.key)}
-		<div class="min-w-48">
-			{#if field.type === 'select'}
-				<Select
-					label={field.label}
-					placeholder={field.placeholder}
-					options={field.options ?? []}
-					bind:value={() => filters[field.key] ?? '', (next) => set(field.key, next)}
-				/>
-			{:else if field.type === 'date'}
-				<DatePicker
-					label={field.label}
-					placeholder={field.placeholder}
-					bind:value={() => filters[field.key] ?? '', (next) => set(field.key, next)}
-				/>
-			{:else}
-				<Input
-					label={field.label}
-					placeholder={field.placeholder}
-					bind:value={() => filters[field.key] ?? '', (next) => set(field.key, next)}
-				/>
-			{/if}
-		</div>
-	{/each}
+<div data-slot="filter-bar" class="flex flex-col gap-3">
+	<Button
+		variant="secondary"
+		class="self-start sm:hidden"
+		aria-expanded={expanded}
+		onclick={() => (expanded = !expanded)}
+	>
+		<SlidersHorizontalIcon class="size-4" aria-hidden="true" />
+		{active > 0 ? `Фильтры: ${active}` : 'Фильтры'}
+	</Button>
+	<div
+		class={['grid-cols-1 gap-3 sm:flex sm:flex-wrap sm:items-end', expanded ? 'grid' : 'hidden']}
+	>
+		{#each fields as field (field.key)}
+			<div class="min-w-0 sm:min-w-48">
+				{#if field.type === 'select'}
+					<Select
+						label={field.label}
+						placeholder={field.placeholder}
+						options={field.options ?? []}
+						bind:value={() => filters[field.key] ?? '', (next) => set(field.key, next)}
+					/>
+				{:else if field.type === 'date'}
+					<DatePicker
+						label={field.label}
+						placeholder={field.placeholder}
+						bind:value={() => filters[field.key] ?? '', (next) => set(field.key, next)}
+					/>
+				{:else}
+					<Input
+						label={field.label}
+						placeholder={field.placeholder}
+						bind:value={() => filters[field.key] ?? '', (next) => set(field.key, next)}
+					/>
+				{/if}
+			</div>
+		{/each}
 
-	<Button variant="secondary" onclick={reset}>Сбросить</Button>
+		<Button variant="secondary" class="justify-self-start" onclick={reset}>Сбросить</Button>
+	</div>
 </div>

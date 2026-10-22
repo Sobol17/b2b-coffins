@@ -17,7 +17,9 @@
 <Card.Root>
 	<Card.Header>
 		<Card.Title>Реквизиты мастерской</Card.Title>
-		<Card.Description>Телефон и адрес видит гость на главной странице.</Card.Description>
+		<Card.Description>
+			Название, ИНН, ОГРН, адрес, телефон и почту видит гость в подвале сайта и в документах.
+		</Card.Description>
 	</Card.Header>
 	<Card.Content>
 		<form
@@ -50,6 +52,13 @@
 				placeholder="Введите КПП"
 				value={requisites?.kpp ?? ''}
 				error={error('kpp')}
+			/>
+			<Input
+				name="ogrn"
+				label="ОГРН или ОГРНИП"
+				placeholder="Введите ОГРН"
+				value={requisites?.ogrn ?? ''}
+				error={error('ogrn')}
 			/>
 			<div class="md:col-span-2">
 				<Input

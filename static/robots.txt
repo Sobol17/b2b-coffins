@@ -1,3 +1,7 @@
-# allow crawling everything by default
+# The public part is the landing page and the documents. The portal and the CRM sit behind a login.
 User-agent: *
-Disallow:
+Disallow: /portal
+Disallow: /crm
+Disallow: /api
+Disallow: /password
+Allow: /

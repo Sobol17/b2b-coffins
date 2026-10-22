@@ -30,18 +30,25 @@
 <div class="flex flex-col gap-6">
 	<div class="px-2"><Breadcrumbs items={crumbs} /></div>
 
-	<div class="grid grid-cols-1 items-start gap-6 lg:grid-cols-[1fr_27.5rem]">
-		<div class="flex flex-col gap-6">
+	<!-- On a phone the price and the order follow the photo, the specs come after them. -->
+	<div
+		class="grid grid-cols-1 items-start gap-6 lg:grid-cols-[1fr_27.5rem] lg:grid-rows-[auto_1fr]"
+	>
+		<div class="lg:col-start-1 lg:row-start-1">
 			<ProductGallery mediaIds={data.product.mediaIds} title={data.product.title} />
+		</div>
+		<div class="lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:self-stretch">
+			<ProductConfigurator
+				product={data.product}
+				bind:selectedId
+				manager={data.counterparty.manager}
+				draftLines={data.draftLines}
+				formError={form?.formError}
+			/>
+		</div>
+		<div class="lg:col-start-1 lg:row-start-2">
 			<ProductSpecs product={data.product} {variant} />
 		</div>
-		<ProductConfigurator
-			product={data.product}
-			bind:selectedId
-			manager={data.counterparty.manager}
-			draftLines={data.draftLines}
-			formError={form?.formError}
-		/>
 	</div>
 
 	{#if data.similar.length > 0}

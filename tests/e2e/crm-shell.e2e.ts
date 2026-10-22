@@ -72,3 +72,30 @@ test('shell: on a phone the sections open as a sheet and close after a tap', asy
 	await expect(page).toHaveURL(/\/crm\/delivery$/);
 	await expect(crmNavLink(page, 'Доставка')).toHaveCount(0);
 });
+
+test('shell: a phone gets a tab bar with the first sections and «Ещё» for the rest', async ({
+	page
+}) => {
+	await page.setViewportSize({ width: 375, height: 812 });
+	await login(page, 'owner');
+	const bar = page.getByRole('navigation', { name: 'Нижняя навигация' });
+	await expect(bar.getByRole('link')).toHaveText(['Главная', 'Доска', 'Заявки', 'Цех']);
+	await expect(bar.getByRole('link', { name: 'Главная' })).toHaveAttribute('aria-current', 'page');
+	// The sheet holds the sections, so the header needs no second button for it.
+	await expect(page.getByRole('button', { name: 'Меню разделов' })).toBeHidden();
+
+	await bar.getByRole('link', { name: 'Заявки' }).click();
+	await expect(page).toHaveURL(/\/crm\/requests$/);
+	await expect(bar.getByRole('link', { name: 'Заявки' })).toHaveAttribute('aria-current', 'page');
+
+	await openCrmMenu(page);
+	await crmNavLink(page, 'Склад').click();
+	await expect(page).toHaveURL(/\/crm\/stock$/);
+	// A section outside the bar lights «Ещё» instead of a tab.
+	await expect(bar.getByRole('link', { name: 'Заявки' })).not.toHaveAttribute('aria-current');
+});
+
+test('shell: the tab bar stays off a desktop screen', async ({ page }) => {
+	await login(page, 'owner');
+	await expect(page.getByRole('navigation', { name: 'Нижняя навигация' })).toBeHidden();
+});

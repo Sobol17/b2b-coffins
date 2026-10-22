@@ -20,7 +20,7 @@
 			<BrandMark class="size-9 sm:size-11" />
 			<span class="font-heading text-2xl font-semibold tracking-[0.14em]">АНГЕЛ</span>
 			<span class="hidden text-[0.6875rem] tracking-[0.1em] text-fg-faint uppercase sm:inline">
-				мастерская
+				фабрика
 			</span>
 		</a>
 

@@ -17,7 +17,8 @@
 		id,
 		name,
 		placeholder,
-		disabled = false
+		disabled = false,
+		blankZero = false
 	}: {
 		label?: string | undefined;
 		hint?: string | undefined;
@@ -29,13 +30,15 @@
 		/** Required: shown once the amount is cleared. */
 		placeholder: string;
 		disabled?: boolean;
+		/** Zero means "no price" in this field: it is drawn empty, so the placeholder shows. */
+		blankZero?: boolean;
 	} = $props();
 
 	const generatedId = $props.id();
 	const fieldId = $derived(id ?? generatedId);
 
 	let draft = $state<string | null>(null);
-	const text = $derived(draft ?? formatMinor(valueMinor));
+	const text = $derived(draft ?? (blankZero && valueMinor === 0 ? '' : formatMinor(valueMinor)));
 	const parseError = $derived(
 		draft !== null && draft !== '' && parseRublesToMinor(draft) === null
 			? 'Введите сумму в целых рублях'
@@ -44,6 +47,11 @@
 
 	function onInput(event: Event & { currentTarget: HTMLInputElement }): void {
 		draft = event.currentTarget.value;
+		// An emptied field clears the price; elsewhere an empty field keeps the last amount.
+		if (blankZero && draft.trim() === '') {
+			valueMinor = 0;
+			return;
+		}
 		const parsed = parseRublesToMinor(draft);
 		if (parsed !== null) valueMinor = parsed;
 	}

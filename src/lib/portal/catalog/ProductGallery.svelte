@@ -28,11 +28,6 @@
 				{/each}
 			</div>
 		{/if}
-		<ProductPhoto
-			mediaId={current}
-			alt={title}
-			caption="основное фото изделия"
-			class="aspect-[4/3] max-h-80 sm:max-h-96"
-		/>
+		<ProductPhoto mediaId={current} alt={title} class="aspect-[4/3] max-h-80 sm:max-h-96" />
 	</div>
 </div>

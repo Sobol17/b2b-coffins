@@ -106,7 +106,8 @@ export const AUDIT_ACTION_TITLE: Readonly<Record<string, string>> = {
 	'counterparty.address_default': 'Адрес по умолчанию выбран',
 	'counterparty.admin_issue': 'Администратор контрагента выдан',
 	'counterparty.admin_promote': 'Сотрудник назначен администратором',
-	'counterparty.access_resend': 'Доступ контрагенту выдан повторно'
+	'counterparty.access_resend': 'Доступ контрагенту выдан повторно',
+	'counterparty.prices_update': 'Цены контрагента изменены'
 };
 
 export const AUDIT_ENTITY_TITLE: Readonly<Record<string, string>> = {

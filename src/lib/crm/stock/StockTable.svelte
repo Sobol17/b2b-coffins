@@ -20,13 +20,13 @@
 	} = $props();
 
 	const columns: DataTableColumn[] = [
-		{ key: 'code', label: 'Код', sortable: true },
+		// The name goes first: a phone card takes the first column as its title.
 		{ key: 'title', label: 'Название', sortable: true },
+		{ key: 'code', label: 'Код', sortable: true },
 		{ key: 'kind', label: 'Вид' },
 		{ key: 'balance', label: 'Остаток', align: 'end' },
 		{ key: 'minThreshold', label: 'Порог', align: 'end' },
-		{ key: 'state', label: 'Состояние' },
-		{ key: 'actions', label: 'Действия', align: 'end' }
+		{ key: 'state', label: 'Состояние' }
 	];
 </script>
 
@@ -43,7 +43,10 @@
 		{#if column.key === 'code'}
 			<span class="text-fg-muted">{row.code}</span>
 		{:else if column.key === 'title'}
-			<div class={row.isActive ? '' : 'text-fg-muted'}>{row.title}</div>
+			<a
+				class={['font-medium hover:text-link-hover', row.isActive ? 'text-link' : 'text-fg-muted']}
+				href={resolve(`/crm/stock/${row.id}`)}>{row.title}</a
+			>
 		{:else if column.key === 'kind'}
 			{KIND_TITLE[row.kind]}
 		{:else if column.key === 'balance'}
@@ -56,7 +59,7 @@
 			<span class="text-xs text-fg-muted">{row.unitTitle}</span>
 		{:else if column.key === 'minThreshold'}
 			{row.minThreshold === 0 ? '—' : row.minThreshold}
-		{:else if column.key === 'state'}
+		{:else if column.key === 'state' && (row.isNegative || row.isBelowThreshold || !row.isActive)}
 			<div class="flex flex-wrap gap-1">
 				{#if row.isNegative}
 					<span class={['rounded-pill px-2 py-0.5 text-xs', TONE_CLASS.danger]}>Минус</span>
@@ -70,8 +73,6 @@
 					<span class={['rounded-pill px-2 py-0.5 text-xs', TONE_CLASS.neutral]}>Выключена</span>
 				{/if}
 			</div>
-		{:else if column.key === 'actions'}
-			<a class="text-link" href={resolve(`/crm/stock/${row.id}`)}>Открыть</a>
 		{/if}
 	{/snippet}
 </DataTable>

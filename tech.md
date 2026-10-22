@@ -1,8 +1,8 @@
 # tech.md — ядро проекта
 
 **Проект:** B2B-портал + CRM для столярной мастерской (производство гробов)
-**Версия ядра:** v1.55
-**Дата:** 20.10.2026
+**Версия ядра:** v1.56
+**Дата:** 22.10.2026
 **Статус:** этап 1 (портал, P1–P14) завершён 19.09.2026; в этапе 2 (CRM) влиты C1–C8, C10, C12, C15, C13, слайс C14 открыт (чек-лист в §14), C16 не начат
 **Владелец файла:** Sobol17 (тимлид и единственный разработчик)
 **Источник требований:** `TZ_B2B_CRM_stolyarka_v06.md`
@@ -11,6 +11,7 @@
 
 | Версия | Изменение |
 |---|---|
+| v1.56 | Правки заказчика по итогам пилота от 22.10.2026 (часть C14). Индивидуальные цены: карточка контрагента в CRM получила вкладку «Цены» по праву `counterparty.manage` и только роли с ценами, менеджер вводит цену каждого варианта. Цены пишутся в прайс-лист, которым владеет один этот контрагент: базовый, просроченный, общий с другими или пустой лист сервер не правит, а заводит новый «Индивидуальные цены: <название>», копирует в него позиции прежнего общего листа и назначает контрагенту. Цена 0 убирает позицию, и цена снова идёт по цепочке `PersonalPriceResolver`; повторная отправка того же ничего не пишет. Правило выбора листа и план правок чистые, лежат в `lib/domain/pricing/personal-price.ts`. Новое действие аудита `counterparty.prices_update` по сущности `counterparties` со старым и новым `priceListId`. Схема БД и матрица прав не менялись. Реквизиты: `org.requisites` получил `ogrn` (13 цифр ОГРН или 15 цифр ОГРНИП). `OrgService.publicContacts` отдаёт гостю `PublicContacts`: телефон, адрес и оператора (название, ИНН, ОГРН, почта); КПП, банк, БИК и счёт с сервера не уходят. Публичные документы: `/legal` и четыре страницы `/legal/terms`, `/legal/personal-data`, `/legal/privacy`, `/legal/cookies` читают реквизиты оператора из настроек на каждом запросе. Ссылки на них стоят в подвале лендинга, на входе и в подвале портала. Плашка cookie на лендинге и входе закрывается кнопкой «Понятно», выбор хранит `localStorage`. `robots.txt` закрывает `/portal`, `/crm`, `/api`, `/password`. Лендинг получил title, description, canonical, Open Graph и разметку Organization. Каталог из прайса мастерской: команда `pnpm admin catalog:import --file <json> [--hide-others]` (`scripts/admin/catalog.ts`) в одной транзакции заводит или обновляет модели и варианты по артикулу; себестоимость и скрытие, заданные в CRM, повтор не трогает; `--hide-others` снимает с публикации модели вне файла. Прайс от 01.06.2026 лежит в `scripts/fixtures/catalog-angel.json`, демо-сид не менялся. Оболочка CRM на телефоне: нижняя панель с «Главной», тремя первыми разделами роли и кнопкой «Ещё», которая открывает шторку бокового меню; кнопка меню в шапке на телефоне скрыта. UI: `DataTable` на ширине телефона рисует строки карточками, `FilterBar` прячет поля за кнопкой «Фильтры» и получил `pageKey`, `MoneyInput` получил `blankZero`, `ContourShell` получил `footerLinks`. Портал получил страницу ошибки для 403, 404 и сбоя, меню профиля на телефоне стало строкой вкладок, фото-заглушки заменил знак мастерской. DTO в §8: `CounterpartyPriceRowDto`, `CounterpartyPriceFilters`, `CounterpartyPriceSaveResult`, `PublicOperator`, `PublicContacts` |
 | v1.55 | Контракт C10 уточнён по расценкам заказчика от 20.10.2026: работу делят те, кто её сделал, а не все, кто пришёл. Состав дня `work_day_staff` остаётся отметкой присутствия, у каждой записи работы появились исполнители в новой таблице `work_entry_staff`, их выбирают только из отмеченных в этот день. Доля работника за день равна `floor(Σ amount_minor / число исполнителей, до рубля)` по записям, где он исполнитель: рубль отбрасывается один раз от суммы дня, остаток остаётся у мастерской. Пришёл, но ни в одной работе не участвовал: за день 0 ₽, день в счётчик дней всё равно идёт. Уникальность `work_entries_uq` снята: один вид работ в дне можно внести несколькими записями с разными исполнителями. Цена записи по-прежнему замораживается, вид работ, уже внесённый в день, сохраняет замороженную цену во всех своих записях. `work_days.share_minor` убран, доли считаются на лету из записей и исполнителей, как и свод открытой недели. В §8: `WorkEntryDto.staffIds`, `WorkDayDto.shares` вместо `shareMinor`, `PayrollDayCellDto` без `shareMinor`. Форма дня шлёт строки `entry.<n>.work`, `entry.<n>.qty`, `entry.<n>.staff.<id>`; строку без количества сервер пропускает, строку без исполнителей и исполнителя вне состава дня отклоняет. Старые записи получают исполнителями весь состав своего дня командой `pnpm admin payroll:backfill-crews`: повторный запуск ничего не меняет, доли старых дней совпадают с прежними. Закрытые недели не пересчитываются, их `payroll_lines` заморожены. Права, топики и действия аудита не менялись |
 | v1.54 | Имя и знак приложения по решению владельца от 13.10.2026. В манифесте `name` «Ангел: заявки мастерской», `short_name` «Ангел» вместо «Заявки»; `src/app.html` получил `apple-mobile-web-app-title`, `favicon.png` и отдельный `apple-touch-icon` на 180 px. Знак: картинка заказчика (ангел у гроба на чёрном поле) вместо буквы на midnight, все размеры режет `scripts/icons.ts` из `scripts/assets/brand-angel.jpg`. `theme_color` и `background_color` не менялись. В §9 добавлены `BrandMark` (знак рядом с надписью в шапках и боковом меню CRM) и `InstallBanner` (полоса установки над шапкой портала и CRM на каждом экране, крестик запоминается на устройстве); `InstallPrompt` на главной портала, в цехе и доставке остаётся. Уже установленное приложение имя и значок само не меняет: его удаляют с экрана и добавляют заново |
 | v1.53 | Слайс C14 открыт, закрыты три его части: сквозной сценарий семи ролей, аудит безопасности, инструкции по ролям; состояние ведёт чек-лист в §14. Аудит уточнил §12 в четырёх местах. Временный пароль: до смены пароля чтение уходит на `/password/change`, а любая запись (form action и `+server.ts`) получает 403, раньше запись проходила. Адрес после входа: `redirectTo` принимается только как путь этого хоста, `//host` и `/\host` отбрасываются (`lib/utils/local-path.ts`). Мутации через `+server.ts`: заголовок `x-requested-with` и совпадение `origin` проверяет один хелпер `requireOwnCall` из `lib/server/core/http.ts` на всех четырёх эндпоинтах, раньше три из них сверяли только заголовок. Вложения заявки: кроме белого списка MIME сервер сверяет сигнатуру файла, сигнатуры JPEG, PNG, WebP и PDF живут в `lib/domain/files/signature.ts` и общие для вложений и фото каталога. Правило порядка в роуте: право проверяется до разбора формы, чужой роли и гостю ответ валидации не уходит. Оболочка CRM держит один landmark `main`. Инструкции ролей мастерской лежат в `docs/guides/`, инструкция контрагента в `docs/portal-guide.md` приведена к P11 и C15. Схема БД, права ролей, DTO и топики не менялись |
@@ -98,7 +99,7 @@
 **Ключевое допущение этапа 1.** Портал зависит от каталога, прайс-листов и учётных записей контрагентов, но CRM-интерфейс для их ведения появляется только на этапе 2. Разрыв закрывается так:
 
 1. сид-скрипт `scripts/seed.ts` наполняет каталог, контрагентов, прайсы и пользователей из фикстур `fixtures/*.json`;
-2. CLI `scripts/admin.ts` (команды `user:create`, `counterparty:create`, `price:import`, `request:transition`, `payroll:backfill-crews`) выполняет то же самое на боевом стенде без UI;
+2. CLI `scripts/admin.ts` (команды `user:create`, `counterparty:create`, `price:import`, `request:transition`, `payroll:backfill-crews`, `catalog:import`) выполняет то же самое на боевом стенде без UI;
    команда `pnpm seed:demo` (`scripts/seed-demo.ts`, v1.23) поверх сида заводит демо-заявки и уведомления для ручной проверки и показа;
 3. переходы статусов, которые на этапе 2 делает менеджер, на этапе 1 выполняет тот же CLI и e2e-хелпер, поэтому портал демонстрируется на полном цикле заявки.
 
@@ -224,11 +225,13 @@ src/
       files/                      storage.ts, validate.ts, image.ts
       audit/                      audit.service.ts
       landing/                    landing.service.ts, landing.repository.ts: лендинг гостя (v1.36)
+      crm-counterparty/           карточка контрагента; counterparty-price.*: индивидуальные цены (v1.56)
       config.ts                   единый разбор env через Zod
     types/                        общие TypeScript-типы (см. §8)
     ui/                           примитивы (см. §9)
     validation/                   Zod-схемы
     utils/                        format.ts, money.ts, dates.ts, props.ts
+    legal/                        docs.ts (список документов), LegalDocument, OperatorDetails, CookieNotice (v1.56)
   routes/
     +page.server.ts               гость видит лендинг (§18.5), вошедший уходит в свой контур
     (portal)/                     контур контрагента, адреса /portal/*
@@ -251,11 +254,13 @@ src/
       public/works/[id]/+server.ts  обложка опубликованной модели гостю (v1.36)
       health/+server.ts
     login/ , logout/ , password/
+    legal/                        публичные документы: terms/, personal-data/, privacy/, cookies/ (v1.56)
+    +error.svelte                 страница ошибки: 403, 404, сбой с requestId (v1.56)
 static/
   manifest.webmanifest            имя, иконки, display, shortcuts
   icons/                          192, 512, maskable
 drizzle/                          сгенерированные миграции, руками не правим
-scripts/                          seed.ts, seed-demo.ts, admin.ts, fixtures/
+scripts/                          seed.ts, seed-demo.ts, admin.ts, admin/catalog.ts, fixtures/
 tests/
   unit/ , domain/ , e2e/ , fixtures/
 ```
@@ -501,6 +506,8 @@ export const discountRules = sqliteTable('discount_rules', {
   validFrom: ts('valid_from'), validTo: ts('valid_to')
 });
 ```
+
+Индивидуальные цены контрагента (v1.56) пишутся только в лист, который не базовый, действует сейчас и назначен одному этому контрагенту. Иначе сервис заводит новый лист «Индивидуальные цены: <название>», копирует в него позиции прежнего небазового листа и меняет `counterparties.price_list_id`. Выбор листа и план правок делает `lib/domain/pricing/personal-price.ts`: цена 0 удаляет позицию, неизменная цена в план не попадает.
 
 ### 5.6 Заявка (ядро)
 
@@ -844,7 +851,7 @@ export const settings = sqliteTable('settings', {
 
 Форма `charity.rate_bp`: целое число базисных пунктов от 0 до 10000. Форма `charity.fund`: `{ title: string; url?: string }` (v1.18). Форма `notifications.enabled`: `boolean`, `false` останавливает разворот любых событий в уведомления (v1.19).
 
-Форма `org.requisites` (v1.37): `{ name: string; inn?: string; kpp?: string; address?: string; phone?: string; email?: string; bank?: string; bik?: string; account?: string }`. ИНН 10 или 12 цифр, КПП и БИК по 9 цифр, расчётный счёт 20 цифр. Гостю из них уходят только телефон и адрес (`OrgService.publicContacts`). Форма `counterparty.staff_limit_default`: целое от 1 до 1000, лимит нового контрагента при создании (v1.37).
+Форма `org.requisites` (v1.37, `ogrn` с v1.56): `{ name: string; inn?: string; kpp?: string; ogrn?: string; address?: string; phone?: string; email?: string; bank?: string; bik?: string; account?: string }`. ИНН 10 или 12 цифр, КПП и БИК по 9 цифр, ОГРН 13 цифр или ОГРНИП 15 цифр, расчётный счёт 20 цифр. Гостю уходят телефон, адрес и оператор: название, ИНН, ОГРН, почта (`OrgService.publicContacts`, v1.56). КПП, банк, БИК и счёт с сервера не уходят. Форма `counterparty.staff_limit_default`: целое от 1 до 1000, лимит нового контрагента при создании (v1.37).
 
 Нумерация в CRM (v1.37): правятся `prefix` (до 10 символов) и `period` ключа `request`. Сохранение пересчитывает `periodKey` на текущий период и ставит `lastValue` равным наибольшему номеру той же формы среди `requests.number`, поэтому возврат к прежнему префиксу или периоду не выдаёт занятый номер. Правило живёт в `resumeSequence` рядом с `nextNumber`.
 
@@ -1121,6 +1128,9 @@ export interface NotificationDeliveryDto extends NotificationLogItemDto {
 export const LANDING_WORKS_LIMIT = 9;
 export interface LandingWorkDto { coverMediaId: number; title: string; }
 export interface LandingCharityDto { fundTitle: string; fundUrl: string | null; ratePercent: number; }
+// The operator of the site for the footer and the legal pages (v1.56). Bank details never leave the server.
+export interface PublicOperator { name: string; inn: string | null; ogrn: string | null; email: string | null; }
+export interface PublicContacts { phone: string | null; address: string | null; operator: PublicOperator | null; }
 
 // search.ts — hints of the portal header search (v1.30). No price key for any role: a hint only leads to a page.
 export const SITE_SEARCH_LIMITS = { categories: 5, products: 6 } as const;
@@ -1291,6 +1301,13 @@ export interface CrmCounterpartyChoicesDto {
   managers: { id: number; fullName: string }[]; priceLists: { id: number; title: string }[];
 }
 export interface CreatedCounterpartyDto { counterpartyId: number; access: CreatedStaffDto; }
+// Tab «Цены» of the card (v1.56): a role with prices only. personalPriceMinor null means the chain decides.
+export interface CounterpartyPriceFilters { search?: string; categoryId?: number; }
+export interface CounterpartyPriceRowDto {
+  variantId: number; productTitle: string; categoryTitle: string; sku: string; sizeCode: string;
+  basePriceMinor: number; personalPriceMinor: number | null;
+}
+export interface CounterpartyPriceSaveResult { updated: number; cleared: number; }
 // The request history of the card reuses Page<RequestListItemDto>, drafts excluded.
 
 // crm-request.ts — board, registry and card of the workshop (C4). Money keys only for a role with prices.
@@ -1662,13 +1679,13 @@ export class RequestDtoMapper {
 | `Button` | `variant: 'primary'\|'secondary'\|'ghost'\|'danger'`, `size: 'sm'\|'md'\|'lg'\|'touch'`, `loading`, `disabled` |
 | `TouchButton` | обёртка `Button` с `size='touch'`, минимум 44×44 px, для цеха и водителя |
 | `Input` / `Textarea` / `NumberInput` | `label`, `placeholder` (обязателен, v1.24), `error`, `hint`, `required`, `bind:value` |
-| `MoneyInput` | `bind:valueMinor`, `placeholder` (обязателен), ввод в целых рублях, хранение в копейках (v1.32) |
+| `MoneyInput` | `bind:valueMinor`, `placeholder` (обязателен), ввод в целых рублях, хранение в копейках (v1.32), `blankZero?`: 0 рисуется пустым полем, пустое поле даёт 0 (v1.56) |
 | `Select` / `Combobox` | `options: {value,label}[]`, `placeholder` (обязателен, без общего «Выберите значение»), `bind:value`, `searchable` |
 | `Checkbox` / `Switch` / `RadioGroup` | `label`, `bind:checked`; у `Checkbox` ещё `name` и `value` для отправки в форме |
 | `DatePicker` / `DateRangePicker` | `bind:value: string`, ISO-строки, `placeholder` по умолчанию «Выберите дату» и «Выберите период» |
 | `FileUpload` | `accept`, `maxSizeMb`, `multiple`, `fields` (доп. поля формы, например владелец файла), `onUploaded(mediaId)` |
-| `DataTable` | `columns`, `rows`, `total`, `query: ListQuery`, `onQueryChange`, `exportUrl`, серверная пагинация |
-| `FilterBar` | `fields` (у каждого поля свой `placeholder`), `bind:filters`, сохранение в URL |
+| `DataTable` | `columns`, `rows`, `total`, `query: ListQuery`, `onQueryChange`, `exportUrl`, серверная пагинация; на ширине телефона строка рисуется карточкой: первая колонка заголовком, остальные парами «подпись: значение», пустые пары скрыты, DOM один (v1.56) |
+| `FilterBar` | `fields` (у каждого поля свой `placeholder`), `bind:filters`, сохранение в URL, `pageKey?` (ключ страницы, который сбрасывает смена фильтра, по умолчанию `page`); на телефоне поля открывает кнопка «Фильтры: N» (v1.56) |
 | `Modal` / `Drawer` / `ConfirmDialog` | `open`, `title`, `onClose`, `{#snippet body()}` |
 | `Toast` (`toast.success/error/info/warning`) | глобальный стор на рунах; `(title, { description?, durationMs?, action?: { label, href } })`, `durationMs: 0` держит тост до закрытия, наведение и фокус ставят таймер на паузу, повтор того же текста перезапускает тост вместо копии, в стопке не больше четырёх (v1.19). Исход form action показывает `withToast({ success?, reset?, pending?, onSuccess? })` из `lib/ui/form-toast.ts`: успех своим текстом, `formError` сервера текстом ошибки, ошибки полей фразой «Проверьте поля формы», обрыв связи отдельной фразой |
 | `StatusBadge` | `status: RequestStatus`, палитра и подпись из одного словаря |
@@ -1679,7 +1696,7 @@ export class RequestDtoMapper {
 | `PhotoGallery` / `PhotoUploader` | `mediaIds`, `editable` |
 | `PriceCell` | `valueMinor?`, рисует прочерк, когда значение не пришло |
 | `Stepper` | история статусов заявки |
-| `ContourShell` | `variant: 'crm'\|'portal'`, `title`, `userName`, `roles`, `links`, `accountHref`, `cart`, `bell?: Snippet` (колокольчик уведомлений, рисуется в обоих контурах с v1.49), `footerCaption`, `search?: Snippet` (поиск в шапке портала, v1.30), `sidebarOpen?` (вариант `crm`: состояние бокового меню из куки, v1.52). `ShellLink`: `href`, `label`, `group?`, `icon?` (v1.52) |
+| `ContourShell` | `variant: 'crm'\|'portal'`, `title`, `userName`, `roles`, `links`, `accountHref`, `cart`, `bell?: Snippet` (колокольчик уведомлений, рисуется в обоих контурах с v1.49), `footerCaption`, `search?: Snippet` (поиск в шапке портала, v1.30), `sidebarOpen?` (вариант `crm`: состояние бокового меню из куки, v1.52), `footerLinks?` (ссылки на документы в подвале, v1.56). Вариант `crm` на телефоне рисует нижнюю панель `CrmBottomBar`: «Главная», три первых раздела роли и «Ещё», которая открывает шторку меню; высоту панели знает переменная `--shell-bottom-inset`, по ней отступают контент и тосты (v1.56). `ShellLink`: `href`, `label`, `group?`, `icon?` (v1.52) |
 | `Sidebar` | shadcn `sidebar` в `lib/ui/base/sidebar`, используется только оболочкой CRM через `ContourShell` (v1.52) |
 | `BrandMark` | `alt?`, `class?`: знак мастерской рядом с надписью в шапке портала (от `sm`), лендинга, боковом меню CRM и в полосе установки; без `alt` декоративный (v1.54) |
 | `InstallBanner` | без пропсов: полоса установки над шапкой, её рисует `ContourShell` в обоих вариантах; в standalone и после крестика пусто (v1.54) |
@@ -1771,7 +1788,7 @@ CD нет. Мёрдж в `main` ничего не разворачивает, с
 - **Row-level.** Каждый репозиторий портального домена принимает `counterpartyId` из `ActorContext` и подмешивает его в `where`. Метод без этого фильтра не проходит ревью. Работник мастерской без `request.read.any` видит заявки только в статусах, из которых его роль делает переход (v1.42). Экран доставки по праву `delivery.work` показывает заявки контрагентов в `ready` и, только на чтение, в `in_work` (v1.43).
 - **Цены.** Роль `cp_employee` не получает ценовые поля из БД. Проверяется e2e-тестом на теле ответа, а не глазами.
 - **ПДн третьего лица.** `requests.deceased_name` видно всем, кому видна заявка, но не подставляется в шаблоны уведомлений и не уходит в SSE (v1.33).
-- **Публичная поверхность.** Гостю без сессии отвечает только `GET /api/public/works/[id]`: обложка опубликованной модели, 404 на скрытую, черновую и удалённую. Остальные файлы идут через `/api/files/[id]` с правом `catalog.read` (v1.33).
+- **Публичная поверхность.** Гостю без сессии отвечает только `GET /api/public/works/[id]`: обложка опубликованной модели, 404 на скрытую, черновую и удалённую. Остальные файлы идут через `/api/files/[id]` с правом `catalog.read` (v1.33). Страницы `/legal/*` открыты гостю и показывают из настроек только название оператора, ИНН, ОГРН, телефон, адрес и почту (v1.56).
 - **Валидация.** Весь вход через Zod на сервере, включая `FormData`, query-параметры и содержимое импортируемых XLSX. Клиентская валидация только для UX.
 - **CSRF.** Form actions SvelteKit проверяют origin. Мутации через `+server.ts` требуют заголовка `x-requested-with` и совпадения origin. Обе проверки делает `requireOwnCall` из `lib/server/core/http.ts`, эндпоинт своей проверки не пишет (v1.53).
 - **Rate limiting.** Логин, восстановление пароля, создание сотрудника контрагента, отправка заявки, загрузка файла. Счётчики в `rate_limits`, окно и лимит в конфиге.
@@ -2030,8 +2047,8 @@ CONTRACT GAP
 - [x] Аудит безопасности: `tests/e2e/crm-audit.e2e.ts` проходит каждый экран, выгрузку и form action CRM семью ролями и гостем (список роутов читается из `src/routes/(crm)`, права записаны в `tests/e2e/crm-surface.ts` по §12; роут без строки прав роняет прогон), `tests/e2e/security-audit.e2e.ts` проверяет временный пароль, адрес после входа, origin эндпоинтов, загрузку файлов, прямые ссылки на вложения, куку сессии и заголовки. Найденное исправлено, список в changelog v1.53.
 - [x] Инструкции по ролям: `docs/guides/` (руководитель, администратор, водитель, столяр и маляр), `docs/portal-guide.md` (администратор и сотрудник контрагента).
 - [ ] Нагрузочная проверка реестров на 10 тыс. заявок и 50 тыс. движений.
-- [ ] Правки UX по итогам пилота.
-- [ ] Первичное наполнение справочников, каталога и видов работ.
+- [x] Правки UX по итогам пилота (v1.56): нижняя панель CRM, карточки таблиц и фильтры на телефоне, индивидуальные цены контрагента, реквизиты оператора, публичные документы, метаданные лендинга, страница ошибки.
+- [ ] Первичное наполнение справочников, каталога и видов работ. Каталог готов к загрузке: `catalog:import` и `scripts/fixtures/catalog-angel.json` (v1.56); загрузка на стенд, справочники и виды работ впереди.
 - [ ] Сквозной сценарий на реальных данных стенда, контрольный пример по выплатам, акт приёмки.
 
 **C16. Бот МАКС.** Драйвер канала `max` на Bot API: привязка чата к пользователю, отправка по матрице §7.3, лог доставки и ретраи тем же `notification.dispatch`. Привязка чата открывает разрыв контракта и поднимается блоком CONTRACT GAP в начале слайса. Канал становится живым, то есть входит в `LIVE_CHANNELS`.
@@ -2360,6 +2377,7 @@ Payload push-уведомления не содержит цен, персона
 | Макет | Роут | Роли | Слайс | Что берём из макета |
 |---|---|---|---|---|
 | Лендинг | `/` | гость | K7 | Шапка с чипом телефона и кнопкой «Вход для контрагентов» на `/login`, первый экран, постоянные факты (срок изготовления, регион доставки), товарные группы текстом, «Производство», «Как мы работаем», подвал. Кнопки «Стать контрагентом» и «Запросить условия» открывают `mailto:` и `tel:` из `org.requisites`. Примеры работ: до девяти обложек опубликованных моделей с названием через `GET /api/public/works/[id]` (P13). Блок благотворительного проекта: название фонда, ссылка и ставка отчисления процентом, собранных сумм гостю нет (P13). Счётчики каталога и остатка гостю не показываются: кроме обложек и названий, данные каталога наружу не отдаются (v1.33). Фон: слой неба с облаками из §18.2, вектор, без анимации (P14) |
+| Документы | `/legal`, `/legal/terms`, `/legal/personal-data`, `/legal/privacy`, `/legal/cookies` | гость и все роли | C14 | Макета нет: шапка и подвал лендинга, хлебные крошки, текст документа, блок «Реквизиты оператора» из `org.requisites`, дата редакции из `lib/legal/docs.ts` (v1.56) |
 | Главная портала | `/portal` | `cp_admin`, `cp_employee` | P6, блоки дополняют P2, P4, P8 | Заголовок с именем контрагента и договором (P2). Три показателя: заявки в работе с суммой для `cp_admin`, ближайшая готовность по `readyAt`, скидка `discountPercent` (P2). Панели «Собрать заявку» и «Повторить заявку» (P4). Таблица активных заявок `new…awaiting_payment` и закрытых за три месяца (P6). Баннер пожертвований в макете отсутствует, P8 ставит его под показателями |
 | Каталог | `/portal/catalog` | обе | P3, P7 | Группы верхнего уровня `categories` с подкатегориями, число артикулов, «от N ₽» по закупочной цене для `cp_admin` и по цене агентства для `cp_employee` (P7), кнопка «Скачать прайс-лист XLSX» только для `cp_admin` |
 | Листинг товаров | `/portal/catalog/[categoryId]` | обе | P3, P7 | Фильтры: материал (`dict_items` `material`), цвет (`options` `color`), длина (`lengthMm`). Сортировка, число на странице, выбранные фильтры чипами, сетка карточек с артикулом, названием и ценой. Наличие не показывается (v1.42). Из P7: карточка показывает цену агентства, у `cp_admin` под ней закупочная серым, сотрудник сортирует по цене агентства |

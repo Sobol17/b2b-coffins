@@ -50,6 +50,7 @@
 						valueMinor={row.agencyPriceMinor ?? 0}
 						label=""
 						placeholder="Введите цену"
+						blankZero
 					/>
 				</div>
 			{/key}

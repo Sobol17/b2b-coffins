@@ -23,6 +23,7 @@ export const requisitesFormSchema = z.object({
 	),
 	inn: blank(orgRequisitesSchema.shape.inn),
 	kpp: blank(orgRequisitesSchema.shape.kpp),
+	ogrn: blank(orgRequisitesSchema.shape.ogrn),
 	address: blank(z.string().max(300, { error: 'Не длиннее 300 символов' }).optional()),
 	phone: blank(z.string().max(40, { error: 'Не длиннее 40 символов' }).optional()),
 	email: blank(orgRequisitesSchema.shape.email),

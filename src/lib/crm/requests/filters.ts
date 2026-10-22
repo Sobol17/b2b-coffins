@@ -25,7 +25,12 @@ export function requestFilterFields(
 ): FilterField[] {
 	const all = (label: string): SelectOption => ({ value: '', label });
 	return [
-		{ key: 'search', label: 'Поиск', type: 'text', placeholder: 'Номер, контрагент или ФИО' },
+		{
+			key: 'search',
+			label: 'Поиск',
+			type: 'text',
+			placeholder: 'Введите номер, контрагента или ФИО'
+		},
 		...(withStatusAndPeriod
 			? [
 					{

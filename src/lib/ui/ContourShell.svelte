@@ -20,7 +20,8 @@
 		variant = 'crm',
 		accountHref,
 		cart,
-		footerCaption = 'Портал контрагента столярной мастерской',
+		footerCaption = 'Портал контрагента фабрики «Ангел»',
+		footerLinks = [],
 		search,
 		bell,
 		sidebarOpen = true,
@@ -34,6 +35,8 @@
 		accountHref?: ResolvedPathname | undefined;
 		cart?: CartLink | undefined;
 		footerCaption?: string;
+		/** Portal only: links of the footer, the public documents of the site (v1.56). */
+		footerLinks?: readonly { readonly href: ResolvedPathname; readonly title: string }[];
 		/** Portal header search. The kit takes it as a snippet so it never imports portal code. */
 		search?: Snippet | undefined;
 		/** Notification bell of either contour, a snippet for the same reason: the kit holds the place. */
@@ -51,7 +54,7 @@
 		<main class="mx-auto w-full max-w-shell flex-1 px-4 pt-4 pb-10 sm:px-6">
 			{@render children()}
 		</main>
-		<ShellFooter caption={footerCaption} />
+		<ShellFooter caption={footerCaption} links={footerLinks} />
 	</div>
 {:else}
 	<CrmShell {title} {userName} {roles} {links} {sidebarOpen} {bell}>
