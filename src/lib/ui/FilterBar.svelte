@@ -25,11 +25,14 @@
 	let {
 		fields,
 		filters = $bindable({}),
-		syncToUrl = true
+		syncToUrl = true,
+		pageKey = 'page'
 	}: {
 		fields: readonly FilterField[];
 		filters?: Record<string, string>;
 		syncToUrl?: boolean;
+		/** Paging key of the registry the filters drive: a second table on a page has its own. */
+		pageKey?: string;
 	} = $props();
 
 	function apply(): void {
@@ -41,7 +44,7 @@
 			else url.searchParams.set(field.key, value);
 		}
 		// A filter change resets paging: page 3 of the old result set means nothing for the new one.
-		url.searchParams.delete('page');
+		url.searchParams.delete(pageKey);
 		// The target is this page's url with a rewritten query, so there is no route to resolve.
 		// eslint-disable-next-line svelte/no-navigation-without-resolve
 		void goto(url, { replaceState: true, keepFocus: true, noScroll: true });

@@ -8,6 +8,7 @@
 	import CounterpartyForms from '$lib/crm/counterparties/CounterpartyForms.svelte';
 	import DebtIndicator from '$lib/crm/counterparties/DebtIndicator.svelte';
 	import PaymentsTable from '$lib/crm/counterparties/PaymentsTable.svelte';
+	import PricesPanel from '$lib/crm/counterparties/PricesPanel.svelte';
 	import RequestHistory from '$lib/crm/counterparties/RequestHistory.svelte';
 	import UsersPanel from '$lib/crm/counterparties/UsersPanel.svelte';
 	import { Breadcrumbs, Card, Tabs } from '$lib/ui';
@@ -18,8 +19,19 @@
 	let { data, form }: PageProps = $props();
 
 	const card = $derived(data.card);
+	const params = page.url.searchParams;
+	// A reload keeps the tab whose table owns the query string.
 	let tab = $state(
-		page.url.searchParams.has('reqPage') || page.url.searchParams.has('payPage') ? 'ledger' : 'card'
+		['pricePage', 'priceSearch', 'priceCategory'].some((key) => params.has(key))
+			? 'prices'
+			: params.has('reqPage') || params.has('payPage')
+				? 'ledger'
+				: 'card'
+	);
+	const pricesError = $derived(
+		form && 'action' in form && form.action === 'prices' && 'formError' in form
+			? form.formError
+			: undefined
 	);
 
 	// Issued or resent access carries a temporary password: shown once, never reloaded.
@@ -57,11 +69,12 @@
 	{/if}
 
 	<Tabs.Root bind:value={tab}>
-		<!-- Four tabs do not fit a phone in one row: they wrap instead of widening the page. -->
+		<!-- Five tabs do not fit a phone in one row: they wrap instead of widening the page. -->
 		<Tabs.List class="h-auto max-w-full flex-wrap justify-start group-data-horizontal/tabs:h-auto">
 			<Tabs.Trigger value="card">Карточка</Tabs.Trigger>
 			<Tabs.Trigger value="contracts">Договоры и адреса</Tabs.Trigger>
 			<Tabs.Trigger value="users">Пользователи</Tabs.Trigger>
+			{#if data.prices}<Tabs.Trigger value="prices">Цены</Tabs.Trigger>{/if}
 			<Tabs.Trigger value="ledger">Заявки и оплаты</Tabs.Trigger>
 		</Tabs.List>
 		<Tabs.Content value="card" class="pt-4">
@@ -74,6 +87,15 @@
 		<Tabs.Content value="users" class="pt-4">
 			<UsersPanel users={card.users} staffLimit={card.staffLimit} timeZone={data.timezone} />
 		</Tabs.Content>
+		{#if data.prices}
+			<Tabs.Content value="prices" class="pt-4">
+				<PricesPanel
+					prices={data.prices.page}
+					categories={data.prices.categories}
+					formError={pricesError}
+				/>
+			</Tabs.Content>
+		{/if}
 		<Tabs.Content value="ledger" class="flex flex-col gap-6 pt-4">
 			<Card.Root>
 				<Card.Header><Card.Title>История заявок</Card.Title></Card.Header>

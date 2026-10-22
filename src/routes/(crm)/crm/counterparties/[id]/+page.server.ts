@@ -1,13 +1,19 @@
-import { error } from '@sveltejs/kit';
+import { error, fail } from '@sveltejs/kit';
 import { z } from 'zod';
 import { requireAction, requireScope } from '$lib/server/auth/guard';
-import { formAction, orHttpStatus } from '$lib/server/core/http';
+import { actionFailure, formAction, orHttpStatus } from '$lib/server/core/http';
 import { parseListQuery } from '$lib/server/core/list';
 import { CounterpartyAccessService } from '$lib/server/crm-counterparty/counterparty-access.service';
 import { CounterpartyDetailService } from '$lib/server/crm-counterparty/counterparty-detail.service';
 import { CounterpartyLedgerService } from '$lib/server/crm-counterparty/counterparty-ledger.service';
+import { CounterpartyPriceService } from '$lib/server/crm-counterparty/counterparty-price.service';
 import { CrmCounterpartyService } from '$lib/server/crm-counterparty/crm-counterparty.service';
 import { mailDriver } from '$lib/server/notifications/drivers/mail/select';
+import {
+	personalPriceEntriesFrom,
+	personalPriceFiltersSchema,
+	personalPricePageSchema
+} from '$lib/validation/counterparty-price';
 import {
 	addressInputSchema,
 	contractInputSchema,
@@ -17,6 +23,7 @@ import {
 	requisitesInputSchema,
 	termsInputSchema
 } from '$lib/validation/crm-counterparty';
+import { definedProps } from '$lib/utils/props';
 import type { Actions, PageServerLoad, RequestEvent } from './$types';
 
 const withId = <T extends z.ZodType>(schema: T) => z.intersection(entityIdSchema, schema);
@@ -35,7 +42,18 @@ function context(event: RequestEvent) {
 		cards: () => new CrmCounterpartyService(actor),
 		details: () => new CounterpartyDetailService(actor),
 		access: () => new CounterpartyAccessService(actor, mailDriver()),
+		prices: () => new CounterpartyPriceService(actor),
 		request: event.request
+	};
+}
+
+function pricesOf(event: RequestEvent, id: number, actor: ReturnType<typeof context>['actor']) {
+	const raw = personalPriceFiltersSchema.parse(Object.fromEntries(event.url.searchParams));
+	const filters = definedProps({ search: raw.priceSearch, categoryId: raw.priceCategory });
+	const service = new CounterpartyPriceService(actor);
+	return {
+		page: service.list(id, parseListQuery(event.url, filters, 'price')),
+		categories: service.categories()
 	};
 }
 
@@ -50,7 +68,8 @@ export const load: PageServerLoad = (event) => {
 		// Every payment row is an amount: a role without prices gets no registry at all.
 		payments: actor.canSeePrices
 			? ledger.payments(id, parseListQuery(event.url, undefined, 'pay'))
-			: null
+			: null,
+		prices: actor.canSeePrices ? pricesOf(event, id, actor) : null
 	}));
 };
 
@@ -126,6 +145,21 @@ export const actions = {
 		return formAction(request, 'adminPromote', entityIdSchema, (input) =>
 			access().promoteAdmin(id, input.id)
 		);
+	},
+	prices: async (event) => {
+		const { id, prices, request } = context(event);
+		const service = prices();
+		const parsed = personalPricePageSchema.safeParse({
+			entries: personalPriceEntriesFrom(await request.formData())
+		});
+		if (!parsed.success) {
+			return fail(422, { action: 'prices', formError: 'Проверьте цены на странице' });
+		}
+		try {
+			return { action: 'prices' as const, saved: service.save(id, parsed.data.entries) };
+		} catch (err) {
+			return actionFailure(err);
+		}
 	},
 	accessResend: (event) => {
 		const { id, access, request } = context(event);

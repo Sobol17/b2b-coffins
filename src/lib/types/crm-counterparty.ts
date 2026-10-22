@@ -89,3 +89,27 @@ export interface CreatedCounterpartyDto {
 	readonly counterpartyId: number;
 	readonly access: CreatedStaffDto;
 }
+
+/** Filters of the «Цены» tab of a counterparty card (v1.56). */
+export interface CounterpartyPriceFilters {
+	readonly search?: string | undefined;
+	readonly categoryId?: number | undefined;
+}
+
+/** One variant on the «Цены» tab (v1.56). The tab exists only for a role with prices. */
+export interface CounterpartyPriceRowDto {
+	readonly variantId: number;
+	readonly productTitle: string;
+	readonly categoryTitle: string | null;
+	readonly sku: string;
+	readonly sizeCode: string;
+	/** What the counterparty pays without its own price: the base list, then the variant price. */
+	readonly basePriceMinor: number;
+	/** The counterparty's own price, null while it pays the base one. */
+	readonly personalPriceMinor: number | null;
+}
+
+export interface CounterpartyPriceSaveResult {
+	readonly updated: number;
+	readonly cleared: number;
+}
