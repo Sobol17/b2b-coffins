@@ -36,6 +36,8 @@
 	} = $props();
 
 	let body = $state('');
+	// A second tap on a slow phone must not post the same message twice and push everyone again.
+	let busy = $state(false);
 	let confirming = $state(false);
 	let closeForm: HTMLFormElement | undefined = $state();
 
@@ -76,6 +78,7 @@
 				action="?/post"
 				use:enhance={withToast({
 					success: 'Сообщение отправлено',
+					pending: (value) => (busy = value),
 					onSuccess: () => (body = '')
 				})}
 				class="flex flex-col gap-3 border-t border-border pt-4"
@@ -88,7 +91,7 @@
 					rows={4}
 				/>
 				<div class="flex flex-wrap gap-3">
-					<Button type="submit" data-testid="support-send">Отправить</Button>
+					<Button type="submit" loading={busy} data-testid="support-send">Отправить</Button>
 					{#if thread.canClose}
 						<Button
 							type="button"

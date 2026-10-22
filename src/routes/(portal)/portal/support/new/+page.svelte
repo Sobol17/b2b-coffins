@@ -3,7 +3,16 @@
 	import { resolve } from '$app/paths';
 	import { profileNavItems } from '$lib/portal/profile-nav';
 	import ProfileNav from '$lib/portal/ProfileNav.svelte';
-	import { Breadcrumbs, Button, Card, ErrorState, Input, Select, Textarea } from '$lib/ui';
+	import {
+		Breadcrumbs,
+		Button,
+		Card,
+		ErrorState,
+		Input,
+		Select,
+		Textarea,
+		withToast
+	} from '$lib/ui';
 	import { REQUEST_STATUS_META } from '$lib/ui/status';
 	import { SUPPORT_SUBJECT_MAX } from '$lib/types/support';
 	import type { PageProps } from './$types';
@@ -21,6 +30,8 @@
 
 	let subject = $state('');
 	let body = $state('');
+	// A second tap would open a twin thread and push the workshop twice.
+	let busy = $state(false);
 	// The card of a request passes its id: the select starts on it, the person may still change it.
 	let requestId = $derived(data.requestId === null ? '' : String(data.requestId));
 
@@ -54,7 +65,12 @@
 
 			<Card.Root>
 				<Card.Content>
-					<form method="POST" action="?/open" use:enhance class="flex flex-col gap-4">
+					<form
+						method="POST"
+						action="?/open"
+						use:enhance={withToast({ pending: (value) => (busy = value) })}
+						class="flex flex-col gap-4"
+					>
 						<Input
 							name="subject"
 							label="Тема"
@@ -81,7 +97,9 @@
 						{#if failure}
 							<div data-testid="support-error"><ErrorState title={failure} /></div>
 						{/if}
-						<Button type="submit" class="self-start" data-testid="support-open">Отправить</Button>
+						<Button type="submit" loading={busy} class="self-start" data-testid="support-open">
+							Отправить
+						</Button>
 					</form>
 				</Card.Content>
 			</Card.Root>

@@ -89,3 +89,38 @@ test('C17: workshop roles without the right get 403 and a guest goes to login', 
 	await page.goto('/portal/support');
 	await expect(page).toHaveURL(/\/login/);
 });
+
+/** Holds the next POST of a form action until `release` runs, as a slow phone network would. */
+async function holdAction(page: Page, action: string): Promise<() => void> {
+	let release = () => {};
+	const gate = new Promise<void>((resolve) => (release = resolve));
+	await page.route(
+		(url) => url.search === `?/${action}`,
+		async (route) => {
+			await gate;
+			await route.continue();
+		},
+		{ times: 1 }
+	);
+	return release;
+}
+
+test('C17: a second tap on «Отправить» waits for the first answer', async ({ page }) => {
+	await login(page, 'cp_employee');
+	await page.goto('/portal/support/new');
+	await page.getByLabel('Тема').fill(unique('Двойное нажатие'));
+	await page.getByLabel('Сообщение').fill('Первое сообщение');
+	const releaseOpen = await holdAction(page, 'open');
+	await page.getByTestId('support-open').click();
+	await expect(page.getByTestId('support-open')).toBeDisabled();
+	releaseOpen();
+	await page.waitForURL(/\/portal\/support\/\d+$/);
+
+	await page.getByLabel('Сообщение').fill('Второе сообщение');
+	const releasePost = await holdAction(page, 'post');
+	await page.getByTestId('support-send').click();
+	await expect(page.getByTestId('support-send')).toBeDisabled();
+	releasePost();
+	await expect(page.getByTestId('support-messages')).toContainText('Второе сообщение');
+	await expect(page.getByTestId('support-send')).toBeEnabled();
+});
