@@ -44,7 +44,7 @@
 			})}
 		/>
 
-		<section class="flex flex-col gap-6">
+		<section class="flex min-w-0 flex-col gap-6">
 			<div class="flex flex-wrap items-end gap-4 px-2">
 				<div>
 					<h1 data-testid="support-title" class="mb-2 text-4xl">Обращения</h1>

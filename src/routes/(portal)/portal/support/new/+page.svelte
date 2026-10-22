@@ -49,7 +49,7 @@
 			})}
 		/>
 
-		<section class="flex flex-col gap-6">
+		<section class="flex min-w-0 flex-col gap-6">
 			<h1 class="px-2 text-4xl">Новое обращение</h1>
 
 			<Card.Root>

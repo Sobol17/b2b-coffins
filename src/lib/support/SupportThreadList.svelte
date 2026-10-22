@@ -29,11 +29,12 @@
 	} = $props();
 
 	const columns = $derived<DataTableColumn[]>([
+		// The state goes right after the subject: on a narrow screen it is the column that matters.
 		{ key: 'subject', label: 'Обращение' },
+		{ key: 'state', label: 'Статус' },
 		...(contour === 'crm' ? [{ key: 'counterparty', label: 'Контрагент' }] : []),
 		...(showAuthor ? [{ key: 'author', label: 'Автор' }] : []),
 		{ key: 'request', label: 'Заявка' },
-		{ key: 'state', label: 'Статус' },
 		{ key: 'last', label: 'Последнее сообщение', align: 'end' as const }
 	]);
 </script>
