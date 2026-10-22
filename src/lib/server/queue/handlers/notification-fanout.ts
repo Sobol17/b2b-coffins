@@ -112,22 +112,18 @@ export function createNotificationFanoutHandler(deps: FanoutDeps) {
 		const act = support.occurrence(event.eventKey, event.entityId, tx);
 		if (!act) return [];
 		const candidates = [
-			...deps.notifications
-				.portalPeople(act.counterpartyId, tx)
-				.map((person) => ({
-					person,
-					userId: person.userId,
-					side: 'portal' as const,
-					roles: person.roles
-				})),
-			...deps.notifications
-				.crmPeople(tx)
-				.map((person) => ({
-					person,
-					userId: person.userId,
-					side: 'crm' as const,
-					roles: person.roles
-				}))
+			...deps.notifications.portalPeople(act.counterpartyId, tx).map((person) => ({
+				person,
+				userId: person.userId,
+				side: 'portal' as const,
+				roles: person.roles
+			})),
+			...deps.notifications.crmPeople(tx).map((person) => ({
+				person,
+				userId: person.userId,
+				side: 'crm' as const,
+				roles: person.roles
+			}))
 		];
 		return supportRecipients(act, candidates).map(({ person, roles }) => ({ person, roles }));
 	}
