@@ -9,6 +9,7 @@ import HistoryIcon from '@lucide/svelte/icons/history';
 import HouseIcon from '@lucide/svelte/icons/house';
 import KanbanIcon from '@lucide/svelte/icons/square-kanban';
 import ListIcon from '@lucide/svelte/icons/list';
+import MessageSquareIcon from '@lucide/svelte/icons/message-square';
 import PackageIcon from '@lucide/svelte/icons/package';
 import SettingsIcon from '@lucide/svelte/icons/settings';
 import TagsIcon from '@lucide/svelte/icons/tags';
@@ -27,6 +28,7 @@ export interface CrmNavRights {
 	readonly reports: boolean;
 	readonly catalog: boolean;
 	readonly counterparties: boolean;
+	readonly support: boolean;
 	readonly settings: boolean;
 	readonly audit: boolean;
 }
@@ -83,6 +85,16 @@ export function crmNav(can: CrmNavRights): CrmNavLink[] {
 				label: 'Доставка',
 				icon: TruckIcon,
 				hint: 'Готовые к выдаче заявки и маршрут'
+			}
+		},
+		{
+			show: can.support,
+			link: {
+				group: WORK,
+				href: resolve('/crm/support'),
+				label: 'Обращения',
+				icon: MessageSquareIcon,
+				hint: 'Вопросы контрагентов и ответы мастерской'
 			}
 		},
 		{
