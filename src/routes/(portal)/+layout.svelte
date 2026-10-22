@@ -4,6 +4,7 @@
 	import { leaveOnLogout, pushStateFor } from '$lib/notifications/push-state.svelte';
 	import { portalFeedHref } from '$lib/portal/feed-href';
 	import HeaderSearch from '$lib/portal/search/HeaderSearch.svelte';
+	import { LEGAL_DOCS } from '$lib/legal/docs';
 	import ContourShell from '$lib/ui/ContourShell.svelte';
 	import type { LayoutProps } from './$types';
 
@@ -43,6 +44,7 @@
 	accountHref={resolve('/portal/profile')}
 	cart={{ href: resolve('/portal/cart'), count: data.cartUnits }}
 	{footerCaption}
+	footerLinks={LEGAL_DOCS}
 >
 	{#snippet search()}
 		<HeaderSearch rights={{ staff: data.canManageStaff, prices: data.canManagePrices }} />
