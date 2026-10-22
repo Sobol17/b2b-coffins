@@ -2,7 +2,15 @@ import { and, desc, eq, inArray, isNull, sql } from 'drizzle-orm';
 import { countExpression } from '../core/list';
 import { BaseRepository } from '../core/repository';
 import type { Tx } from '../db/client';
-import { notificationFeed, payrollPeriods, requests, stockItems, users } from '../db/schema';
+import {
+	notificationFeed,
+	payrollPeriods,
+	requests,
+	stockItems,
+	supportMessages,
+	supportThreads,
+	users
+} from '../db/schema';
 import type { ActorContext } from '$lib/types/actor';
 import { REQUEST_EVENT_KEYS, type EventKey } from '$lib/types/events';
 
@@ -15,9 +23,13 @@ export interface FeedRow {
 	readonly stockItemTitle: string | null;
 	readonly weekId: number | null;
 	readonly weekStartsOn: Date | null;
+	readonly supportThreadId: number | null;
+	readonly supportSubject: string | null;
 	readonly readAt: Date | null;
 	readonly createdAt: Date;
 }
+
+const threadIdOfFeed = sql<number>`coalesce(${supportMessages.threadId}, case when ${notificationFeed.eventKey} in ('support.opened', 'support.closed') then ${notificationFeed.entityId} end)`;
 
 /** The bell feed of tech.md 5.9: one row per person and event, read side of `notification.fanout`. */
 export class NotificationFeedRepository extends BaseRepository<typeof notificationFeed> {
@@ -65,6 +77,8 @@ export class NotificationFeedRepository extends BaseRepository<typeof notificati
 				stockItemTitle: stockItems.title,
 				weekId: payrollPeriods.id,
 				weekStartsOn: payrollPeriods.startsOn,
+				supportThreadId: supportThreads.id,
+				supportSubject: supportThreads.subject,
 				readAt: notificationFeed.readAt,
 				createdAt: notificationFeed.createdAt
 			})
@@ -97,6 +111,21 @@ export class NotificationFeedRepository extends BaseRepository<typeof notificati
 							eq(notificationFeed.eventKey, 'payroll.week_closed')
 						)
 					: never
+			)
+			// A message event points at the message, the others at the thread (tech.md 7.3, v1.57).
+			.leftJoin(
+				supportMessages,
+				and(
+					eq(supportMessages.id, notificationFeed.entityId),
+					eq(notificationFeed.eventKey, 'support.message_posted')
+				)
+			)
+			.leftJoin(
+				supportThreads,
+				and(
+					eq(supportThreads.id, threadIdOfFeed),
+					workshop ? undefined : eq(supportThreads.counterpartyId, users.counterpartyId)
+				)
 			)
 			.where(this.own(ctx))
 			.orderBy(desc(notificationFeed.createdAt), desc(notificationFeed.id))
