@@ -17,7 +17,7 @@
 				data-testid="draft-line"
 				class="grid grid-cols-[4.5rem_1fr_auto] items-center gap-x-4 gap-y-3 py-4 sm:grid-cols-[5.5rem_1fr_auto_auto]"
 			>
-				<ProductPhoto mediaId={item.coverMediaId} alt="" caption="фото" class="aspect-square" />
+				<ProductPhoto mediaId={item.coverMediaId} alt="" class="aspect-square" />
 				<div>
 					<div class="text-xs tracking-[0.08em] text-fg-faint">{item.sku}</div>
 					<a

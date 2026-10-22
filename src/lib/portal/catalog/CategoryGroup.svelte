@@ -38,7 +38,7 @@
 				href={resolve(`/portal/catalog/${child.id}`)}
 				class="flex flex-col overflow-hidden rounded-inset bg-surface-muted hover:bg-chip"
 			>
-				<ProductPhoto mediaId={null} alt="" caption={child.title} class="aspect-[5/4]" />
+				<ProductPhoto mediaId={null} alt="" class="aspect-[5/4]" />
 				<div class="p-4">
 					<div class="font-heading text-xl font-semibold">{child.title}</div>
 					<div class="text-sm text-fg-muted">
@@ -60,10 +60,14 @@
 				<ProductPhoto mediaId={product.coverMediaId} alt="" class="aspect-[5/4]" />
 				<div class="p-4">
 					<div class="font-heading text-xl font-semibold">{product.title}</div>
+					<!-- One size needs no counter: the line is left to the price. -->
 					<div class="text-sm text-fg-muted">
-						Размеров: {product.variantCount}
+						{#if product.variantCount > 1}Размеров: {product.variantCount}{/if}
 						{#if product.agencyPriceMinor ?? product.minPriceMinor}
-							· <PriceCell valueMinor={product.agencyPriceMinor ?? product.minPriceMinor} /> ₽
+							{#if product.variantCount > 1}· {product.agencyPriceMinor === undefined
+									? 'от'
+									: ''}{/if}
+							<PriceCell valueMinor={product.agencyPriceMinor ?? product.minPriceMinor} /> ₽
 						{/if}
 					</div>
 				</div>
