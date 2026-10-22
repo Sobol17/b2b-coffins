@@ -1,7 +1,8 @@
 import { resolve } from '$app/paths';
 import type { ResolvedPathname } from '$app/types';
 
-export type ProfileSection = 'profile' | 'staff' | 'prices' | 'requests' | 'notifications';
+export type ProfileSection =
+	'profile' | 'staff' | 'prices' | 'requests' | 'support' | 'notifications';
 
 export interface ProfileNavItem {
 	readonly href: ResolvedPathname;
@@ -14,7 +15,7 @@ export interface ProfileNavRights {
 	readonly prices: boolean;
 }
 
-/** One menu for the profile pages: account, staff, agency prices, requests and notifications. */
+/** One menu for the profile pages: account, staff, prices, requests, chat and notifications. */
 export function profileNavItems(
 	current: ProfileSection,
 	rights: ProfileNavRights
@@ -42,6 +43,8 @@ export function profileNavItems(
 		label: 'Мои заявки',
 		active: current === 'requests'
 	});
+	// Both portal roles write to the workshop (v1.57); the employee sees only the own threads.
+	items.push({ href: resolve('/portal/support'), label: 'Чат', active: current === 'support' });
 	items.push({
 		href: resolve('/portal/profile/notifications'),
 		label: 'Уведомления',
