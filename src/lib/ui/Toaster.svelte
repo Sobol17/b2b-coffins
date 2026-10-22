@@ -51,7 +51,7 @@
 <section
 	data-slot="toaster"
 	aria-label="Уведомления"
-	class="pointer-events-none fixed inset-x-0 bottom-0 z-50 flex flex-col items-stretch gap-2 p-4 sm:inset-x-auto sm:right-0 sm:w-[26rem] sm:items-end"
+	class="pointer-events-none fixed inset-x-0 bottom-(--shell-bottom-inset) z-50 flex flex-col items-stretch gap-2 p-4 sm:inset-x-auto sm:right-0 sm:w-[26rem] sm:items-end"
 >
 	{#each toast.items as item (item.id)}
 		{@const meta = KIND_META[item.kind]}

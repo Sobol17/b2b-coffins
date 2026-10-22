@@ -53,10 +53,13 @@ export async function login(page: Page, role: RoleKey): Promise<void> {
 export const crmNavLink = (page: Page, name: string) =>
 	page.getByRole('navigation', { name: 'Разделы' }).getByRole('link', { name, exact: true });
 
-/** On a phone the sections sit in a sheet. The click is retried until hydration wires the button. */
+/** On a phone the sections sit in a sheet behind «Ещё». The click is retried until hydration wires it. */
 export async function openCrmMenu(page: Page): Promise<void> {
 	await expect(async () => {
-		await page.getByRole('button', { name: 'Меню разделов' }).click();
+		await page
+			.getByRole('navigation', { name: 'Нижняя навигация' })
+			.getByRole('button', { name: 'Ещё' })
+			.click();
 		await expect(page.getByRole('navigation', { name: 'Разделы' })).toBeVisible({ timeout: 1000 });
 	}).toPass();
 }

@@ -174,3 +174,14 @@
 	min-height: var(--spacing-touch);
 	min-width: var(--spacing-touch);
 }
+
+/* Height the CRM phone tab bar takes from the bottom of the screen. Page content and toasts sit
+   above it; without the bar the inset is zero. */
+:root {
+	--shell-bottom-inset: 0px;
+}
+@media (width < 48rem) {
+	:root:has([data-crm-bottom-bar]) {
+		--shell-bottom-inset: calc(4.5rem + 1px + env(safe-area-inset-bottom));
+	}
+}
