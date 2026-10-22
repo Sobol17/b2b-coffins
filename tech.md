@@ -1,9 +1,9 @@
 # tech.md — ядро проекта
 
 **Проект:** B2B-портал + CRM для столярной мастерской (производство гробов)
-**Версия ядра:** v1.56
+**Версия ядра:** v1.57
 **Дата:** 22.10.2026
-**Статус:** этап 1 (портал, P1–P14) завершён 19.09.2026; в этапе 2 (CRM) влиты C1–C8, C10, C12, C15, C13, слайс C14 открыт (чек-лист в §14), C16 не начат
+**Статус:** этап 1 (портал, P1–P14) завершён 19.09.2026; в этапе 2 (CRM) влиты C1–C8, C10, C12, C15, C13, слайс C14 открыт (чек-лист в §14), C17 (обращения) в работе, C16 не начат
 **Владелец файла:** Sobol17 (тимлид и единственный разработчик)
 **Источник требований:** `TZ_B2B_CRM_stolyarka_v06.md`
 
@@ -11,6 +11,7 @@
 
 | Версия | Изменение |
 |---|---|
+| v1.57 | Слайс C17 «Обращения контрагентов» по решениям владельца от 22.10.2026, дизайн в `docs/superpowers/specs/2026-10-22-support-chat-design.md`. Новый раздел §5.10: таблицы `support_threads` (ветка с темой, контрагентом, автором, необязательной заявкой, статусом `open` или `closed` и стороной последнего сообщения) и `support_messages` (текст и сторона автора `portal` или `crm`). Строки не удаляются, номер обращения это `id`. Права: `support.own` у `cp_admin` и `cp_employee` с фильтром реестра P6 (сотрудник видит свои обращения, администратор весь контрагент), `support.any` у `manager` и `owner`; правило `owner` исключает `support.own`. Обращение открывает только контрагент, закрывает любая сторона, в закрытое писать нельзя, повторного открытия нет; повторное закрытие ничего не пишет. Заявку к обращению сервер проверяет тем же фильтром P6, чужая даёт 404. События §7.3: `support.opened` (id обращения), `support.message_posted` (id сообщения), `support.closed` (id обращения). Адресатов выбирает `supportRecipients` (`lib/domain/support/recipients.ts`): действие портала идёт мастерской, действие мастерской идёт каждому `cp_admin` контрагента и автору обращения, действие `cp_admin` в чужом обращении идёт ещё и его автору; автор действия событие не получает, это исключение из правила v1.49. Fanout читает автора из сообщения или обращения, payload не меняется. Переменные шаблонов `{{thread}}`, `{{subject}}`, `{{counterparty}}`, `{{author}}`, `{{url}}`, у открытия и сообщения ещё `{{excerpt}}` (до 100 символов). Ссылки `/portal/support/{id}` и `/crm/support/{id}`. Строка колокольчика события обращения отдаёт `entityId` равным id обращения и `entityLabel` равным теме. Команда `pnpm admin notifications:sync` вставляет из фикстур недостающие правила и шаблоны и не трогает существующие: так новые события попадают на стенд, где сид не запускают. Действия аудита `support.open`, `support.post`, `support.close` по сущности `support_threads`, текст сообщения в журнал не пишется. Ограничение частоты `support.post` (30 за 10 минут) заменило `request.comment`. Обращения заменили «Переписку с менеджером» P6: карточка заявки портала больше не принимает комментарии, старые публичные комментарии показывает на чтение, рядом обращения по заявке и кнопка «Написать по заявке»; `RequestCardDto` получил `supportThreads`. CRM комментарии портала не показывала, поэтому написанное там до мастерской не доходило. Экраны: «Чат» в профиле портала (`/portal/support`, `/new`, `/[id]`) и раздел «Обращения» CRM (`/crm/support`, `/[id]`) последним в группе «Работа». В §8 добавлен `lib/types/support.ts` |
 | v1.56 | Правки заказчика по итогам пилота от 22.10.2026 (часть C14). Индивидуальные цены: карточка контрагента в CRM получила вкладку «Цены» по праву `counterparty.manage` и только роли с ценами, менеджер вводит цену каждого варианта. Цены пишутся в прайс-лист, которым владеет один этот контрагент: базовый, просроченный, общий с другими или пустой лист сервер не правит, а заводит новый «Индивидуальные цены: <название>», копирует в него позиции прежнего общего листа и назначает контрагенту. Цена 0 убирает позицию, и цена снова идёт по цепочке `PersonalPriceResolver`; повторная отправка того же ничего не пишет. Правило выбора листа и план правок чистые, лежат в `lib/domain/pricing/personal-price.ts`. Новое действие аудита `counterparty.prices_update` по сущности `counterparties` со старым и новым `priceListId`. Схема БД и матрица прав не менялись. Реквизиты: `org.requisites` получил `ogrn` (13 цифр ОГРН или 15 цифр ОГРНИП). `OrgService.publicContacts` отдаёт гостю `PublicContacts`: телефон, адрес и оператора (название, ИНН, ОГРН, почта); КПП, банк, БИК и счёт с сервера не уходят. Публичные документы: `/legal` и четыре страницы `/legal/terms`, `/legal/personal-data`, `/legal/privacy`, `/legal/cookies` читают реквизиты оператора из настроек на каждом запросе. Ссылки на них стоят в подвале лендинга, на входе и в подвале портала. Плашка cookie на лендинге и входе закрывается кнопкой «Понятно», выбор хранит `localStorage`. `robots.txt` закрывает `/portal`, `/crm`, `/api`, `/password`. Лендинг получил title, description, canonical, Open Graph и разметку Organization. Каталог из прайса мастерской: команда `pnpm admin catalog:import --file <json> [--hide-others]` (`scripts/admin/catalog.ts`) в одной транзакции заводит или обновляет модели и варианты по артикулу; себестоимость и скрытие, заданные в CRM, повтор не трогает; `--hide-others` снимает с публикации модели вне файла. Прайс от 01.06.2026 лежит в `scripts/fixtures/catalog-angel.json`, демо-сид не менялся. Оболочка CRM на телефоне: нижняя панель с «Главной», тремя первыми разделами роли и кнопкой «Ещё», которая открывает шторку бокового меню; кнопка меню в шапке на телефоне скрыта. UI: `DataTable` на ширине телефона рисует строки карточками, `FilterBar` прячет поля за кнопкой «Фильтры» и получил `pageKey`, `MoneyInput` получил `blankZero`, `ContourShell` получил `footerLinks`. Портал получил страницу ошибки для 403, 404 и сбоя, меню профиля на телефоне стало строкой вкладок, фото-заглушки заменил знак мастерской. DTO в §8: `CounterpartyPriceRowDto`, `CounterpartyPriceFilters`, `CounterpartyPriceSaveResult`, `PublicOperator`, `PublicContacts` |
 | v1.55 | Контракт C10 уточнён по расценкам заказчика от 20.10.2026: работу делят те, кто её сделал, а не все, кто пришёл. Состав дня `work_day_staff` остаётся отметкой присутствия, у каждой записи работы появились исполнители в новой таблице `work_entry_staff`, их выбирают только из отмеченных в этот день. Доля работника за день равна `floor(Σ amount_minor / число исполнителей, до рубля)` по записям, где он исполнитель: рубль отбрасывается один раз от суммы дня, остаток остаётся у мастерской. Пришёл, но ни в одной работе не участвовал: за день 0 ₽, день в счётчик дней всё равно идёт. Уникальность `work_entries_uq` снята: один вид работ в дне можно внести несколькими записями с разными исполнителями. Цена записи по-прежнему замораживается, вид работ, уже внесённый в день, сохраняет замороженную цену во всех своих записях. `work_days.share_minor` убран, доли считаются на лету из записей и исполнителей, как и свод открытой недели. В §8: `WorkEntryDto.staffIds`, `WorkDayDto.shares` вместо `shareMinor`, `PayrollDayCellDto` без `shareMinor`. Форма дня шлёт строки `entry.<n>.work`, `entry.<n>.qty`, `entry.<n>.staff.<id>`; строку без количества сервер пропускает, строку без исполнителей и исполнителя вне состава дня отклоняет. Старые записи получают исполнителями весь состав своего дня командой `pnpm admin payroll:backfill-crews`: повторный запуск ничего не меняет, доли старых дней совпадают с прежними. Закрытые недели не пересчитываются, их `payroll_lines` заморожены. Права, топики и действия аудита не менялись |
 | v1.54 | Имя и знак приложения по решению владельца от 13.10.2026. В манифесте `name` «Ангел: заявки мастерской», `short_name` «Ангел» вместо «Заявки»; `src/app.html` получил `apple-mobile-web-app-title`, `favicon.png` и отдельный `apple-touch-icon` на 180 px. Знак: картинка заказчика (ангел у гроба на чёрном поле) вместо буквы на midnight, все размеры режет `scripts/icons.ts` из `scripts/assets/brand-angel.jpg`. `theme_color` и `background_color` не менялись. В §9 добавлены `BrandMark` (знак рядом с надписью в шапках и боковом меню CRM) и `InstallBanner` (полоса установки над шапкой портала и CRM на каждом экране, крестик запоминается на устройстве); `InstallPrompt` на главной портала, в цехе и доставке остаётся. Уже установленное приложение имя и значок само не меняет: его удаляют с экрана и добавляют заново |
@@ -248,6 +249,7 @@ src/
         shop/                     цех: очередь выпуска позиций и наполнение заявок (v1.41)
         delivery/                 доставка: погрузка по строкам, «Доставлено», заявки в работе для плана (v1.43)
         notifications/            личная лента, переключатели и журнал; read/ отмечает прочтение (v1.49)
+        support/                  обращения контрагентов: реестр и переписка (v1.57)
     api/
       stream/[topic]/+server.ts   SSE
       files/[id]/+server.ts       раздача файлов с проверкой прав
@@ -855,6 +857,50 @@ export const settings = sqliteTable('settings', {
 
 Нумерация в CRM (v1.37): правятся `prefix` (до 10 символов) и `period` ключа `request`. Сохранение пересчитывает `periodKey` на текущий период и ставит `lastValue` равным наибольшему номеру той же формы среди `requests.number`, поэтому возврат к прежнему префиксу или периоду не выдаёт занятый номер. Правило живёт в `resumeSequence` рядом с `nextNumber`.
 
+### 5.10 Обращения (v1.57)
+
+```ts
+export const SUPPORT_THREAD_STATUSES = ['open', 'closed'] as const;
+export const SUPPORT_SIDES = ['portal', 'crm'] as const;
+
+export const supportThreads = sqliteTable('support_threads', {
+  id: pk(),
+  counterpartyId: integer('counterparty_id').notNull().references(() => counterparties.id),
+  createdById: integer('created_by_id').notNull().references(() => users.id),
+  requestId: integer('request_id').references(() => requests.id),
+  subject: text('subject').notNull(),
+  status: text('status', { enum: SUPPORT_THREAD_STATUSES }).notNull().default('open'),
+  // Denormalized from the newest message: the lists sort and mark «whose turn» without a join.
+  lastMessageAt: ts('last_message_at').notNull(),
+  lastMessageSide: text('last_message_side', { enum: SUPPORT_SIDES }).notNull(),
+  closedAt: ts('closed_at'),
+  closedById: integer('closed_by_id').references(() => users.id),
+  createdAt: createdAt(), updatedAt: updatedAt()
+}, (t) => ({
+  cpIdx: index('support_threads_cp_idx').on(t.counterpartyId, t.lastMessageAt),
+  authorIdx: index('support_threads_author_idx').on(t.createdById, t.lastMessageAt),
+  statusIdx: index('support_threads_status_idx').on(t.status, t.lastMessageAt)
+}));
+
+export const supportMessages = sqliteTable('support_messages', {
+  id: pk(),
+  threadId: integer('thread_id').notNull().references(() => supportThreads.id),
+  authorId: integer('author_id').notNull().references(() => users.id),
+  // The author's contour at the time of writing: a scope change later must not flip old messages.
+  side: text('side', { enum: SUPPORT_SIDES }).notNull(),
+  body: text('body').notNull(),
+  createdAt: createdAt()
+}, (t) => ({ threadIdx: index('support_messages_thread_idx').on(t.threadId, t.createdAt) }));
+```
+
+Инварианты:
+
+- `support_threads.request_id`, если задан, указывает на заявку того же `counterparty_id` не в статусе `draft`; сотрудник контрагента привязывает только свою заявку;
+- у обращения есть хотя бы одно сообщение: ветка и первое сообщение пишутся одной транзакцией;
+- `last_message_at` и `last_message_side` равны полям самого нового сообщения ветки;
+- `closed_at` и `closed_by_id` заданы тогда и только тогда, когда `status = 'closed'`;
+- строки не удаляются, сообщения не правятся. Вложений, флагов брака и рекламаций у обращения нет.
+
 ---
 
 ## 6. Машина состояний заявки
@@ -957,7 +1003,8 @@ export const EVENT_KEYS = [
   'request.submitted', 'request.accepted', 'request.ready', 'request.delivered',
   'request.cancelled', 'request.rejected',
   'request.payment_marked', 'request.paid',
-  'stock.below_threshold', 'payroll.week_closed'
+  'stock.below_threshold', 'payroll.week_closed',
+  'support.opened', 'support.message_posted', 'support.closed'   // v1.57
 ] as const;
 ```
 
@@ -979,6 +1026,8 @@ export const EVENT_KEYS = [
 - `notifications.payload` хранит `{ entityId }`, текст письма собирается в `notification.dispatch` из БД на момент отправки.
 
 Переменные шаблона привязаны к событию (`EVENT_TEMPLATE_VARIABLES`, v1.49). События заявки: `{{number}}`, `{{status}}` (подпись из `lib/ui/status.ts`), `{{url}}`, `{{counterparty}}`, `{{externalNumber}}`. `stock.below_threshold`: `{{item}}` (название позиции), `{{code}}`, `{{balance}}`, `{{threshold}}`, `{{unit}}`, `{{url}}`. `payroll.week_closed`: `{{period}}` (границы недели в `org.timezone`), `{{url}}`. `{{url}}` это `ORIGIN` плюс путь по адресату: `/portal/requests/{id}` человеку портала, `/crm/requests/{id}` человеку мастерской с правом `request.read.any`, `/crm/delivery` остальным людям мастерской, `/crm/stock/{id}` у события склада, `/crm/payroll?week={дата начала}` у события выплат. Подстановка идёт в один проход, значение с фигурными скобками не раскрывается. Денежных переменных нет. Переменная вне набора своего события роняет сид и отклоняется при сохранении шаблона в CRM. Набор по событию, ссылка по адресату и правка шаблонов сделаны в C15: фикстура держит по одному шаблону push на событие, сид вставляет отсутствующий шаблон и не перетирает правку руководителя (v1.50). В `PushMessage.url` уходит тот же путь без `ORIGIN`.
+
+События обращений (v1.57). `support.opened` и `support.closed` несут id обращения, `support.message_posted` id сообщения, поэтому каждое сообщение даёт ровно один разворот. Первое сообщение обращения отдельного `support.message_posted` не даёт. Адресатов считает `supportRecipients` (`lib/domain/support/recipients.ts`) по стороне автора действия: действие портала идёт активным людям мастерской, действие мастерской идёт каждому `cp_admin` контрагента и автору обращения; если `cp_admin` пишет в обращение сотрудника или закрывает его, автор обращения тоже получает событие. Автор действия не получает событие никогда: это исключение из правила «инициатор из адресатов не исключается». Автора fanout читает из `support_messages.author_id`, `support_threads.created_by_id` или `closed_by_id`. Роли дальше режет матрица: правила `push` есть у `manager` и `owner` на все три события и у `cp_admin` и `cp_employee` на `support.message_posted` и `support.closed`. Переменные шаблонов: `{{thread}}` (номер обращения), `{{subject}}`, `{{counterparty}}`, `{{author}}` (ФИО автора действия), `{{url}}`; у `support.opened` и `support.message_posted` ещё `{{excerpt}}`, начало текста до 100 символов, обрезанное по слову. Ссылка `/portal/support/{id обращения}` человеку портала и `/crm/support/{id обращения}` человеку мастерской. На стенд новые правила и шаблоны приходят командой `pnpm admin notifications:sync`: она вставляет только отсутствующие строки фикстур и не трогает правку руководителя.
 
 ### 7.4 SSE
 
@@ -1647,6 +1696,38 @@ export type Minor = number & { readonly __brand: 'minor' };
 export const DICT_CODES = ['material','finish','fabric','hardware','unit','refusal_reason','stock_move_reason','transport'] as const;
 export const STOCK_MOVE_TYPES = ['production','shipment','adjustment','inventory','reversal','purchase'] as const;
 export const JOB_TOPICS = ['notification.dispatch','notification.fanout','charity.recount','stock.threshold.check','session.cleanup'] as const;
+
+// support.ts (v1.57)
+export type SupportThreadStatus = (typeof SUPPORT_THREAD_STATUSES)[number];
+export type SupportSide = (typeof SUPPORT_SIDES)[number];
+export const SUPPORT_SUBJECT_MIN = 3, SUPPORT_SUBJECT_MAX = 120, SUPPORT_BODY_MAX = 4000, SUPPORT_EXCERPT_MAX = 100;
+export interface SupportThreadListItemDto {
+  id: number; subject: string; status: SupportThreadStatus;
+  awaiting: SupportSide | null;          // whose turn to answer; null when closed
+  counterpartyName: string; authorName: string;
+  requestId: number | null; requestNumber: string | null;
+  lastMessageAt: string; createdAt: string;
+}
+export interface SupportMessageDto {
+  id: number; side: SupportSide; authorName: string;
+  authorRole: string;                    // role title: «Администратор мастерской», «Сотрудник»
+  isMine: boolean; body: string; createdAt: string;
+}
+export interface SupportThreadDto extends SupportThreadListItemDto {
+  counterpartyId: number; closedAt: string | null; closedByName: string | null;
+  canPost: boolean; canClose: boolean;   // open and the actor passes the fence
+  messages: SupportMessageDto[];
+}
+export interface SupportThreadFilters { status?: SupportThreadStatus; awaiting?: SupportSide; counterpartyId?: number; q?: string }
+export interface SupportRequestOptionDto { id: number; number: string; status: RequestStatus }
+// No price on any support dto: a request is its number and status.
+// RequestCardDto.supportThreads: SupportThreadListItemDto[], threads about the request the reader may open.
+// NotificationFeedItemDto of a support event: entityId is the thread id, entityLabel the subject.
+
+// validation/support.ts
+// supportOpenSchema    = object({ subject: trim 3..120, body: trim 1..4000, requestId?: id ('' -> undefined) })
+// supportPostSchema    = object({ body: trim 1..4000 })
+// supportFiltersSchema = object({ status?, awaiting?, counterpartyId?, q?: ..100 }); an unknown value is dropped
 ```
 
 ### 8.1 Проекции по ролям
@@ -1784,14 +1865,14 @@ CD нет. Мёрдж в `main` ничего не разворачивает, с
 Требования обязательны к каждому слайсу, не выносятся в отдельную задачу «сделать безопасность в конце».
 
 - **Аутентификация.** Пароли argon2id (`memoryCost >= 19456`, `timeCost >= 2`). Сессия на сервере, в куку кладём случайный идентификатор, в БД его хеш. Кука `httpOnly`, `secure`, `sameSite=lax`, срок 30 дней с продлением. Смена пароля и блокировка убивают все сессии пользователя. Пока учётная запись должна сменить временный пароль, чтение уходит на `/password/change`, а запись получает 403 (v1.53). Адрес возврата после входа принимается только как путь этого хоста (v1.53).
-- **Права.** Проверка на сервере на каждое действие и каждый переход статуса, а не только на отрисовку экрана. Роут проверяет право до разбора формы (v1.53). Единая точка: `PolicyService.can(actor, action, subject)`. Скрытие кнопки в UI защитой не считается. Раздел отчётов читает только `owner` по `reports.read`; перечисление в фонд и его сторно пишутся по `charity.manage`, оно тоже только у `owner` (v1.51).
+- **Права.** Проверка на сервере на каждое действие и каждый переход статуса, а не только на отрисовку экрана. Роут проверяет право до разбора формы (v1.53). Единая точка: `PolicyService.can(actor, action, subject)`. Скрытие кнопки в UI защитой не считается. Раздел отчётов читает только `owner` по `reports.read`; перечисление в фонд и его сторно пишутся по `charity.manage`, оно тоже только у `owner` (v1.51). Обращения: `support.own` у ролей портала с фильтром реестра P6, `support.any` у `manager` и `owner`; `owner` не получает `support.own` (v1.57).
 - **Row-level.** Каждый репозиторий портального домена принимает `counterpartyId` из `ActorContext` и подмешивает его в `where`. Метод без этого фильтра не проходит ревью. Работник мастерской без `request.read.any` видит заявки только в статусах, из которых его роль делает переход (v1.42). Экран доставки по праву `delivery.work` показывает заявки контрагентов в `ready` и, только на чтение, в `in_work` (v1.43).
 - **Цены.** Роль `cp_employee` не получает ценовые поля из БД. Проверяется e2e-тестом на теле ответа, а не глазами.
-- **ПДн третьего лица.** `requests.deceased_name` видно всем, кому видна заявка, но не подставляется в шаблоны уведомлений и не уходит в SSE (v1.33).
+- **ПДн третьего лица.** `requests.deceased_name` видно всем, кому видна заявка, но не подставляется в шаблоны уведомлений и не уходит в SSE (v1.33). `{{excerpt}}` обращения это текст, который человек написал сам; содержимое пуша шифруется ключами подписки, сервис доставки его не читает (v1.57).
 - **Публичная поверхность.** Гостю без сессии отвечает только `GET /api/public/works/[id]`: обложка опубликованной модели, 404 на скрытую, черновую и удалённую. Остальные файлы идут через `/api/files/[id]` с правом `catalog.read` (v1.33). Страницы `/legal/*` открыты гостю и показывают из настроек только название оператора, ИНН, ОГРН, телефон, адрес и почту (v1.56).
 - **Валидация.** Весь вход через Zod на сервере, включая `FormData`, query-параметры и содержимое импортируемых XLSX. Клиентская валидация только для UX.
 - **CSRF.** Form actions SvelteKit проверяют origin. Мутации через `+server.ts` требуют заголовка `x-requested-with` и совпадения origin. Обе проверки делает `requireOwnCall` из `lib/server/core/http.ts`, эндпоинт своей проверки не пишет (v1.53).
-- **Rate limiting.** Логин, восстановление пароля, создание сотрудника контрагента, отправка заявки, загрузка файла. Счётчики в `rate_limits`, окно и лимит в конфиге.
+- **Rate limiting.** Логин, восстановление пароля, создание сотрудника контрагента, отправка заявки, загрузка файла, сообщение обращения (`support.post`, v1.57). Счётчики в `rate_limits`, окно и лимит в конфиге.
 - **Загрузка файлов.** Белый список MIME, проверка сигнатуры файла, лимит размера, генерация имени сервером, запрет исполняемых расширений, хранение вне webroot. Сигнатуры лежат в `lib/domain/files/signature.ts` и общие для вложений заявки и фото каталога (v1.53).
 - **SQL.** Только Drizzle-построитель. Конкатенация строк в SQL запрещена, сырой SQL только через параметризованный `sql` с плейсхолдерами.
 - **Заголовки.** `hooks.server.ts` ставит CSP без `unsafe-eval`, `X-Content-Type-Options`, `Referrer-Policy`, `X-Frame-Options: DENY`, HSTS.
@@ -2050,6 +2131,9 @@ CONTRACT GAP
 - [x] Правки UX по итогам пилота (v1.56): нижняя панель CRM, карточки таблиц и фильтры на телефоне, индивидуальные цены контрагента, реквизиты оператора, публичные документы, метаданные лендинга, страница ошибки.
 - [ ] Первичное наполнение справочников, каталога и видов работ. Каталог готов к загрузке: `catalog:import` и `scripts/fixtures/catalog-angel.json` (v1.56); загрузка на стенд, справочники и виды работ впереди.
 - [ ] Сквозной сценарий на реальных данных стенда, контрольный пример по выплатам, акт приёмки.
+
+**C17. Обращения контрагентов** (контракт v1.57). Вкладка «Чат» в профиле портала: обращение с темой и необязательной заявкой, переписка, закрытие. Раздел «Обращения» в CRM для `manager` и `owner` с реестром, фильтром «ждёт ответа» и ответом. Пуш и колокольчик другой стороне на открытие, сообщение и закрытие. Замена «Переписки с менеджером» P6 в карточке заявки, команда `notifications:sync` для стенда. Идёт параллельно с C14 отдельной веткой, раньше C16.
+**DoD:** контрагент задаёт вопрос из кабинета, администратор мастерской отвечает из CRM, обе стороны получают пуш и строку колокольчика, закрытое обращение не принимает сообщений.
 
 **C16. Бот МАКС.** Драйвер канала `max` на Bot API: привязка чата к пользователю, отправка по матрице §7.3, лог доставки и ретраи тем же `notification.dispatch`. Привязка чата открывает разрыв контракта и поднимается блоком CONTRACT GAP в начале слайса. Канал становится живым, то есть входит в `LIVE_CHANNELS`.
 **DoD:** пользователь привязывает чат один раз и получает событие ботом, отказ бота виден в логе доставки и уходит в ретрай, повторная отправка того же уведомления второго сообщения не создаёт.
@@ -2384,7 +2468,8 @@ Payload push-уведомления не содержит цен, персона
 | Карточка товара | `/portal/catalog/product/[productId]` | обе | P3 просмотр, P4 добавление, P7 цена | Галерея `media`, характеристики из полей варианта и справочника материалов, описание, выбор размера (`sizeCode` варианта) и цвета из `options` по матрице `product_options`, других опций нет (v1.22), цена за штуку, количество, «Добавить в заявку» (P4), похожие позиции той же категории. Из P7: цена агентства на модель, у `cp_admin` рядом закупочная серым |
 | Корзина | `/portal/cart` | обе | P4, P7 | Черновик заявки: строки с вариантом и опциями, цена и сумма строки для `cp_admin`, количество, удаление, очистка. Отгрузка (P11): адрес из `delivery_addresses`, дата и время доставки, ФИО умершего, все четыре поля обязательны; самовывоза нет. Комментарий необязателен. Поле «Ваш номер заявки» не рисуется (v1.27). Итог: позиции, изделия, сумма, скидка по договору, к оплате (только `cp_admin`). Из P7: в строке цена агентства за штуку, суммы строки и итога в ценах агентства не считаются. «Оформить заявку» выполняет `draft -> new` |
 | Мои заявки | `/portal/requests` | обе | P6 | Раскладка профиля с боковым меню, строки-карточки: номер, дата, статус, первая позиция, число позиций и изделий, сумма для `cp_admin`, автор (`createdById`) для администратора. Чипы статусов с числами, поиск по номеру, сортировка. Фильтр периода из DoD P6 добавляется, в макете его нет. «Новая заявка» ведёт в каталог |
-| Заявка (детальная) | `/portal/requests/[id]` | обе | P6, P7, P8 | Показатели: позиции, сумма (`cp_admin`), статус. Состав заявки `DataTable`, комментарий, параметры отгрузки (адрес, срок, ФИО умершего, P11) и скидка, «Повторить заявку» (P4), «Отменить заявку» для `new -> cancelled` (P5), карточка менеджера. Из DoD P6 добавляются `Stepper` истории статусов, переписка с менеджером (`comments` без `isInternal`) и вложения, из P7 цена агентства в строке состава, из P8 строка «в фонд с этой заявки» |
+| Заявка (детальная) | `/portal/requests/[id]` | обе | P6, P7, P8 | Показатели: позиции, сумма (`cp_admin`), статус. Состав заявки `DataTable`, комментарий, параметры отгрузки (адрес, срок, ФИО умершего, P11) и скидка, «Повторить заявку» (P4), «Отменить заявку» для `new -> cancelled` (P5), карточка менеджера. Из DoD P6 добавляются `Stepper` истории статусов, переписка с менеджером (`comments` без `isInternal`; с v1.57 только на чтение, вместо формы обращения по заявке и кнопка «Написать по заявке») и вложения, из P7 цена агентства в строке состава, из P8 строка «в фонд с этой заявки» |
+| Чат | `/portal/support`, `/portal/support/new`, `/portal/support/[id]` | обе | C17 | Макета нет, экраны собраны в раскладке профиля (v1.57): список обращений `DataTable` с состоянием «Ждёт ответа мастерской», «Есть ответ», «Закрыто», форма нового обращения с темой, заявкой и текстом, переписка с формой ответа и закрытием |
 | Уведомления | `/portal/profile/notifications` | обе | P9 | Макета нет, экран собран в раскладке профиля: переключатели уведомлений по парам «событие, канал», которые предлагает матрица роли, и журнал отправок `DataTable` с событием, номером заявки, каналом и статусом доставки. Текст ошибки драйвера не показывается. Из P12: канал `max` в списке переключателей, полный список фида и отметка прочтения; фид выключить нельзя, поэтому переключателя у него нет |
 | Профиль контрагента | `/portal/profile` | обе | K5 аккаунт, P2 карточка | K5: раскладка профиля и блок «Мой аккаунт» с формой ФИО и телефона, эталонная вертикаль. P2: название, договор (`contracts`), показатели задолженности и закупки за год для `cp_admin`, превью трёх сотрудников, менеджер. Реквизиты и плитка скидки из профиля убраны в P10: реквизиты ведёт менеджер в C3, скидка осталась в корзине и в карточке заявки |
 | Мои цены | `/portal/prices` | `cp_admin`, у `cp_employee` 403 | P7 | `DataTable` моделей каталога: артикул, название, категория, закупочная цена «от N ₽» серым, поле своей цены на `MoneyInput`. Поиск и фильтр категории через `FilterBar`, серверная пагинация, сохранение страницы одной формой. Пустое поле означает, что цена не задана: сотрудник видит прочерк |
