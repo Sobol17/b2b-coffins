@@ -15,4 +15,10 @@ describe('where an event leads (tech.md 7.3)', () => {
 		);
 		expect(eventPath('payroll.week_closed', 9, 'crm_registry')).toBe('/crm/payroll');
 	});
+
+	it('opens the support thread in the contour of the reader (v1.57)', () => {
+		expect(eventPath('support.message_posted', 17, 'portal')).toBe('/portal/support/17');
+		expect(eventPath('support.opened', 17, 'crm_registry')).toBe('/crm/support/17');
+		expect(eventPath('support.closed', 17, 'crm_floor')).toBe('/crm/support/17');
+	});
 });

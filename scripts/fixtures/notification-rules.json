@@ -172,5 +172,65 @@
 		"roleCode": "owner",
 		"channel": "push",
 		"enabled": true
+	},
+	{
+		"eventKey": "support.opened",
+		"roleCode": "manager",
+		"channel": "push",
+		"enabled": true
+	},
+	{
+		"eventKey": "support.opened",
+		"roleCode": "owner",
+		"channel": "push",
+		"enabled": true
+	},
+	{
+		"eventKey": "support.message_posted",
+		"roleCode": "manager",
+		"channel": "push",
+		"enabled": true
+	},
+	{
+		"eventKey": "support.message_posted",
+		"roleCode": "owner",
+		"channel": "push",
+		"enabled": true
+	},
+	{
+		"eventKey": "support.closed",
+		"roleCode": "manager",
+		"channel": "push",
+		"enabled": true
+	},
+	{
+		"eventKey": "support.closed",
+		"roleCode": "owner",
+		"channel": "push",
+		"enabled": true
+	},
+	{
+		"eventKey": "support.message_posted",
+		"roleCode": "cp_admin",
+		"channel": "push",
+		"enabled": true
+	},
+	{
+		"eventKey": "support.message_posted",
+		"roleCode": "cp_employee",
+		"channel": "push",
+		"enabled": true
+	},
+	{
+		"eventKey": "support.closed",
+		"roleCode": "cp_admin",
+		"channel": "push",
+		"enabled": true
+	},
+	{
+		"eventKey": "support.closed",
+		"roleCode": "cp_employee",
+		"channel": "push",
+		"enabled": true
 	}
 ]

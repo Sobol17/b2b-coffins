@@ -66,4 +66,20 @@ describe('notification templates per event (C15)', () => {
 			);
 		}
 	});
+
+	it('gives support events their own variables and keeps the old sets (v1.57)', () => {
+		expect(EVENT_TEMPLATE_VARIABLES['support.opened']).toEqual([
+			'thread',
+			'subject',
+			'counterparty',
+			'author',
+			'excerpt',
+			'url'
+		]);
+		expect(EVENT_TEMPLATE_VARIABLES['support.message_posted']).toContain('excerpt');
+		expect(EVENT_TEMPLATE_VARIABLES['support.closed']).not.toContain('excerpt');
+		expect(unknownVariables('support.closed', '{{excerpt}}')).toEqual(['excerpt']);
+		expect(EVENT_TEMPLATE_VARIABLES['payroll.week_closed']).toEqual(['period', 'url']);
+		expect(EVENT_TEMPLATE_VARIABLES['stock.below_threshold']).toContain('threshold');
+	});
 });
