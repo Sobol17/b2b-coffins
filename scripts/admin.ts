@@ -1,6 +1,7 @@
 import { database } from '../src/lib/server/db/client';
 import { catalogImport } from './admin/catalog';
 import { counterpartyCreate } from './admin/counterparty';
+import { notificationsSync } from './admin/notifications';
 import { payrollBackfillCrews } from './admin/payroll';
 import { priceImport } from './admin/price';
 import { requestTransition } from './admin/request';
@@ -15,6 +16,7 @@ const USAGE = `pnpm admin <command> [options]
   catalog:import       --file <json> [--hide-others]
   request:transition   --request <number> --to <status> --actor <email> [--reason] [--comment]
   payroll:backfill-crews
+  notifications:sync
 `;
 
 async function main(): Promise<void> {
@@ -35,6 +37,8 @@ async function main(): Promise<void> {
 			return requestTransition(db, argv);
 		case 'payroll:backfill-crews':
 			return payrollBackfillCrews(db);
+		case 'notifications:sync':
+			return notificationsSync(db);
 		default:
 			console.error(USAGE);
 			process.exit(1);
