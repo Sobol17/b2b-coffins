@@ -109,7 +109,7 @@ function upsertOption(
 }
 
 /** Every variant gets its own product-kind stock item, so C8 can post moves without a migration. */
-function upsertVariantStockItem(db: Db, sku: string, title: string, unitId: number): number {
+export function upsertVariantStockItem(db: Db, sku: string, title: string, unitId: number): number {
 	const [row] = db
 		.insert(stockItems)
 		.values({ kind: 'product', code: sku, title, unitId })

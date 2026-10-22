@@ -1,0 +1,1199 @@
+{
+	"comment": "Price list of the workshop from 01.06.2026. Delivery is included in the price of every item.",
+	"materials": [
+		{
+			"code": "stone",
+			"title": "Искусственный камень",
+			"sortOrder": 60
+		},
+		{
+			"code": "plastic",
+			"title": "Пластик",
+			"sortOrder": 70
+		}
+	],
+	"categories": [
+		{
+			"code": "economy",
+			"title": "Эконом",
+			"sortOrder": 10
+		},
+		{
+			"code": "combined",
+			"title": "Комбинированные",
+			"sortOrder": 20
+		},
+		{
+			"code": "standard",
+			"title": "Стандартные",
+			"sortOrder": 30
+		},
+		{
+			"code": "classic",
+			"title": "Классика",
+			"sortOrder": 40
+		},
+		{
+			"code": "pattern",
+			"title": "Узор, тиснение, багет",
+			"sortOrder": 50
+		},
+		{
+			"code": "solid",
+			"title": "Массив дерева",
+			"sortOrder": 60
+		},
+		{
+			"code": "double_lid",
+			"title": "Двухкрышечные",
+			"sortOrder": 70
+		},
+		{
+			"code": "exclusive",
+			"title": "Эксклюзивные",
+			"sortOrder": 80
+		},
+		{
+			"code": "figures",
+			"title": "Фигуры объёмные",
+			"sortOrder": 90
+		},
+		{
+			"code": "lid_cross",
+			"title": "Крест на гроб",
+			"sortOrder": 100
+		},
+		{
+			"code": "grave_cross",
+			"title": "Кресты могильные деревянные",
+			"sortOrder": 110
+		}
+	],
+	"products": [
+		{
+			"sku": "ANG-0101",
+			"title": "Эконом",
+			"category": "economy",
+			"sortOrder": 10,
+			"variants": [
+				{
+					"sku": "ANG-0101-1",
+					"sizeCode": "Стандарт",
+					"material": "pine",
+					"basePriceMinor": 850000
+				}
+			]
+		},
+		{
+			"sku": "ANG-0102",
+			"title": "Крафт",
+			"category": "economy",
+			"sortOrder": 20,
+			"variants": [
+				{
+					"sku": "ANG-0102-1",
+					"sizeCode": "Стандарт",
+					"material": "pine",
+					"basePriceMinor": 950000
+				}
+			]
+		},
+		{
+			"sku": "ANG-0103",
+			"title": "Крафт с багетом",
+			"category": "economy",
+			"sortOrder": 30,
+			"variants": [
+				{
+					"sku": "ANG-0103-1",
+					"sizeCode": "Стандарт",
+					"material": "pine",
+					"basePriceMinor": 1050000
+				}
+			]
+		},
+		{
+			"sku": "ANG-0104",
+			"title": "Крафт с багетом лакированный",
+			"category": "economy",
+			"sortOrder": 40,
+			"variants": [
+				{
+					"sku": "ANG-0104-1",
+					"sizeCode": "Стандарт",
+					"material": "pine",
+					"basePriceMinor": 1150000
+				}
+			]
+		},
+		{
+			"sku": "ANG-0201",
+			"title": "Комбинированный славянский",
+			"category": "combined",
+			"sortOrder": 10,
+			"variants": [
+				{
+					"sku": "ANG-0201-1",
+					"sizeCode": "Стандарт",
+					"material": "pine",
+					"basePriceMinor": 1350000
+				}
+			]
+		},
+		{
+			"sku": "ANG-0202",
+			"title": "Комбинированный шестигранный",
+			"category": "combined",
+			"sortOrder": 20,
+			"variants": [
+				{
+					"sku": "ANG-0202-1",
+					"sizeCode": "Стандарт",
+					"material": "pine",
+					"basePriceMinor": 1350000
+				}
+			]
+		},
+		{
+			"sku": "ANG-0301",
+			"title": "Стандарт славянский",
+			"category": "standard",
+			"sortOrder": 10,
+			"variants": [
+				{
+					"sku": "ANG-0301-1",
+					"sizeCode": "Стандарт",
+					"material": "pine",
+					"basePriceMinor": 1350000
+				}
+			]
+		},
+		{
+			"sku": "ANG-0302",
+			"title": "Стандарт шестигранный",
+			"category": "standard",
+			"sortOrder": 20,
+			"variants": [
+				{
+					"sku": "ANG-0302-1",
+					"sizeCode": "Стандарт",
+					"material": "pine",
+					"basePriceMinor": 1350000
+				}
+			]
+		},
+		{
+			"sku": "ANG-0401",
+			"title": "Славянский",
+			"category": "classic",
+			"sortOrder": 10,
+			"variants": [
+				{
+					"sku": "ANG-0401-1",
+					"sizeCode": "Стандарт",
+					"material": "pine",
+					"basePriceMinor": 1500000
+				}
+			]
+		},
+		{
+			"sku": "ANG-0402",
+			"title": "Шестигранный",
+			"category": "classic",
+			"sortOrder": 20,
+			"variants": [
+				{
+					"sku": "ANG-0402-1",
+					"sizeCode": "Стандарт",
+					"material": "pine",
+					"basePriceMinor": 1500000
+				}
+			]
+		},
+		{
+			"sku": "ANG-0403",
+			"title": "Славянский белый",
+			"category": "classic",
+			"sortOrder": 30,
+			"variants": [
+				{
+					"sku": "ANG-0403-1",
+					"sizeCode": "Стандарт",
+					"material": "pine",
+					"basePriceMinor": 1550000
+				}
+			]
+		},
+		{
+			"sku": "ANG-0404",
+			"title": "Шестигранный белый",
+			"category": "classic",
+			"sortOrder": 40,
+			"variants": [
+				{
+					"sku": "ANG-0404-1",
+					"sizeCode": "Стандарт",
+					"material": "pine",
+					"basePriceMinor": 1550000
+				}
+			]
+		},
+		{
+			"sku": "ANG-0405",
+			"title": "Славянский Евро",
+			"category": "classic",
+			"sortOrder": 50,
+			"variants": [
+				{
+					"sku": "ANG-0405-1",
+					"sizeCode": "Стандарт",
+					"material": "pine",
+					"basePriceMinor": 1600000
+				}
+			]
+		},
+		{
+			"sku": "ANG-0406",
+			"title": "Шестигранный Евро",
+			"category": "classic",
+			"sortOrder": 60,
+			"variants": [
+				{
+					"sku": "ANG-0406-1",
+					"sizeCode": "Стандарт",
+					"material": "pine",
+					"basePriceMinor": 1600000
+				}
+			]
+		},
+		{
+			"sku": "ANG-0407",
+			"title": "Римский",
+			"category": "classic",
+			"sortOrder": 70,
+			"variants": [
+				{
+					"sku": "ANG-0407-1",
+					"sizeCode": "на 60",
+					"material": "pine",
+					"basePriceMinor": 1700000
+				}
+			]
+		},
+		{
+			"sku": "ANG-0408",
+			"title": "Римский с багетом",
+			"category": "classic",
+			"sortOrder": 80,
+			"variants": [
+				{
+					"sku": "ANG-0408-1",
+					"sizeCode": "на 60",
+					"material": "pine",
+					"basePriceMinor": 2100000
+				}
+			]
+		},
+		{
+			"sku": "ANG-0409",
+			"title": "Римский с багетом Евро",
+			"category": "classic",
+			"sortOrder": 90,
+			"variants": [
+				{
+					"sku": "ANG-0409-1",
+					"sizeCode": "на 60",
+					"material": "pine",
+					"basePriceMinor": 2200000
+				}
+			]
+		},
+		{
+			"sku": "ANG-0410",
+			"title": "Восьмигранный",
+			"category": "classic",
+			"sortOrder": 100,
+			"variants": [
+				{
+					"sku": "ANG-0410-1",
+					"sizeCode": "на 65",
+					"material": "pine",
+					"basePriceMinor": 1800000
+				}
+			]
+		},
+		{
+			"sku": "ANG-0411",
+			"title": "Восьмигранный Евро",
+			"category": "classic",
+			"sortOrder": 110,
+			"variants": [
+				{
+					"sku": "ANG-0411-1",
+					"sizeCode": "на 65",
+					"material": "pine",
+					"basePriceMinor": 1900000
+				}
+			]
+		},
+		{
+			"sku": "ANG-0412",
+			"title": "Восьмигранный с узором",
+			"category": "classic",
+			"sortOrder": 120,
+			"variants": [
+				{
+					"sku": "ANG-0412-1",
+					"sizeCode": "на 65",
+					"material": "pine",
+					"basePriceMinor": 2100000
+				}
+			]
+		},
+		{
+			"sku": "ANG-0413",
+			"title": "Восьмигранный с узором Евро",
+			"category": "classic",
+			"sortOrder": 130,
+			"variants": [
+				{
+					"sku": "ANG-0413-1",
+					"sizeCode": "на 65",
+					"material": "pine",
+					"basePriceMinor": 2200000
+				}
+			]
+		},
+		{
+			"sku": "ANG-0501",
+			"title": "Славянский с узором",
+			"category": "pattern",
+			"sortOrder": 10,
+			"variants": [
+				{
+					"sku": "ANG-0501-1",
+					"sizeCode": "Стандарт",
+					"material": "pine",
+					"basePriceMinor": 1800000
+				}
+			]
+		},
+		{
+			"sku": "ANG-0502",
+			"title": "Шестигранный с узором",
+			"category": "pattern",
+			"sortOrder": 20,
+			"variants": [
+				{
+					"sku": "ANG-0502-1",
+					"sizeCode": "Стандарт",
+					"material": "pine",
+					"basePriceMinor": 1800000
+				}
+			]
+		},
+		{
+			"sku": "ANG-0503",
+			"title": "Славянский с узором белый",
+			"category": "pattern",
+			"sortOrder": 30,
+			"variants": [
+				{
+					"sku": "ANG-0503-1",
+					"sizeCode": "Стандарт",
+					"material": "pine",
+					"basePriceMinor": 1850000
+				}
+			]
+		},
+		{
+			"sku": "ANG-0504",
+			"title": "Шестигранный с узором белый",
+			"category": "pattern",
+			"sortOrder": 40,
+			"variants": [
+				{
+					"sku": "ANG-0504-1",
+					"sizeCode": "Стандарт",
+					"material": "pine",
+					"basePriceMinor": 1850000
+				}
+			]
+		},
+		{
+			"sku": "ANG-0505",
+			"title": "Славянский с узором Евро",
+			"category": "pattern",
+			"sortOrder": 50,
+			"variants": [
+				{
+					"sku": "ANG-0505-1",
+					"sizeCode": "Стандарт",
+					"material": "pine",
+					"basePriceMinor": 1900000
+				}
+			]
+		},
+		{
+			"sku": "ANG-0506",
+			"title": "Шестигранный с узором Евро",
+			"category": "pattern",
+			"sortOrder": 60,
+			"variants": [
+				{
+					"sku": "ANG-0506-1",
+					"sizeCode": "Стандарт",
+					"material": "pine",
+					"basePriceMinor": 1900000
+				}
+			]
+		},
+		{
+			"sku": "ANG-0507",
+			"title": "Славянский с тиснением",
+			"category": "pattern",
+			"sortOrder": 70,
+			"variants": [
+				{
+					"sku": "ANG-0507-1",
+					"sizeCode": "Стандарт",
+					"material": "pine",
+					"basePriceMinor": 1900000
+				}
+			]
+		},
+		{
+			"sku": "ANG-0508",
+			"title": "Шестигранный с тиснением",
+			"category": "pattern",
+			"sortOrder": 80,
+			"variants": [
+				{
+					"sku": "ANG-0508-1",
+					"sizeCode": "Стандарт",
+					"material": "pine",
+					"basePriceMinor": 1900000
+				}
+			]
+		},
+		{
+			"sku": "ANG-0509",
+			"title": "Славянский с тиснением белый",
+			"category": "pattern",
+			"sortOrder": 90,
+			"variants": [
+				{
+					"sku": "ANG-0509-1",
+					"sizeCode": "Стандарт",
+					"material": "pine",
+					"basePriceMinor": 1950000
+				}
+			]
+		},
+		{
+			"sku": "ANG-0510",
+			"title": "Шестигранный с тиснением белый",
+			"category": "pattern",
+			"sortOrder": 100,
+			"variants": [
+				{
+					"sku": "ANG-0510-1",
+					"sizeCode": "Стандарт",
+					"material": "pine",
+					"basePriceMinor": 1950000
+				}
+			]
+		},
+		{
+			"sku": "ANG-0511",
+			"title": "Славянский с тиснением Евро",
+			"category": "pattern",
+			"sortOrder": 110,
+			"variants": [
+				{
+					"sku": "ANG-0511-1",
+					"sizeCode": "Стандарт",
+					"material": "pine",
+					"basePriceMinor": 2000000
+				}
+			]
+		},
+		{
+			"sku": "ANG-0512",
+			"title": "Шестигранный с тиснением Евро",
+			"category": "pattern",
+			"sortOrder": 120,
+			"variants": [
+				{
+					"sku": "ANG-0512-1",
+					"sizeCode": "Стандарт",
+					"material": "pine",
+					"basePriceMinor": 2000000
+				}
+			]
+		},
+		{
+			"sku": "ANG-0513",
+			"title": "Славянский с багетом",
+			"category": "pattern",
+			"sortOrder": 130,
+			"variants": [
+				{
+					"sku": "ANG-0513-1",
+					"sizeCode": "Стандарт",
+					"material": "pine",
+					"basePriceMinor": 1950000
+				}
+			]
+		},
+		{
+			"sku": "ANG-0514",
+			"title": "Шестигранный с багетом",
+			"category": "pattern",
+			"sortOrder": 140,
+			"variants": [
+				{
+					"sku": "ANG-0514-1",
+					"sizeCode": "Стандарт",
+					"material": "pine",
+					"basePriceMinor": 1950000
+				}
+			]
+		},
+		{
+			"sku": "ANG-0515",
+			"title": "Славянский с багетом белый",
+			"category": "pattern",
+			"sortOrder": 150,
+			"variants": [
+				{
+					"sku": "ANG-0515-1",
+					"sizeCode": "Стандарт",
+					"material": "pine",
+					"basePriceMinor": 2000000
+				}
+			]
+		},
+		{
+			"sku": "ANG-0516",
+			"title": "Шестигранный с багетом белый",
+			"category": "pattern",
+			"sortOrder": 160,
+			"variants": [
+				{
+					"sku": "ANG-0516-1",
+					"sizeCode": "Стандарт",
+					"material": "pine",
+					"basePriceMinor": 2000000
+				}
+			]
+		},
+		{
+			"sku": "ANG-0517",
+			"title": "Славянский с багетом Евро",
+			"category": "pattern",
+			"sortOrder": 170,
+			"variants": [
+				{
+					"sku": "ANG-0517-1",
+					"sizeCode": "Стандарт",
+					"material": "pine",
+					"basePriceMinor": 2050000
+				}
+			]
+		},
+		{
+			"sku": "ANG-0518",
+			"title": "Шестигранный с багетом Евро",
+			"category": "pattern",
+			"sortOrder": 180,
+			"variants": [
+				{
+					"sku": "ANG-0518-1",
+					"sizeCode": "Стандарт",
+					"material": "pine",
+					"basePriceMinor": 2050000
+				}
+			]
+		},
+		{
+			"sku": "ANG-0519",
+			"title": "Канадец шестигранный",
+			"category": "pattern",
+			"sortOrder": 190,
+			"variants": [
+				{
+					"sku": "ANG-0519-1",
+					"sizeCode": "Стандарт",
+					"material": "pine",
+					"basePriceMinor": 2000000
+				}
+			]
+		},
+		{
+			"sku": "ANG-0520",
+			"title": "Канадец шестигранный Евро",
+			"category": "pattern",
+			"sortOrder": 200,
+			"variants": [
+				{
+					"sku": "ANG-0520-1",
+					"sizeCode": "Стандарт",
+					"material": "pine",
+					"basePriceMinor": 2100000
+				}
+			]
+		},
+		{
+			"sku": "ANG-0601",
+			"title": "Лофт шестигранный матовый орех",
+			"category": "solid",
+			"sortOrder": 10,
+			"variants": [
+				{
+					"sku": "ANG-0601-1",
+					"sizeCode": "Стандарт",
+					"material": "pine",
+					"basePriceMinor": 2300000
+				}
+			]
+		},
+		{
+			"sku": "ANG-0602",
+			"title": "Лофт шестигранный глянцевый Евро",
+			"category": "solid",
+			"sortOrder": 20,
+			"variants": [
+				{
+					"sku": "ANG-0602-1",
+					"sizeCode": "Стандарт",
+					"material": "pine",
+					"basePriceMinor": 2400000
+				}
+			]
+		},
+		{
+			"sku": "ANG-0603",
+			"title": "Лофт славянский матовый Евро",
+			"category": "solid",
+			"sortOrder": 30,
+			"variants": [
+				{
+					"sku": "ANG-0603-1",
+					"sizeCode": "Стандарт",
+					"material": "pine",
+					"basePriceMinor": 2300000
+				}
+			]
+		},
+		{
+			"sku": "ANG-0604",
+			"title": "Лофт славянский глянцевый орех",
+			"category": "solid",
+			"sortOrder": 40,
+			"variants": [
+				{
+					"sku": "ANG-0604-1",
+					"sizeCode": "Стандарт",
+					"material": "pine",
+					"basePriceMinor": 2400000
+				}
+			]
+		},
+		{
+			"sku": "ANG-0701",
+			"title": "Американец с узором",
+			"category": "double_lid",
+			"sortOrder": 10,
+			"variants": [
+				{
+					"sku": "ANG-0701-1",
+					"sizeCode": "на 65",
+					"material": "pine",
+					"basePriceMinor": 3700000
+				}
+			]
+		},
+		{
+			"sku": "ANG-0702",
+			"title": "Американец с узором Евро",
+			"category": "double_lid",
+			"sortOrder": 20,
+			"variants": [
+				{
+					"sku": "ANG-0702-1",
+					"sizeCode": "на 65",
+					"material": "pine",
+					"basePriceMinor": 3900000
+				}
+			]
+		},
+		{
+			"sku": "ANG-0801",
+			"title": "Христианский шестигранный",
+			"category": "exclusive",
+			"sortOrder": 10,
+			"variants": [
+				{
+					"sku": "ANG-0801-1",
+					"sizeCode": "Стандарт",
+					"material": "pine",
+					"basePriceMinor": 2100000
+				}
+			],
+			"description": "Новинка."
+		},
+		{
+			"sku": "ANG-0802",
+			"title": "Христианский славянский",
+			"category": "exclusive",
+			"sortOrder": 20,
+			"variants": [
+				{
+					"sku": "ANG-0802-1",
+					"sizeCode": "Стандарт",
+					"material": "pine",
+					"basePriceMinor": 2100000
+				}
+			],
+			"description": "Новинка."
+		},
+		{
+			"sku": "ANG-0803",
+			"title": "Стандарт шестигранный «Ангел»",
+			"category": "exclusive",
+			"sortOrder": 30,
+			"variants": [
+				{
+					"sku": "ANG-0803-1",
+					"sizeCode": "Стандарт",
+					"material": "pine",
+					"basePriceMinor": 1650000
+				}
+			],
+			"description": "Новинка."
+		},
+		{
+			"sku": "ANG-0804",
+			"title": "Стандарт славянский «Ангел»",
+			"category": "exclusive",
+			"sortOrder": 40,
+			"variants": [
+				{
+					"sku": "ANG-0804-1",
+					"sizeCode": "Стандарт",
+					"material": "pine",
+					"basePriceMinor": 1650000
+				}
+			],
+			"description": "Новинка."
+		},
+		{
+			"sku": "ANG-0805",
+			"title": "Стандарт шестигранный узорный",
+			"category": "exclusive",
+			"sortOrder": 50,
+			"variants": [
+				{
+					"sku": "ANG-0805-1",
+					"sizeCode": "Стандарт",
+					"material": "pine",
+					"basePriceMinor": 1600000
+				}
+			],
+			"description": "Новинка."
+		},
+		{
+			"sku": "ANG-0806",
+			"title": "Стандарт славянский узорный",
+			"category": "exclusive",
+			"sortOrder": 60,
+			"variants": [
+				{
+					"sku": "ANG-0806-1",
+					"sizeCode": "Стандарт",
+					"material": "pine",
+					"basePriceMinor": 1600000
+				}
+			],
+			"description": "Новинка."
+		},
+		{
+			"sku": "ANG-0807",
+			"title": "Стандарт шестигранный «Роза»",
+			"category": "exclusive",
+			"sortOrder": 70,
+			"variants": [
+				{
+					"sku": "ANG-0807-1",
+					"sizeCode": "Стандарт",
+					"material": "pine",
+					"basePriceMinor": 1650000
+				}
+			],
+			"description": "Новинка."
+		},
+		{
+			"sku": "ANG-0808",
+			"title": "Стандарт славянский «Роза»",
+			"category": "exclusive",
+			"sortOrder": 80,
+			"variants": [
+				{
+					"sku": "ANG-0808-1",
+					"sizeCode": "Стандарт",
+					"material": "pine",
+					"basePriceMinor": 1650000
+				}
+			],
+			"description": "Новинка."
+		},
+		{
+			"sku": "ANG-0809",
+			"title": "Шестигранный «Большая роза»",
+			"category": "exclusive",
+			"sortOrder": 90,
+			"variants": [
+				{
+					"sku": "ANG-0809-1",
+					"sizeCode": "Стандарт",
+					"material": "pine",
+					"basePriceMinor": 1950000
+				}
+			],
+			"description": "Новинка."
+		},
+		{
+			"sku": "ANG-0810",
+			"title": "Славянский «Большая роза»",
+			"category": "exclusive",
+			"sortOrder": 100,
+			"variants": [
+				{
+					"sku": "ANG-0810-1",
+					"sizeCode": "Стандарт",
+					"material": "pine",
+					"basePriceMinor": 1950000
+				}
+			],
+			"description": "Новинка."
+		},
+		{
+			"sku": "ANG-0811",
+			"title": "Христианский шестигранный белый",
+			"category": "exclusive",
+			"sortOrder": 110,
+			"variants": [
+				{
+					"sku": "ANG-0811-1",
+					"sizeCode": "Стандарт",
+					"material": "pine",
+					"basePriceMinor": 2150000
+				}
+			],
+			"description": "Новинка."
+		},
+		{
+			"sku": "ANG-0812",
+			"title": "Христианский славянский белый",
+			"category": "exclusive",
+			"sortOrder": 120,
+			"variants": [
+				{
+					"sku": "ANG-0812-1",
+					"sizeCode": "Стандарт",
+					"material": "pine",
+					"basePriceMinor": 2150000
+				}
+			],
+			"description": "Новинка."
+		},
+		{
+			"sku": "ANG-0813",
+			"title": "Стандарт шестигранный «Ангел» белый",
+			"category": "exclusive",
+			"sortOrder": 130,
+			"variants": [
+				{
+					"sku": "ANG-0813-1",
+					"sizeCode": "Стандарт",
+					"material": "pine",
+					"basePriceMinor": 1700000
+				}
+			],
+			"description": "Новинка."
+		},
+		{
+			"sku": "ANG-0814",
+			"title": "Стандарт славянский «Ангел» белый",
+			"category": "exclusive",
+			"sortOrder": 140,
+			"variants": [
+				{
+					"sku": "ANG-0814-1",
+					"sizeCode": "Стандарт",
+					"material": "pine",
+					"basePriceMinor": 1700000
+				}
+			],
+			"description": "Новинка."
+		},
+		{
+			"sku": "ANG-0815",
+			"title": "Стандарт шестигранный узорный белый",
+			"category": "exclusive",
+			"sortOrder": 150,
+			"variants": [
+				{
+					"sku": "ANG-0815-1",
+					"sizeCode": "Стандарт",
+					"material": "pine",
+					"basePriceMinor": 1650000
+				}
+			],
+			"description": "Новинка."
+		},
+		{
+			"sku": "ANG-0816",
+			"title": "Стандарт славянский узорный белый",
+			"category": "exclusive",
+			"sortOrder": 160,
+			"variants": [
+				{
+					"sku": "ANG-0816-1",
+					"sizeCode": "Стандарт",
+					"material": "pine",
+					"basePriceMinor": 1650000
+				}
+			],
+			"description": "Новинка."
+		},
+		{
+			"sku": "ANG-0817",
+			"title": "Стандарт шестигранный «Роза» белый",
+			"category": "exclusive",
+			"sortOrder": 170,
+			"variants": [
+				{
+					"sku": "ANG-0817-1",
+					"sizeCode": "Стандарт",
+					"material": "pine",
+					"basePriceMinor": 1700000
+				}
+			],
+			"description": "Новинка."
+		},
+		{
+			"sku": "ANG-0818",
+			"title": "Стандарт славянский «Роза» белый",
+			"category": "exclusive",
+			"sortOrder": 180,
+			"variants": [
+				{
+					"sku": "ANG-0818-1",
+					"sizeCode": "Стандарт",
+					"material": "pine",
+					"basePriceMinor": 1700000
+				}
+			],
+			"description": "Новинка."
+		},
+		{
+			"sku": "ANG-0819",
+			"title": "Шестигранный «Большая роза» белый",
+			"category": "exclusive",
+			"sortOrder": 190,
+			"variants": [
+				{
+					"sku": "ANG-0819-1",
+					"sizeCode": "Стандарт",
+					"material": "pine",
+					"basePriceMinor": 2000000
+				}
+			],
+			"description": "Новинка."
+		},
+		{
+			"sku": "ANG-0820",
+			"title": "Славянский «Большая роза» белый",
+			"category": "exclusive",
+			"sortOrder": 200,
+			"variants": [
+				{
+					"sku": "ANG-0820-1",
+					"sizeCode": "Стандарт",
+					"material": "pine",
+					"basePriceMinor": 2000000
+				}
+			],
+			"description": "Новинка."
+		},
+		{
+			"sku": "ANG-0901",
+			"title": "Фигура объёмная «Иисус»",
+			"category": "figures",
+			"sortOrder": 10,
+			"variants": [
+				{
+					"sku": "ANG-0901-1",
+					"sizeCode": "500×300 мм",
+					"material": "stone",
+					"basePriceMinor": 500000,
+					"lengthMm": 500,
+					"widthMm": 300
+				}
+			],
+			"description": "Искусственный камень."
+		},
+		{
+			"sku": "ANG-0902",
+			"title": "Фигура объёмная «Роза двойная»",
+			"category": "figures",
+			"sortOrder": 20,
+			"variants": [
+				{
+					"sku": "ANG-0902-1",
+					"sizeCode": "430×180 мм",
+					"material": "stone",
+					"basePriceMinor": 400000,
+					"lengthMm": 430,
+					"widthMm": 180
+				}
+			],
+			"description": "Искусственный камень."
+		},
+		{
+			"sku": "ANG-0903",
+			"title": "Фигура объёмная «Роза одинарная»",
+			"category": "figures",
+			"sortOrder": 30,
+			"variants": [
+				{
+					"sku": "ANG-0903-1",
+					"sizeCode": "400×110 мм",
+					"material": "stone",
+					"basePriceMinor": 350000,
+					"lengthMm": 400,
+					"widthMm": 110
+				}
+			],
+			"description": "Искусственный камень."
+		},
+		{
+			"sku": "ANG-0904",
+			"title": "Фигура объёмная «Роза ветка»",
+			"category": "figures",
+			"sortOrder": 40,
+			"variants": [
+				{
+					"sku": "ANG-0904-1",
+					"sizeCode": "470×130 мм",
+					"material": "stone",
+					"basePriceMinor": 380000,
+					"lengthMm": 470,
+					"widthMm": 130
+				}
+			],
+			"description": "Искусственный камень."
+		},
+		{
+			"sku": "ANG-1001",
+			"title": "Крестик польский",
+			"category": "lid_cross",
+			"sortOrder": 10,
+			"variants": [
+				{
+					"sku": "ANG-1001-1",
+					"sizeCode": "Стандарт",
+					"material": "plastic",
+					"basePriceMinor": 50000
+				}
+			],
+			"description": "Пластиковый крест на крышку гроба, цвет золото."
+		},
+		{
+			"sku": "ANG-1101",
+			"title": "Крест № 1",
+			"category": "grave_cross",
+			"sortOrder": 10,
+			"variants": [
+				{
+					"sku": "ANG-1101-1",
+					"sizeCode": "Стандарт",
+					"material": "pine",
+					"basePriceMinor": 300000
+				}
+			]
+		},
+		{
+			"sku": "ANG-1102",
+			"title": "Крест № 2",
+			"category": "grave_cross",
+			"sortOrder": 20,
+			"variants": [
+				{
+					"sku": "ANG-1102-1",
+					"sizeCode": "Стандарт",
+					"material": "pine",
+					"basePriceMinor": 330000
+				}
+			]
+		},
+		{
+			"sku": "ANG-1103",
+			"title": "Крест № 3",
+			"category": "grave_cross",
+			"sortOrder": 30,
+			"variants": [
+				{
+					"sku": "ANG-1103-1",
+					"sizeCode": "Стандарт",
+					"material": "pine",
+					"basePriceMinor": 370000
+				}
+			]
+		},
+		{
+			"sku": "ANG-1104",
+			"title": "Крест № 4",
+			"category": "grave_cross",
+			"sortOrder": 40,
+			"variants": [
+				{
+					"sku": "ANG-1104-1",
+					"sizeCode": "Стандарт",
+					"material": "pine",
+					"basePriceMinor": 370000
+				}
+			]
+		},
+		{
+			"sku": "ANG-1105",
+			"title": "Крест № 5",
+			"category": "grave_cross",
+			"sortOrder": 50,
+			"variants": [
+				{
+					"sku": "ANG-1105-1",
+					"sizeCode": "Стандарт",
+					"material": "pine",
+					"basePriceMinor": 380000
+				}
+			]
+		},
+		{
+			"sku": "ANG-1106",
+			"title": "Крест № 6",
+			"category": "grave_cross",
+			"sortOrder": 60,
+			"variants": [
+				{
+					"sku": "ANG-1106-1",
+					"sizeCode": "Стандарт",
+					"material": "pine",
+					"basePriceMinor": 420000
+				}
+			]
+		}
+	]
+}

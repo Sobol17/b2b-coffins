@@ -114,6 +114,16 @@ docker compose cp prices.xlsx app:/app/data/prices.xlsx
 docker compose exec app pnpm admin price:import --file /app/data/prices.xlsx --price-list ...
 ```
 
+### Каталог из прайса мастерской
+
+`scripts/fixtures/catalog-angel.json` хранит прайс от 01.06.2026: 78 моделей в 11 разделах, по одному варианту на модель. Строки вида «Славянский / Шестигранный» заведены двумя моделями с одной ценой. Файл лежит в образе, копировать его не нужно:
+
+```bash
+docker compose exec app pnpm admin catalog:import --file scripts/fixtures/catalog-angel.json --hide-others
+```
+
+`--hide-others` снимает с портала модели, которых нет в файле, например демо-модели сида. Заявки на них остаются. Повторный запуск обновляет названия и цены и ничего не дублирует. Себестоимость, которую заполнили в CRM, и модели, скрытые в CRM, импорт не трогает. Материал корпуса у гробов и крестов записан как «Сосна»: поправьте его в карточке варианта, где он другой.
+
 ## Логи
 
 ```bash

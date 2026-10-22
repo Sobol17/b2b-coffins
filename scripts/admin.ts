@@ -1,4 +1,5 @@
 import { database } from '../src/lib/server/db/client';
+import { catalogImport } from './admin/catalog';
 import { counterpartyCreate } from './admin/counterparty';
 import { payrollBackfillCrews } from './admin/payroll';
 import { priceImport } from './admin/price';
@@ -11,6 +12,7 @@ const USAGE = `pnpm admin <command> [options]
   counterparty:create  --name --price-list --admin-email --admin-name --admin-password
                        [--discount] [--scheme] [--inn] [--address] [--phone] [--email]
   price:import         --file <xlsx|csv> --price-list
+  catalog:import       --file <json> [--hide-others]
   request:transition   --request <number> --to <status> --actor <email> [--reason] [--comment]
   payroll:backfill-crews
 `;
@@ -27,6 +29,8 @@ async function main(): Promise<void> {
 			return counterpartyCreate(db, argv);
 		case 'price:import':
 			return priceImport(db, argv);
+		case 'catalog:import':
+			return catalogImport(db, argv);
 		case 'request:transition':
 			return requestTransition(db, argv);
 		case 'payroll:backfill-crews':
