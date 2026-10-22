@@ -88,6 +88,7 @@ describe('organisation settings of the CRM', () => {
 			name: 'ООО «Мастерская»',
 			inn: '7701234567',
 			kpp: '',
+			ogrn: '',
 			address: ' г. Тверь ',
 			phone: '+7 900 000-00-01',
 			email: '',
@@ -103,16 +104,24 @@ describe('organisation settings of the CRM', () => {
 			address: 'г. Тверь',
 			phone: '+7 900 000-00-01'
 		});
-		expect(OrgService.publicContacts()).toEqual({ phone: '+7 900 000-00-01', address: 'г. Тверь' });
+		expect(OrgService.publicContacts()).toEqual({
+			phone: '+7 900 000-00-01',
+			address: 'г. Тверь',
+			operator: { name: 'ООО «Мастерская»', inn: '7701234567', ogrn: null, email: null }
+		});
 	});
 
-	it('checks the digits of INN, KPP, BIK and account', () => {
+	it('checks the digits of INN, KPP, OGRN, BIK and account', () => {
 		const base = { name: 'ООО', kpp: '', address: '', phone: '', email: '', bank: '', bik: '' };
 		const parse = (patch: Record<string, string>) =>
 			requisitesFormSchema.safeParse({ ...base, inn: '', account: '', ...patch }).success;
 		expect(parse({ inn: '123' })).toBe(false);
 		expect(parse({ inn: '123456789012' })).toBe(true);
 		expect(parse({ kpp: '12345678' })).toBe(false);
+		// ОГРНИП of the workshop owner: 15 digits; a company ОГРН has 13.
+		expect(parse({ ogrn: '324385000072479' })).toBe(true);
+		expect(parse({ ogrn: '1027700132195' })).toBe(true);
+		expect(parse({ ogrn: '32438500007247' })).toBe(false);
 		expect(parse({ account: '4070281000000000000' })).toBe(false);
 		expect(parse({ name: '' })).toBe(false);
 	});

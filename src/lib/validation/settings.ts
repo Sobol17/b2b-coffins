@@ -12,6 +12,8 @@ export const orgRequisitesSchema = z.object({
 	name: z.string().min(1),
 	inn: digits([10, 12], 'ИНН: 10 или 12 цифр').optional(),
 	kpp: digits(9, 'КПП: 9 цифр').optional(),
+	// An individual entrepreneur has an ОГРНИП of 15 digits, a company an ОГРН of 13 (v1.56).
+	ogrn: digits([13, 15], 'ОГРН: 13 цифр, ОГРНИП: 15 цифр').optional(),
 	address: z.string().min(1).optional(),
 	phone: z.string().min(1).optional(),
 	email: z.email({ error: 'Введите адрес электронной почты' }).optional(),

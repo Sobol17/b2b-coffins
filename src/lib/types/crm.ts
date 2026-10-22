@@ -78,6 +78,7 @@ export interface OrgRequisitesDto {
 	readonly name: string;
 	readonly inn?: string;
 	readonly kpp?: string;
+	readonly ogrn?: string;
 	readonly address?: string;
 	readonly phone?: string;
 	readonly email?: string;

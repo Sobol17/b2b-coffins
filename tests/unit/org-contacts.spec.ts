@@ -10,13 +10,18 @@ beforeEach(() => {
 });
 
 describe('public contacts of the landing page', () => {
-	it('exposes the phone and the address and nothing else from the requisites', () => {
+	it('exposes the contacts and the operator, never the bank details or the KPP', () => {
 		db.insert(settings)
 			.values({
 				key: 'org.requisites',
 				value: {
 					name: 'ООО «Столярная мастерская»',
 					inn: '7701234567',
+					kpp: '770101001',
+					ogrn: '1027700132195',
+					email: 'office@workshop.example',
+					bank: 'ПАО Банк',
+					bik: '044525000',
 					account: '40702810000000000001',
 					phone: '+7 495 000-00-00',
 					address: 'г. Москва, ул. Промышленная, д. 4'
@@ -28,18 +33,27 @@ describe('public contacts of the landing page', () => {
 
 		expect(contacts).toEqual({
 			phone: '+7 495 000-00-00',
-			address: 'г. Москва, ул. Промышленная, д. 4'
+			address: 'г. Москва, ул. Промышленная, д. 4',
+			operator: {
+				name: 'ООО «Столярная мастерская»',
+				inn: '7701234567',
+				ogrn: '1027700132195',
+				email: 'office@workshop.example'
+			}
 		});
-		expect(JSON.stringify(contacts)).not.toContain('7701234567');
+		const body = JSON.stringify(contacts);
+		for (const secret of ['770101001', '044525000', '40702810000000000001', 'ПАО Банк']) {
+			expect(body).not.toContain(secret);
+		}
 	});
 
 	it('answers with empty contacts when the setting is missing', () => {
-		expect(OrgService.publicContacts()).toEqual({ phone: null, address: null });
+		expect(OrgService.publicContacts()).toEqual({ phone: null, address: null, operator: null });
 	});
 
 	it('answers with empty contacts when the setting is malformed', () => {
 		db.insert(settings).values({ key: 'org.requisites', value: 'not an object' }).run();
 
-		expect(OrgService.publicContacts()).toEqual({ phone: null, address: null });
+		expect(OrgService.publicContacts()).toEqual({ phone: null, address: null, operator: null });
 	});
 });
