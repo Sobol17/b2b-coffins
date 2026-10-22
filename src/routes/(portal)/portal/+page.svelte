@@ -25,9 +25,7 @@
 		<Card.Root>
 			<Card.Content class="flex flex-col gap-3">
 				<h2 class="text-2xl">Собрать заявку</h2>
-				<p class="text-fg-muted">
-					Подбор моделей по каталогу, размеры, отделка и наличие на складе.
-				</p>
+				<p class="text-fg-muted">Модели по разделам, размер и цвет, ваши цены по договору.</p>
 				<Button href={resolve('/portal/catalog')} class="self-start">Открыть каталог</Button>
 			</Card.Content>
 		</Card.Root>
