@@ -4,6 +4,7 @@ import { NotificationFeedRepository } from '../../notifications/notification-fee
 import { NotificationRuleRepository } from '../../notifications/notification-rule.repository';
 import { NotificationRepository, type Person } from '../../notifications/notification.repository';
 import { PushSubscriptionRepository } from '../../notifications/push-subscription.repository';
+import { SupportFactsRepository } from '../../notifications/support-facts.repository';
 import { SettingsRepository } from '../../settings/settings.repository';
 import { defineHandler } from '../job-handler';
 import { Queue } from '../queue';
@@ -16,7 +17,8 @@ import {
 	workshopRolesTowards,
 	type RoleRule
 } from '$lib/domain/notification/matrix';
-import { REQUEST_EVENT_KEYS, type EventKey } from '$lib/types/events';
+import { supportRecipients } from '$lib/domain/support/recipients';
+import { REQUEST_EVENT_KEYS, SUPPORT_EVENT_KEYS, type EventKey } from '$lib/types/events';
 import { LIVE_CHANNELS } from '$lib/types/notifications';
 import type { RoleCode } from '$lib/types/roles';
 import { notificationsEnabledSchema } from '$lib/validation/settings';
@@ -27,6 +29,7 @@ export interface FanoutDeps {
 	readonly subscriptions: Pick<PushSubscriptionRepository, 'hasLive'>;
 	readonly isEnabled: () => boolean;
 	readonly feed?: NotificationFeedRepository;
+	readonly support?: Pick<SupportFactsRepository, 'occurrence'>;
 }
 
 /** One person and the roles they hold towards this very event. */
@@ -55,6 +58,7 @@ interface Plan {
  */
 export function createNotificationFanoutHandler(deps: FanoutDeps) {
 	const feed = deps.feed ?? new NotificationFeedRepository();
+	const support = deps.support ?? new SupportFactsRepository();
 	return defineHandler({
 		topic: 'notification.fanout',
 		schema: JOB_PAYLOAD_SCHEMAS['notification.fanout'],
@@ -76,6 +80,7 @@ export function createNotificationFanoutHandler(deps: FanoutDeps) {
 	});
 
 	function addresseesOf(event: Occurrence, tx: Tx): Addressee[] {
+		if (SUPPORT_EVENT_KEYS.includes(event.eventKey)) return supportAddressees(event, tx);
 		const workshop = deps.notifications.crmPeople(tx);
 		if (!REQUEST_EVENT_KEYS.includes(event.eventKey)) {
 			// Stock and payroll are the workshop's own business: the portal never hears of them.
@@ -97,6 +102,30 @@ export function createNotificationFanoutHandler(deps: FanoutDeps) {
 				roles: workshopRolesTowards(person.roles, counterpartyId === null)
 			}))
 		];
+	}
+
+	/**
+	 * A support act goes to the other side and to the thread author, never back to its own author
+	 * (v1.57). The matrix then cuts the roles: only workshop heads have rules for these events.
+	 */
+	function supportAddressees(event: Occurrence, tx: Tx): Addressee[] {
+		const act = support.occurrence(event.eventKey, event.entityId, tx);
+		if (!act) return [];
+		const candidates = [
+			...deps.notifications.portalPeople(act.counterpartyId, tx).map((person) => ({
+				person,
+				userId: person.userId,
+				side: 'portal' as const,
+				roles: person.roles
+			})),
+			...deps.notifications.crmPeople(tx).map((person) => ({
+				person,
+				userId: person.userId,
+				side: 'crm' as const,
+				roles: person.roles
+			}))
+		];
+		return supportRecipients(act, candidates).map(({ person, roles }) => ({ person, roles }));
 	}
 
 	function fanOutTo(

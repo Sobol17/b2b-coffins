@@ -30,7 +30,6 @@
 	);
 
 	const failure = $derived(form && 'formError' in form ? form.formError : undefined);
-	const commentError = $derived(form && form.action === undefined ? failure : undefined);
 </script>
 
 <svelte:head><title>Заявка {request.number}</title></svelte:head>
@@ -126,9 +125,9 @@
 			<RequestThread
 				requestId={request.id}
 				comments={request.comments}
+				supportThreads={request.supportThreads}
 				attachments={request.attachments}
 				timeZone={data.timezone}
-				formError={commentError}
 			/>
 		</div>
 

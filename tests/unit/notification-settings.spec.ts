@@ -77,7 +77,9 @@ describe('NotificationSettingsService', () => {
 			'request.delivered',
 			'request.rejected',
 			'request.payment_marked',
-			'request.paid'
+			'request.paid',
+			'support.message_posted',
+			'support.closed'
 		]);
 		expect(prefs.every((p) => p.isDefault)).toBe(true);
 		expect(prefs.filter((p) => p.channel === 'push').every((p) => p.enabled)).toBe(true);
@@ -95,9 +97,12 @@ describe('NotificationSettingsService', () => {
 			'request.accepted',
 			'request.ready',
 			'request.delivered',
-			'request.rejected'
+			'request.rejected',
+			'support.message_posted',
+			'support.closed'
 		]);
-		expect(prefs).toHaveLength(8);
+		// Four request events on push and MAX, the two support events on push only (v1.57).
+		expect(prefs).toHaveLength(10);
 	});
 
 	it('stores the switches, reads them back and writes the audit row', () => {
@@ -143,7 +148,10 @@ describe('NotificationSettingsService', () => {
 			'request.delivered:push',
 			'request.cancelled:push',
 			'request.paid:push',
-			'stock.below_threshold:push'
+			'stock.below_threshold:push',
+			'support.opened:push',
+			'support.message_posted:push',
+			'support.closed:push'
 		]);
 		expect(() => service.save({ enabled: ['request.accepted:push'] })).toThrow(ValidationError);
 		expect(service.save({ enabled: ['request.ready:push'] }).filter((p) => p.enabled)).toHaveLength(

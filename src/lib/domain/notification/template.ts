@@ -1,24 +1,55 @@
-import { EVENT_KEYS, REQUEST_EVENT_KEYS, type EventKey } from '$lib/types/events';
+import { EVENT_KEYS, type EventKey } from '$lib/types/events';
 
 const REQUEST_VARIABLES = ['number', 'status', 'url', 'counterparty', 'externalNumber'] as const;
 const STOCK_VARIABLES = ['item', 'code', 'balance', 'threshold', 'unit', 'url'] as const;
 const PAYROLL_VARIABLES = ['period', 'url'] as const;
+const SUPPORT_VARIABLES = [
+	'thread',
+	'subject',
+	'counterparty',
+	'author',
+	'excerpt',
+	'url'
+] as const;
+// Closing a thread carries no message, so there is nothing to quote.
+const SUPPORT_CLOSED_VARIABLES = SUPPORT_VARIABLES.filter((name) => name !== 'excerpt');
 
 export type TemplateValues = Readonly<Record<string, string>>;
 
-/** One entry per event: every request event shares a set, stock and payroll bring their own. */
-function perEvent<T>(request: T, stock: T, payroll: T): Readonly<Record<EventKey, T>> {
-	const entries = EVENT_KEYS.map((key): [EventKey, T] => {
-		if (REQUEST_EVENT_KEYS.includes(key)) return [key, request];
-		return [key, key === 'stock.below_threshold' ? stock : payroll];
-	});
+type EventGroup = 'request' | 'stock' | 'payroll' | 'support' | 'support_closed';
+
+/** Every event names its group: a new key without one fails the typecheck, not the payroll set. */
+const GROUP_OF: Readonly<Record<EventKey, EventGroup>> = {
+	'request.submitted': 'request',
+	'request.accepted': 'request',
+	'request.ready': 'request',
+	'request.delivered': 'request',
+	'request.cancelled': 'request',
+	'request.rejected': 'request',
+	'request.payment_marked': 'request',
+	'request.paid': 'request',
+	'stock.below_threshold': 'stock',
+	'payroll.week_closed': 'payroll',
+	'support.opened': 'support',
+	'support.message_posted': 'support',
+	'support.closed': 'support_closed'
+};
+
+function perEvent<T>(byGroup: Readonly<Record<EventGroup, T>>): Readonly<Record<EventKey, T>> {
+	const entries = EVENT_KEYS.map((key): [EventKey, T] => [key, byGroup[GROUP_OF[key]]]);
 	return Object.fromEntries(entries) as Record<EventKey, T>;
 }
 
 /** Variables a template of the event may use (tech.md 7.3). No money on any of the lists. */
 export const EVENT_TEMPLATE_VARIABLES: Readonly<Record<EventKey, readonly string[]>> = perEvent<
 	readonly string[]
->(REQUEST_VARIABLES, STOCK_VARIABLES, PAYROLL_VARIABLES);
+>({
+	request: REQUEST_VARIABLES,
+	stock: STOCK_VARIABLES,
+	payroll: PAYROLL_VARIABLES,
+	support: SUPPORT_VARIABLES,
+	support_closed: SUPPORT_CLOSED_VARIABLES
+});
 
 const PLACEHOLDER = /\{\{\s*([A-Za-z]+)\s*\}\}/g;
 
@@ -40,17 +71,26 @@ export function renderTemplate(eventKey: EventKey, text: string, values: Templat
 	return text.replace(PLACEHOLDER, (_, name: string) => values[name] ?? '');
 }
 
+const SUPPORT_SAMPLE = {
+	thread: '17',
+	subject: 'Сроки по заявке 2026-0042',
+	counterparty: 'Ритуал-Сервис',
+	author: 'Илья Коротков',
+	excerpt: 'Подскажите, успеете ли к пятнице?',
+	url: 'https://example.ru/crm/support/17'
+} as const;
+
 /** What the preview and the test push show in place of live data. */
 export const TEMPLATE_SAMPLES: Readonly<Record<EventKey, TemplateValues>> =
-	perEvent<TemplateValues>(
-		{
+	perEvent<TemplateValues>({
+		request: {
 			number: '2026-0042',
 			status: 'Готов к выдаче',
 			url: 'https://example.ru/crm/requests/42',
 			counterparty: 'Ритуал-Сервис',
 			externalNumber: 'РС-118'
 		},
-		{
+		stock: {
 			item: 'Ткань обивочная',
 			code: 'TK-01',
 			balance: '4',
@@ -58,8 +98,16 @@ export const TEMPLATE_SAMPLES: Readonly<Record<EventKey, TemplateValues>> =
 			unit: 'м',
 			url: 'https://example.ru/crm/stock/5'
 		},
-		{
+		payroll: {
 			period: '05.10.2026 по 11.10.2026',
 			url: 'https://example.ru/crm/payroll?week=2026-10-05'
+		},
+		support: SUPPORT_SAMPLE,
+		support_closed: {
+			thread: SUPPORT_SAMPLE.thread,
+			subject: SUPPORT_SAMPLE.subject,
+			counterparty: SUPPORT_SAMPLE.counterparty,
+			author: SUPPORT_SAMPLE.author,
+			url: SUPPORT_SAMPLE.url
 		}
-	);
+	});

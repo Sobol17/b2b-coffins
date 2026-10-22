@@ -63,7 +63,7 @@ export interface CrmBoardDto {
 export const ITEMS_EDIT_MODES = ['free', 'controlled', 'closed'] as const;
 export type ItemsEditMode = (typeof ITEMS_EDIT_MODES)[number];
 
-export interface CrmRequestCardDto extends Omit<RequestCardDto, 'comments'> {
+export interface CrmRequestCardDto extends Omit<RequestCardDto, 'comments' | 'supportThreads'> {
 	readonly counterpartyId: number | null;
 	readonly counterpartyName: string | null;
 	readonly isStockRequest: boolean;

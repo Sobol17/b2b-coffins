@@ -58,5 +58,23 @@
 		"channel": "push",
 		"subject": "Неделя закрыта",
 		"body": "Ведомость за {{period}} готова к выплате"
+	},
+	{
+		"eventKey": "support.opened",
+		"channel": "push",
+		"subject": "Новое обращение №{{thread}}",
+		"body": "{{counterparty}}: {{excerpt}}"
+	},
+	{
+		"eventKey": "support.message_posted",
+		"channel": "push",
+		"subject": "Обращение №{{thread}}: {{subject}}",
+		"body": "{{author}}: {{excerpt}}"
+	},
+	{
+		"eventKey": "support.closed",
+		"channel": "push",
+		"subject": "Обращение №{{thread}} закрыто",
+		"body": "{{subject}}"
 	}
 ]

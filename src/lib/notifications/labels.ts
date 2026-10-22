@@ -1,5 +1,5 @@
 import type { ResolvedPathname } from '$app/types';
-import type { EventKey } from '$lib/types/events';
+import { SUPPORT_EVENT_KEYS, type EventKey } from '$lib/types/events';
 import type {
 	NotificationChannel,
 	NotificationFeedItemDto,
@@ -26,13 +26,18 @@ export const EVENT_LABEL: Readonly<Record<EventKey, EventLabel>> = {
 	'request.payment_marked': { title: 'Оплата получена', hint: 'Мастерская отметила платёж' },
 	'request.paid': { title: 'Заявка оплачена', hint: 'Оплата покрыла всю сумму' },
 	'stock.below_threshold': { title: 'Остаток ниже порога', hint: 'Позиция склада заканчивается' },
-	'payroll.week_closed': { title: 'Неделя закрыта', hint: 'Ведомость готова к выплате' }
+	'payroll.week_closed': { title: 'Неделя закрыта', hint: 'Ведомость готова к выплате' },
+	'support.opened': { title: 'Новое обращение', hint: 'Контрагент задал вопрос' },
+	'support.message_posted': { title: 'Новое сообщение', hint: 'Ответ в обращении' },
+	'support.closed': { title: 'Обращение закрыто', hint: 'Переписка завершена' }
 };
 
-/** What a feed line is about: the request number, the stock item or the payroll week. */
+/** What a feed line is about: the request number, the stock item, the payroll week or the thread. */
 export function feedSubject(item: NotificationFeedItemDto): string {
 	if (item.requestNumber !== null) return item.requestNumber;
 	if (item.entityLabel === null) return '—';
+	if (SUPPORT_EVENT_KEYS.includes(item.eventKey))
+		return `№${item.entityId ?? ''} ${item.entityLabel}`;
 	return item.eventKey === 'payroll.week_closed'
 		? `Неделя с ${item.entityLabel}`
 		: item.entityLabel;

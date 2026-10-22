@@ -1,13 +1,8 @@
 import { requireAction, requireScope } from '$lib/server/auth/guard';
 import { actionFailure, invalidForm, orHttpStatus } from '$lib/server/core/http';
 import { RequestCardService } from '$lib/server/request/request-card.service';
-import { RequestCommentService } from '$lib/server/request/request-comment.service';
 import { RequestTransitionService } from '$lib/server/request/request-transition.service';
-import {
-	requestCommentSchema,
-	requestIdSchema,
-	requestTransitionSchema
-} from '$lib/validation/request';
+import { requestIdSchema, requestTransitionSchema } from '$lib/validation/request';
 import type { ActorContext } from '$lib/types/actor';
 import type { Actions, PageServerLoad } from './$types';
 
@@ -23,21 +18,6 @@ export const load: PageServerLoad = ({ locals, params, url }) => {
 };
 
 export const actions = {
-	comment: async ({ locals, params, request, url }) => {
-		const actor = reader(locals, url);
-		const parsed = requestCommentSchema.safeParse(Object.fromEntries(await request.formData()));
-		if (!parsed.success) return invalidForm(parsed.error);
-		try {
-			const posted = new RequestCommentService(actor).add(
-				requestIdSchema.parse(params.id),
-				parsed.data
-			);
-			return { action: 'comment' as const, posted };
-		} catch (err) {
-			return actionFailure(err);
-		}
-	},
-
 	/** Cancelling is a status move, so it goes through the state machine like every other one. */
 	cancel: async ({ locals, params, request, url }) => {
 		const actor = reader(locals, url);

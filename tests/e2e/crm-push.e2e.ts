@@ -94,7 +94,8 @@ test('C15: a person without a device gets the bell and no push row', async ({ pa
 test('C15: the owner edits a template, previews it and the change is audited', async ({ page }) => {
 	await login(page, 'owner');
 	await page.goto(TEMPLATES);
-	await expect(page.getByTestId('template-card')).toHaveCount(10);
+	// One push template per event, support threads included (v1.57).
+	await expect(page.getByTestId('template-card')).toHaveCount(13);
 	const card = page.getByTestId('template-card').filter({ hasText: 'Заявка готова к выдаче' });
 	const text = card.getByLabel('Текст');
 	const saved = page.getByTestId('toast').filter({ hasText: 'Шаблон сохранён' });

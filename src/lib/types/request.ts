@@ -1,3 +1,4 @@
+import type { SupportThreadListItemDto } from './support';
 import type { Page } from './list';
 import type { RoleCode } from './roles';
 
@@ -216,7 +217,10 @@ export interface RequestCardDto {
 	readonly items: readonly RequestItemDto[];
 	readonly unitCount: number;
 	readonly history: readonly RequestHistoryStepDto[];
+	/** Comments written before v1.57: read only, questions now go to support threads. */
 	readonly comments: readonly RequestCommentDto[];
+	/** Support threads about the request that the reader may open (v1.57). */
+	readonly supportThreads: readonly SupportThreadListItemDto[];
 	readonly attachments: readonly RequestAttachmentDto[];
 	/** Moves this actor may ask for, guards aside (tech.md 6.2). */
 	readonly targets: readonly RequestStatus[];

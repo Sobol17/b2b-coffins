@@ -9,7 +9,8 @@ import {
 	priceLists,
 	products,
 	requests,
-	stockItems
+	stockItems,
+	supportThreads
 } from '../../src/lib/server/db/schema';
 import type { RoleKey } from './fixtures';
 
@@ -44,6 +45,7 @@ const SECTIONS: readonly SectionRights[] = [
 	{ prefix: '/crm/catalog', readers: ADMINS },
 	{ prefix: '/crm/prices', readers: ADMINS },
 	{ prefix: '/crm/counterparties', readers: ADMINS },
+	{ prefix: '/crm/support', readers: ADMINS },
 	{ prefix: '/crm/notifications', readers: CRM_ROLES }
 ];
 
@@ -99,7 +101,8 @@ function parameters(db: Db): Readonly<Record<string, number | null>> {
 		'/crm/stock/inventories/[id]': lastId(db, inventories, inventories.id),
 		'/crm/counterparties/[id]': lastId(db, counterparties, counterparties.id),
 		'/crm/catalog/[id]': lastId(db, products, products.id, isNull(products.deletedAt)),
-		'/crm/prices/[id]': lastId(db, priceLists, priceLists.id)
+		'/crm/prices/[id]': lastId(db, priceLists, priceLists.id),
+		'/crm/support/[id]': lastId(db, supportThreads, supportThreads.id)
 	};
 }
 

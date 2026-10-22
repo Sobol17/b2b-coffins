@@ -122,7 +122,8 @@ test('C12: the owner reads the matrix and cannot change it', async ({ page }) =>
 	await page.goto('/crm/settings/notifications');
 
 	const matrix = page.getByTestId('notification-matrix');
-	await expect(matrix.getByTestId('data-table-row')).toHaveCount(10);
+	// One row per event: ten of the request flow, stock and payroll, three of support threads (v1.57).
+	await expect(matrix.getByTestId('data-table-row')).toHaveCount(13);
 	const lowShelf = matrix.getByTestId('data-table-row').filter({ hasText: 'Остаток ниже порога' });
 	await expect(lowShelf.getByTestId('matrix-cell')).toHaveCount(2);
 	await expect(lowShelf).toContainText('Колокольчик');

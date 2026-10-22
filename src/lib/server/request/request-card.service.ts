@@ -3,6 +3,7 @@ import { CardDtoMapper } from './card.dto';
 import { DraftItemRepository } from './draft-item.repository';
 import { RequestCardRepository } from './request-card.repository';
 import { SentRequestService } from './sent-request.service';
+import { SupportThreadService } from '../support/support-thread.service';
 import { targetsForRole } from '$lib/domain/request/state-machine';
 import type { ActorContext } from '$lib/types/actor';
 import type { RequestCardDto } from '$lib/types/request';
@@ -34,6 +35,7 @@ export class RequestCardService extends SentRequestService {
 			agencyPrices: this.agency.forProducts(lines.map((line) => line.productId)),
 			history: this.cards.history(row.id),
 			comments: this.cards.comments(row.id),
+			supportThreads: new SupportThreadService(this.ctx).forRequest(row.id),
 			attachments: this.cards.attachments(row.id),
 			// Buttons come from the state machine, so a screen cannot offer a move the server refuses.
 			targets: targetsForRole(row.status, this.ctx.roles),

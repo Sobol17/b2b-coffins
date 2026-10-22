@@ -86,6 +86,9 @@ export const AUDIT_ACTION_TITLE: Readonly<Record<string, string>> = {
 	'request.transition': 'Статус заявки изменён',
 	'request.comment': 'Комментарий к заявке',
 	'request.attach': 'Вложение к заявке',
+	'support.open': 'Обращение открыто',
+	'support.post': 'Сообщение в обращении',
+	'support.close': 'Обращение закрыто',
 	'request.create': 'Заявка заведена в мастерской',
 	'request.items_update': 'Состав заявки изменён',
 	// Assignees left in v1.42; the journal still names the entries written before that.
@@ -122,7 +125,8 @@ export const AUDIT_ENTITY_TITLE: Readonly<Record<string, string>> = {
 	counterparties: 'Контрагент',
 	contracts: 'Договор',
 	delivery_addresses: 'Адрес доставки',
-	notification_templates: 'Шаблон уведомления'
+	notification_templates: 'Шаблон уведомления',
+	support_threads: 'Обращение'
 };
 
 export const SCHEME_OPTIONS: readonly (SelectOption & { value: SettlementScheme })[] = [

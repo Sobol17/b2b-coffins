@@ -146,7 +146,7 @@ test('another counterparty reaches none of the requests by a direct link', async
 	const data = await (await page.request.get(`${card}/__data.json`)).text();
 	expect(data).toContain('"status":403');
 	expect(data).not.toContain(number);
-	for (const action of ['comment', 'cancel']) {
+	for (const action of ['cancel']) {
 		// An action call answers 200 with the refusal inside, the way `use:enhance` reads it.
 		const response = await page.request.post(`${card}?/${action}`, {
 			headers: { origin: ORIGIN, accept: 'application/json' },
@@ -157,6 +157,12 @@ test('another counterparty reaches none of the requests by a direct link', async
 		expect(answer.data, action).toContain('Недостаточно прав');
 		expect(answer.data, action).not.toContain('request.read');
 	}
+	// Questions left the card for support threads in v1.57: the comment action is gone for everyone.
+	const gone = await page.request.post(`${card}?/comment`, {
+		headers: { origin: ORIGIN, accept: 'application/json' },
+		form: { body: 'Чужой комментарий' }
+	});
+	expect(((await gone.json()) as { type: string; status?: number }).type).toBe('error');
 	expect(statusOf(db, number)).toBe('new');
 
 	await page.goto('/portal/requests');

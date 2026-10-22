@@ -92,6 +92,32 @@ export function seedNotificationTemplates(db: Db): number {
 	return rows.length;
 }
 
+/**
+ * Inserts the rules and templates of the fixtures that the database lacks and touches nothing
+ * else (tech.md v1.57). The stand never runs the seed, so this is how a new event reaches it
+ * without undoing a switch or a text the owner changed.
+ */
+export function syncNotificationFixtures(db: Db): { rules: number; templates: number } {
+	const rules = loadFixture('notification-rules.json', z.array(notificationRuleFixture));
+	const templates = loadFixture(
+		'notification-templates.json',
+		z.array(notificationTemplateFixture)
+	);
+	let addedRules = 0;
+	for (const row of rules) {
+		addedRules += db.insert(notificationRules).values(row).onConflictDoNothing().run().changes;
+	}
+	let addedTemplates = 0;
+	for (const row of templates) {
+		addedTemplates += db
+			.insert(notificationTemplates)
+			.values(row)
+			.onConflictDoNothing()
+			.run().changes;
+	}
+	return { rules: addedRules, templates: addedTemplates };
+}
+
 export function dictIdByCode(db: Db, dict: DictCode, code: string): number {
 	const [row] = db
 		.select({ id: dictItems.id })

@@ -1,31 +1,30 @@
 <script lang="ts">
-	import { enhance } from '$app/forms';
 	import { invalidateAll } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import { Button, Card, FileUpload, Textarea, toast, withToast } from '$lib/ui';
+	import { supportState } from '$lib/support/labels';
+	import { Button, Card, FileUpload, TONE_CLASS, toast } from '$lib/ui';
 	import { ATTACHMENT_MAX_BYTES, ATTACHMENT_MIMES } from '$lib/domain/request/attachments';
 	import { formatDateTime } from '$lib/utils/format';
 	import type { RequestAttachmentDto, RequestCommentDto } from '$lib/types/request';
+	import type { SupportThreadListItemDto } from '$lib/types/support';
 
 	/*
-	 * The thread with the manager and the files of the request. Both write through the server: the
-	 * comment through a form action, the file through the files endpoint that checks the same right.
+	 * Questions about the request and its files. Questions go to support threads since v1.57; the
+	 * comments written before stay readable. The file goes through the endpoint that checks the right.
 	 */
 	let {
 		requestId,
 		comments,
+		supportThreads,
 		attachments,
-		timeZone,
-		formError
+		timeZone
 	}: {
 		requestId: number;
 		comments: readonly RequestCommentDto[];
+		supportThreads: readonly SupportThreadListItemDto[];
 		attachments: readonly RequestAttachmentDto[];
 		timeZone: string;
-		formError: string | undefined;
 	} = $props();
-
-	let body = $state('');
 
 	function onUploaded(): void {
 		// The row is already stored; the load function re-reads the card and the list picks it up.
@@ -36,44 +35,53 @@
 
 <Card.Root>
 	<Card.Content class="flex flex-col gap-4">
-		<h2 class="text-2xl">Переписка с мастерской</h2>
+		<div class="flex flex-wrap items-center gap-3">
+			<h2 class="text-2xl">Вопросы по заявке</h2>
+			<Button
+				class="sm:ml-auto"
+				variant="secondary"
+				href={resolve(`/portal/support/new?request=${requestId}`)}
+				data-testid="ask-about-request"
+			>
+				Написать по заявке
+			</Button>
+		</div>
 
-		<ul data-testid="comment-thread" class="flex flex-col gap-3">
-			{#each comments as comment (comment.id)}
-				<li class="flex flex-col gap-1 rounded-md bg-surface-muted px-4 py-3">
-					<span class="text-sm text-fg-muted">
-						{comment.isMine ? 'Вы' : comment.authorName} ·
-						<time datetime={comment.createdAt}>{formatDateTime(comment.createdAt, timeZone)}</time>
+		<ul data-testid="request-support-threads" class="flex flex-col gap-2">
+			{#each supportThreads as thread (thread.id)}
+				{@const shown = supportState(thread, 'portal')}
+				<li class="flex flex-wrap items-center gap-x-3 gap-y-1">
+					<a class="underline" href={resolve(`/portal/support/${thread.id}`)}>
+						№{thread.id}
+						{thread.subject}
+					</a>
+					<span class={['inline-flex rounded-pill px-2.5 py-0.5 text-xs', TONE_CLASS[shown.tone]]}>
+						{shown.label}
 					</span>
-					<p>{comment.body}</p>
 				</li>
 			{:else}
-				<li class="text-fg-muted">Сообщений пока нет.</li>
+				<li class="text-fg-muted">Обращений по заявке пока нет.</li>
 			{/each}
 		</ul>
 
-		<form
-			method="POST"
-			action="?/comment"
-			use:enhance={withToast({
-				success: {
-					title: 'Сообщение отправлено',
-					description: 'Администратор мастерской ответит в этой переписке'
-				},
-				onSuccess: () => (body = '')
-			})}
-			class="flex flex-col gap-3"
-		>
-			<Textarea
-				name="body"
-				label="Сообщение мастерской"
-				placeholder="Введите сообщение"
-				bind:value={body}
-				error={formError}
-				rows={3}
-			/>
-			<Button type="submit" data-testid="post-comment" class="self-start">Отправить</Button>
-		</form>
+		{#if comments.length > 0}
+			<div class="flex flex-col gap-3 border-t border-border pt-4">
+				<h3 class="text-xl">Переписка с мастерской</h3>
+				<ul data-testid="comment-thread" class="flex flex-col gap-3">
+					{#each comments as comment (comment.id)}
+						<li class="flex flex-col gap-1 rounded-md bg-surface-muted px-4 py-3">
+							<span class="text-sm text-fg-muted">
+								{comment.isMine ? 'Вы' : comment.authorName} ·
+								<time datetime={comment.createdAt}
+									>{formatDateTime(comment.createdAt, timeZone)}</time
+								>
+							</span>
+							<p>{comment.body}</p>
+						</li>
+					{/each}
+				</ul>
+			</div>
+		{/if}
 
 		<div class="flex flex-col gap-3 border-t border-border pt-4">
 			<h3 class="text-xl">Вложения</h3>

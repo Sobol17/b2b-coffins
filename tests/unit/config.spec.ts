@@ -30,7 +30,7 @@ describe('messages a form may show', () => {
 		const shown = [
 			userMessage(new ForbiddenError('request.read.own')),
 			userMessage(new NotFoundError('delivery address')),
-			userMessage(new RateLimitError('request.comment', 60)),
+			userMessage(new RateLimitError('support.post', 60)),
 			userMessage(new ValidationError())
 		];
 

@@ -1,15 +1,21 @@
-import { REQUEST_EVENT_KEYS, type EventKey } from '$lib/types/events';
+import { REQUEST_EVENT_KEYS, SUPPORT_EVENT_KEYS, type EventKey } from '$lib/types/events';
 
 /** Who reads the event: a portal person, a workshop person with the registry, or one without it. */
 export type Audience = 'portal' | 'crm_registry' | 'crm_floor';
 
-/** Path of the screen an event opens (tech.md 7.3). The server checks the right there again. */
+/**
+ * Path of the screen an event opens (tech.md 7.3). The server checks the right there again. A
+ * support event takes the thread id, also for a message event whose entity is the message.
+ */
 export function eventPath(
 	eventKey: EventKey,
 	entityId: number,
 	audience: Audience,
 	weekStart?: string
 ): string {
+	if (SUPPORT_EVENT_KEYS.includes(eventKey)) {
+		return audience === 'portal' ? `/portal/support/${entityId}` : `/crm/support/${entityId}`;
+	}
 	if (REQUEST_EVENT_KEYS.includes(eventKey)) {
 		if (audience === 'portal') return `/portal/requests/${entityId}`;
 		return audience === 'crm_registry' ? `/crm/requests/${entityId}` : '/crm/delivery';

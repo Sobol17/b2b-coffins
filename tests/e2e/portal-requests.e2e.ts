@@ -70,15 +70,17 @@ test('an attachment is stored on the request and comes back through the files ro
 	expect(download.status()).toBe(200);
 });
 
-test('the counterparty writes to the manager and cancels the request from the card', async ({
+test('the counterparty asks about the request in the chat and cancels it from the card', async ({
 	page
 }) => {
 	const number = await sendRequest(page, 'cp_admin');
 	await openCard(page, number);
 
-	await page.getByLabel('Сообщение мастерской').fill('Нужна отгрузка одной партией');
-	await page.getByTestId('post-comment').click();
-	await expect(page.getByTestId('comment-thread')).toContainText('Нужна отгрузка одной партией');
+	// Questions moved to support threads in v1.57: the card has no comment form any more.
+	await expect(page.getByLabel('Сообщение мастерской')).toHaveCount(0);
+	await page.getByTestId('ask-about-request').click();
+	await expect(page).toHaveURL(/\/portal\/support\/new\?request=\d+$/);
+	await page.goBack();
 
 	await page.getByTestId('cancel-request').click();
 	await expect(page.getByText('Отменена').first()).toBeVisible();

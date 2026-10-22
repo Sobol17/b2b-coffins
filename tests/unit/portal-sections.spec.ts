@@ -25,6 +25,12 @@ describe('header search sections', () => {
 		expect(labels('реквизиты')).toEqual([]);
 	});
 
+	it('finds the support chat by the words people use for it (v1.57)', () => {
+		for (const query of ['чат', 'обращ', 'вопрос', 'поддержка', 'переписка']) {
+			expect(labels(query, { staff: false, prices: false })).toContain('Чат');
+		}
+	});
+
 	it('matches the start of a word, not any fragment inside it', () => {
 		expect(labels('мо')).not.toContain('Главная');
 		expect(labels('мо')).toContain('Мои цены');

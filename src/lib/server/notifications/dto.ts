@@ -35,7 +35,8 @@ export class NotificationDtoMapper {
 
 	/**
 	 * One line of the bell. The event carries no money and no personal data of the deceased. A
-	 * payroll week is labelled by its first day in the organisation timezone.
+	 * payroll week is labelled by its first day in the organisation timezone, a support thread by
+	 * its subject.
 	 */
 	static toFeedItem(row: FeedRow, timeZone: string): NotificationFeedItemDto {
 		const week = row.weekStartsOn ? formatDate(row.weekStartsOn.toISOString(), timeZone) : null;
@@ -44,8 +45,8 @@ export class NotificationDtoMapper {
 			eventKey: row.eventKey,
 			requestId: row.requestId,
 			requestNumber: row.requestNumber,
-			entityId: row.stockItemId ?? row.weekId,
-			entityLabel: row.stockItemTitle ?? week,
+			entityId: row.stockItemId ?? row.weekId ?? row.supportThreadId,
+			entityLabel: row.stockItemTitle ?? week ?? row.supportSubject,
 			isRead: row.readAt !== null,
 			createdAt: row.createdAt.toISOString()
 		};

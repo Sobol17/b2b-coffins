@@ -6,10 +6,12 @@ import type { PushMessage } from './drivers/push';
 import { NotificationRuleRepository } from './notification-rule.repository';
 import { NotificationRepository } from './notification.repository';
 import { PushFactsRepository, type RecipientFacts } from './push-facts.repository';
+import { SupportFactsRepository } from './support-facts.repository';
 import { clip } from '$lib/domain/notification/delivery';
 import { eventPath, type Audience } from '$lib/domain/notification/link';
 import { renderTemplate, type TemplateValues } from '$lib/domain/notification/template';
-import { REQUEST_EVENT_KEYS, type EventKey } from '$lib/types/events';
+import { excerpt } from '$lib/domain/support/excerpt';
+import { REQUEST_EVENT_KEYS, SUPPORT_EVENT_KEYS, type EventKey } from '$lib/types/events';
 import { REQUEST_STATUS_META } from '$lib/ui/status';
 import { formatDate, isoDay } from '$lib/utils/format';
 
@@ -20,6 +22,7 @@ export interface PushMessageDeps {
 	readonly templates: NotificationRuleRepository;
 	readonly requests: NotificationRepository;
 	readonly facts: PushFactsRepository;
+	readonly support: Pick<SupportFactsRepository, 'occurrence'>;
 	readonly timeZone: () => string;
 	readonly origin: string;
 }
@@ -43,6 +46,7 @@ export class PushMessageService {
 			templates: deps.templates ?? new NotificationRuleRepository(),
 			requests: deps.requests ?? new NotificationRepository(),
 			facts: deps.facts ?? new PushFactsRepository(),
+			support: deps.support ?? new SupportFactsRepository(),
 			timeZone: deps.timeZone ?? (() => OrgService.timezone()),
 			origin: deps.origin ?? config.ORIGIN
 		};
@@ -75,6 +79,7 @@ export class PushMessageService {
 	}
 
 	private scene(key: EventKey, id: number, to: RecipientFacts, tx?: Tx): Scene | null {
+		if (SUPPORT_EVENT_KEYS.includes(key)) return this.supportScene(key, id, to, tx);
 		if (REQUEST_EVENT_KEYS.includes(key)) return this.requestScene(key, id, to, tx);
 		return key === 'stock.below_threshold' ? this.stockScene(id, tx) : this.weekScene(id, tx);
 	}
@@ -94,6 +99,22 @@ export class PushMessageService {
 				externalNumber: request.externalNumber ?? ''
 			}
 		};
+	}
+
+	/** The text quotes the person's own words; no request field reaches it (tech.md 12, v1.57). */
+	private supportScene(key: EventKey, id: number, to: RecipientFacts, tx?: Tx): Scene | null {
+		const act = this.deps.support.occurrence(key, id, tx);
+		if (!act) return null;
+		const path = eventPath(key, act.threadId, audienceOf(to));
+		const values: Record<string, string> = {
+			thread: String(act.threadId),
+			subject: act.subject,
+			counterparty: act.counterpartyName,
+			author: act.actorName,
+			url: this.deps.origin + path
+		};
+		if (act.body !== null) values['excerpt'] = excerpt(act.body);
+		return { path, values };
 	}
 
 	private stockScene(id: number, tx?: Tx): Scene | null {

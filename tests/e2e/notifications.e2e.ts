@@ -54,7 +54,8 @@ test('the page offers push and the bot, never mail', async ({ page }) => {
 	await login(page, 'cp_admin');
 	await page.goto(SETTINGS);
 
-	await expect(page.getByTestId('notification-pref')).toHaveCount(12);
+	// Six request events on push and MAX, two support events on push only (v1.57).
+	await expect(page.getByTestId('notification-pref')).toHaveCount(14);
 	await expect(page.getByRole('checkbox', { name: /почта/i })).toHaveCount(0);
 	await expect(page.getByRole('checkbox', { name: 'Заявка готова к выдаче: пуш' })).toBeChecked();
 });
@@ -69,8 +70,9 @@ test('a switched-off event keeps the choice over a reload', async ({ page }) => 
 	await page.getByTestId('save-notifications').click();
 	const toast = page.getByTestId('toast').filter({ hasText: 'Настройки сохранены' });
 	await expect(toast).toBeVisible();
-	// Six events on push plus the same six on MAX, which waits for its driver in C16.
-	await expect(toast.getByTestId('toast-description')).toHaveText('Включено: 5 из 12');
+	// Six events on push plus the same six on MAX, which waits for its driver in C16, plus two
+	// support events on push (v1.57).
+	await expect(toast.getByTestId('toast-description')).toHaveText('Включено: 7 из 14');
 
 	await page.reload();
 	await expect(ready).not.toBeChecked();
@@ -103,7 +105,7 @@ test('turning every channel off warns that the feed still shows the events', asy
 test('the employee cannot switch on an event its role is not offered', async ({ page }) => {
 	await login(page, 'cp_employee');
 	await page.goto(SETTINGS);
-	await expect(page.getByTestId('notification-pref')).toHaveCount(8);
+	await expect(page.getByTestId('notification-pref')).toHaveCount(10);
 	await expect(page.getByRole('checkbox', { name: /оплачена/ })).toHaveCount(0);
 	await expect(
 		page.getByRole('checkbox', { name: 'Заявка готова к выдаче: бот в макс' })

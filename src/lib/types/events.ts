@@ -8,11 +8,20 @@ export const EVENT_KEYS = [
 	'request.payment_marked',
 	'request.paid',
 	'stock.below_threshold',
-	'payroll.week_closed'
+	'payroll.week_closed',
+	// Counterparty questions (tech.md 7.3, v1.57). A message event carries the message id.
+	'support.opened',
+	'support.message_posted',
+	'support.closed'
 ] as const;
 export type EventKey = (typeof EVENT_KEYS)[number];
 
 /** Events whose `entityId` is a request id (tech.md 7.3): the feed links only these to a card. */
 export const REQUEST_EVENT_KEYS = EVENT_KEYS.filter((key) =>
 	key.startsWith('request.')
+) as readonly EventKey[];
+
+/** Events of a support thread: the feed and the push lead them to the thread, not to a request. */
+export const SUPPORT_EVENT_KEYS = EVENT_KEYS.filter((key) =>
+	key.startsWith('support.')
 ) as readonly EventKey[];

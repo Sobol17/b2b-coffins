@@ -1,5 +1,6 @@
 import { resolve } from '$app/paths';
 import type { FeedHref } from '$lib/notifications/labels';
+import { SUPPORT_EVENT_KEYS } from '$lib/types/events';
 
 /**
  * Where a workshop feed line leads (tech.md v1.49). A reader without the registry, the driver,
@@ -13,6 +14,7 @@ export function crmFeedHref(canReadRequests: boolean): FeedHref {
 				: resolve('/crm/delivery');
 		}
 		if (item.entityId === null) return null;
+		if (SUPPORT_EVENT_KEYS.includes(item.eventKey)) return resolve(`/crm/support/${item.entityId}`);
 		return item.eventKey === 'stock.below_threshold'
 			? resolve(`/crm/stock/${item.entityId}`)
 			: resolve('/crm/payroll');
