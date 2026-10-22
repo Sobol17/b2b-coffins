@@ -94,17 +94,6 @@ export const requestTransitionSchema = z.object({
 
 export type RequestTransitionInput = z.infer<typeof requestTransitionSchema>;
 
-/** A message of the portal thread with the manager (P6). Internal notes belong to the CRM. */
-export const requestCommentSchema = z.object({
-	body: z
-		.string({ error: 'Напишите сообщение' })
-		.trim()
-		.min(1, { error: 'Напишите сообщение' })
-		.max(2000, { error: 'Сообщение не длиннее 2000 символов' })
-});
-
-export type RequestCommentInput = z.infer<typeof requestCommentSchema>;
-
 /** Filters of the registry: chips of statuses and a closed window of dates over the sent moment. */
 export const requestFiltersSchema = z.object({
 	statuses: z.array(z.enum(REQUEST_STATUSES)).default([]),

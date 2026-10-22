@@ -1382,7 +1382,7 @@ export interface CrmBoardDto { columns: CrmBoardColumnDto[]; }
 // free: `new`, the whole request is repriced; controlled: `in_work`, frozen prices and a comment; closed: later.
 export const ITEMS_EDIT_MODES = ['free','controlled','closed'] as const;
 export type ItemsEditMode = (typeof ITEMS_EDIT_MODES)[number];
-export interface CrmRequestCardDto extends Omit<RequestCardDto, 'comments'> {
+export interface CrmRequestCardDto extends Omit<RequestCardDto, 'comments' | 'supportThreads'> {
   counterpartyId: number | null; counterpartyName: string | null; isStockRequest: boolean;
   flags: AttentionFlag[]; itemsEdit: ItemsEditMode;
   canMarkPayment: boolean;               // awaiting_payment, a counterparty request, the right request.payment.mark (v1.44)

@@ -165,22 +165,6 @@ export class RequestCardRepository extends BaseRepository<typeof requests> {
 			.all();
 	}
 
-	/** A message of the portal thread: never internal, the CRM owns that flag (tech.md 5.6). */
-	insertComment(entry: { requestId: number; authorId: number; body: string }, tx: Tx): CommentRow {
-		const [created] = this.db(tx)
-			.insert(comments)
-			.values({ ...entry, isInternal: false })
-			.returning({ id: comments.id, createdAt: comments.createdAt })
-			.all();
-		if (!created) throw new Error('failed to insert a request comment');
-		return {
-			...created,
-			authorId: entry.authorId,
-			authorName: this.authorName(entry.authorId, tx),
-			body: entry.body
-		};
-	}
-
 	insertAttachment(
 		file: { requestId: number; path: string; mime: string; sizeBytes: number; uploadedBy: number },
 		tx: Tx

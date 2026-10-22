@@ -10,6 +10,7 @@ import type {
 	RequestItemDto,
 	RequestStatus
 } from '$lib/types/request';
+import type { SupportThreadListItemDto } from '$lib/types/support';
 import { definedProps } from '$lib/utils/props';
 
 export interface CardParts {
@@ -21,24 +22,29 @@ export interface CardParts {
 	readonly agencyPrices: ReadonlyMap<number, number> | undefined;
 	readonly history: readonly HistoryRow[];
 	readonly comments: readonly CommentRow[];
+	readonly supportThreads: readonly SupportThreadListItemDto[];
 	readonly attachments: readonly AttachmentRow[];
 	readonly targets: readonly RequestStatus[];
 	readonly viewerId: number;
 }
 
-export type CoreParts = Omit<CardParts, 'comments' | 'viewerId'>;
+export type CoreParts = Omit<CardParts, 'comments' | 'supportThreads' | 'viewerId'>;
 
 /** Role projection of the request card (tech.md 8.1). */
 export class CardDtoMapper {
 	static toCard(row: CardRow, parts: CardParts): RequestCardDto {
 		return {
 			...CardDtoMapper.toCore(row, parts),
-			comments: parts.comments.map((comment) => CardDtoMapper.toComment(comment, parts.viewerId))
+			comments: parts.comments.map((comment) => CardDtoMapper.toComment(comment, parts.viewerId)),
+			supportThreads: parts.supportThreads
 		};
 	}
 
 	/** The card without the portal thread: the workshop card of C4 is built on it. */
-	static toCore(row: CardRow, parts: CoreParts): Omit<RequestCardDto, 'comments'> {
+	static toCore(
+		row: CardRow,
+		parts: CoreParts
+	): Omit<RequestCardDto, 'comments' | 'supportThreads'> {
 		return {
 			id: row.id,
 			number: row.number,

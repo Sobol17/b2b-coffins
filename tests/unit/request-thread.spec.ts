@@ -1,22 +1,15 @@
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { eq } from 'drizzle-orm';
 import { afterAll, beforeEach, describe, expect, it } from 'vitest';
-import { auditLog, comments } from '../../src/lib/server/db/schema';
+import { comments } from '../../src/lib/server/db/schema';
 import { FileAccessService } from '../../src/lib/server/files/file-access.service';
 import { RequestAttachmentService } from '../../src/lib/server/request/request-attachment.service';
 import { RequestCardService } from '../../src/lib/server/request/request-card.service';
-import { RequestCommentService } from '../../src/lib/server/request/request-comment.service';
 import { insertUser, migratedDatabase } from './helpers/db';
-import {
-	portalActor,
-	resetRequests,
-	seedOrderingWorld,
-	variantId
-} from './helpers/portal-requests';
+import { openThread, resetSupport } from './helpers/support';
+import { portalActor, seedOrderingWorld, variantId } from './helpers/portal-requests';
 import { send } from './helpers/registry';
-import { refused } from './helpers/transitions';
 
 const db = migratedDatabase();
 const world = seedOrderingWorld(db);
@@ -44,20 +37,21 @@ function card(id: number, ctx = adminCtx) {
 }
 
 beforeEach(() => {
-	resetRequests(db);
+	resetSupport(db);
 	db.delete(comments).run();
 });
 
-describe('portal thread with the manager (P6)', () => {
-	it('shows a posted comment on the card and marks it as written by the actor', () => {
+describe('portal thread with the manager after C17 (P6, v1.57)', () => {
+	it('shows an old public comment on the card, read only', () => {
 		const id = send(adminCtx, VOLGA_180);
+		db.insert(comments)
+			.values({ requestId: id, authorId: world.adminId, body: 'Нужна отгрузка одной партией' })
+			.run();
 
-		new RequestCommentService(adminCtx).add(id, { body: 'Нужна отгрузка одной партией' });
-
-		const [posted] = card(id).comments;
-		expect(posted?.body).toBe('Нужна отгрузка одной партией');
-		expect(posted?.isMine).toBe(true);
-		expect(posted?.authorName).toBe('Ольга Смирнова');
+		const [old] = card(id).comments;
+		expect(old?.body).toBe('Нужна отгрузка одной партией');
+		expect(old?.isMine).toBe(true);
+		expect(old?.authorName).toBe('Ольга Смирнова');
 	});
 
 	it('keeps an internal note of the workshop out of the portal', () => {
@@ -74,28 +68,17 @@ describe('portal thread with the manager (P6)', () => {
 		expect(card(id).comments).toEqual([]);
 	});
 
-	it('refuses a comment on a request of another counterparty', () => {
-		const id = send(adminCtx, VOLGA_180);
+	it('lists the support threads of the request inside the fence of the reader', () => {
+		const id = send(employeeCtx, VOLGA_180);
+		openThread(employeeCtx, { requestId: id, subject: 'Сроки' });
+		openThread(adminCtx, { requestId: id, subject: 'Обивка' });
 
-		expect(
-			refused(() => new RequestCommentService(outsiderCtx).add(id, { body: 'Привет' }))
-		).toEqual({ name: 'ForbiddenError', status: 403 });
+		expect(card(id, employeeCtx).supportThreads.map((thread) => thread.subject)).toEqual(['Сроки']);
+		expect(card(id, adminCtx).supportThreads).toHaveLength(2);
 	});
+});
 
-	it('writes the comment to the audit journal', () => {
-		const id = send(adminCtx, VOLGA_180);
-		new RequestCommentService(adminCtx).add(id, { body: 'Уточните срок' });
-
-		const actions = db
-			.select({ action: auditLog.action })
-			.from(auditLog)
-			.where(eq(auditLog.entityId, id))
-			.all()
-			.map((row) => row.action);
-
-		expect(actions).toContain('request.comment');
-	});
-
+describe('attachments of a request (P6)', () => {
 	it('stores an attachment under the name the counterparty uploaded', async () => {
 		const id = send(adminCtx, VOLGA_180);
 
