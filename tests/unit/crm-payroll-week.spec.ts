@@ -56,7 +56,8 @@ function markControlWeek(): void {
 		days().save({
 			date,
 			staffIds,
-			entries: entries.map(([workTypeId, qty]) => ({ workTypeId, qty }))
+			// Everyone who came did every work: the v1.48 sample still holds under crews.
+			entries: entries.map(([workTypeId, qty]) => ({ workTypeId, qty, staffIds }))
 		});
 	mark('2026-10-05', [anna, boris, viktor], [[assembly, 10]]);
 	mark(
@@ -131,14 +132,14 @@ describe('the weekly sheet against the control sample', () => {
 			['Глеб', 2, 45_000, -20_000, 25_000]
 		]);
 		expect(week.totalPayoutMinor).toBe(1_059_800);
-		expect(week.days.map((day) => [day.presentCount, day.totalMinor, day.shareMinor])).toEqual([
-			[3, 200_000, 66_600],
-			[2, 160_000, 80_000],
-			[4, 84_000, 21_000],
-			[1, 24_000, 24_000],
-			[2, 112_000, 56_000],
-			[0, 0, 0],
-			[0, 0, 0]
+		expect(week.days.map((day) => [day.presentCount, day.totalMinor])).toEqual([
+			[3, 200_000],
+			[2, 160_000],
+			[4, 84_000],
+			[1, 24_000],
+			[2, 112_000],
+			[0, 0],
+			[0, 0]
 		]);
 	});
 
@@ -174,7 +175,11 @@ describe('the weekly sheet against the control sample', () => {
 
 	it('lists the idle active crew with zeros and hides a switched-off idle worker', () => {
 		insertStaff('Захар', false);
-		days().save({ date: WEEK, staffIds: [anna], entries: [{ workTypeId: assembly, qty: 1 }] });
+		days().save({
+			date: WEEK,
+			staffIds: [anna],
+			entries: [{ workTypeId: assembly, qty: 1, staffIds: [anna] }]
+		});
 		expect(figures()).toEqual([
 			['Анна', 1, 20_000, 0, 20_000],
 			['Борис', 0, 0, 0, 0],
@@ -263,7 +268,11 @@ describe('closing a week', () => {
 	});
 
 	it('leaves the idle crew off a closed sheet', () => {
-		days().save({ date: WEEK, staffIds: [anna], entries: [{ workTypeId: assembly, qty: 1 }] });
+		days().save({
+			date: WEEK,
+			staffIds: [anna],
+			entries: [{ workTypeId: assembly, qty: 1, staffIds: [anna] }]
+		});
 		adjust(boris, 'plus', 100);
 		adjust(boris, 'plus', 0);
 		closing().close(WEEK);
@@ -298,9 +307,17 @@ describe('closing a week', () => {
 	});
 
 	it('refuses to close while a withholding exceeds what the days now give', () => {
-		days().save({ date: WEEK, staffIds: [anna], entries: [{ workTypeId: assembly, qty: 5 }] });
+		days().save({
+			date: WEEK,
+			staffIds: [anna],
+			entries: [{ workTypeId: assembly, qty: 5, staffIds: [anna] }]
+		});
 		adjust(anna, 'minus', 900);
-		days().save({ date: WEEK, staffIds: [anna], entries: [{ workTypeId: assembly, qty: 1 }] });
+		days().save({
+			date: WEEK,
+			staffIds: [anna],
+			entries: [{ workTypeId: assembly, qty: 1, staffIds: [anna] }]
+		});
 		expect(() => closing().close(WEEK)).toThrow(ValidationError);
 	});
 });
@@ -322,7 +339,7 @@ describe('opening a closed week again', () => {
 		days().save({
 			date: '2026-10-10',
 			staffIds: [gleb],
-			entries: [{ workTypeId: sanding, qty: 1 }]
+			entries: [{ workTypeId: sanding, qty: 1, staffIds: [gleb] }]
 		});
 		expect(figures()[3]).toEqual(['Глеб', 3, 53_000, 0, 53_000]);
 		// A second close of the same week must not trip over the event it already published.
@@ -420,6 +437,30 @@ describe('the report over any dates', () => {
 		expect(whole.worksTotalMinor).toBe(580_000);
 		// Monday keeps 2 roubles of the split: 2000 − 3 × 666.
 		expect(whole.accruedTotalMinor).toBe(579_800);
+	});
+
+	it('pays each worker from their own crews, and the day counts for one in no crew', () => {
+		days().save({
+			date: WEEK,
+			staffIds: [anna, boris, viktor, gleb],
+			entries: [
+				{ workTypeId: assembly, qty: 3, staffIds: [anna, boris] },
+				{ workTypeId: lacquer, qty: 1, staffIds: [viktor] }
+			]
+		});
+		// 600 roubles of assembly between Anna and Boris, 120 of lacquer to Viktor, Gleb only came.
+		expect(report(WEEK, WEEK).staff).toEqual([
+			{ staffId: anna, fullName: 'Анна', daysWorked: 1, accruedMinor: 30_000 },
+			{ staffId: boris, fullName: 'Борис', daysWorked: 1, accruedMinor: 30_000 },
+			{ staffId: viktor, fullName: 'Виктор', daysWorked: 1, accruedMinor: 12_000 },
+			{ staffId: gleb, fullName: 'Глеб', daysWorked: 1, accruedMinor: 0 }
+		]);
+		expect(figures()).toEqual([
+			['Анна', 1, 30_000, 0, 30_000],
+			['Борис', 1, 30_000, 0, 30_000],
+			['Виктор', 1, 12_000, 0, 12_000],
+			['Глеб', 1, 0, 0, 0]
+		]);
 	});
 
 	it('keeps to the dates asked for, both ends included', () => {

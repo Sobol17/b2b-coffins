@@ -4,7 +4,7 @@ import { PayrollCalendar } from './payroll-calendar';
 import { PayrollPeriodRepository, type PeriodRow } from './payroll-period.repository';
 import { PayrollStaffRepository } from './payroll-staff.repository';
 import { WorkDayRepository, type WorkDayWithStaff } from './work-day.repository';
-import { payoutMinor, weekAccruals } from '$lib/domain/payroll/calc';
+import { dayShares, payoutMinor, weekAccruals } from '$lib/domain/payroll/calc';
 import type { PayrollDayCellDto, PayrollLineDto } from '$lib/types/crm-payroll';
 
 export interface WeekSnapshot {
@@ -51,8 +51,7 @@ export class PayrollWeekReader {
 			return {
 				date,
 				presentCount: day?.staffIds.length ?? 0,
-				totalMinor: day?.totalMinor ?? 0,
-				shareMinor: day?.shareMinor ?? 0
+				totalMinor: day?.totalMinor ?? 0
 			};
 		});
 	}
@@ -63,7 +62,9 @@ export class PayrollWeekReader {
 		period: PeriodRow | undefined,
 		tx?: Tx
 	): PayrollLineDto[] {
-		const accruals = new Map(weekAccruals(marked).map((line) => [line.staffId, line]));
+		const accruals = new Map(
+			weekAccruals(marked.map(withShares)).map((line) => [line.staffId, line])
+		);
 		const stored = new Map(
 			(period ? this.periods.lines(period.id, tx) : []).map((line) => [line.staffId, line])
 		);
@@ -93,4 +94,9 @@ export class PayrollWeekReader {
 				};
 			});
 	}
+}
+
+/** A marked day with each worker's pay, counted from its crews as the day sheet counts it. */
+export function withShares(day: WorkDayWithStaff) {
+	return { staffIds: day.staffIds, shares: dayShares(day.staffIds, day.entries) };
 }

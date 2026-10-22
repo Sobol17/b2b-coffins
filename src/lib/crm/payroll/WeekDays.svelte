@@ -24,7 +24,6 @@
 				{:else}
 					<span class="tabular-nums">Работало: {day.presentCount}</span>
 					<span class="tabular-nums">Сумма: {roubles(day.totalMinor)}</span>
-					<span class="tabular-nums">Каждому: {roubles(day.shareMinor)}</span>
 				{/if}
 			</a>
 		</li>

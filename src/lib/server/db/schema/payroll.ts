@@ -32,7 +32,6 @@ export const workDays = sqliteTable(
 		id: pk(),
 		workDate: ts('work_date').notNull(), // start of the calendar day in org.timezone
 		totalMinor: money('total_minor'), // sum of the entries
-		shareMinor: money('share_minor'), // one worker's pay for the day, whole roubles (v1.48)
 		createdById: integer('created_by_id')
 			.notNull()
 			.references(() => users.id),
@@ -69,8 +68,23 @@ export const workEntries = sqliteTable(
 		qty: integer('qty').notNull(),
 		rateMinor: money('rate_minor'), // frozen price at entry time
 		amountMinor: money('amount_minor')
+	}
+	// One work may come in several entries, one per crew (v1.55): no unique index on the work.
+);
+
+/** Who did the entry: its amount is split among them only, each one present that day (v1.55). */
+export const workEntryStaff = sqliteTable(
+	'work_entry_staff',
+	{
+		id: pk(),
+		workEntryId: integer('work_entry_id')
+			.notNull()
+			.references(() => workEntries.id, { onDelete: 'cascade' }),
+		staffId: integer('staff_id')
+			.notNull()
+			.references(() => staff.id)
 	},
-	(t) => [uniqueIndex('work_entries_uq').on(t.workDayId, t.workTypeId)]
+	(t) => [uniqueIndex('work_entry_staff_uq').on(t.workEntryId, t.staffId)]
 );
 
 export const payrollPeriods = sqliteTable(

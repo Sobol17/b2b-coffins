@@ -1,8 +1,8 @@
 # tech.md — ядро проекта
 
 **Проект:** B2B-портал + CRM для столярной мастерской (производство гробов)
-**Версия ядра:** v1.54
-**Дата:** 13.10.2026
+**Версия ядра:** v1.55
+**Дата:** 20.10.2026
 **Статус:** этап 1 (портал, P1–P14) завершён 19.09.2026; в этапе 2 (CRM) влиты C1–C8, C10, C12, C15, C13, слайс C14 открыт (чек-лист в §14), C16 не начат
 **Владелец файла:** Sobol17 (тимлид и единственный разработчик)
 **Источник требований:** `TZ_B2B_CRM_stolyarka_v06.md`
@@ -11,6 +11,7 @@
 
 | Версия | Изменение |
 |---|---|
+| v1.55 | Контракт C10 уточнён по расценкам заказчика от 20.10.2026: работу делят те, кто её сделал, а не все, кто пришёл. Состав дня `work_day_staff` остаётся отметкой присутствия, у каждой записи работы появились исполнители в новой таблице `work_entry_staff`, их выбирают только из отмеченных в этот день. Доля работника за день равна `floor(Σ amount_minor / число исполнителей, до рубля)` по записям, где он исполнитель: рубль отбрасывается один раз от суммы дня, остаток остаётся у мастерской. Пришёл, но ни в одной работе не участвовал: за день 0 ₽, день в счётчик дней всё равно идёт. Уникальность `work_entries_uq` снята: один вид работ в дне можно внести несколькими записями с разными исполнителями. Цена записи по-прежнему замораживается, вид работ, уже внесённый в день, сохраняет замороженную цену во всех своих записях. `work_days.share_minor` убран, доли считаются на лету из записей и исполнителей, как и свод открытой недели. В §8: `WorkEntryDto.staffIds`, `WorkDayDto.shares` вместо `shareMinor`, `PayrollDayCellDto` без `shareMinor`. Форма дня шлёт строки `entry.<n>.work`, `entry.<n>.qty`, `entry.<n>.staff.<id>`; строку без количества сервер пропускает, строку без исполнителей и исполнителя вне состава дня отклоняет. Старые записи получают исполнителями весь состав своего дня командой `pnpm admin payroll:backfill-crews`: повторный запуск ничего не меняет, доли старых дней совпадают с прежними. Закрытые недели не пересчитываются, их `payroll_lines` заморожены. Права, топики и действия аудита не менялись |
 | v1.54 | Имя и знак приложения по решению владельца от 13.10.2026. В манифесте `name` «Ангел: заявки мастерской», `short_name` «Ангел» вместо «Заявки»; `src/app.html` получил `apple-mobile-web-app-title`, `favicon.png` и отдельный `apple-touch-icon` на 180 px. Знак: картинка заказчика (ангел у гроба на чёрном поле) вместо буквы на midnight, все размеры режет `scripts/icons.ts` из `scripts/assets/brand-angel.jpg`. `theme_color` и `background_color` не менялись. В §9 добавлены `BrandMark` (знак рядом с надписью в шапках и боковом меню CRM) и `InstallBanner` (полоса установки над шапкой портала и CRM на каждом экране, крестик запоминается на устройстве); `InstallPrompt` на главной портала, в цехе и доставке остаётся. Уже установленное приложение имя и значок само не меняет: его удаляют с экрана и добавляют заново |
 | v1.53 | Слайс C14 открыт, закрыты три его части: сквозной сценарий семи ролей, аудит безопасности, инструкции по ролям; состояние ведёт чек-лист в §14. Аудит уточнил §12 в четырёх местах. Временный пароль: до смены пароля чтение уходит на `/password/change`, а любая запись (form action и `+server.ts`) получает 403, раньше запись проходила. Адрес после входа: `redirectTo` принимается только как путь этого хоста, `//host` и `/\host` отбрасываются (`lib/utils/local-path.ts`). Мутации через `+server.ts`: заголовок `x-requested-with` и совпадение `origin` проверяет один хелпер `requireOwnCall` из `lib/server/core/http.ts` на всех четырёх эндпоинтах, раньше три из них сверяли только заголовок. Вложения заявки: кроме белого списка MIME сервер сверяет сигнатуру файла, сигнатуры JPEG, PNG, WebP и PDF живут в `lib/domain/files/signature.ts` и общие для вложений и фото каталога. Правило порядка в роуте: право проверяется до разбора формы, чужой роли и гостю ответ валидации не уходит. Оболочка CRM держит один landmark `main`. Инструкции ролей мастерской лежат в `docs/guides/`, инструкция контрагента в `docs/portal-guide.md` приведена к P11 и C15. Схема БД, права ролей, DTO и топики не менялись |
 | v1.52 | Оболочка и раскладка CRM. `ContourShell` в варианте `crm` рисует боковое меню на shadcn `sidebar` вместо плоской шапки: разделы собраны в группы «Работа», «Учёт», «Продажи», «Администрирование», меню сворачивается в иконки и на телефоне открывается шторкой, состояние хранит кука `sidebar_state`. `ShellLink` получил необязательные `group` и `icon`; ссылка без группы уходит в блок пользователя внизу меню рядом с «Выйти». `ContourShell` получил проп `sidebarOpen`. Список разделов и подписи плиток главной живут в `lib/crm/nav.ts`, главная CRM показывает плитки доступных роли разделов. Подменю раздела рисует один `SectionTabs` (отчёты, выплаты, склад, каталог, уведомления), списки вкладок лежат в `lib/crm/sections.ts`. Правило таблиц: `DataTable` остаётся там, где строки сравнивают по колонкам (заявки, склад, движения, ведомость, отчёты, журнал, оплаты); короткий справочник с кнопками в строке рисует `EntityList` из `lib/crm` (пользователи, сотрудники, работы, справочники, инвентаризации, модели каталога, состав заявки). Формы создания каталога, цветов, категорий, прайс-листов и скидок открываются в `Modal` по кнопке. Схема БД, права и DTO не менялись |
@@ -97,7 +98,7 @@
 **Ключевое допущение этапа 1.** Портал зависит от каталога, прайс-листов и учётных записей контрагентов, но CRM-интерфейс для их ведения появляется только на этапе 2. Разрыв закрывается так:
 
 1. сид-скрипт `scripts/seed.ts` наполняет каталог, контрагентов, прайсы и пользователей из фикстур `fixtures/*.json`;
-2. CLI `scripts/admin.ts` (команды `user:create`, `counterparty:create`, `price:import`, `request:transition`) выполняет то же самое на боевом стенде без UI;
+2. CLI `scripts/admin.ts` (команды `user:create`, `counterparty:create`, `price:import`, `request:transition`, `payroll:backfill-crews`) выполняет то же самое на боевом стенде без UI;
    команда `pnpm seed:demo` (`scripts/seed-demo.ts`, v1.23) поверх сида заводит демо-заявки и уведомления для ручной проверки и показа;
 3. переходы статусов, которые на этапе 2 делает менеджер, на этапе 1 выполняет тот же CLI и e2e-хелпер, поэтому портал демонстрируется на полном цикле заявки.
 
@@ -667,7 +668,6 @@ export const workDays = sqliteTable('work_days', {
   id: pk(),
   workDate: ts('work_date').notNull(),                 // start of the calendar day in org.timezone
   totalMinor: money('total_minor'),                    // sum of the entries
-  shareMinor: money('share_minor'),                    // one worker's pay for the day, whole roubles (v1.48)
   createdById: integer('created_by_id').notNull().references(() => users.id),
   createdAt: createdAt(), updatedAt: updatedAt()
 }, (t) => ({ uq: uniqueIndex('work_days_uq').on(t.workDate) }));
@@ -685,7 +685,14 @@ export const workEntries = sqliteTable('work_entries', {
   qty: integer('qty').notNull(),
   rateMinor: money('rate_minor'),                      // frozen price at entry time
   amountMinor: money('amount_minor')
-}, (t) => ({ uq: uniqueIndex('work_entries_uq').on(t.workDayId, t.workTypeId) }));
+});                                                    // one work may come in several entries, one per crew (v1.55)
+
+// Who did the entry: its amount is split among them only, each one is present that day (v1.55).
+export const workEntryStaff = sqliteTable('work_entry_staff', {
+  id: pk(),
+  workEntryId: integer('work_entry_id').notNull().references(() => workEntries.id, { onDelete: 'cascade' }),
+  staffId: integer('staff_id').notNull().references(() => staff.id)
+}, (t) => ({ uq: uniqueIndex('work_entry_staff_uq').on(t.workEntryId, t.staffId) }));
 
 export const payrollPeriods = sqliteTable('payroll_periods', {
   id: pk(),
@@ -1411,11 +1418,11 @@ export type PayrollPeriodStatus = (typeof PAYROLL_PERIOD_STATUSES)[number];
 export const PAYROLL_QTY_MAX = 10_000;                  // units of one work in a day
 export const PAYROLL_RATE_MAX_MINOR = 100_000_000;      // 1 000 000 roubles per unit
 export const PAYROLL_ADJUSTMENT_MAX_MINOR = 100_000_000;
-export const PAYROLL_SHARE_STEP_MINOR = 100;            // a share is whole roubles, rounded down
+export const PAYROLL_SHARE_STEP_MINOR = 100;            // a worker's day pay is whole roubles, rounded down
 export const PAYROLL_REPORT_MAX_DAYS = 366;
 export interface StaffDto { id: number; fullName: string; position: string | null; isActive: boolean; hasAccount: boolean; }
 export interface WorkTypeDto { id: number; title: string; rateMinor: number; isActive: boolean; }
-export interface WorkEntryDto { workTypeId: number; title: string; qty: number; rateMinor: number; amountMinor: number; }
+export interface WorkEntryDto { workTypeId: number; title: string; qty: number; rateMinor: number; amountMinor: number; staffIds: number[]; }
 export interface WorkDayStaffDto { id: number; fullName: string; position: string | null; present: boolean; }
 export interface WorkDayDto {
   date: string;                                        // 'YYYY-MM-DD' in org.timezone
@@ -1426,9 +1433,10 @@ export interface WorkDayDto {
   staff: WorkDayStaffDto[];                            // active staff plus whoever is already on the day
   workTypes: WorkTypeDto[];                            // active ones plus those already on the day
   entries: WorkEntryDto[];
-  presentCount: number; totalMinor: number; shareMinor: number;
+  presentCount: number; totalMinor: number;
+  shares: { staffId: number; shareMinor: number }[];   // one per present worker, 0 for one in no crew (v1.55)
 }
-export interface PayrollDayCellDto { date: string; presentCount: number; totalMinor: number; shareMinor: number; }
+export interface PayrollDayCellDto { date: string; presentCount: number; totalMinor: number; }
 export interface PayrollLineDto {
   id: number | null;                                   // null until the line is stored
   staffId: number; fullName: string; position: string | null;
@@ -1999,7 +2007,7 @@ CONTRACT GAP
 
 Номер C9 выведен из дорожной карты вместе с нормами комплектующих (v1.47) и не переиспользуется.
 
-**C10. Персонал и еженедельные выплаты** (переопределён в v1.48). Справочник сотрудников, виды работ с ценой за единицу, рабочий день: кто работал, какие работы и сколько, сумма дня поровну между работавшими с округлением доли до рубля вниз, копирование состава прошлого дня. Недельный свод, корректировки с комментарием, закрытие и переоткрытие периода, отметка выплаты, ведомость в XLSX, отчёт по сотрудникам и видам работ. Себестоимость варианта правят руководитель и администратор.
+**C10. Персонал и еженедельные выплаты** (переопределён в v1.48, делёж уточнён в v1.55). Справочник сотрудников, виды работ с ценой за единицу, рабочий день: кто пришёл, какие работы, сколько и кто их сделал; сумма записи делится поровну между её исполнителями, доля работника за день округляется до рубля вниз; копирование состава прошлого дня. Недельный свод, корректировки с комментарием, закрытие и переоткрытие периода, отметка выплаты, ведомость в XLSX, отчёт по сотрудникам и видам работ. Себестоимость варианта правят руководитель и администратор.
 **DoD:** день отмечается за минуту, недельная ведомость совпадает с контрольным примером до копейки, закрытый период не редактируется без переоткрытия с записью в аудит.
 
 Номер C11 выведен из дорожной карты вместе с документами и не переиспользуется.

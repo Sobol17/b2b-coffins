@@ -59,45 +59,81 @@ export const payrollIdSchema = z.object({ id });
 
 const unique = (values: readonly number[]) => new Set(values).size === values.length;
 
-/** A whole day in one write: who worked and how much of each work was done. */
-export const workDaySaveSchema = z.object({
-	date: payrollDateSchema,
-	staffIds: z.array(id).max(200).refine(unique, { error: 'Сотрудник отмечен дважды' }),
-	entries: z
-		.array(
-			z.object({
-				workTypeId: id,
-				qty: z.coerce
-					.number({ error: 'Введите количество' })
-					.int({ error: 'Количество должно быть целым' })
-					.min(1, { error: 'Не меньше одного' })
-					.max(PAYROLL_QTY_MAX, { error: `Не больше ${PAYROLL_QTY_MAX}` })
-			})
-		)
-		.max(200)
-		.refine((rows) => unique(rows.map((row) => row.workTypeId)), {
-			error: 'Работа указана дважды'
-		})
-});
-
-const STAFF_PREFIX = 'staff.';
-const QTY_PREFIX = 'qty.';
+const crewKey = (entry: { workTypeId: number; staffIds: readonly number[] }) =>
+	`${entry.workTypeId}:${[...entry.staffIds].sort((a, b) => a - b).join(',')}`;
 
 /**
- * The day form sends a ticked `staff.<id>` box per worker and a `qty.<workTypeId>` field per work;
- * an empty or zero quantity means the work was not done that day.
+ * A whole day in one write: who came, and for each work how much was done and by whom (v1.55).
+ * The same work may come twice when two crews did it, but never twice with the same crew.
+ */
+export const workDaySaveSchema = z
+	.object({
+		date: payrollDateSchema,
+		staffIds: z.array(id).max(200).refine(unique, { error: 'Сотрудник отмечен дважды' }),
+		entries: z
+			.array(
+				z.object({
+					workTypeId: id,
+					qty: z.coerce
+						.number({ error: 'Введите количество' })
+						.int({ error: 'Количество должно быть целым' })
+						.min(1, { error: 'Не меньше одного' })
+						.max(PAYROLL_QTY_MAX, { error: `Не больше ${PAYROLL_QTY_MAX}` }),
+					staffIds: z
+						.array(id)
+						.min(1, { error: 'Отметьте, кто сделал работу' })
+						.max(200)
+						.refine(unique, { error: 'Исполнитель отмечен дважды' })
+				})
+			)
+			.max(200)
+			.refine((rows) => new Set(rows.map(crewKey)).size === rows.length, {
+				error: 'Работа с тем же составом указана дважды'
+			})
+	})
+	.refine(
+		(day) =>
+			day.entries.every((entry) =>
+				entry.staffIds.every((staffId) => day.staffIds.includes(staffId))
+			),
+		{ path: ['entries'], error: 'Исполнитель работы не отмечен среди тех, кто работал' }
+	);
+
+const STAFF_PREFIX = 'staff.';
+const ENTRY_FIELD = /^entry\.(\d+)\.(work|qty|staff\.(\d+))$/;
+
+interface EntryFields {
+	workTypeId?: unknown;
+	qty?: unknown;
+	staffIds: string[];
+}
+
+/**
+ * The day form sends a ticked `staff.<id>` box per worker who came, and a row per work:
+ * `entry.<n>.work`, `entry.<n>.qty` and a ticked `entry.<n>.staff.<id>` box per crew member.
+ * A row with an empty or zero quantity means the work was not done and is dropped.
  */
 function dayOfForm(value: unknown): unknown {
 	if (typeof value !== 'object' || value === null) return value;
 	const fields = Object.entries(value);
+	const rows = new Map<string, EntryFields>();
+	for (const [key, field] of fields) {
+		const match = ENTRY_FIELD.exec(key);
+		if (!match?.[1]) continue;
+		const row = rows.get(match[1]) ?? { staffIds: [] };
+		if (match[2] === 'work') row.workTypeId = field;
+		else if (match[2] === 'qty') row.qty = field;
+		else if (match[3]) row.staffIds.push(match[3]);
+		rows.set(match[1], row);
+	}
 	return {
 		date: fields.find(([key]) => key === 'date')?.[1],
 		staffIds: fields
 			.filter(([key]) => key.startsWith(STAFF_PREFIX))
 			.map(([key]) => key.slice(STAFF_PREFIX.length)),
-		entries: fields
-			.filter(([key, qty]) => key.startsWith(QTY_PREFIX) && qty !== '' && Number(qty) !== 0)
-			.map(([key, qty]) => ({ workTypeId: key.slice(QTY_PREFIX.length), qty }))
+		entries: [...rows.values()].filter(
+			(row) => row.qty !== undefined && row.qty !== '' && Number(row.qty) !== 0
+		)
 	};
 }
 

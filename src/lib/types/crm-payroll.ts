@@ -1,4 +1,4 @@
-// Staff, work prices, day sheets and the weekly payroll (C10, tech.md v1.48). Read by payroll.read only.
+// Staff, work prices, day sheets and the weekly payroll (C10, tech.md v1.48, crews v1.55). Read by payroll.read only.
 export const PAYROLL_PERIOD_STATUSES = ['open', 'calculated', 'paid'] as const;
 export type PayrollPeriodStatus = (typeof PAYROLL_PERIOD_STATUSES)[number];
 /** Units of one work in a day. */
@@ -6,7 +6,7 @@ export const PAYROLL_QTY_MAX = 10_000;
 /** 1 000 000 roubles per unit. */
 export const PAYROLL_RATE_MAX_MINOR = 100_000_000;
 export const PAYROLL_ADJUSTMENT_MAX_MINOR = 100_000_000;
-/** A share is whole roubles, rounded down. */
+/** A worker's pay for a day is whole roubles, rounded down. */
 export const PAYROLL_SHARE_STEP_MINOR = 100;
 export const PAYROLL_REPORT_MAX_DAYS = 366;
 
@@ -31,6 +31,8 @@ export interface WorkEntryDto {
 	qty: number;
 	rateMinor: number;
 	amountMinor: number;
+	/** Who did it: the amount is split among them only. */
+	staffIds: number[];
 }
 
 export interface WorkDayStaffDto {
@@ -56,14 +58,14 @@ export interface WorkDayDto {
 	entries: WorkEntryDto[];
 	presentCount: number;
 	totalMinor: number;
-	shareMinor: number;
+	/** One per present worker, 0 for one who is in no crew. */
+	shares: { staffId: number; shareMinor: number }[];
 }
 
 export interface PayrollDayCellDto {
 	date: string;
 	presentCount: number;
 	totalMinor: number;
-	shareMinor: number;
 }
 
 export interface PayrollLineDto {

@@ -8,6 +8,7 @@ import {
 	workDayStaff,
 	workDays,
 	workEntries,
+	workEntryStaff,
 	workTypes
 } from '../../../src/lib/server/db/schema';
 import { PolicyService } from '../../../src/lib/server/auth/policy';
@@ -50,6 +51,7 @@ export function clearPayroll(): void {
 	database.delete(jobQueue).run();
 	database.delete(payrollLines).run();
 	database.delete(payrollPeriods).run();
+	database.delete(workEntryStaff).run();
 	database.delete(workEntries).run();
 	database.delete(workDayStaff).run();
 	database.delete(workDays).run();

@@ -1,5 +1,6 @@
 import { database } from '../src/lib/server/db/client';
 import { counterpartyCreate } from './admin/counterparty';
+import { payrollBackfillCrews } from './admin/payroll';
 import { priceImport } from './admin/price';
 import { requestTransition } from './admin/request';
 import { userCreate } from './admin/user';
@@ -11,6 +12,7 @@ const USAGE = `pnpm admin <command> [options]
                        [--discount] [--scheme] [--inn] [--address] [--phone] [--email]
   price:import         --file <xlsx|csv> --price-list
   request:transition   --request <number> --to <status> --actor <email> [--reason] [--comment]
+  payroll:backfill-crews
 `;
 
 async function main(): Promise<void> {
@@ -27,6 +29,8 @@ async function main(): Promise<void> {
 			return priceImport(db, argv);
 		case 'request:transition':
 			return requestTransition(db, argv);
+		case 'payroll:backfill-crews':
+			return payrollBackfillCrews(db);
 		default:
 			console.error(USAGE);
 			process.exit(1);
