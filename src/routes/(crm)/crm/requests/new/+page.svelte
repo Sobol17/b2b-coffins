@@ -99,7 +99,7 @@
 							name="deliveryTime"
 							type="time"
 							label="Время доставки"
-							placeholder="Укажите время"
+							placeholder="Введите время"
 							required
 						/>
 					</div>

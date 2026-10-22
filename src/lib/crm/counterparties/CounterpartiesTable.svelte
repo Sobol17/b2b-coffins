@@ -23,8 +23,7 @@
 		{ key: 'managerName', label: 'Администратор' },
 		{ key: 'settlementScheme', label: 'Расчёты' },
 		{ key: 'staffCount', label: 'Сотрудников' },
-		{ key: 'debt', label: 'Задолженность' },
-		{ key: 'actions', label: 'Действия', align: 'end' }
+		{ key: 'debt', label: 'Задолженность' }
 	];
 
 	const schemeLabel = (value: CrmCounterpartyListItemDto['settlementScheme']) =>
@@ -34,7 +33,11 @@
 <DataTable {columns} {rows} {total} {query} {onQueryChange} emptyTitle="Контрагентов не найдено">
 	{#snippet cell(row: CrmCounterpartyListItemDto, column: DataTableColumn)}
 		{#if column.key === 'name'}
-			<div>{row.name}</div>
+			<!-- The name opens the card: a separate column for the link fell off a phone screen. -->
+			<a
+				class="font-medium text-link hover:text-link-hover"
+				href={resolve(`/crm/counterparties/${row.id}`)}>{row.name}</a
+			>
 			<div class="text-xs text-fg-faint">{row.inn ? `ИНН ${row.inn}` : 'ИНН не указан'}</div>
 		{:else if column.key === 'managerName'}
 			{row.managerName ?? '—'}
@@ -46,8 +49,6 @@
 			<DebtIndicator
 				debt={row.debtMinor === undefined ? undefined : { debtMinor: row.debtMinor }}
 			/>
-		{:else if column.key === 'actions'}
-			<a class="text-link" href={resolve(`/crm/counterparties/${row.id}`)}> Открыть </a>
 		{/if}
 	{/snippet}
 </DataTable>

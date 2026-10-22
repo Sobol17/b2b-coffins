@@ -122,7 +122,12 @@ test('C8 DoD: the balance is the sum of the moves and opens into them', async ({
 });
 
 async function idOf(page: Page): Promise<string> {
-	const href = await page.getByRole('link', { name: 'Открыть' }).first().getAttribute('href');
+	const href = await page
+		.getByTestId('data-table-row')
+		.first()
+		.getByRole('link')
+		.first()
+		.getAttribute('href');
 	return href?.split('/').at(-1) ?? '';
 }
 
