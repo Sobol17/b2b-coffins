@@ -1,4 +1,10 @@
+import type { Db } from '../../src/lib/server/db/client';
+import { financeEntries } from '../../src/lib/server/db/schema';
 import { FinanceEntryService } from '../../src/lib/server/finance/finance-entry.service';
+import { OrgService } from '../../src/lib/server/settings/org.service';
+import { isoDay } from '../../src/lib/utils/format';
+import { actorContext } from '../admin/request';
+import { DEMO_PEOPLE } from './demo-scenarios';
 import { addDays } from '../../src/lib/domain/payroll/calc';
 import type { ActorContext } from '../../src/lib/types/actor';
 import type { FinanceKind } from '../../src/lib/types/finance';
@@ -20,7 +26,7 @@ const DEMO_FINANCE: readonly DemoEntry[] = [
 
 /**
  * Manual entries of the finance page (v1.58), written through the service so the journal gets them
- * too. The caller runs this once per demo seed; the guard of seedDemo keeps a second run out.
+ * too. bookFinanceOnce is the guard; call this directly only on an empty table.
  * @returns how many entries were written.
  */
 export function seedDemoFinance(owner: ActorContext, today: string): number {
@@ -36,4 +42,15 @@ export function seedDemoFinance(owner: ActorContext, today: string): number {
 		});
 	}
 	return DEMO_FINANCE.length;
+}
+
+/**
+ * Books the demo entries when the table is empty, whatever the requests guard says: a stand seeded
+ * before the finance page still gets a page that is not empty.
+ * @returns how many entries were written, 0 when the table already had rows.
+ */
+export function bookFinanceOnce(db: Db): number {
+	if (db.select({ id: financeEntries.id }).from(financeEntries).limit(1).all().length > 0) return 0;
+	const today = isoDay(new Date().toISOString(), OrgService.timezone());
+	return seedDemoFinance(actorContext(db, DEMO_PEOPLE.owner), today);
 }

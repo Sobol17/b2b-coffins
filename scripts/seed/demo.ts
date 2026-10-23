@@ -18,10 +18,8 @@ import { RequestSubmitService } from '../../src/lib/server/request/request-submi
 import { RequestTransitionService } from '../../src/lib/server/request/request-transition.service';
 import type { ActorContext } from '../../src/lib/types/actor';
 import type { RequestStatus } from '../../src/lib/types/request';
-import { OrgService } from '../../src/lib/server/settings/org.service';
-import { isoDay } from '../../src/lib/utils/format';
 import { actorContext, refusalReasonId } from '../admin/request';
-import { seedDemoFinance } from './demo-finance';
+import { bookFinanceOnce } from './demo-finance';
 import {
 	DEMO_COUNTERPARTY,
 	DEMO_MARK,
@@ -39,6 +37,8 @@ type People = Record<keyof typeof DEMO_PEOPLE, ActorContext>;
  */
 export async function seedDemo(db: Db): Promise<{ requests: number; jobs: number }> {
 	const counterpartyId = demoCounterpartyId(db);
+	// The finance entries have their own guard: a stand seeded before v1.58 gets them on the next run.
+	bookFinanceOnce(db);
 	if (alreadySeeded(db, counterpartyId)) return { requests: 0, jobs: 0 };
 
 	const people = loadPeople(db);
@@ -47,7 +47,6 @@ export async function seedDemo(db: Db): Promise<{ requests: number; jobs: number
 		const id = submit(db, people, counterpartyId, scenario);
 		advance(db, people, id, scenario);
 	}
-	seedDemoFinance(people.owner, isoDay(new Date().toISOString(), OrgService.timezone()));
 	return { requests: DEMO_SCENARIOS.length, jobs: await drainQueue() };
 }
 

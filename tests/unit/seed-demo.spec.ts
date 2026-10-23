@@ -161,6 +161,18 @@ describe('pnpm seed:demo (v1.23)', () => {
 		expect(entries.every((row) => row.occurredAt.getTime() <= Date.now())).toBe(true);
 	});
 
+	it('books the finance entries on a stand seeded before the finance page (v1.58)', async () => {
+		const before = counts();
+		db.delete(financeEntries).run();
+
+		await seedDemo(db);
+
+		expect(counts()).toMatchObject({ ...before, audit: before.audit + 4 });
+		db.delete(financeEntries).run();
+		await seedDemo(db);
+		expect(db.select().from(financeEntries).all()).toHaveLength(4);
+	});
+
 	it('changes nothing on a second run', async () => {
 		const before = counts();
 
