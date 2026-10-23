@@ -51,6 +51,17 @@ test('C18: the owner records, edits and deletes an expense', async ({ page }) =>
 	await expect.poll(() => roublesOf(page, 'finance-expense')).toBe(before);
 });
 
+test('C18: the sheet downloads from a page opened without a query', async ({ page }) => {
+	await login(page, 'owner');
+	await openFinance(page);
+	const link = page.getByRole('link', { name: 'Выгрузить в XLSX' });
+	const href = await link.getAttribute('href');
+	expect(href).toBeTruthy();
+	const sheet = await page.request.get(href ?? '');
+	expect(sheet.status()).toBe(200);
+	expect(sheet.headers()['content-type']).toContain('spreadsheetml');
+});
+
 test('C18: a payment mark shows up as income without a manual entry', async ({ page }) => {
 	const [owner] = db
 		.select({ id: users.id })
