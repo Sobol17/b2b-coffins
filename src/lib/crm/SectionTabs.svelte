@@ -17,7 +17,7 @@
 <nav
 	aria-label={label}
 	data-testid={testId}
-	class="-mx-4 flex gap-1 overflow-x-auto border-b border-border px-4 sm:mx-0 sm:px-0"
+	class="-mx-3 flex gap-1 overflow-x-auto border-b border-border px-3 sm:mx-0 sm:px-0"
 >
 	{#each tabs as tab (tab.href)}
 		{@const isCurrent = page.url.pathname === tab.href}

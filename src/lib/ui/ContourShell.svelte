@@ -51,7 +51,7 @@
 	<div class="flex min-h-screen flex-col">
 		<InstallBanner />
 		<PortalHeader {title} {userName} {roles} {links} {accountHref} {cart} {search} {bell} />
-		<main class="mx-auto w-full max-w-shell flex-1 px-4 pt-4 pb-10 sm:px-6">
+		<main class="mx-auto w-full max-w-shell flex-1 px-3 pt-3 pb-10 sm:px-6 sm:pt-4">
 			{@render children()}
 		</main>
 		<ShellFooter caption={footerCaption} links={footerLinks} />
