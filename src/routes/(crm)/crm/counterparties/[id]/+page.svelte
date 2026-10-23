@@ -70,7 +70,7 @@
 
 	<Tabs.Root bind:value={tab}>
 		<!-- Five tabs do not fit a phone in one row: they wrap instead of widening the page. -->
-		<Tabs.List class="h-auto max-w-full flex-wrap justify-start group-data-horizontal/tabs:h-auto">
+		<Tabs.List>
 			<Tabs.Trigger value="card">Карточка</Tabs.Trigger>
 			<Tabs.Trigger value="contracts">Договоры и адреса</Tabs.Trigger>
 			<Tabs.Trigger value="users">Пользователи</Tabs.Trigger>

@@ -2,6 +2,12 @@
 @import 'tw-animate-css';
 
 /*
+ * The app has one light theme. Tailwind ties `dark:` to the OS setting by default, which mixed the
+ * dark leftovers of the shadcn primitives into the light design on phones set to dark mode.
+ */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/*
  * Design tokens (tech.md 9, palette of tech.md 18.2). Every colour, radius, shadow and spacing step
  * in the app comes from here. A slice that hard-codes a colour in a component gets rolled back.
  *
