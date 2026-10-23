@@ -110,7 +110,7 @@
 	<Sidebar.Inset class="min-w-0 bg-surface">
 		<InstallBanner />
 		<header
-			class="sticky top-0 z-10 flex h-14 items-center gap-2 border-b border-border bg-surface-raised px-4"
+			class="sticky top-0 z-10 flex h-14 items-center gap-2 border-b border-border bg-surface-raised px-3 sm:px-4"
 		>
 			<!-- On a phone the tab bar opens the sheet: a second button for it would only crowd the bar. -->
 			<Sidebar.Trigger class="hidden md:inline-flex" />
@@ -126,7 +126,7 @@
 		<!-- Sidebar.Inset is the main landmark already: a page holds one. -->
 		<!-- The phone tab bar is fixed: the page keeps its last lines above it. -->
 		<div
-			class="mx-auto w-full max-w-shell flex-1 p-4 pb-[calc(var(--shell-bottom-inset)+1rem)] sm:p-6 sm:pb-[calc(var(--shell-bottom-inset)+1.5rem)]"
+			class="mx-auto w-full max-w-shell flex-1 p-3 pb-[calc(var(--shell-bottom-inset)+1rem)] sm:p-6 sm:pb-[calc(var(--shell-bottom-inset)+1.5rem)]"
 		>
 			{@render children()}
 		</div>

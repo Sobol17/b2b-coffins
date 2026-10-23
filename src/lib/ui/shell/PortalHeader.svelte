@@ -46,7 +46,7 @@
 	}
 </script>
 
-<header class="sticky top-0 z-10 bg-surface px-4 pt-4 pb-2 sm:px-6">
+<header class="sticky top-0 z-10 bg-surface px-3 pt-3 pb-2 sm:px-6 sm:pt-4">
 	<div
 		data-testid="portal-header"
 		class="mx-auto flex h-16 max-w-shell items-center gap-3 rounded-card bg-surface-raised pr-2.5 pl-4 sm:h-20 sm:gap-8 sm:pr-5 sm:pl-7"
