@@ -5,7 +5,8 @@ export const DEMO_PEOPLE = {
 	admin: 'admin@ritual-service.example',
 	employee: 'employee@ritual-service.example',
 	manager: 'manager@workshop.example',
-	driver: 'driver@workshop.example'
+	driver: 'driver@workshop.example',
+	owner: 'owner@workshop.example'
 } as const;
 
 export type DemoStage =

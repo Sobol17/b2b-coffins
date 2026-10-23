@@ -18,7 +18,10 @@ import { RequestSubmitService } from '../../src/lib/server/request/request-submi
 import { RequestTransitionService } from '../../src/lib/server/request/request-transition.service';
 import type { ActorContext } from '../../src/lib/types/actor';
 import type { RequestStatus } from '../../src/lib/types/request';
+import { OrgService } from '../../src/lib/server/settings/org.service';
+import { isoDay } from '../../src/lib/utils/format';
 import { actorContext, refusalReasonId } from '../admin/request';
+import { seedDemoFinance } from './demo-finance';
 import {
 	DEMO_COUNTERPARTY,
 	DEMO_MARK,
@@ -44,6 +47,7 @@ export async function seedDemo(db: Db): Promise<{ requests: number; jobs: number
 		const id = submit(db, people, counterpartyId, scenario);
 		advance(db, people, id, scenario);
 	}
+	seedDemoFinance(people.owner, isoDay(new Date().toISOString(), OrgService.timezone()));
 	return { requests: DEMO_SCENARIOS.length, jobs: await drainQueue() };
 }
 
@@ -77,7 +81,8 @@ function loadPeople(db: Db): People {
 		admin: actorContext(db, DEMO_PEOPLE.admin),
 		employee: actorContext(db, DEMO_PEOPLE.employee),
 		manager: actorContext(db, DEMO_PEOPLE.manager),
-		driver: actorContext(db, DEMO_PEOPLE.driver)
+		driver: actorContext(db, DEMO_PEOPLE.driver),
+		owner: actorContext(db, DEMO_PEOPLE.owner)
 	};
 }
 

@@ -18,6 +18,7 @@ import {
 import {
 	auditLog,
 	counterparties,
+	financeEntries,
 	jobQueue,
 	notificationFeed,
 	notifications,
@@ -67,7 +68,8 @@ function counts() {
 		notifications: db.select().from(notifications).all().length,
 		feed: db.select().from(notificationFeed).all().length,
 		jobs: db.select().from(jobQueue).all().length,
-		audit: db.select().from(auditLog).all().length
+		audit: db.select().from(auditLog).all().length,
+		finance: db.select().from(financeEntries).all().length
 	};
 }
 
@@ -144,6 +146,19 @@ describe('pnpm seed:demo (v1.23)', () => {
 			.filter((job) => job.topic !== 'session.cleanup' && job.status !== 'done');
 
 		expect(open).toEqual([]);
+	});
+
+	it('books a few manual finance entries of the owner this month (v1.58)', () => {
+		const owner = userId('owner@workshop.example');
+		const entries = db.select().from(financeEntries).all();
+
+		expect(entries.map((row) => [row.kind, row.comment, row.createdById])).toEqual([
+			['expense', 'Аренда цеха', owner],
+			['expense', 'Доски, сосна', owner],
+			['expense', 'Бензин на доставку', owner],
+			['income', 'Продажа обрезков', owner]
+		]);
+		expect(entries.every((row) => row.occurredAt.getTime() <= Date.now())).toBe(true);
 	});
 
 	it('changes nothing on a second run', async () => {
