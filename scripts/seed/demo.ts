@@ -19,6 +19,7 @@ import { RequestTransitionService } from '../../src/lib/server/request/request-t
 import type { ActorContext } from '../../src/lib/types/actor';
 import type { RequestStatus } from '../../src/lib/types/request';
 import { actorContext, refusalReasonId } from '../admin/request';
+import { bookFinanceOnce } from './demo-finance';
 import {
 	DEMO_COUNTERPARTY,
 	DEMO_MARK,
@@ -36,6 +37,8 @@ type People = Record<keyof typeof DEMO_PEOPLE, ActorContext>;
  */
 export async function seedDemo(db: Db): Promise<{ requests: number; jobs: number }> {
 	const counterpartyId = demoCounterpartyId(db);
+	// The finance entries have their own guard: a stand seeded before v1.58 gets them on the next run.
+	bookFinanceOnce(db);
 	if (alreadySeeded(db, counterpartyId)) return { requests: 0, jobs: 0 };
 
 	const people = loadPeople(db);
@@ -77,7 +80,8 @@ function loadPeople(db: Db): People {
 		admin: actorContext(db, DEMO_PEOPLE.admin),
 		employee: actorContext(db, DEMO_PEOPLE.employee),
 		manager: actorContext(db, DEMO_PEOPLE.manager),
-		driver: actorContext(db, DEMO_PEOPLE.driver)
+		driver: actorContext(db, DEMO_PEOPLE.driver),
+		owner: actorContext(db, DEMO_PEOPLE.owner)
 	};
 }
 

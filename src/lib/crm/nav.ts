@@ -1,4 +1,5 @@
 import { resolve } from '$app/paths';
+import BanknoteIcon from '@lucide/svelte/icons/banknote-arrow-up';
 import BellIcon from '@lucide/svelte/icons/bell';
 import BookOpenIcon from '@lucide/svelte/icons/book-open';
 import BuildingIcon from '@lucide/svelte/icons/building-2';
@@ -29,6 +30,7 @@ export interface CrmNavRights {
 	readonly catalog: boolean;
 	readonly counterparties: boolean;
 	readonly support: boolean;
+	readonly finance: boolean;
 	readonly settings: boolean;
 	readonly audit: boolean;
 }
@@ -125,6 +127,16 @@ export function crmNav(can: CrmNavRights): CrmNavLink[] {
 				label: 'Отчёты',
 				icon: ChartIcon,
 				hint: 'Продажи, долги, склад и фонд'
+			}
+		},
+		{
+			show: can.finance,
+			link: {
+				group: BOOKS,
+				href: resolve('/crm/finance'),
+				label: 'Финансы',
+				icon: BanknoteIcon,
+				hint: 'Доходы, расходы и итог за период'
 			}
 		},
 		{

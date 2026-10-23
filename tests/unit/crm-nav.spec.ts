@@ -11,6 +11,7 @@ const NONE: CrmNavRights = {
 	catalog: false,
 	counterparties: false,
 	support: false,
+	finance: false,
 	settings: false,
 	audit: false
 };
@@ -33,5 +34,25 @@ describe('CRM sections and support threads (v1.57)', () => {
 
 	it('leaves «Обращения» out for a role without the right', () => {
 		expect(work({ ...NONE, delivery: true })).toEqual(['Доставка']);
+	});
+});
+
+describe('CRM sections and finance (v1.58)', () => {
+	const books = (rights: CrmNavRights) =>
+		crmNav(rights)
+			.filter((link) => link.group === 'Учёт')
+			.map((link) => link.label);
+
+	it('ends the books group with «Финансы» for the owner', () => {
+		expect(books({ ...NONE, stock: true, payroll: true, reports: true, finance: true })).toEqual([
+			'Склад',
+			'Выплаты',
+			'Отчёты',
+			'Финансы'
+		]);
+	});
+
+	it('leaves «Финансы» out without the right', () => {
+		expect(books({ ...NONE, stock: true, payroll: true, reports: true })).not.toContain('Финансы');
 	});
 });

@@ -1,9 +1,9 @@
 # tech.md — ядро проекта
 
 **Проект:** B2B-портал + CRM для столярной мастерской (производство гробов)
-**Версия ядра:** v1.57
-**Дата:** 22.10.2026
-**Статус:** этап 1 (портал, P1–P14) завершён 19.09.2026; в этапе 2 (CRM) влиты C1–C8, C10, C12, C15, C13, слайс C14 открыт (чек-лист в §14), C17 (обращения) в работе, C16 не начат
+**Версия ядра:** v1.58
+**Дата:** 23.10.2026
+**Статус:** этап 1 (портал, P1–P14) завершён 19.09.2026; в этапе 2 (CRM) влиты C1–C8, C10, C12, C15, C13, слайс C14 открыт (чек-лист в §14), C17 (обращения) влит, C18 (финансы) в работе, C16 не начат
 **Владелец файла:** Sobol17 (тимлид и единственный разработчик)
 **Источник требований:** `TZ_B2B_CRM_stolyarka_v06.md`
 
@@ -11,6 +11,7 @@
 
 | Версия | Изменение |
 |---|---|
+| v1.58 | Слайс C18 «Финансы» по решениям владельца от 23.10.2026, дизайн в `docs/superpowers/specs/2026-10-23-crm-finance-design.md`. Страница `/crm/finance` руководителя: форма ручной операции, аналитика за период и лента. Право `finance.manage` только у `owner`, остальные роли получают 403. Доход от заявок это поступившие деньги: каждая отметка `payment_marks` идёт в ленту доходом на свою дату, сторно отметки идёт туда же с минусом. Выплата бригаде (`payroll_lines` с `paid_at` и `payout_minor > 0`) идёт расходом в день отметки «Выплачено», снятая отметка убирает строку. Перечисление в фонд (`charity_transfers`) идёт расходом, его сторно уменьшает расход. Автоматические операции не копируются: лента читает их из источников одним `UNION ALL`, правят их только в источнике. Ручная операция хранится в новой таблице `finance_entries` (§5.11): тип `income` или `expense`, сумма больше нуля и не больше 100 000 000 ₽, день в `org.timezone` не позже сегодняшнего, обязательный комментарий до 500 символов. Категорий, счетов, валют и повторяющихся платежей нет. Ручную операцию можно исправить и удалить мягко (`deleted_at`); действия аудита `finance.entry.create`, `finance.entry.update`, `finance.entry.delete` по сущности `finance_entries`. Период общий для аналитики и ленты, как у отчётов C13, не длиннее 366 дней. Сводку и корзины графика (день до 31 дня, неделя до 92, иначе месяц) считает `lib/domain/finance/summary.ts`. Лента выгружается в XLSX синхронно. Взаимозачёт считается доходом. Событий, топиков очереди и шаблонов слайс не добавляет. В §8 добавлен `lib/types/finance.ts`, код живёт в `server/finance/` и `lib/crm/finance/` |
 | v1.57 | Слайс C17 «Обращения контрагентов» по решениям владельца от 22.10.2026, дизайн в `docs/superpowers/specs/2026-10-22-support-chat-design.md`. Новый раздел §5.10: таблицы `support_threads` (ветка с темой, контрагентом, автором, необязательной заявкой, статусом `open` или `closed` и стороной последнего сообщения) и `support_messages` (текст и сторона автора `portal` или `crm`). Строки не удаляются, номер обращения это `id`. Права: `support.own` у `cp_admin` и `cp_employee` с фильтром реестра P6 (сотрудник видит свои обращения, администратор весь контрагент), `support.any` у `manager` и `owner`; правило `owner` исключает `support.own`. Обращение открывает только контрагент, закрывает любая сторона, в закрытое писать нельзя, повторного открытия нет; повторное закрытие ничего не пишет. Заявку к обращению сервер проверяет тем же фильтром P6, чужая даёт 404. События §7.3: `support.opened` (id обращения), `support.message_posted` (id сообщения), `support.closed` (id обращения). Адресатов выбирает `supportRecipients` (`lib/domain/support/recipients.ts`): действие портала идёт мастерской, действие мастерской идёт каждому `cp_admin` контрагента и автору обращения, действие `cp_admin` в чужом обращении идёт ещё и его автору; автор действия событие не получает, это исключение из правила v1.49. Fanout читает автора из сообщения или обращения, payload не меняется. Переменные шаблонов `{{thread}}`, `{{subject}}`, `{{counterparty}}`, `{{author}}`, `{{url}}`, у открытия и сообщения ещё `{{excerpt}}` (до 100 символов). Ссылки `/portal/support/{id}` и `/crm/support/{id}`. Строка колокольчика события обращения отдаёт `entityId` равным id обращения и `entityLabel` равным теме. Команда `pnpm admin notifications:sync` вставляет из фикстур недостающие правила и шаблоны и не трогает существующие: так новые события попадают на стенд, где сид не запускают. Действия аудита `support.open`, `support.post`, `support.close` по сущности `support_threads`, текст сообщения в журнал не пишется. Ограничение частоты `support.post` (30 за 10 минут) заменило `request.comment`. Обращения заменили «Переписку с менеджером» P6: карточка заявки портала больше не принимает комментарии, старые публичные комментарии показывает на чтение, рядом обращения по заявке и кнопка «Написать по заявке»; `RequestCardDto` получил `supportThreads`. CRM комментарии портала не показывала, поэтому написанное там до мастерской не доходило. Экраны: «Чат» в профиле портала (`/portal/support`, `/new`, `/[id]`) и раздел «Обращения» CRM (`/crm/support`, `/[id]`) последним в группе «Работа». В §8 добавлен `lib/types/support.ts` |
 | v1.56 | Правки заказчика по итогам пилота от 22.10.2026 (часть C14). Индивидуальные цены: карточка контрагента в CRM получила вкладку «Цены» по праву `counterparty.manage` и только роли с ценами, менеджер вводит цену каждого варианта. Цены пишутся в прайс-лист, которым владеет один этот контрагент: базовый, просроченный, общий с другими или пустой лист сервер не правит, а заводит новый «Индивидуальные цены: <название>», копирует в него позиции прежнего общего листа и назначает контрагенту. Цена 0 убирает позицию, и цена снова идёт по цепочке `PersonalPriceResolver`; повторная отправка того же ничего не пишет. Правило выбора листа и план правок чистые, лежат в `lib/domain/pricing/personal-price.ts`. Новое действие аудита `counterparty.prices_update` по сущности `counterparties` со старым и новым `priceListId`. Схема БД и матрица прав не менялись. Реквизиты: `org.requisites` получил `ogrn` (13 цифр ОГРН или 15 цифр ОГРНИП). `OrgService.publicContacts` отдаёт гостю `PublicContacts`: телефон, адрес и оператора (название, ИНН, ОГРН, почта); КПП, банк, БИК и счёт с сервера не уходят. Публичные документы: `/legal` и четыре страницы `/legal/terms`, `/legal/personal-data`, `/legal/privacy`, `/legal/cookies` читают реквизиты оператора из настроек на каждом запросе. Ссылки на них стоят в подвале лендинга, на входе и в подвале портала. Плашка cookie на лендинге и входе закрывается кнопкой «Понятно», выбор хранит `localStorage`. `robots.txt` закрывает `/portal`, `/crm`, `/api`, `/password`. Лендинг получил title, description, canonical, Open Graph и разметку Organization. Каталог из прайса мастерской: команда `pnpm admin catalog:import --file <json> [--hide-others]` (`scripts/admin/catalog.ts`) в одной транзакции заводит или обновляет модели и варианты по артикулу; себестоимость и скрытие, заданные в CRM, повтор не трогает; `--hide-others` снимает с публикации модели вне файла. Прайс от 01.06.2026 лежит в `scripts/fixtures/catalog-angel.json`, демо-сид не менялся. Оболочка CRM на телефоне: нижняя панель с «Главной», тремя первыми разделами роли и кнопкой «Ещё», которая открывает шторку бокового меню; кнопка меню в шапке на телефоне скрыта. UI: `DataTable` на ширине телефона рисует строки карточками, `FilterBar` прячет поля за кнопкой «Фильтры» и получил `pageKey`, `MoneyInput` получил `blankZero`, `ContourShell` получил `footerLinks`. Портал получил страницу ошибки для 403, 404 и сбоя, меню профиля на телефоне стало строкой вкладок, фото-заглушки заменил знак мастерской. DTO в §8: `CounterpartyPriceRowDto`, `CounterpartyPriceFilters`, `CounterpartyPriceSaveResult`, `PublicOperator`, `PublicContacts` |
 | v1.55 | Контракт C10 уточнён по расценкам заказчика от 20.10.2026: работу делят те, кто её сделал, а не все, кто пришёл. Состав дня `work_day_staff` остаётся отметкой присутствия, у каждой записи работы появились исполнители в новой таблице `work_entry_staff`, их выбирают только из отмеченных в этот день. Доля работника за день равна `floor(Σ amount_minor / число исполнителей, до рубля)` по записям, где он исполнитель: рубль отбрасывается один раз от суммы дня, остаток остаётся у мастерской. Пришёл, но ни в одной работе не участвовал: за день 0 ₽, день в счётчик дней всё равно идёт. Уникальность `work_entries_uq` снята: один вид работ в дне можно внести несколькими записями с разными исполнителями. Цена записи по-прежнему замораживается, вид работ, уже внесённый в день, сохраняет замороженную цену во всех своих записях. `work_days.share_minor` убран, доли считаются на лету из записей и исполнителей, как и свод открытой недели. В §8: `WorkEntryDto.staffIds`, `WorkDayDto.shares` вместо `shareMinor`, `PayrollDayCellDto` без `shareMinor`. Форма дня шлёт строки `entry.<n>.work`, `entry.<n>.qty`, `entry.<n>.staff.<id>`; строку без количества сервер пропускает, строку без исполнителей и исполнителя вне состава дня отклоняет. Старые записи получают исполнителями весь состав своего дня командой `pnpm admin payroll:backfill-crews`: повторный запуск ничего не меняет, доли старых дней совпадают с прежними. Закрытые недели не пересчитываются, их `payroll_lines` заморожены. Права, топики и действия аудита не менялись |
@@ -227,6 +228,7 @@ src/
       audit/                      audit.service.ts
       landing/                    landing.service.ts, landing.repository.ts: лендинг гостя (v1.36)
       crm-counterparty/           карточка контрагента; counterparty-price.*: индивидуальные цены (v1.56)
+      finance/                    лента денег руководителя: ручные операции, сводка, выгрузка (v1.58)
       config.ts                   единый разбор env через Zod
     types/                        общие TypeScript-типы (см. §8)
     ui/                           примитивы (см. §9)
@@ -250,6 +252,7 @@ src/
         delivery/                 доставка: погрузка по строкам, «Доставлено», заявки в работе для плана (v1.43)
         notifications/            личная лента, переключатели и журнал; read/ отмечает прочтение (v1.49)
         support/                  обращения контрагентов: реестр и переписка (v1.57)
+        finance/                  финансы руководителя: форма, аналитика, лента; export.xlsx (v1.58)
     api/
       stream/[topic]/+server.ts   SSE
       files/[id]/+server.ts       раздача файлов с проверкой прав
@@ -900,6 +903,32 @@ export const supportMessages = sqliteTable('support_messages', {
 - `last_message_at` и `last_message_side` равны полям самого нового сообщения ветки;
 - `closed_at` и `closed_by_id` заданы тогда и только тогда, когда `status = 'closed'`;
 - строки не удаляются, сообщения не правятся. Вложений, флагов брака и рекламаций у обращения нет.
+
+### 5.11 Финансы (v1.58)
+
+```ts
+export const FINANCE_KINDS = ['income', 'expense'] as const;
+
+// Manual entries of the owner. Order payments, payroll payouts and fund transfers are read from
+// their own tables and never copied here.
+export const financeEntries = sqliteTable('finance_entries', {
+  id: pk(),
+  kind: text('kind', { enum: FINANCE_KINDS }).notNull(),
+  amountMinor: integer('amount_minor').notNull(),          // > 0, the kind gives the sign
+  occurredAt: ts('occurred_at').notNull(),                 // start of the calendar day in org.timezone
+  comment: text('comment').notNull(),
+  createdById: integer('created_by_id').notNull().references(() => users.id),
+  createdAt: createdAt(), updatedAt: updatedAt(), deletedAt: ts('deleted_at')
+}, (t) => ({ occurredIdx: index('finance_entries_occurred_idx').on(t.occurredAt) }));
+```
+
+Инварианты:
+
+- `amount_minor` больше нуля и не больше `FINANCE_ENTRY_MAX_MINOR`;
+- `occurred_at` это начало календарного дня в `org.timezone`, не позже сегодняшнего на момент записи;
+- строка с `deleted_at` в ленту, аналитику и выгрузку не попадает, правке и повторному удалению не поддаётся (404).
+
+Лента финансов собирается из четырёх источников: `payment_marks` (доход, знак суммы как есть), `payroll_lines` с `paid_at` и `payout_minor > 0` (расход в день отметки), `charity_transfers` (расход, сторно уменьшает его) и `finance_entries` без `deleted_at`. Доход и расход считаются по источнику, а не по знаку строки.
 
 ---
 
@@ -1697,6 +1726,35 @@ export const DICT_CODES = ['material','finish','fabric','hardware','unit','refus
 export const STOCK_MOVE_TYPES = ['production','shipment','adjustment','inventory','reversal','purchase'] as const;
 export const JOB_TOPICS = ['notification.dispatch','notification.fanout','charity.recount','stock.threshold.check','session.cleanup'] as const;
 
+// finance.ts (v1.58) — the owner's money page. Read and written by finance.manage only.
+export const FINANCE_KINDS = ['income', 'expense'] as const;
+export const FINANCE_SOURCES = ['order_payment', 'manual_income', 'payroll', 'charity', 'manual_expense'] as const;
+export const FINANCE_ENTRY_MAX_MINOR = 10_000_000_000;   // 100 000 000 roubles
+export const FINANCE_COMMENT_MAX = 500;
+export type FinanceKind = (typeof FINANCE_KINDS)[number];
+export type FinanceSource = (typeof FINANCE_SOURCES)[number];
+export interface FinanceFilters { from: string; to: string; kind: FinanceKind | null; source: FinanceSource | null; }
+/** One line of the feed. signedMinor is positive for money in, negative for money out. */
+export interface FinanceOperationDto {
+  key: string;                            // `${source}:${id}`, unique across sources
+  source: FinanceSource; kind: FinanceKind;
+  occurredOn: string;                     // 'YYYY-MM-DD' in org.timezone
+  signedMinor: number;
+  title: string; detail: string | null;
+  href: string | null;                    // the source screen; null for a manual entry
+  manualId: number | null;                // set for a manual entry only: edit and delete use it
+}
+export interface FinanceSourceTotalDto { source: FinanceSource; signedMinor: number; count: number; }
+export interface FinanceBucketDto { from: string; to: string; incomeMinor: number; expenseMinor: number; }
+export interface FinanceSummaryDto {
+  range: ReportRangeDto;
+  incomeMinor: number; expenseMinor: number; netMinor: number;   // expense is money out, net = income - expense
+  bySource: FinanceSourceTotalDto[];      // all five sources, zeros included, in FINANCE_SOURCES order
+  bucket: SalesBucket;                    // 'day' up to 31 days, 'week' up to 92, else 'month'
+  buckets: FinanceBucketDto[];            // contiguous, empty buckets included
+}
+export interface FinancePageDto { filters: FinanceFilters; summary: FinanceSummaryDto; feed: Page<FinanceOperationDto>; }
+
 // support.ts (v1.57)
 export type SupportThreadStatus = (typeof SUPPORT_THREAD_STATUSES)[number];
 export type SupportSide = (typeof SUPPORT_SIDES)[number];
@@ -1865,7 +1923,7 @@ CD нет. Мёрдж в `main` ничего не разворачивает, с
 Требования обязательны к каждому слайсу, не выносятся в отдельную задачу «сделать безопасность в конце».
 
 - **Аутентификация.** Пароли argon2id (`memoryCost >= 19456`, `timeCost >= 2`). Сессия на сервере, в куку кладём случайный идентификатор, в БД его хеш. Кука `httpOnly`, `secure`, `sameSite=lax`, срок 30 дней с продлением. Смена пароля и блокировка убивают все сессии пользователя. Пока учётная запись должна сменить временный пароль, чтение уходит на `/password/change`, а запись получает 403 (v1.53). Адрес возврата после входа принимается только как путь этого хоста (v1.53).
-- **Права.** Проверка на сервере на каждое действие и каждый переход статуса, а не только на отрисовку экрана. Роут проверяет право до разбора формы (v1.53). Единая точка: `PolicyService.can(actor, action, subject)`. Скрытие кнопки в UI защитой не считается. Раздел отчётов читает только `owner` по `reports.read`; перечисление в фонд и его сторно пишутся по `charity.manage`, оно тоже только у `owner` (v1.51). Обращения: `support.own` у ролей портала с фильтром реестра P6, `support.any` у `manager` и `owner`; `owner` не получает `support.own` (v1.57).
+- **Права.** Проверка на сервере на каждое действие и каждый переход статуса, а не только на отрисовку экрана. Роут проверяет право до разбора формы (v1.53). Единая точка: `PolicyService.can(actor, action, subject)`. Скрытие кнопки в UI защитой не считается. Раздел отчётов читает только `owner` по `reports.read`; перечисление в фонд и его сторно пишутся по `charity.manage`, оно тоже только у `owner` (v1.51). Обращения: `support.own` у ролей портала с фильтром реестра P6, `support.any` у `manager` и `owner`; `owner` не получает `support.own` (v1.57). Страницу финансов, её действия и выгрузку открывает только `owner` по `finance.manage` (v1.58).
 - **Row-level.** Каждый репозиторий портального домена принимает `counterpartyId` из `ActorContext` и подмешивает его в `where`. Метод без этого фильтра не проходит ревью. Работник мастерской без `request.read.any` видит заявки только в статусах, из которых его роль делает переход (v1.42). Экран доставки по праву `delivery.work` показывает заявки контрагентов в `ready` и, только на чтение, в `in_work` (v1.43).
 - **Цены.** Роль `cp_employee` не получает ценовые поля из БД. Проверяется e2e-тестом на теле ответа, а не глазами.
 - **ПДн третьего лица.** `requests.deceased_name` видно всем, кому видна заявка, но не подставляется в шаблоны уведомлений и не уходит в SSE (v1.33). `{{excerpt}}` обращения это текст, который человек написал сам; содержимое пуша шифруется ключами подписки, сервис доставки его не читает (v1.57).
@@ -2134,6 +2192,9 @@ CONTRACT GAP
 
 **C17. Обращения контрагентов** (контракт v1.57). Вкладка «Чат» в профиле портала: обращение с темой и необязательной заявкой, переписка, закрытие. Раздел «Обращения» в CRM для `manager` и `owner` с реестром, фильтром «ждёт ответа» и ответом. Пуш и колокольчик другой стороне на открытие, сообщение и закрытие. Замена «Переписки с менеджером» P6 в карточке заявки, команда `notifications:sync` для стенда. Идёт параллельно с C14 отдельной веткой, раньше C16.
 **DoD:** контрагент задаёт вопрос из кабинета, администратор мастерской отвечает из CRM, обе стороны получают пуш и строку колокольчика, закрытое обращение не принимает сообщений.
+
+**C18. Финансы** (контракт v1.58). Страница `/crm/finance` руководителя: форма ручного дохода или расхода с суммой, датой и комментарием, аналитика за период (доходы, расходы, итог, разбивка по источникам, график по корзинам) и лента операций с выгрузкой XLSX. Оплаты заявок, выплаты бригаде и перечисления в фонд попадают в ленту сами. Идёт как C17: параллельно с C14, отдельной веткой, раньше C16.
+**DoD:** руководитель видит доходы, расходы и итог за период на одной странице, оплаты, выплаты и перечисления попадают в ленту без ручного ввода, сумма доходов за период совпадает с суммой отметок оплаты за тот же период.
 
 **C16. Бот МАКС.** Драйвер канала `max` на Bot API: привязка чата к пользователю, отправка по матрице §7.3, лог доставки и ретраи тем же `notification.dispatch`. Привязка чата открывает разрыв контракта и поднимается блоком CONTRACT GAP в начале слайса. Канал становится живым, то есть входит в `LIVE_CHANNELS`.
 **DoD:** пользователь привязывает чат один раз и получает событие ботом, отказ бота виден в логе доставки и уходит в ретрай, повторная отправка того же уведомления второго сообщения не создаёт.

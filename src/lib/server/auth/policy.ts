@@ -27,7 +27,9 @@ export const ACTIONS = [
 	'audit.read',
 	// Counterparty questions (tech.md v1.57): the own fence of P6 in the portal, all in the workshop.
 	'support.own',
-	'support.any'
+	'support.any',
+	// The owner's money page (tech.md v1.58): income, expenses and the feed.
+	'finance.manage'
 ] as const;
 export type Action = (typeof ACTIONS)[number];
 

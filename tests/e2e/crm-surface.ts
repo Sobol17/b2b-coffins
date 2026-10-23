@@ -36,6 +36,7 @@ interface SectionRights {
 const SECTIONS: readonly SectionRights[] = [
 	{ prefix: '/crm/settings', readers: OWNER },
 	{ prefix: '/crm/reports', readers: OWNER },
+	{ prefix: '/crm/finance', readers: OWNER },
 	{ prefix: '/crm/payroll', readers: ADMINS },
 	{ prefix: '/crm/stock', readers: [...ADMINS, 'carpenter', 'painter'], writers: ADMINS },
 	{ prefix: '/crm/delivery', readers: [...ADMINS, 'driver'] },
@@ -118,7 +119,8 @@ const QUERIES: Readonly<Record<string, string>> = {
 	'/crm/reports/stock/export.xlsx': RANGE,
 	'/crm/reports/funnel/export.xlsx': RANGE,
 	'/crm/reports/lost/export.xlsx': RANGE,
-	'/crm/reports/charity/export.xlsx': RANGE
+	'/crm/reports/charity/export.xlsx': RANGE,
+	'/crm/finance/export.xlsx': RANGE
 };
 
 function concrete(template: string, ids: Readonly<Record<string, number | null>>): Screen {

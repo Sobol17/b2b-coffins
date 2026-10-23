@@ -82,3 +82,11 @@ describe('reports and the fund (C13, tech.md v1.51)', () => {
 		}
 	});
 });
+
+describe('finance (C18, tech.md v1.58)', () => {
+	it('opens the money page to the owner only', () => {
+		for (const role of ROLE_CODES) {
+			expect(PolicyService.can({ roles: [role] }, 'finance.manage')).toBe(role === 'owner');
+		}
+	});
+});

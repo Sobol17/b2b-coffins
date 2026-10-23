@@ -8,3 +8,4 @@ export * from './stock';
 export * from './system';
 export * from './users';
 export * from './support';
+export * from './finance';

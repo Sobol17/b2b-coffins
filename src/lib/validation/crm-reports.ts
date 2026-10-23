@@ -28,8 +28,9 @@ const optionalText = (max: number) =>
 			.nullable()
 	);
 
-const rangeShape = { from: day, to: day };
-const checkRange = (value: { from: string; to: string }, ctx: z.RefinementCtx): void => {
+// Shared with the finance page (C18): one period rule for every screen that reads a range.
+export const rangeShape = { from: day, to: day };
+export const checkRange = (value: { from: string; to: string }, ctx: z.RefinementCtx): void => {
 	const problem = rangeProblem(value, REPORT_MAX_DAYS);
 	if (problem !== null) {
 		ctx.addIssue({ code: 'custom', path: ['to'], message: RANGE_MESSAGE[problem] });
