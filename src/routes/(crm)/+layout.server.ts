@@ -36,6 +36,7 @@ export const load: LayoutServerLoad = ({ locals, url, cookies }) => {
 			catalog: PolicyService.can(actor, 'catalog.manage'),
 			counterparties: PolicyService.can(actor, 'counterparty.manage'),
 			support: PolicyService.can(actor, 'support.any'),
+			finance: PolicyService.can(actor, 'finance.manage'),
 			settings: PolicyService.can(actor, 'settings.manage'),
 			audit: PolicyService.can(actor, 'audit.read')
 		}
