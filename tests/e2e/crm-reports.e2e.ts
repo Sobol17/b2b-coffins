@@ -57,8 +57,16 @@ test('C13: the owner reads the period, downloads a sheet and records a transfer'
 		await expect(page.getByTestId('modal')).toBeVisible({ timeout: 1000 });
 	}).toPass();
 	const modal = page.getByTestId('modal');
-	await modal.getByLabel('Сумма, ₽').fill('1');
-	await modal.getByLabel('Документ').fill('E2E ПП 1');
+	const amount = modal.getByLabel('Сумма, ₽');
+	const documentRef = modal.getByLabel('Документ');
+	// Typing can land while the dialog still settles and come back empty, so the form is filled
+	// again until both fields hold their values. Only then is it sent.
+	await expect(async () => {
+		await amount.fill('1');
+		await documentRef.fill('E2E ПП 1');
+		await expect(amount).toHaveValue('1', { timeout: 500 });
+		await expect(documentRef).toHaveValue('E2E ПП 1', { timeout: 500 });
+	}).toPass();
 	await modal.getByRole('button', { name: 'Записать', exact: true }).click();
 	await expect(page.getByTestId('modal')).toHaveCount(0);
 	await expect(page.getByRole('row', { name: /E2E ПП 1/ })).toBeVisible();
