@@ -68,3 +68,13 @@ export function momentInZone(isoDate: string, clock: string, timeZone: string): 
 	const guess = target - zoneOffsetMs(target, timeZone);
 	return new Date(target - zoneOffsetMs(guess, timeZone));
 }
+
+/**
+ * The calendar date and `HH:MM` the wall clock of the zone shows at the instant: the inverse of
+ * `momentInZone`, so a saved deadline fills the form with the same values it was typed with.
+ */
+export function wallClockInZone(iso: string, timeZone: string): { date: string; time: string } {
+	const at = Date.parse(iso);
+	const wall = new Date(at + zoneOffsetMs(at, timeZone)).toISOString();
+	return { date: wall.slice(0, 10), time: wall.slice(11, 16) };
+}

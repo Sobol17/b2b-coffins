@@ -19,9 +19,14 @@
 		type SelectOption,
 		type ToastSpec
 	} from '$lib/ui';
+	import { wallClockInZone } from '$lib/domain/time/zone';
 	import type { DraftDto, SubmittedRequestDto } from '$lib/types/request';
 
-	let { draft, formError }: { draft: DraftDto; formError?: string | undefined } = $props();
+	let {
+		draft,
+		timeZone,
+		formError
+	}: { draft: DraftDto; timeZone: string; formError?: string | undefined } = $props();
 
 	/*
 	 * A draft may hold half of the form: the send is what the server blocks, not the saving.
@@ -33,7 +38,9 @@
 	const address = $derived(
 		pickedAddress ?? (draft.deliveryAddressId === null ? '' : String(draft.deliveryAddressId))
 	);
-	const date = $derived(pickedDate ?? draft.deliveryAt?.slice(0, 10) ?? '');
+	// The saved instant goes back into the form on the clock of the workshop the server read it on.
+	const saved = $derived(draft.deliveryAt ? wallClockInZone(draft.deliveryAt, timeZone) : null);
+	const date = $derived(pickedDate ?? saved?.date ?? '');
 
 	const options = $derived<SelectOption[]>(
 		draft.addresses.map((item) => ({
@@ -95,7 +102,7 @@
 			type="time"
 			label="Время доставки"
 			placeholder="Введите время"
-			value={draft.deliveryAt?.slice(11, 16) ?? ''}
+			value={saved?.time ?? ''}
 			required
 		/>
 	</div>
