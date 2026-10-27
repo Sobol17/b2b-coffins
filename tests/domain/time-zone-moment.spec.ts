@@ -1,6 +1,6 @@
 import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
-import { momentInZone } from '../../src/lib/domain/time/zone';
+import { momentInZone, wallClockInZone } from '../../src/lib/domain/time/zone';
 
 function assertProperty(property: fc.IPropertyWithHooks<unknown[]>): void {
 	expect(() => fc.assert(property)).not.toThrow();
@@ -48,5 +48,49 @@ describe('a deadline typed on the wall clock of the workshop (C4)', () => {
 		expect(momentInZone('2026-02-31', '10:00', 'Europe/Moscow')).toBeNull();
 		expect(momentInZone('2026-02-01', '24:00', 'Europe/Moscow')).toBeNull();
 		expect(momentInZone('2026-02-01', '9:00', 'Europe/Moscow')).toBeNull();
+	});
+});
+
+describe('a stored deadline shown back on the wall clock of the workshop (P11)', () => {
+	it('splits the instant into the date and the time of the zone, not of UTC', () => {
+		expect(wallClockInZone('2026-10-30T11:30:00.000Z', 'Europe/Moscow')).toEqual({
+			date: '2026-10-30',
+			time: '14:30'
+		});
+		expect(wallClockInZone('2026-10-30T20:30:00.000Z', 'Asia/Irkutsk')).toEqual({
+			date: '2026-10-31',
+			time: '04:30'
+		});
+	});
+
+	it('gives back exactly the date and time the deadline was typed with', () => {
+		const zones = fc.constantFrom(
+			'Europe/Moscow',
+			'Asia/Irkutsk',
+			'Asia/Vladivostok',
+			'Europe/Kaliningrad',
+			'UTC'
+		);
+		const days = fc.date({
+			min: new Date('2026-01-01'),
+			max: new Date('2027-12-31'),
+			noInvalidDate: true
+		});
+		assertProperty(
+			fc.property(
+				zones,
+				days,
+				fc.integer({ min: 0, max: 23 }),
+				fc.integer({ min: 0, max: 59 }),
+				(zone, day, h, m) => {
+					const date = day.toISOString().slice(0, 10);
+					const time = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+					const moment = momentInZone(date, time, zone);
+					if (moment === null) return false;
+					const wall = wallClockInZone(moment.toISOString(), zone);
+					return wall.date === date && wall.time === time;
+				}
+			)
+		);
 	});
 });

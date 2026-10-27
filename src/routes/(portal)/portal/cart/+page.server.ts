@@ -5,6 +5,7 @@ import { actionFailure, invalidForm } from '$lib/server/core/http';
 import { DraftService } from '$lib/server/request/draft.service';
 import { RequestRepeatService } from '$lib/server/request/request-repeat.service';
 import { RequestSubmitService } from '$lib/server/request/request-submit.service';
+import { OrgService } from '$lib/server/settings/org.service';
 import type { ActorContext } from '$lib/types/actor';
 import {
 	draftDetailsSchema,
@@ -68,7 +69,7 @@ export const actions = {
 
 	details: async ({ request, locals, url }) => {
 		const service = new DraftService(orderer(locals, url));
-		const parsed = draftDetailsSchema.safeParse(await fields(request));
+		const parsed = draftDetailsSchema(OrgService.timezone()).safeParse(await fields(request));
 		if (!parsed.success) return invalidForm(parsed.error);
 		try {
 			service.saveDetails(parsed.data);
@@ -80,7 +81,7 @@ export const actions = {
 
 	submit: async ({ request, locals, url }) => {
 		const service = new RequestSubmitService(orderer(locals, url));
-		const parsed = draftDetailsSchema.safeParse(await fields(request));
+		const parsed = draftDetailsSchema(OrgService.timezone()).safeParse(await fields(request));
 		if (!parsed.success) return invalidForm(parsed.error);
 		try {
 			return { submitted: service.submit(parsed.data) };

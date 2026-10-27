@@ -175,7 +175,7 @@ describe('the portal draft (P4)', () => {
 	});
 
 	it('ignores an own request number posted with the details: the cart no longer asks for it', () => {
-		const parsed = draftDetailsSchema.parse({
+		const parsed = draftDetailsSchema('Europe/Moscow').parse({
 			delivery: 'pickup',
 			comment: '',
 			externalNumber: 'РС-77'

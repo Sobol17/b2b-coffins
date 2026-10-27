@@ -65,7 +65,7 @@
 		<div class="grid grid-cols-1 items-start gap-6 lg:grid-cols-[1fr_25rem]">
 			<div class="flex flex-col gap-6">
 				<DraftLines {draft} />
-				<DeliveryPanel {draft} {formError} />
+				<DeliveryPanel {draft} timeZone={data.timezone} {formError} />
 			</div>
 			<DraftSummary {draft} formId={DRAFT_FORM_ID} />
 		</div>

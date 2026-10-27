@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import { login, purchaseMoneyKeys } from './fixtures';
-import { emptyCart, fillDelivery } from './portal-flow';
+import { emptyCart, fillDelivery, openCard } from './portal-flow';
 
 const ORIGIN = 'http://localhost:4173';
 
@@ -55,6 +55,33 @@ test('the server refuses a send while the delivery fields are empty', async ({ p
 	// The draft is untouched: a refused send leaves the cart exactly as it was.
 	await expect(page.getByTestId('cart-count')).toBeVisible();
 	await expect(page.getByTestId('draft-line').first()).toBeVisible();
+});
+
+// The preview runs in the zone of the machine, the seed sets the workshop to Moscow: a deadline read
+// on the server clock would come back shifted everywhere except a machine that lives in Moscow.
+test('the deadline keeps the typed wall clock in the saved draft and on the card', async ({
+	page
+}) => {
+	await login(page, 'cp_admin');
+	await addVolga(page, '1');
+	await page.goto('/portal/cart');
+	await fillDelivery(page);
+	await page.getByLabel('Время доставки').fill('14:30');
+	const date = (await page.getByTestId('delivery-date').getByRole('button').innerText()).trim();
+	await page.getByRole('button', { name: 'Сохранить черновик' }).click();
+	await expect(page.getByText('Черновик сохранён')).toBeVisible();
+
+	await page.reload();
+	await expect(page.getByLabel('Время доставки')).toHaveValue('14:30');
+	await expect(page.getByTestId('delivery-date').getByRole('button')).toHaveText(date);
+
+	await page.getByTestId('submit-draft').click();
+	const banner = page.getByTestId('request-submitted');
+	await expect(banner).toContainText(/З-\d{4}-\d{5}/);
+	const number = (await banner.innerText()).match(/З-\d{4}-\d{5}/)?.[0];
+	if (!number) throw new Error('the portal did not show a request number');
+	await openCard(page, number);
+	await expect(page.getByTestId('request-shipment')).toContainText(`${date} 14:30`);
 });
 
 test('the administrator sees the personal total with the contract discount', async ({ page }) => {
