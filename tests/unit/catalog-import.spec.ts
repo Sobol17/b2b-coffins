@@ -47,7 +47,7 @@ describe('catalog import from the price list of 01.06.2026', () => {
 	it('loads every line of the price list, a pair as two models with one price', () => {
 		const result = importCatalog(db, fixture);
 
-		expect(result).toEqual({ products: 78, variants: 78, hidden: 0 });
+		expect(result).toEqual({ products: 78, variants: 78, hidden: 0, photos: 0 });
 		expect(price('Эконом')).toBe(850_000);
 		expect(price('Славянский с багетом Евро')).toBe(2_050_000);
 		expect(price('Шестигранный с багетом Евро')).toBe(2_050_000);
