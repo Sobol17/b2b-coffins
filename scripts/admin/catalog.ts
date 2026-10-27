@@ -1,11 +1,14 @@
 import { readFileSync } from 'node:fs';
+import { dirname } from 'node:path';
 import { and, eq, notInArray } from 'drizzle-orm';
 import { z } from 'zod';
+import { config } from '../../src/lib/server/config';
 import type { Db } from '../../src/lib/server/db/client';
 import { categories, dictItems, productVariants, products } from '../../src/lib/server/db/schema';
 import { upsertVariantStockItem } from '../seed/catalog';
 import { dictIdByCode } from '../seed/reference';
 import { readOptions, STRING_OPTION } from './args';
+import { attachPhotos, loadPhotos, type PhotoSource } from './catalog-photos';
 
 const optionsSchema = z.object({
 	file: z.string().min(1),
@@ -35,6 +38,8 @@ export const catalogImportSchema = z.object({
 			category: z.string().min(1),
 			sortOrder: z.number().int(),
 			description: z.string().min(1).optional(),
+			// Paths relative to the folder of the file; the first photo becomes the cover.
+			photos: z.array(z.string().min(1)).default([]),
 			variants: z
 				.array(
 					z.object({
@@ -59,6 +64,7 @@ export interface CatalogImportResult {
 	readonly products: number;
 	readonly variants: number;
 	readonly hidden: number;
+	readonly photos: number;
 }
 
 /** Categories are matched by title, so a section the CRM already has is reused, not doubled. */
@@ -127,12 +133,14 @@ function upsertVariant(
 /**
  * Loads a price list into the catalog in one transaction. Running it twice leaves the same
  * catalog. `hideOthers` takes every model outside the file off the portal, history stays intact.
+ * Without `photos` the file's photos are not read at all.
  */
 export function importCatalog(
 	db: Db,
 	fixture: CatalogImport,
-	{ hideOthers = false }: { hideOthers?: boolean } = {}
+	{ hideOthers = false, photos }: { hideOthers?: boolean; photos?: PhotoSource } = {}
 ): CatalogImportResult {
+	const loaded = photos ? loadPhotos(fixture.products, photos.sourceDir) : new Map();
 	return db.transaction(() => {
 		for (const material of fixture.materials) {
 			db.insert(dictItems)
@@ -149,10 +157,13 @@ export function importCatalog(
 		);
 
 		let variants = 0;
+		let attached = 0;
 		for (const product of fixture.products) {
 			const categoryId = categoryIds.get(product.category);
 			if (categoryId === undefined) throw new Error(`unknown category ${product.category}`);
 			const productId = upsertProduct(db, product, categoryId);
+			if (photos)
+				attached += attachPhotos(db, productId, loaded.get(product.sku) ?? [], photos.filesRoot);
 			for (const variant of product.variants) {
 				upsertVariant(db, productId, product.title, variant, pcsUnitId);
 				variants += 1;
@@ -174,7 +185,7 @@ export function importCatalog(
 					)
 					.run().changes
 			: 0;
-		return { products: fixture.products.length, variants, hidden };
+		return { products: fixture.products.length, variants, hidden, photos: attached };
 	});
 }
 
@@ -188,8 +199,12 @@ export function catalogImport(db: Db, argv: readonly string[]): void {
 	const parsed = catalogImportSchema.safeParse(raw);
 	if (!parsed.success)
 		throw new Error(`${options.file} is invalid: ${z.prettifyError(parsed.error)}`);
-	const result = importCatalog(db, parsed.data, { hideOthers: options['hide-others'] ?? false });
+	const result = importCatalog(db, parsed.data, {
+		hideOthers: options['hide-others'] ?? false,
+		photos: { sourceDir: dirname(options.file), filesRoot: config.FILES_DIR }
+	});
 	console.log(
-		`catalog imported: ${result.products} models, ${result.variants} variants, ${result.hidden} hidden`
+		`catalog imported: ${result.products} models, ${result.variants} variants, ` +
+			`${result.hidden} hidden, ${result.photos} photos`
 	);
 }
