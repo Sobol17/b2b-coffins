@@ -24,6 +24,10 @@ test('C18: the owner records, edits and deletes an expense', async ({ page }) =>
 	await login(page, 'owner');
 	await crmNavLink(page, 'Финансы').click();
 	await expect(page.getByTestId('finance-expense')).toBeVisible();
+	// A manual entry carries a date without a time, so today's payments of every earlier run sort
+	// above it and push it off the first page. The source filter narrows the feed, not the tiles.
+	await page.goto('/crm/finance?source=manual_expense');
+	await expect(page.getByTestId('finance-expense')).toBeVisible();
 	const before = await roublesOf(page, 'finance-expense');
 
 	const form = page.getByTestId('finance-form');
