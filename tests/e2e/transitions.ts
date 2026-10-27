@@ -1,4 +1,3 @@
-import { execFileSync } from 'node:child_process';
 import { and, eq, inArray, isNull, or, sql } from 'drizzle-orm';
 import { createDb, type Db } from '../../src/lib/server/db/client';
 import {
@@ -14,54 +13,12 @@ import {
 } from '../../src/lib/server/db/schema';
 import { ACCOUNTS, type RoleKey } from './fixtures';
 import type { RequestStatus } from '../../src/lib/types/request';
+import { E2E_DATABASE_PATH } from './transition-cli';
 
-const DATABASE_PATH = './data/e2e.db';
+export { transition, type TransitionResult } from './transition-cli';
 
 export function e2eDb(): Db {
-	return createDb(DATABASE_PATH);
-}
-
-export interface TransitionResult {
-	readonly ok: boolean;
-	readonly output: string;
-}
-
-/**
- * Moves a request the way an operator does it until the CRM screens arrive in C4 to C7: through
- * `pnpm admin`, against the e2e database, with the rights of a real account.
- */
-export function transition(
-	number: string,
-	to: RequestStatus,
-	actor: RoleKey,
-	note: { reason?: string; comment?: string } = {}
-): TransitionResult {
-	const argv = [
-		'admin',
-		'request:transition',
-		'--request',
-		number,
-		'--to',
-		to,
-		'--actor',
-		ACCOUNTS[actor].email,
-		...(note.reason ? ['--reason', note.reason] : []),
-		...(note.comment ? ['--comment', note.comment] : [])
-	];
-	try {
-		const output = execFileSync('pnpm', argv, {
-			encoding: 'utf8',
-			stdio: 'pipe',
-			env: { ...process.env, DATABASE_PATH }
-		});
-		return { ok: true, output };
-	} catch (err) {
-		const failed = err as { stdout?: string; stderr?: string };
-		const output = `${failed.stdout ?? ''}${failed.stderr ?? ''}`;
-		// Specs assert on `ok` alone; the reason of an unexpected refusal belongs in the run log.
-		console.error(`request:transition ${number} -> ${to} failed:\n${output}`);
-		return { ok: false, output };
-	}
+	return createDb(E2E_DATABASE_PATH);
 }
 
 interface Position {
