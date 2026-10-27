@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { momentInZone } from '$lib/domain/time/zone';
 import { REQUEST_STATUSES } from '$lib/types/request';
 
 const id = z.coerce.number().int().positive();
@@ -54,31 +55,31 @@ const deliveryTime = z.union([z.literal(''), z.string().regex(/^\d{2}:\d{2}$/)])
 /**
  * Delivery and comment, saved with the draft and at submit. A draft may hold a half-filled form:
  * the send is what the server blocks, so a counterparty collects the request in several visits.
+ * The date and time are read on the wall clock of the workshop, whatever zone the server runs in.
  */
-export const draftDetailsSchema = z
-	.object({
-		deliveryAddressId: optionalId,
-		deliveryDate,
-		deliveryTime,
-		deceasedName: optionalText(200, 'ФИО умершего не длиннее 200 символов'),
-		comment: optionalText(1000, 'Комментарий не длиннее 1000 символов')
-	})
-	.transform((value) => ({
-		deliveryAddressId: value.deliveryAddressId,
-		deliveryAt: localMoment(value.deliveryDate, value.deliveryTime),
-		deceasedName: value.deceasedName,
-		comment: value.comment
-	}));
-
-/** Both halves come from the form; either one missing means the deadline is not set yet. */
-function localMoment(date: string | undefined, time: string | undefined): Date | null {
-	if (!date || !time) return null;
-	const moment = new Date(`${date}T${time}:00`);
-	return Number.isNaN(moment.getTime()) ? null : moment;
+export function draftDetailsSchema(timeZone: string) {
+	return z
+		.object({
+			deliveryAddressId: optionalId,
+			deliveryDate,
+			deliveryTime,
+			deceasedName: optionalText(200, 'ФИО умершего не длиннее 200 символов'),
+			comment: optionalText(1000, 'Комментарий не длиннее 1000 символов')
+		})
+		.transform((value) => ({
+			deliveryAddressId: value.deliveryAddressId,
+			deliveryAt:
+				value.deliveryDate && value.deliveryTime
+					? momentInZone(value.deliveryDate, value.deliveryTime, timeZone)
+					: null,
+			deceasedName: value.deceasedName,
+			comment: value.comment
+		}));
 }
 
+export type DraftDetailsInput = z.output<ReturnType<typeof draftDetailsSchema>>;
+
 export type AddDraftItemInput = z.infer<typeof addDraftItemSchema>;
-export type DraftDetailsInput = z.infer<typeof draftDetailsSchema>;
 
 /** FormData to a plain object, keeping repeated `option` fields as a list. */
 export function draftItemForm(form: FormData): Record<string, unknown> {
