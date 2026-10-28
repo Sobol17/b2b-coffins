@@ -75,6 +75,17 @@ export class RequestTransitionService extends BaseService {
 		return this.chainAutoSteps(request.id, request.status, tx);
 	}
 
+	/**
+	 * Closes every waiting request of the counterparty the guards now let through (tech.md v1.65):
+	 * once its whole debt is repaid they move to `paid` together. Runs in the transaction of a mark.
+	 * @returns ids of the requests that moved to `paid`.
+	 */
+	settleCounterparty(counterpartyId: number, tx: Tx): number[] {
+		return this.repo
+			.awaitingOf(counterpartyId, tx)
+			.filter((id) => this.chainAutoSteps(id, 'awaiting_payment', tx) === 'paid');
+	}
+
 	private run(
 		requestId: number,
 		input: RequestTransitionInput,

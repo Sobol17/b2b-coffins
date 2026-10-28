@@ -1,7 +1,16 @@
 import { expect, test, type Page } from '@playwright/test';
 import { enterRequest } from './crm-flow';
 import { login } from './fixtures';
-import { e2eDb, loadUp, moneyOf, statusChain, statusOf, stockUp, transition } from './transitions';
+import {
+	clearOtherDebts,
+	e2eDb,
+	loadUp,
+	moneyOf,
+	statusChain,
+	statusOf,
+	stockUp,
+	transition
+} from './transitions';
 
 const ORIGIN = 'http://localhost:4173';
 // Mahogany is left to this spec: the portal orders walnut, C4 black, C5 wenge, C6 white.
@@ -44,6 +53,8 @@ test('C7 DoD: a partial payment keeps the request waiting, the rest closes it in
 	expect(moneyOf(db, number).marksMinor).toBe(1000_00);
 
 	// The untouched field carries the rest with its kopecks.
+	// A request closes only when its counterparty owes nothing else (tech.md v1.65).
+	clearOtherDebts(db, number);
 	await pay(page);
 
 	await expect(panel.getByRole('button', { name: 'Отметить оплату' })).toHaveCount(0);

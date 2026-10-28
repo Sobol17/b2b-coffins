@@ -37,12 +37,13 @@ beforeEach(() => resetRequests(db));
 
 describe('the delivered block of the delivery screen', () => {
 	it('lists a request right after the door, whatever the payment did', () => {
-		const byInvoice = delivered(false);
+		// Cash first: a request closes only while the counterparty owes nothing else (v1.65).
 		const byCash = delivered(true);
+		const byInvoice = delivered(false);
 
 		const rows = delivery().overview().delivered;
 
-		expect(rows.map((row) => row.id)).toEqual([byCash, byInvoice]);
+		expect(rows.map((row) => row.id)).toEqual([byInvoice, byCash]);
 		expect(rows.find((row) => row.id === byCash)).toMatchObject({
 			counterpartyName: 'Ритуал-Сервис',
 			deceasedName: 'Иванов Иван Иванович',

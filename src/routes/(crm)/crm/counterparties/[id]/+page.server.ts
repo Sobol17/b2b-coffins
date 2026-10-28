@@ -9,6 +9,7 @@ import { CounterpartyLedgerService } from '$lib/server/crm-counterparty/counterp
 import { CounterpartyPriceService } from '$lib/server/crm-counterparty/counterparty-price.service';
 import { CrmCounterpartyService } from '$lib/server/crm-counterparty/crm-counterparty.service';
 import { mailDriver } from '$lib/server/notifications/drivers/mail/select';
+import { CounterpartyPaymentService } from '$lib/server/payment/counterparty-payment.service';
 import {
 	personalPriceEntriesFrom,
 	personalPriceFiltersSchema,
@@ -23,6 +24,7 @@ import {
 	requisitesInputSchema,
 	termsInputSchema
 } from '$lib/validation/crm-counterparty';
+import { paymentMarkSchema } from '$lib/validation/payment';
 import { definedProps } from '$lib/utils/props';
 import type { Actions, PageServerLoad, RequestEvent } from './$types';
 
@@ -43,6 +45,7 @@ function context(event: RequestEvent) {
 		details: () => new CounterpartyDetailService(actor),
 		access: () => new CounterpartyAccessService(actor, mailDriver()),
 		prices: () => new CounterpartyPriceService(actor),
+		payments: () => new CounterpartyPaymentService(actor),
 		request: event.request
 	};
 }
@@ -160,6 +163,10 @@ export const actions = {
 		} catch (err) {
 			return actionFailure(err);
 		}
+	},
+	pay: (event) => {
+		const { id, payments, request } = context(event);
+		return formAction(request, 'pay', paymentMarkSchema, (input) => payments().pay(id, input));
 	},
 	refill: (event) => {
 		const { id, prices, request } = context(event);

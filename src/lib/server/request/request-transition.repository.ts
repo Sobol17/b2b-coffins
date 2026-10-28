@@ -1,10 +1,12 @@
-import { and, eq, inArray, ne, type SQL } from 'drizzle-orm';
+import { and, asc, eq, inArray, ne, type SQL } from 'drizzle-orm';
 import { BaseRepository } from '../core/repository';
+import { DebtRepository } from '../counterparty/debt.repository';
 import type { Tx } from '../db/client';
 import { PaymentMarkRepository } from '../payment/payment-mark.repository';
 import { LoadingRepository } from '../stock/loading.repository';
 import { StockFill } from '../stock/stock-fill';
 import { dictItems, requestItems, requestStatusHistory, requests } from '../db/schema';
+import { DEBT_STATUSES, requestDebtMinor } from '$lib/domain/payment/debt';
 import type { GuardFacts } from '$lib/domain/request/guards';
 import { reachableStatuses } from '$lib/domain/request/state-machine';
 import type { StampField } from '$lib/domain/request/transition-flow';
@@ -33,7 +35,8 @@ export class RequestTransitionRepository extends BaseRepository<typeof requests>
 	constructor(
 		private readonly fill: StockFill = new StockFill(),
 		private readonly loading: LoadingRepository = new LoadingRepository(),
-		private readonly marks: PaymentMarkRepository = new PaymentMarkRepository()
+		private readonly marks: PaymentMarkRepository = new PaymentMarkRepository(),
+		private readonly debts: DebtRepository = new DebtRepository()
 	) {
 		super(requests);
 	}
@@ -73,6 +76,8 @@ export class RequestTransitionRepository extends BaseRepository<typeof requests>
 		const [row] = db
 			.select({
 				totalMinor: requests.totalMinor,
+				status: requests.status,
+				counterpartyId: requests.counterpartyId,
 				isStockRequest: requests.isStockRequest,
 				deliveryAddressId: requests.deliveryAddressId,
 				deliveryAt: requests.deliveryAt,
@@ -81,6 +86,7 @@ export class RequestTransitionRepository extends BaseRepository<typeof requests>
 			.from(requests)
 			.where(eq(requests.id, requestId))
 			.all();
+		const marks = this.marks.amounts(requestId, tx);
 		return {
 			stockCovered: this.fill.covers(requestId, tx),
 			unitPricesMinor: db
@@ -90,7 +96,8 @@ export class RequestTransitionRepository extends BaseRepository<typeof requests>
 				.all()
 				.map((line) => line.price),
 			totalMinor: row?.totalMinor ?? 0,
-			paymentMarksMinor: this.marks.amounts(requestId, tx),
+			paymentMarksMinor: marks,
+			otherDebtMinor: row ? this.otherDebtMinor(row, marks, tx) : 0,
 			delivery: {
 				isStockRequest: row?.isStockRequest ?? false,
 				deliveryAddressId: row?.deliveryAddressId ?? null,
@@ -99,6 +106,32 @@ export class RequestTransitionRepository extends BaseRepository<typeof requests>
 			},
 			loadedLines: this.loading.linesOf(requestId, tx)
 		};
+	}
+
+	/** Requests of the counterparty waiting for money, the oldest delivery first (tech.md v1.65). */
+	awaitingOf(counterpartyId: number, tx?: Tx): number[] {
+		return this.db(tx)
+			.select({ id: requests.id })
+			.from(requests)
+			.where(
+				and(eq(requests.counterpartyId, counterpartyId), eq(requests.status, 'awaiting_payment'))
+			)
+			.orderBy(asc(requests.deliveredAt), asc(requests.id))
+			.all()
+			.map((row) => row.id);
+	}
+
+	/** The debt of the counterparty without this request's own rest: the hold of guard fullyPaid. */
+	private otherDebtMinor(
+		row: { status: RequestStatus; counterpartyId: number | null; totalMinor: number },
+		marks: readonly number[],
+		tx?: Tx
+	): number {
+		if (row.counterpartyId === null) return 0;
+		const own = (DEBT_STATUSES as readonly RequestStatus[]).includes(row.status)
+			? requestDebtMinor(row.totalMinor, marks)
+			: 0;
+		return this.debts.of(row.counterpartyId, tx).debtMinor - own;
 	}
 
 	/** A rejection names its reason from the refusal_reason dictionary, nothing else. */

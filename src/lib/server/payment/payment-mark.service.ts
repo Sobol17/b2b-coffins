@@ -6,6 +6,7 @@ import type { Tx } from '../db/client';
 import { bus } from '../events/bus';
 import { RequestTransitionService } from '../request/request-transition.service';
 import { OrgService } from '../settings/org.service';
+import { paymentDay } from './payment-day';
 import { PaymentMarkRepository } from './payment-mark.repository';
 import { requestDebtMinor } from '$lib/domain/payment/debt';
 import {
@@ -14,9 +15,8 @@ import {
 	settledAmountMinor,
 	type MarkRefusal
 } from '$lib/domain/payment/mark';
-import { startOfDayInZone } from '$lib/domain/time/zone';
 import type { ActorContext } from '$lib/types/actor';
-import type { SubmittedRequestDto } from '$lib/types/request';
+import type { RequestStatus, SubmittedRequestDto } from '$lib/types/request';
 import type { PaymentMarkInput, PaymentReverseInput } from '$lib/validation/payment';
 
 const REFUSAL: Readonly<Record<MarkRefusal, string>> = {
@@ -26,7 +26,8 @@ const REFUSAL: Readonly<Record<MarkRefusal, string>> = {
 
 /**
  * Payment marks of the request card (C7, tech.md v1.44). The manager never moves the status: a mark
- * that covers the total lets the system take `awaiting_payment -> paid` in the same transaction.
+ * that repays the last of the counterparty's debt lets the system take `awaiting_payment -> paid`
+ * for all its covered requests in the same transaction (v1.65).
  */
 export class PaymentMarkService extends BaseService {
 	constructor(
@@ -49,7 +50,7 @@ export class PaymentMarkService extends BaseService {
 	 * ValidationError for a date in the future or an amount above the rest.
 	 */
 	mark(requestId: number, input: PaymentMarkInput): SubmittedRequestDto {
-		const paidAt = this.paidAt(input.paidAt);
+		const paidAt = paymentDay(input.paidAt, this.timeZone, this.now());
 		return this.audited({ action: 'payment.mark', entity: 'payment_marks' }, (tx) => {
 			const request = this.waiting(requestId, tx);
 			const dueMinor = requestDebtMinor(request.totalMinor, this.marks.amounts(request.id, tx));
@@ -69,7 +70,7 @@ export class PaymentMarkService extends BaseService {
 				tx
 			);
 			this.marks.syncPaid(request.id, tx);
-			const status = this.transitions.settle(request.id, tx);
+			const status = this.settle(request, tx);
 			// A closing mark is announced by request.paid; only a partial one needs its own event.
 			if (status === 'awaiting_payment') bus.emit('request.payment_marked', request.id, tx);
 			return {
@@ -131,15 +132,10 @@ export class PaymentMarkService extends BaseService {
 		return request;
 	}
 
-	/** The day of the payment in the workshop zone; money cannot arrive tomorrow. */
-	private paidAt(isoDate: string): Date {
-		const paidAt = startOfDayInZone(isoDate, this.timeZone);
-		if (paidAt === null) throw new ValidationError('Выберите дату оплаты', { field: 'paidAt' });
-		if (paidAt.getTime() > this.now().getTime()) {
-			throw new ValidationError('Дата оплаты не может быть позже сегодняшней', {
-				field: 'paidAt'
-			});
-		}
-		return paidAt;
+	/** A covered request waits for the rest of the counterparty's debt (tech.md v1.65). */
+	private settle(request: SteeredRow, tx: Tx): RequestStatus {
+		if (request.counterpartyId === null) return this.transitions.settle(request.id, tx);
+		const closed = this.transitions.settleCounterparty(request.counterpartyId, tx);
+		return closed.includes(request.id) ? 'paid' : 'awaiting_payment';
 	}
 }

@@ -1,7 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import { crmNavLink, login, openBell, purchaseMoneyKeys, type RoleKey } from './fixtures';
 import { openCard, sendRequest } from './portal-flow';
-import { e2eDb, moneyOf, statusChain, statusOf, stockUp } from './transitions';
+import { clearOtherDebts, e2eDb, moneyOf, statusChain, statusOf, stockUp } from './transitions';
 
 /*
  * The acceptance scenario of stage 2 (tech.md 14, C14): one request goes from the cart of a
@@ -120,6 +120,8 @@ test.describe.serial('one request through all seven roles', () => {
 		await page.goto(shared.card);
 
 		const panel = page.getByTestId('request-payments');
+		// A request closes only when its counterparty owes nothing else (tech.md v1.65).
+		clearOtherDebts(db, shared.number);
 		await panel.getByRole('button', { name: 'Отметить оплату' }).click();
 		await expect(page.getByText('Оплата отмечена').first()).toBeVisible();
 

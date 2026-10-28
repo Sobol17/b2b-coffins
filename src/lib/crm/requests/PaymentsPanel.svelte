@@ -123,6 +123,10 @@
 				/>
 				<Button type="submit" class="self-start">Отметить оплату</Button>
 			</form>
+		{:else if card.status === 'awaiting_payment' && card.dueMinor === 0 && !card.isStockRequest}
+			<p class="text-sm text-fg-muted" data-testid="payments-held">
+				Заявка оплачена. Она перейдёт в «Оплачено», когда контрагент погасит весь долг.
+			</p>
 		{:else if card.status !== 'paid'}
 			<p class="text-sm text-fg-muted">Оплату отмечают после доставки заявки.</p>
 		{/if}

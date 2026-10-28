@@ -25,7 +25,11 @@ export interface DemoScenario {
 	readonly stage: DemoStage;
 }
 
-/** One request per stage of tech.md 6.2, so every badge and every mail text shows up once. */
+/**
+ * One request per stage of tech.md 6.2, so every badge and every mail text shows up once. The paid
+ * one goes before the one awaiting payment: a request closes only when the counterparty owes
+ * nothing else (v1.65).
+ */
 export const DEMO_SCENARIOS: readonly DemoScenario[] = [
 	{
 		mark: `${DEMO_MARK}1`,
@@ -71,7 +75,7 @@ export const DEMO_SCENARIOS: readonly DemoScenario[] = [
 		deliveryInDays: 5,
 		deceasedName: 'Кравцова Нина Андреевна',
 		comment: 'Позвонить за час до приезда',
-		stage: 'awaiting_payment'
+		stage: 'paid'
 	},
 	{
 		mark: `${DEMO_MARK}5`,
@@ -81,7 +85,7 @@ export const DEMO_SCENARIOS: readonly DemoScenario[] = [
 		deliveryInDays: 6,
 		deceasedName: 'Белов Юрий Тимофеевич',
 		comment: null,
-		stage: 'paid'
+		stage: 'awaiting_payment'
 	},
 	{
 		mark: `${DEMO_MARK}6`,

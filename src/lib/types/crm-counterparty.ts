@@ -110,6 +110,13 @@ export interface CounterpartyPriceRowDto {
 	readonly personalPriceMinor: number | null;
 }
 
+/** A payment against the whole debt (v1.65): how many requests it reached and closed. */
+export interface CounterpartyPaymentResult {
+	readonly amountMinor: number;
+	readonly requestCount: number;
+	readonly closedCount: number;
+}
+
 export interface CounterpartyPriceSaveResult {
 	readonly updated: number;
 	readonly cleared: number;

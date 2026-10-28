@@ -1,4 +1,4 @@
-import { desc, eq, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, sql } from 'drizzle-orm';
 import { BaseRepository } from '../core/repository';
 import type { Tx } from '../db/client';
 import { paymentMarks, requests, users } from '../db/schema';
@@ -80,6 +80,35 @@ export class PaymentMarkRepository extends BaseRepository<typeof paymentMarks> {
 			.where(eq(paymentMarks.requestId, requestId))
 			.all()
 			.map((mark) => mark.amount);
+	}
+
+	/**
+	 * Requests of the counterparty that take money now, the oldest delivery first, with what each
+	 * still owes: the order a payment of the whole debt is spread in (tech.md v1.65).
+	 */
+	openOf(
+		counterpartyId: number,
+		tx?: Tx
+	): { requestId: number; totalMinor: number; paidMinor: number }[] {
+		return this.db(tx)
+			.select({
+				requestId: requests.id,
+				totalMinor: requests.totalMinor,
+				// A join, not a correlated subquery: a one-table select drops the table prefix.
+				paidMinor: sql<number>`coalesce(sum(${paymentMarks.amountMinor}), 0)`
+			})
+			.from(requests)
+			.leftJoin(paymentMarks, eq(paymentMarks.requestId, requests.id))
+			.where(
+				and(
+					eq(requests.counterpartyId, counterpartyId),
+					eq(requests.status, 'awaiting_payment'),
+					eq(requests.isStockRequest, false)
+				)
+			)
+			.groupBy(requests.id)
+			.orderBy(asc(requests.deliveredAt), asc(requests.id))
+			.all();
 	}
 
 	insert(mark: NewPaymentMark, tx: Tx): number {
