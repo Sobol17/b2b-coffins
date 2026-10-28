@@ -12,7 +12,7 @@
 	}: {
 		choices: CrmCounterpartyChoicesDto;
 		values?: {
-			priceListId: number | null;
+			regionPriceListId: number | null;
 			discountPercent: number;
 			settlementScheme: SettlementScheme;
 			managerId: number | null;
@@ -26,7 +26,7 @@
 		...choices.managers.map((row) => ({ value: String(row.id), label: row.fullName }))
 	]);
 	const priceLists = $derived([
-		{ value: '', label: 'Базовые цены' },
+		{ value: '', label: 'Без регионального прайса' },
 		...choices.priceLists.map((row) => ({ value: String(row.id), label: row.title }))
 	]);
 </script>
@@ -39,11 +39,11 @@
 	value={String(values?.managerId ?? '')}
 />
 <Select
-	name="priceListId"
-	label="Прайс-лист"
+	name="regionPriceListId"
+	label="Региональный прайс-лист"
 	placeholder="Выберите прайс-лист"
 	options={priceLists}
-	value={String(values?.priceListId ?? '')}
+	value={String(values?.regionPriceListId ?? '')}
 />
 <Select
 	name="settlementScheme"

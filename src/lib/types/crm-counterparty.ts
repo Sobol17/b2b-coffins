@@ -51,7 +51,8 @@ export interface CrmCounterpartyCardDto {
 	readonly address: string | null;
 	readonly phone: string | null;
 	readonly email: string | null;
-	readonly priceListId: number | null;
+	/** The regional list the personal prices were prefilled from (v1.64). */
+	readonly regionPriceListId: number | null;
 	readonly discountPercent: number;
 	readonly settlementScheme: SettlementScheme;
 	readonly managerId: number | null;

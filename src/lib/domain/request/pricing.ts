@@ -10,6 +10,8 @@ export interface UnitPriceInput {
 	readonly basePriceMinor: number;
 	/** Entry of the base price list, when the list has one for this variant. */
 	readonly baseListPriceMinor?: number | undefined;
+	/** Entry of the regional list of the counterparty (v1.64). */
+	readonly regionListPriceMinor?: number | undefined;
 	/** Entry of the counterparty price list. Lists are sparse: most variants have none. */
 	readonly personalListPriceMinor?: number | undefined;
 }
@@ -24,9 +26,17 @@ export function isPriceListActive(window: PriceListWindow, at: Date): boolean {
 	return started && notEnded;
 }
 
-/** Personal price of a variant: counterparty list, then base list, then the variant price. */
+/**
+ * Personal price of a variant: the counterparty list, then its regional list (v1.64), then the
+ * base list, then the variant price.
+ */
 export function resolveUnitPrice(input: UnitPriceInput): number {
-	return input.personalListPriceMinor ?? input.baseListPriceMinor ?? input.basePriceMinor;
+	return (
+		input.personalListPriceMinor ??
+		input.regionListPriceMinor ??
+		input.baseListPriceMinor ??
+		input.basePriceMinor
+	);
 }
 
 /**

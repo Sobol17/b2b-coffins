@@ -8,6 +8,8 @@ export const priceLists = sqliteTable('price_lists', {
 	id: pk(),
 	title: text('title').notNull(),
 	isBase: bool('is_base').notNull().default(false),
+	// A list one counterparty holds alone, made from its card; never offered as a region (v1.64).
+	isPersonal: bool('is_personal').notNull().default(false),
 	validFrom: ts('valid_from'),
 	validTo: ts('valid_to'),
 	createdAt: createdAt(),

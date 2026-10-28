@@ -55,7 +55,8 @@ const requisitesShape = {
 };
 
 const termsShape = {
-	priceListId: nullableId,
+	// The regional list that prefills the personal one; the personal list itself is the system's.
+	regionPriceListId: nullableId,
 	discountPercent: z.coerce
 		.number({ error: 'Введите процент' })
 		.int({ error: 'Скидка: целое число процентов' })
@@ -108,7 +109,7 @@ export const createCounterpartySchema = z
 			email: rest.email
 		},
 		terms: {
-			priceListId: rest.priceListId,
+			regionPriceListId: rest.regionPriceListId,
 			discountPercent: rest.discountPercent,
 			settlementScheme: rest.settlementScheme,
 			managerId: rest.managerId

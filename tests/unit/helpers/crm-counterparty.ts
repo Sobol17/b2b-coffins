@@ -43,7 +43,7 @@ export function newCounterparty(patch: Record<string, string> = {}) {
 		address: '',
 		phone: '',
 		email: '',
-		priceListId: '',
+		regionPriceListId: '',
 		discountPercent: '3',
 		settlementScheme: 'weekly',
 		managerId: '',

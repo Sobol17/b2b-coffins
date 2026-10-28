@@ -161,6 +161,10 @@ export const actions = {
 			return actionFailure(err);
 		}
 	},
+	refill: (event) => {
+		const { id, prices, request } = context(event);
+		return formAction(request, 'refill', z.object({}), () => prices().refill(id));
+	},
 	accessResend: (event) => {
 		const { id, access, request } = context(event);
 		return formAction(request, 'accessResend', entityIdSchema, (input) =>

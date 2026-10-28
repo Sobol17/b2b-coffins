@@ -36,6 +36,17 @@ export class PriceRepository extends BaseRepository<typeof priceListItems> {
 		return row;
 	}
 
+	/** The regional list of a counterparty (v1.64): the tier under its personal list. */
+	regionList(counterpartyId: number): PriceListRow | undefined {
+		const [row] = this.db()
+			.select(LIST_COLUMNS)
+			.from(counterparties)
+			.innerJoin(priceLists, eq(priceLists.id, counterparties.regionPriceListId))
+			.where(eq(counterparties.id, counterpartyId))
+			.all();
+		return row;
+	}
+
 	/** The contract rate of a counterparty the caller has already reached by its own rule. */
 	contractDiscount(counterpartyId: number): number {
 		const [row] = this.db()

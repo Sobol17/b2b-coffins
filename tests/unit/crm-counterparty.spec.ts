@@ -129,7 +129,7 @@ describe('a manager creates a counterparty with its administrator (C3 DoD)', () 
 		await expect(
 			access().create(newCounterparty({ managerId: String(carpenterId) }))
 		).rejects.toThrow(ValidationError);
-		await expect(access().create(newCounterparty({ priceListId: '999' }))).rejects.toThrow(
+		await expect(access().create(newCounterparty({ regionPriceListId: '999' }))).rejects.toThrow(
 			ValidationError
 		);
 	});

@@ -27,6 +27,8 @@ export type ManagedCounterpartyRow =
 	ReturnType<CrmCounterpartyRepository['find']> extends infer T ? NonNullable<T> : never;
 
 const manager = alias(users, 'manager');
+/** A list a counterparty may take as its region: shared, not the base one (v1.64). */
+const REGION_LIST = and(eq(priceLists.isBase, false), eq(priceLists.isPersonal, false));
 
 // Active portal accounts of the row: the same seats the staff limit counts.
 const staffCount = sql<number>`(select count(*) from ${users} where ${users.counterpartyId} = ${counterparties.id} and ${users.isActive} = 1 and ${users.deletedAt} is null)`;
@@ -113,6 +115,7 @@ export class CrmCounterpartyRepository extends BaseRepository<typeof counterpart
 			priceLists: this.db(tx)
 				.select({ id: priceLists.id, title: priceLists.title })
 				.from(priceLists)
+				.where(REGION_LIST)
 				.orderBy(asc(priceLists.title), asc(priceLists.id))
 				.all()
 		};
@@ -122,12 +125,12 @@ export class CrmCounterpartyRepository extends BaseRepository<typeof counterpart
 		return this.managerQuery(userId, tx).length > 0;
 	}
 
-	priceListExists(id: number, tx?: Tx): boolean {
+	isRegionList(id: number, tx?: Tx): boolean {
 		return (
 			this.db(tx)
 				.select({ id: priceLists.id })
 				.from(priceLists)
-				.where(eq(priceLists.id, id))
+				.where(and(eq(priceLists.id, id), REGION_LIST))
 				.get() !== undefined
 		);
 	}

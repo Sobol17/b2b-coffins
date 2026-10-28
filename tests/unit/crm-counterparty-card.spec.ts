@@ -161,7 +161,7 @@ describe('requisites, terms and notes', () => {
 
 	it('changes the commercial terms and keeps the old ones in the journal', () => {
 		const card = cards().updateTerms(ownId, {
-			priceListId: null,
+			regionPriceListId: null,
 			discountPercent: 7,
 			settlementScheme: 'monthly',
 			managerId: ownerId,

@@ -36,7 +36,7 @@ export class CrmCounterpartyDtoMapper {
 			address: row.address,
 			phone: row.phone,
 			email: row.email,
-			priceListId: row.priceListId,
+			regionPriceListId: row.regionPriceListId,
 			discountPercent: row.discountPercent,
 			settlementScheme: row.settlementScheme,
 			managerId: row.managerId,

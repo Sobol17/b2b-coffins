@@ -4,6 +4,7 @@ import { StaffDtoMapper } from '../staff/dto';
 import { StaffRepository } from '../staff/staff.repository';
 import { CounterpartyBaseService } from './counterparty-base.service';
 import { CounterpartyDetailRepository } from './counterparty-detail.repository';
+import { PersonalListFiller } from './personal-list';
 import { CrmCounterpartyRepository } from './crm-counterparty.repository';
 import { CrmCounterpartyDtoMapper } from './dto';
 import type { ActorContext } from '$lib/types/actor';
@@ -23,7 +24,8 @@ export class CrmCounterpartyService extends CounterpartyBaseService {
 		counterparties: CrmCounterpartyRepository = new CrmCounterpartyRepository(),
 		private readonly details: CounterpartyDetailRepository = new CounterpartyDetailRepository(),
 		private readonly staff: StaffRepository = new StaffRepository(),
-		private readonly debts: DebtRepository = new DebtRepository()
+		private readonly debts: DebtRepository = new DebtRepository(),
+		private readonly filler: PersonalListFiller = new PersonalListFiller()
 	) {
 		super(ctx, counterparties);
 	}
@@ -80,11 +82,16 @@ export class CrmCounterpartyService extends CounterpartyBaseService {
 			const old = this.requireCounterparty(id, tx);
 			this.validateTerms(input, tx);
 			this.counterparties.update(id, input, tx);
+			// A new region prefills a counterparty without its own list; its own prices stay.
+			const region = input.regionPriceListId;
+			if (region !== null && region !== old.regionPriceListId) {
+				this.filler.fill(old, region, false, tx);
+			}
 			return {
 				result: this.card(id, tx),
 				entityId: id,
 				before: {
-					priceListId: old.priceListId,
+					regionPriceListId: old.regionPriceListId,
 					discountPercent: old.discountPercent,
 					settlementScheme: old.settlementScheme,
 					managerId: old.managerId,
