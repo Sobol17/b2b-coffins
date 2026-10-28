@@ -110,6 +110,12 @@ docker compose exec app pnpm admin notifications:sync
 docker compose exec app pnpm admin roles:sync
 ```
 
+Обновление до ядра v1.62 переносит себестоимость из варианта каталога в складскую позицию. Запустите перенос один раз после старта контейнера, иначе себестоимость, заполненная в карточке варианта, пропадёт из реестра склада и отчётов. Повторный запуск ничего не меняет.
+
+```bash
+docker compose exec app pnpm admin stock:cost-backfill
+```
+
 ## Команды администратора
 
 CLI из `tech.md` §2 работает внутри контейнера:

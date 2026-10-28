@@ -16,10 +16,10 @@ export function isManualMove(type: string): type is ManualMoveType {
 	return (MANUAL_MOVE_TYPES as readonly string[]).includes(type);
 }
 
-/** Rows of the warehouse to the DTOs of tech.md §8. No money ever passes through here. */
+/** Rows of the warehouse to the DTOs of tech.md §8. The cost passes for `canSeeCost` only. */
 export class StockDtoMapper {
-	static toRow(row: StockItemRow): StockRowDto {
-		return {
+	static toRow(row: StockItemRow, withCost: boolean): StockRowDto {
+		const dto: StockRowDto = {
 			id: row.id,
 			kind: row.kind,
 			code: row.code,
@@ -32,6 +32,7 @@ export class StockDtoMapper {
 			isBelowThreshold: isBelowThreshold(row.balance, row.minThreshold),
 			isNegative: row.isNegative === 1
 		};
+		return withCost ? { ...dto, costPriceMinor: row.costPriceMinor } : dto;
 	}
 
 	static toPosition(row: PositionRow): StockPositionDto {

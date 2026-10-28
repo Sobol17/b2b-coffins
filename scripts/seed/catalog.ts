@@ -161,6 +161,11 @@ export function seedCatalog(db: Db): { products: number; variants: number } {
 		for (const variant of product.variants) {
 			const materialId = dictIdByCode(db, 'material', variant.material);
 			const stockItemId = upsertVariantStockItem(db, variant.sku, product.title, pcsUnitId);
+			// The demo cost belongs to the stock item since v1.62.
+			db.update(stockItems)
+				.set({ costPriceMinor: variant.costPriceMinor })
+				.where(eq(stockItems.id, stockItemId))
+				.run();
 			const values = {
 				productId: productRow.id,
 				sku: variant.sku,
@@ -171,7 +176,6 @@ export function seedCatalog(db: Db): { products: number; variants: number } {
 				heightMm: variant.heightMm,
 				weightG: variant.weightG,
 				basePriceMinor: variant.basePriceMinor,
-				costPriceMinor: variant.costPriceMinor,
 				stockItemId,
 				isPublished: true
 			};

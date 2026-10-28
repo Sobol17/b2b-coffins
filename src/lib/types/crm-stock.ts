@@ -2,7 +2,7 @@ import type { StockMoveType } from './dicts';
 
 /**
  * The warehouse, tech.md §8 (C8, v1.45). Balance is the sum of moves and every figure opens into
- * the moves it is made of. No money key lives here for any role.
+ * the moves it is made of. The only money key is the cost of an item, for `canSeeCost` (v1.62).
  */
 
 export const STOCK_KINDS = ['product', 'component'] as const;
@@ -17,6 +17,8 @@ export type InventoryStatus = (typeof INVENTORY_STATUSES)[number];
 
 /** Units in one manual move or one inventory line. */
 export const STOCK_MOVE_MAX = 100000;
+/** Cost of one unit of a stock item: 10 000 000 roubles. */
+export const STOCK_COST_MAX_MINOR = 1_000_000_000;
 
 export interface StockFilters {
 	readonly kind?: StockKind | undefined;
@@ -40,6 +42,8 @@ export interface StockRowDto {
 	readonly isBelowThreshold: boolean;
 	/** Any position of the item is below zero. */
 	readonly isNegative: boolean;
+	/** Cost of one unit, owner and administrator only (v1.62). */
+	readonly costPriceMinor?: number;
 }
 
 export interface StockPositionDto {
@@ -78,6 +82,8 @@ export interface StockCardDto extends StockRowDto {
 export interface StockChoicesDto {
 	readonly units: readonly { readonly id: number; readonly title: string }[];
 	readonly reasons: readonly { readonly id: number; readonly title: string }[];
+	/** The item form offers the cost field (v1.62). */
+	readonly canSeeCost: boolean;
 }
 
 export interface InventoryRowDto {

@@ -1,5 +1,5 @@
 import { PolicyService } from '../auth/policy';
-import { ConflictError, ForbiddenError, NotFoundError, ValidationError } from '../core/errors';
+import { ConflictError, NotFoundError, ValidationError } from '../core/errors';
 import { BaseService } from '../core/service';
 import type { Tx } from '../db/client';
 import { ProductRepository } from './product.repository';
@@ -31,7 +31,6 @@ export class CrmVariantService extends BaseService {
 	}
 
 	createVariant(input: VariantInput): CrmVariantDto {
-		this.guardCost(input);
 		return this.audited({ action: 'catalog.variant.create', entity: 'product_variants' }, (tx) => {
 			this.validateVariant(input, undefined, tx);
 			const id = this.variants.insert(input, tx);
@@ -44,7 +43,6 @@ export class CrmVariantService extends BaseService {
 	}
 
 	updateVariant(id: number, input: VariantInput): CrmVariantDto {
-		this.guardCost(input);
 		return this.audited({ action: 'catalog.variant.update', entity: 'product_variants' }, (tx) => {
 			const old = this.requireVariant(id, tx);
 			if (old.isDeleted || old.productId !== input.productId)
@@ -189,12 +187,6 @@ export class CrmVariantService extends BaseService {
 		if (input.priceDeltaMinor !== 0) throw new ValidationError('Цвет не меняет цену');
 		if (input.stockItemId !== null && !this.variants.stockComponentActive(input.stockItemId, tx))
 			throw new ValidationError('Выберите учётную позицию комплектующего');
-	}
-
-	private guardCost(input: VariantInput): void {
-		if (input.costPriceMinor !== undefined && !PolicyService.can(this.ctx, 'catalog.cost.read')) {
-			throw new ForbiddenError('catalog.cost.read');
-		}
 	}
 
 	private guardLastVariant(old: CrmVariantDto, tx: Tx): void {

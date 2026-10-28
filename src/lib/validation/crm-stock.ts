@@ -2,6 +2,7 @@ import { z } from 'zod';
 import {
 	MANUAL_MOVE_TYPES,
 	STOCK_KINDS,
+	STOCK_COST_MAX_MINOR,
 	STOCK_MOVE_MAX,
 	type StockFilters
 } from '$lib/types/crm-stock';
@@ -61,7 +62,18 @@ const itemFields = {
 		.number({ error: 'Введите порог' })
 		.int({ error: 'Порог должен быть целым' })
 		.min(0, { error: 'Порог не бывает отрицательным' })
-		.max(STOCK_MOVE_MAX, { error: `Не больше ${STOCK_MOVE_MAX}` })
+		.max(STOCK_MOVE_MAX, { error: `Не больше ${STOCK_MOVE_MAX}` }),
+	// A role without the cost gets no field: absent means «keep», not zero (v1.62).
+	costPriceMinor: z.preprocess(
+		(value) => (value === '' || value == null ? undefined : value),
+		z.coerce
+			.number({ error: 'Введите себестоимость' })
+			.int({ error: 'Введите себестоимость в целых рублях' })
+			.min(0, { error: 'Не меньше нуля' })
+			.max(STOCK_COST_MAX_MINOR, { error: 'Не больше 10 000 000 ₽' })
+			.multipleOf(100, { error: 'Введите себестоимость в целых рублях' })
+			.optional()
+	)
 };
 
 export const stockItemCreateSchema = z.object({

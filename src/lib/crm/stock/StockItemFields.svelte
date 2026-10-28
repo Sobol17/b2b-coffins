@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Input, NumberInput, Select } from '$lib/ui';
+	import { Input, MoneyInput, NumberInput, Select } from '$lib/ui';
 	import { STOCK_MOVE_MAX, type StockChoicesDto, type StockRowDto } from '$lib/types/crm-stock';
 
 	/** The fields a new item and an edit share; the kind is chosen once, on creation. */
@@ -8,7 +8,9 @@
 		values
 	}: {
 		choices: StockChoicesDto;
-		values?: Pick<StockRowDto, 'code' | 'title' | 'unitId' | 'minThreshold'> | undefined;
+		values?:
+			| Pick<StockRowDto, 'code' | 'title' | 'unitId' | 'minThreshold' | 'costPriceMinor'>
+			| undefined;
 	} = $props();
 
 	const units = $derived(
@@ -50,3 +52,12 @@
 	min={0}
 	max={STOCK_MOVE_MAX}
 />
+{#if choices.canSeeCost}
+	<MoneyInput
+		name="costPriceMinor"
+		label="Себестоимость, ₽"
+		placeholder="Введите себестоимость"
+		hint="За единицу. Видят руководитель и администратор"
+		valueMinor={values?.costPriceMinor ?? 0}
+	/>
+{/if}

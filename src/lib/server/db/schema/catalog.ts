@@ -55,7 +55,8 @@ export const productVariants = sqliteTable(
 		heightMm: integer('height_mm'),
 		weightG: integer('weight_g'),
 		basePriceMinor: money('base_price_minor'),
-		costPriceMinor: money('cost_price_minor'), // visible to owner role only
+		// Legacy since v1.62: the cost lives on the stock item. Read only by `stock:cost-backfill`.
+		costPriceMinor: money('cost_price_minor'),
 		stockItemId: integer('stock_item_id').references(() => stockItems.id),
 		isPublished: bool('is_published').notNull().default(false),
 		createdAt: createdAt(),

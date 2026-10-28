@@ -3,6 +3,7 @@
 	import { DataTable, TONE_CLASS, type DataTableColumn } from '$lib/ui';
 	import type { StockRowDto } from '$lib/types/crm-stock';
 	import type { ListQuery } from '$lib/types/list';
+	import { formatMinor } from '$lib/utils/format';
 	import { KIND_TITLE } from './labels';
 
 	let {
@@ -10,24 +11,30 @@
 		total,
 		query,
 		onQueryChange,
-		exportUrl
+		exportUrl,
+		canSeeCost = false
 	}: {
 		rows: readonly StockRowDto[];
 		total: number;
 		query: ListQuery;
 		onQueryChange: (next: ListQuery) => void;
 		exportUrl: string;
+		/** Adds the cost column: owner and administrator only (v1.62). */
+		canSeeCost?: boolean;
 	} = $props();
 
-	const columns: DataTableColumn[] = [
+	const columns: DataTableColumn[] = $derived([
 		// The name goes first: a phone card takes the first column as its title.
 		{ key: 'title', label: 'Название', sortable: true },
 		{ key: 'code', label: 'Код', sortable: true },
 		{ key: 'kind', label: 'Вид' },
 		{ key: 'balance', label: 'Остаток', align: 'end' },
 		{ key: 'minThreshold', label: 'Порог', align: 'end' },
+		...(canSeeCost
+			? [{ key: 'cost', label: 'Себестоимость', align: 'end' } satisfies DataTableColumn]
+			: []),
 		{ key: 'state', label: 'Состояние' }
-	];
+	]);
 </script>
 
 <DataTable
@@ -57,6 +64,10 @@
 				{row.balance}
 			</span>
 			<span class="text-xs text-fg-muted">{row.unitTitle}</span>
+		{:else if column.key === 'cost'}
+			<span class="tabular-nums" data-testid="stock-cost">
+				{row.costPriceMinor ? `${formatMinor(row.costPriceMinor)} ₽` : '—'}
+			</span>
 		{:else if column.key === 'minThreshold'}
 			{row.minThreshold === 0 ? '—' : row.minThreshold}
 		{:else if column.key === 'state' && (row.isNegative || row.isBelowThreshold || !row.isActive)}

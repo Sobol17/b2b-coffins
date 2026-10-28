@@ -83,6 +83,7 @@
 				{query}
 				onQueryChange={changeQuery}
 				{exportUrl}
+				canSeeCost={data.choices.canSeeCost}
 			/>
 		</Card.Content>
 	</Card.Root>

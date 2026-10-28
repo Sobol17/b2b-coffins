@@ -60,10 +60,6 @@ export const variantInputSchema = z.object({
 	heightMm: optionalNumber.default(null),
 	weightG: optionalNumber.default(null),
 	basePriceMinor: money,
-	costPriceMinor: z.preprocess(
-		(value) => (value === '' || value == null ? undefined : value),
-		money.optional()
-	),
 	stockItemId: nullableId,
 	isPublished: checkbox.default(false)
 });

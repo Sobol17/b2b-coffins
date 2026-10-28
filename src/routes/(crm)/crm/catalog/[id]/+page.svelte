@@ -43,7 +43,6 @@
 						<VariantForm
 							variant={editing === 'new' ? null : editing}
 							choices={data.choices}
-							canSeeCost={data.canSeeCost}
 							onDone={() => (editing = null)}
 						/>
 					{/key}
@@ -61,7 +60,7 @@
 								{variant.isDeleted ? 'Удалён' : variant.isPublished ? 'Опубликован' : 'Скрыт'} · Базовая
 								цена {formatMinor(variant.basePriceMinor)} ₽
 								{#if data.canSeeCost && variant.costPriceMinor !== undefined}
-									· Себестоимость {formatMinor(variant.costPriceMinor)} ₽{/if}
+									· Себестоимость {formatMinor(variant.costPriceMinor)} ₽ по складу{/if}
 							</p>
 							<p class="text-sm text-fg-muted">
 								Учётная позиция: {data.choices.stockProducts.find(

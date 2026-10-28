@@ -1,0 +1,1 @@
+ALTER TABLE `stock_items` ADD `cost_price_minor` integer DEFAULT 0 NOT NULL;
