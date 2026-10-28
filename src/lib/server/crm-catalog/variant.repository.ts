@@ -218,8 +218,9 @@ export class ManagedVariantRepository extends BaseRepository<typeof productVaria
 	private costs(ids: number[], tx?: Tx): Map<number, number> {
 		if (!ids.length) return new Map();
 		const rows = this.db(tx)
-			.select({ id: productVariants.id, cost: productVariants.costPriceMinor })
+			.select({ id: productVariants.id, cost: stockItems.costPriceMinor })
 			.from(productVariants)
+			.leftJoin(stockItems, eq(stockItems.id, productVariants.stockItemId))
 			.where(inArray(productVariants.id, ids))
 			.all();
 		return new Map(rows.flatMap((row) => (row.cost === null ? [] : [[row.id, row.cost]])));

@@ -19,6 +19,7 @@ export interface StockItemRow {
 	readonly isActive: boolean;
 	readonly balance: number;
 	readonly isNegative: number;
+	readonly costPriceMinor: number;
 }
 
 export interface StockItemPatch {
@@ -27,6 +28,7 @@ export interface StockItemPatch {
 	readonly unitId: number;
 	readonly minThreshold: number;
 	readonly isActive?: boolean;
+	readonly costPriceMinor?: number | undefined;
 }
 
 // Table names are spelled out: inside a subquery a bare "id" would bind to the inner table.
@@ -45,7 +47,8 @@ const COLUMNS = {
 	minThreshold: stockItems.minThreshold,
 	isActive: stockItems.isActive,
 	balance: BALANCE,
-	isNegative: IS_NEGATIVE
+	isNegative: IS_NEGATIVE,
+	costPriceMinor: stockItems.costPriceMinor
 };
 
 const SORTABLE = { code: stockItems.code, title: stockItems.title };
@@ -94,7 +97,7 @@ export class StockItemRepository extends BaseRepository<typeof stockItems> {
 	insert(item: StockItemPatch & { kind: StockKind }, tx: Tx): number {
 		const [row] = this.db(tx)
 			.insert(stockItems)
-			.values(item)
+			.values({ ...item, costPriceMinor: item.costPriceMinor ?? 0 })
 			.returning({ id: stockItems.id })
 			.all();
 		if (!row) throw new Error('failed to insert a stock item');
@@ -102,7 +105,10 @@ export class StockItemRepository extends BaseRepository<typeof stockItems> {
 	}
 
 	update(id: number, patch: StockItemPatch, tx: Tx): void {
-		this.db(tx).update(stockItems).set(patch).where(eq(stockItems.id, id)).run();
+		// An absent cost is a form without the field: the stored one stays.
+		const { costPriceMinor, ...rest } = patch;
+		const set = costPriceMinor === undefined ? rest : { ...rest, costPriceMinor };
+		this.db(tx).update(stockItems).set(set).where(eq(stockItems.id, id)).run();
 	}
 
 	/** Colours the variants of the item are made in: the compatibility matrix of C2. */

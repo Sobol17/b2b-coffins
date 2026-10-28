@@ -1,7 +1,7 @@
 # tech.md — ядро проекта
 
 **Проект:** B2B-портал + CRM для столярной мастерской (производство гробов)
-**Версия ядра:** v1.61
+**Версия ядра:** v1.62
 **Дата:** 28.10.2026
 **Статус:** этап 1 (портал, P1–P14) завершён 19.09.2026; в этапе 2 (CRM) влиты C1–C8, C10, C12, C15, C13, слайс C14 открыт (чек-лист в §14), C17 (обращения) влит, C18 (финансы) в работе, C16 не начат
 **Владелец файла:** Sobol17 (тимлид и единственный разработчик)
@@ -11,6 +11,7 @@
 
 | Версия | Изменение |
 |---|---|
+| v1.62 | Правка после демо 28.10.2026: себестоимость живёт в складской позиции. `stock_items` получил `cost_price_minor` (целые копейки, по умолчанию 0): себестоимость одной единицы, у изделий и у комплектующих. Её заполняют руками полем «Себестоимость, ₽» в форме позиции склада (`stockItemCreateSchema`, `stockItemUpdateSchema`: целые рубли, от 0 до `STOCK_COST_MAX_MINOR`; пустое поле значит «не прислано», сохранённое значение остаётся). Видят и пишут её только роли с `canSeeCost` (`owner`, `manager`): `StockRowDto.costPriceMinor` и колонка «Себестоимость» реестра приходят только им, `StockChoicesDto.canSeeCost` открывает поле формы, запись от роли без `canSeeCost` отклоняется 403. Аудит `stock.item.update` пишет себестоимость до и после. Поле себестоимости варианта ушло из формы и схемы варианта C2 (`variantInputSchema`), `CrmVariantDto.costPriceMinor` и цена с себестоимостью каталога читают себестоимость учётной позиции варианта; вариант без позиции стоит 0. Колонка `product_variants.cost_price_minor` остаётся до следующей версии: её читает только команда `pnpm admin stock:cost-backfill`, которая переносит заполненную себестоимость варианта в его позицию, если у позиции себестоимость 0; повторный запуск ничего не меняет. Сид пишет себестоимость демо-каталога в позиции. Правило «себестоимость варианта одно число, заполняется руками» (v1.47) читается как «себестоимость позиции склада». Миграция `0021` |
 | v1.61 | Правка после демо 28.10.2026: роли цеха «Шлифовщик» (`grinder`) и «Обивщик» (`upholsterer`). Изделие проходит столяра, шлифовщика, маляра и обивщика, затем попадает на склад; этот порядок задаёт `WORK_ROLES` и тот же порядок ролей в `ROLE_CODES` и `CRM_ROLES`. Права новых ролей совпадают со столяром и маляром: `crm.access`, `catalog.read`, `request.read.own`, `stock.read`; цен они не видят (`canSeePrices = false`), переходов в §6.2 у них нет. Расценки по роли: `work_types` получил nullable колонку `role_code` (`WORK_ROLES`), `null` это общая работа. `WorkTypeDto.roleCode`, форма работы выбирает роль, список работ и выбор работы в рабочем дне идут в порядке цеха, общие работы в конце, в дне работа подписана «Роль: название». Аудит `work_type.update` пишет роль до и после. Делёж суммы записи не менялся. Новые роли приходят на стенд командой `pnpm admin roles:sync`: она повторяет сид ролей из `scripts/fixtures/roles.json` и повторный запуск ничего не меняет. Сид добавил учётные записи шлифовщика и обивщика и роли видам работ. Миграция `0020` |
 | v1.60 | Правка после демо 28.10.2026: блок «Доставлены» на `/crm/delivery`. Статус `delivered` в той же транзакции уходит в `awaiting_payment` или `paid`, поэтому блок читает `requests.delivered_at`, а не статус: заявки контрагентов в `delivered`, `awaiting_payment` и `paid`, доставленные за последние `DELIVERED_DAYS` (7) дней, свежие сверху, не больше `DELIVERY_LIST_LIMIT`. Строка `DeliveredStopDto` несёт номер, контрагента, умершего, адрес, момент доставки, число штук и статус; денег в ней нет. `DeliveryDto` получил `delivered` и `deliveredTotal`. Права экрана прежние (`delivery.work`). Схема БД не менялась |
 | v1.59 | Фото каталога из PDF мастерской. Модель в файле `catalog:import` получила необязательное поле `photos`: пути к JPEG, PNG или WebP относительно папки файла, первое фото становится обложкой. Импорт читает и проверяет все фото по сигнатуре до транзакции, битый файл останавливает импорт целиком. Фото кладутся в `FILES_DIR` по пути `product/<id>/<random>.<ext>`, строки `media` с `owner_scope = 'product'` без `uploaded_by`. Фото получает только модель без фото: после первого импорта галерея принадлежит CRM, повтор ничего не добавляет. Итог команды считает добавленные фото. В `scripts/fixtures/catalog-angel/` лежат 43 фото, вырезанные из «Каталога Ангел»; у 35 моделей прайса фото в каталоге нет (эксклюзивные, часть узоров и тиснений, фигуры, крестик). Схема БД не менялась |
@@ -104,7 +105,7 @@
 **Ключевое допущение этапа 1.** Портал зависит от каталога, прайс-листов и учётных записей контрагентов, но CRM-интерфейс для их ведения появляется только на этапе 2. Разрыв закрывается так:
 
 1. сид-скрипт `scripts/seed.ts` наполняет каталог, контрагентов, прайсы и пользователей из фикстур `fixtures/*.json`;
-2. CLI `scripts/admin.ts` (команды `user:create`, `counterparty:create`, `price:import`, `request:transition`, `payroll:backfill-crews`, `catalog:import`, `roles:sync`) выполняет то же самое на боевом стенде без UI;
+2. CLI `scripts/admin.ts` (команды `user:create`, `counterparty:create`, `price:import`, `request:transition`, `payroll:backfill-crews`, `catalog:import`, `roles:sync`, `stock:cost-backfill`) выполняет то же самое на боевом стенде без UI;
    команда `pnpm seed:demo` (`scripts/seed-demo.ts`, v1.23) поверх сида заводит демо-заявки и уведомления для ручной проверки и показа;
 3. переходы статусов, которые на этапе 2 делает менеджер, на этапе 1 выполняет тот же CLI и e2e-хелпер, поэтому портал демонстрируется на полном цикле заявки.
 
@@ -431,7 +432,7 @@ export const productVariants = sqliteTable('product_variants', {
   lengthMm: integer('length_mm'), widthMm: integer('width_mm'), heightMm: integer('height_mm'),
   weightG: integer('weight_g'),
   basePriceMinor: money('base_price_minor'),
-  costPriceMinor: money('cost_price_minor'),          // visible to owner role only
+  costPriceMinor: money('cost_price_minor'),          // legacy since v1.62: read only by `stock:cost-backfill`, dropped later
   stockItemId: integer('stock_item_id').references(() => stockItems.id),
   isPublished: integer('is_published', { mode: 'boolean' }).notNull().default(false),
   createdAt: createdAt(), updatedAt: updatedAt(), deletedAt: ts('deleted_at')
@@ -614,6 +615,7 @@ export const stockItems = sqliteTable('stock_items', {
   title: text('title').notNull(),
   unitId: integer('unit_id').notNull().references(() => dictItems.id),   // dict = 'unit'
   minThreshold: integer('min_threshold').notNull().default(0),
+  costPriceMinor: money('cost_price_minor'),          // cost of one unit, owner and manager only; the margin reads it (v1.62)
   isActive: integer('is_active', { mode: 'boolean' }).notNull().default(true),
   createdAt: createdAt(), updatedAt: updatedAt()
 }, (t) => ({ codeUq: uniqueIndex('stock_items_code_uq').on(t.code) }));
@@ -1479,7 +1481,7 @@ export interface DeliveryDto {
   delivered: DeliveredStopDto[]; deliveredTotal: number;
 }
 
-// crm-stock.ts — the warehouse (C8, v1.45). Balance is the sum of moves, every figure opens into its moves. No money keys.
+// crm-stock.ts — the warehouse (C8, v1.45). Balance is the sum of moves, every figure opens into its moves. The only money key is the item cost for canSeeCost (v1.62).
 export const STOCK_KINDS = ['product', 'component'] as const;
 export type StockKind = (typeof STOCK_KINDS)[number];
 export const MANUAL_MOVE_TYPES = ['purchase', 'adjustment'] as const;   // what the move form writes and what a reversal may cancel
@@ -1487,6 +1489,7 @@ export type ManualMoveType = (typeof MANUAL_MOVE_TYPES)[number];
 export const INVENTORY_STATUSES = ['draft', 'applied'] as const;
 export type InventoryStatus = (typeof INVENTORY_STATUSES)[number];
 export const STOCK_MOVE_MAX = 100000;               // units in one manual move or one inventory line
+export const STOCK_COST_MAX_MINOR = 1_000_000_000;   // cost of one unit: 10 000 000 roubles (v1.62)
 export interface StockFilters { kind?: StockKind; belowThreshold?: boolean; negative?: boolean; activeOnly?: boolean; }
 export interface StockRowDto {
   id: number; kind: StockKind; code: string; title: string; unitId: number; unitTitle: string;
@@ -1494,6 +1497,7 @@ export interface StockRowDto {
   balance: number;                                   // sum of every move of the item, all colours of a product together
   isBelowThreshold: boolean;                         // minThreshold > 0 and balance < minThreshold
   isNegative: boolean;                               // any position of the item is below zero
+  costPriceMinor?: number;                           // cost of one unit, canSeeCost only (v1.62)
 }
 export interface StockPositionDto { optionId: number | null; colorTitle: string | null; balance: number; }
 export interface StockMoveDto {
@@ -1509,7 +1513,7 @@ export interface StockCardDto extends StockRowDto {
   colors: { id: number; title: string }[];           // colours the move form offers: the matrix of the variant, empty for a component
   canManage: boolean;
 }                                                    // the journal comes apart as ListResult<StockMoveDto>
-export interface StockChoicesDto { units: { id: number; title: string }[]; reasons: { id: number; title: string }[]; }
+export interface StockChoicesDto { units: { id: number; title: string }[]; reasons: { id: number; title: string }[]; canSeeCost: boolean; }
 export interface InventoryRowDto {
   id: number; kind: StockKind; status: InventoryStatus; comment: string | null;
   createdByName: string; createdAt: string; appliedAt: string | null;
@@ -2156,7 +2160,7 @@ CONTRACT GAP
 **C1. Каркас CRM, пользователи, справочники, настройки, аудит.** Layout и навигация CRM, управление сотрудниками мастерской и ролями, справочники `dict_items`, настройки организации и нумерации, ставка отчисления и данные фонда, лимит сотрудников, журнал аудита с фильтрами. IP-фильтр входа выведен из объёма (v1.37).
 **DoD:** руководитель заводит пользователя, справочник и настройку без разработчика, каждое изменение видно в журнале аудита.
 
-**C2. CRM: каталог и цены.** CRUD категорий, моделей, вариантов, цветовых опций и матрицы совместимости, медиа с обложкой и порядком, прайс-листы и скидки с периодом действия, себестоимость для руководителя и администратора (v1.48), выбор существующей учётной позиции склада, публикация и скрытие в портале. Категории создаются в CRM, поэтому пустой каталог можно наполнить без сида. Модели и варианты удаляются мягко (`deleted_at`), опции выключаются (`is_active`), категория с потомками или моделями не удаляется. Цена `price_lists` действует в полуоткрытом окне `[valid_from, valid_to)`; базовые прайс-листы не могут одновременно действовать. Для каждой строки заявки берётся максимум договорной скидки и действующих `discount_rules` её категории и предков; строки с одним процентом складываются до округления. `DraftDto.discountPercent` показывает округлённый эффективный процент от общей суммы, `discountMinor` остаётся точным; для одной договорной ставки без правил расчёт не меняется. Раздача медиа продукта использует существующий `/api/files/[id]`.
+**C2. CRM: каталог и цены.** CRUD категорий, моделей, вариантов, цветовых опций и матрицы совместимости, медиа с обложкой и порядком, прайс-листы и скидки с периодом действия, себестоимость для руководителя и администратора (v1.48; с v1.62 правится в складской позиции, вариант её только показывает), выбор существующей учётной позиции склада, публикация и скрытие в портале. Категории создаются в CRM, поэтому пустой каталог можно наполнить без сида. Модели и варианты удаляются мягко (`deleted_at`), опции выключаются (`is_active`), категория с потомками или моделями не удаляется. Цена `price_lists` действует в полуоткрытом окне `[valid_from, valid_to)`; базовые прайс-листы не могут одновременно действовать. Для каждой строки заявки берётся максимум договорной скидки и действующих `discount_rules` её категории и предков; строки с одним процентом складываются до округления. `DraftDto.discountPercent` показывает округлённый эффективный процент от общей суммы, `discountMinor` остаётся точным; для одной договорной ставки без правил расчёт не меняется. Раздача медиа продукта использует существующий `/api/files/[id]`.
 **DoD:** каталог наполняется через CRM без сида, себестоимость не приходит в ответах никому кроме руководителя и администратора (v1.48).
 
 **C3. CRM: контрагенты.** Карточка с реквизитами, договором, адресами, прайсом и схемой расчётов, список пользователей контрагента, выдача администратора, история заявок и оплат, индикатор задолженности, заметки, ответственный менеджер. Контрагент заводится одной транзакцией с первым администратором. Долг считается из `payment_marks` одним запросом для портала и CRM (v1.39). Скан договора и архивация контрагента в объём не входят.

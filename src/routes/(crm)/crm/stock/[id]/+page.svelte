@@ -18,6 +18,7 @@
 		type FilterField
 	} from '$lib/ui';
 	import { STOCK_MOVE_TYPES } from '$lib/types/dicts';
+	import { formatMinor } from '$lib/utils/format';
 	import type { ListQuery } from '$lib/types/list';
 	import { filtersOf, listQueryOf, withListQuery } from '$lib/utils/list-url';
 	import type { PageProps } from './$types';
@@ -82,6 +83,13 @@
 					{#if card.isBelowThreshold}
 						<span class={['rounded-pill px-2 py-0.5 text-xs', TONE_CLASS.warning]}>
 							Ниже порога {card.minThreshold}
+						</span>
+					{/if}
+					{#if card.costPriceMinor !== undefined}
+						<span class="ml-auto text-sm text-fg-muted" data-testid="stock-card-cost">
+							Себестоимость {card.costPriceMinor
+								? `${formatMinor(card.costPriceMinor)} ₽`
+								: 'не задана'}
 						</span>
 					{/if}
 				</div>

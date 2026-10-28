@@ -22,7 +22,7 @@ describe('C2 server form contracts', () => {
 		).toBe(false);
 	});
 
-	it('keeps variant money in whole rubles and cost distinct', () => {
+	it('keeps variant money in whole rubles and leaves the cost to the stock item', () => {
 		const base = {
 			productId: '1',
 			sku: 'V-1',
@@ -32,12 +32,11 @@ describe('C2 server form contracts', () => {
 			costPriceMinor: '5000',
 			stockItemId: ''
 		};
-		expect(variantInputSchema.parse(base)).toMatchObject({
-			basePriceMinor: 10000,
-			costPriceMinor: 5000,
-			stockItemId: null
-		});
-		expect(variantInputSchema.safeParse({ ...base, costPriceMinor: '5001' }).success).toBe(false);
+		const parsed = variantInputSchema.parse(base);
+		expect(parsed).toMatchObject({ basePriceMinor: 10000, stockItemId: null });
+		// The form of v1.62 has no cost: a forged field never reaches the variant.
+		expect(parsed).not.toHaveProperty('costPriceMinor');
+		expect(variantInputSchema.safeParse({ ...base, basePriceMinor: '10001' }).success).toBe(false);
 		expect(optionInputSchema.safeParse({ title: 'Красный', priceDeltaMinor: '1' }).success).toBe(
 			false
 		);

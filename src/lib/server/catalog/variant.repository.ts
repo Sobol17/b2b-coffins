@@ -6,7 +6,8 @@ import {
 	options,
 	productOptions,
 	productVariants,
-	products
+	products,
+	stockItems
 } from '../db/schema';
 import { productVisible, variantVisible, type Visibility } from './visibility';
 import type { OptionKind } from '$lib/types/catalog';
@@ -154,9 +155,11 @@ export class VariantRepository extends BaseRepository<typeof productVariants> {
 			.select({
 				id: productVariants.id,
 				basePriceMinor: productVariants.basePriceMinor,
-				costPriceMinor: productVariants.costPriceMinor
+				// The cost lives on the stock item since v1.62; a variant without one costs nothing known.
+				costPriceMinor: sql<number>`coalesce(${stockItems.costPriceMinor}, 0)`
 			})
 			.from(productVariants)
+			.leftJoin(stockItems, eq(stockItems.id, productVariants.stockItemId))
 			.where(where)
 			.all();
 		return new Map(

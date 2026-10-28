@@ -6,12 +6,10 @@
 	let {
 		variant,
 		choices,
-		canSeeCost,
 		onDone
 	}: {
 		variant: CrmVariantDto | null;
 		choices: CrmCatalogChoicesDto;
-		canSeeCost: boolean;
 		onDone: () => void;
 	} = $props();
 	const materials = $derived(
@@ -100,12 +98,6 @@
 		placeholder="Введите цену"
 		valueMinor={variant?.basePriceMinor ?? 0}
 	/>
-	{#if canSeeCost}<MoneyInput
-			name="costPriceMinor"
-			label="Себестоимость"
-			placeholder="Введите себестоимость"
-			valueMinor={variant?.costPriceMinor ?? 0}
-		/>{/if}
 	<div class="flex items-end gap-2">
 		<Button type="submit">{variant ? 'Сохранить вариант' : 'Добавить вариант'}</Button>
 		<Button variant="secondary" onclick={onDone}>Отмена</Button>

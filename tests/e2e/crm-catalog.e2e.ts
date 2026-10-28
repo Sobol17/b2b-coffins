@@ -98,7 +98,7 @@ test('C2 fills and publishes a model through CRM; the portal never receives cost
 	await login(page, 'manager');
 	const response = await page.goto(productUrl);
 	const body = (await response?.text()) ?? '';
-	// The administrator fills the cost in by hand (tech.md v1.48).
+	// The administrator reads the cost of the stock item on the variant (tech.md v1.62).
 	expect(body).toContain('costPriceMinor');
 	const saved = await page.request.post(`${productUrl}?/updateVariant`, {
 		headers: { origin: 'http://localhost:4173' },
@@ -108,7 +108,6 @@ test('C2 fills and publishes a model through CRM; the portal never receives cost
 			sizeCode: '190',
 			materialId: '1',
 			basePriceMinor: '100000',
-			costPriceMinor: '100',
 			stockItemId: '',
 			isPublished: 'true'
 		}

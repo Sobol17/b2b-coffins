@@ -3,11 +3,12 @@ import { beforeAll, describe, expect, it } from 'vitest';
 import { PolicyService } from '../../src/lib/server/auth/policy';
 import { CrmCatalogService } from '../../src/lib/server/crm-catalog/crm-catalog.service';
 import { ConflictError, ForbiddenError, ValidationError } from '../../src/lib/server/core/errors';
-import { auditLog, dictItems, productVariants, products } from '../../src/lib/server/db/schema';
+import { auditLog, dictItems, products } from '../../src/lib/server/db/schema';
 import { CatalogService } from '../../src/lib/server/catalog/catalog.service';
 import type { ActorContext } from '../../src/lib/types/actor';
 import type { RoleCode } from '../../src/lib/types/roles';
 import { insertUser, migratedDatabase } from './helpers/db';
+import { variantInputSchema } from '../../src/lib/validation/crm-catalog';
 
 const db = migratedDatabase();
 let ownerId = 0;
@@ -58,7 +59,6 @@ describe('C2 catalog from an empty database', () => {
 			heightMm: null,
 			weightG: null,
 			basePriceMinor: 100000,
-			costPriceMinor: 50000,
 			stockItemId: null,
 			isPublished: true
 		});
@@ -77,7 +77,7 @@ describe('C2 catalog from an empty database', () => {
 		const portal = new CatalogService(actor('cp_admin')).get(product.id);
 		expect(portal.variants[0]?.options[0]?.id).toBe(option.id);
 		expect(portal.variants[0]).not.toHaveProperty('costPriceMinor');
-		expect(service.getProduct(product.id).variants[0]?.costPriceMinor).toBe(50000);
+		expect(service.getProduct(product.id).variants[0]?.costPriceMinor).toBe(0);
 		expect(() =>
 			service.updateVariant(variant.id, {
 				productId: product.id,
@@ -89,7 +89,6 @@ describe('C2 catalog from an empty database', () => {
 				heightMm: variant.heightMm,
 				weightG: variant.weightG,
 				basePriceMinor: variant.basePriceMinor,
-				costPriceMinor: 50000,
 				stockItemId: null,
 				isPublished: false
 			})
@@ -101,46 +100,13 @@ describe('C2 catalog from an empty database', () => {
 		).toBeGreaterThan(0);
 	});
 
-	it('lets the administrator read and change the cost of a variant', () => {
+	it('shows the cost of the linked stock item on the variant, read only (v1.62)', () => {
 		const manager = new CrmCatalogService(actor('manager'));
 		const product = manager.listProducts()[0];
 		const variant = manager.getProduct(product?.id ?? 0).variants[0];
-		expect(variant?.costPriceMinor).toBe(50000);
-		manager.updateVariant(variant?.id ?? 0, {
-			productId: product?.id ?? 0,
-			sku: 'C2-VARIANT',
-			sizeCode: '190',
-			materialId,
-			lengthMm: 1900,
-			widthMm: null,
-			heightMm: null,
-			weightG: null,
-			basePriceMinor: 100000,
-			costPriceMinor: 61000,
-			stockItemId: null,
-			isPublished: true
-		});
-		expect(
-			db
-				.select({ cost: productVariants.costPriceMinor })
-				.from(productVariants)
-				.where(eq(productVariants.id, variant?.id ?? 0))
-				.all()[0]?.cost
-		).toBe(61000);
-		manager.updateVariant(variant?.id ?? 0, {
-			productId: product?.id ?? 0,
-			sku: 'C2-VARIANT',
-			sizeCode: '190',
-			materialId,
-			lengthMm: 1900,
-			widthMm: null,
-			heightMm: null,
-			weightG: null,
-			basePriceMinor: 100000,
-			costPriceMinor: 50000,
-			stockItemId: null,
-			isPublished: true
-		});
+		expect(variant?.stockItemId).toBeNull();
+		expect(variant?.costPriceMinor).toBe(0);
+		expect(variantInputSchema.shape).not.toHaveProperty('costPriceMinor');
 	});
 
 	it('validates references and blocks matrix entries for inactive colours', () => {

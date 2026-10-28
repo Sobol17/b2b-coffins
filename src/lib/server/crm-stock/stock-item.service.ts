@@ -30,7 +30,7 @@ export class StockItemService extends StockBaseService {
 	list(query: ListQuery<StockFilters>): Page<StockRowDto> {
 		const { rows, total } = this.items.list(query);
 		return {
-			rows: rows.map((row) => StockDtoMapper.toRow(row)),
+			rows: rows.map((row) => StockDtoMapper.toRow(row, this.ctx.canSeeCost)),
 			total,
 			page: query.page,
 			perPage: query.perPage
@@ -46,7 +46,7 @@ export class StockItemService extends StockBaseService {
 	card(id: number): StockCardDto {
 		const row = this.require(id);
 		return {
-			...StockDtoMapper.toRow(row),
+			...StockDtoMapper.toRow(row, this.ctx.canSeeCost),
 			positions: this.moves.positions(id).map((position) => StockDtoMapper.toPosition(position)),
 			colors: row.kind === 'product' ? this.items.colours(id) : [],
 			canManage: this.canManage
@@ -54,12 +54,17 @@ export class StockItemService extends StockBaseService {
 	}
 
 	choices(): StockChoicesDto {
-		return { units: this.items.dict('unit'), reasons: this.items.dict('stock_move_reason') };
+		return {
+			units: this.items.dict('unit'),
+			reasons: this.items.dict('stock_move_reason'),
+			canSeeCost: this.ctx.canSeeCost
+		};
 	}
 
 	/** @throws ValidationError for a taken code or an unknown unit. */
 	create(input: StockItemCreateInput): number {
 		this.assertManage();
+		this.assertCost(input);
 		return this.audited({ action: 'stock.item.create', entity: 'stock_items' }, (tx) => {
 			this.check(input, null, tx);
 			const id = this.items.insert(input, tx);
@@ -70,6 +75,7 @@ export class StockItemService extends StockBaseService {
 	/** The item is switched off rather than deleted: its moves keep pointing at it. */
 	update(id: number, input: StockItemUpdateInput): void {
 		this.assertManage();
+		this.assertCost(input);
 		this.audited({ action: 'stock.item.update', entity: 'stock_items' }, (tx) => {
 			const before = this.require(id, tx);
 			this.check(input, id, tx);
@@ -82,11 +88,17 @@ export class StockItemService extends StockBaseService {
 					title: before.title,
 					unitId: before.unitId,
 					minThreshold: before.minThreshold,
-					isActive: before.isActive
+					isActive: before.isActive,
+					...(input.costPriceMinor === undefined ? {} : { costPriceMinor: before.costPriceMinor })
 				},
 				after: { ...input }
 			};
 		});
+	}
+
+	/** Only a role that sees the cost may write it (tech.md 8.1). */
+	private assertCost(input: { costPriceMinor?: number | undefined }): void {
+		this.assert(input.costPriceMinor === undefined || this.ctx.canSeeCost, 'stock.item.cost');
 	}
 
 	private require(id: number, tx?: Tx): StockItemRow {

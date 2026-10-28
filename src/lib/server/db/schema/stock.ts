@@ -7,7 +7,7 @@ import {
 	type AnySQLiteColumn
 } from 'drizzle-orm/sqlite-core';
 import { STOCK_MOVE_TYPES } from '$lib/types/dicts';
-import { bool, createdAt, pk, ts, updatedAt } from './_shared';
+import { bool, createdAt, money, pk, ts, updatedAt } from './_shared';
 import { dictItems, options } from './catalog';
 import { requestItems, requests } from './requests';
 import { users } from './users';
@@ -23,6 +23,8 @@ export const stockItems = sqliteTable(
 			.notNull()
 			.references(() => dictItems.id), // dict = 'unit'
 		minThreshold: integer('min_threshold').notNull().default(0),
+		// Filled by hand, owner and administrator only; the margin of the reports reads it (v1.62).
+		costPriceMinor: money('cost_price_minor'),
 		isActive: bool('is_active').notNull().default(true),
 		createdAt: createdAt(),
 		updatedAt: updatedAt()

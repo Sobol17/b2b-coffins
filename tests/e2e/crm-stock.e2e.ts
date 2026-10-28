@@ -219,3 +219,25 @@ test('C8: the driver and the portal get 403 on the warehouse', async ({ page }) 
 	await login(page, 'cp_admin');
 	expect((await page.goto('/crm/stock'))?.status()).toBe(403);
 });
+
+test('v1.62: the owner keeps the cost on the stock item, the shop crew never gets it', async ({
+	page
+}) => {
+	await login(page, 'owner');
+	const code = await newItem(page, 0);
+	const id = new URL(page.url()).pathname.split('/').at(-1) ?? '';
+	await expect(page.getByTestId('stock-card-cost')).toHaveText('Себестоимость не задана');
+
+	await page.getByLabel('Себестоимость, ₽').fill('4500');
+	await page.getByRole('button', { name: 'Сохранить позицию' }).click();
+	await expect(page.getByTestId('stock-card-cost')).toHaveText('Себестоимость 4 500 ₽');
+	await page.goto(`/crm/stock?search=${code}`);
+	await expect(page.getByTestId('stock-cost').first()).toHaveText('4 500 ₽');
+
+	await page.context().clearCookies();
+	await login(page, 'grinder');
+	const body = (await (await page.request.get(`/crm/stock/${id}/__data.json`)).text()) ?? '';
+	expect(purchaseMoneyKeys(body)).toEqual([]);
+	await page.goto(`/crm/stock/${id}`);
+	await expect(page.getByTestId('stock-card-cost')).toHaveCount(0);
+});
