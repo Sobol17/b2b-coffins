@@ -2,8 +2,13 @@ import { error } from '@sveltejs/kit';
 import { requireAction, requireScope } from '$lib/server/auth/guard';
 import { CrmCatalogService } from '$lib/server/crm-catalog/crm-catalog.service';
 import { CrmPricingService } from '$lib/server/crm-pricing/crm-pricing.service';
+import { PriceImportService } from '$lib/server/crm-pricing/price-import.service';
 import { actionFailure, invalidForm, orHttpStatus } from '$lib/server/core/http';
-import { entityIdSchema, priceListItemInputSchema } from '$lib/validation/crm-catalog';
+import {
+	entityIdSchema,
+	priceListItemInputSchema,
+	priceSheetUploadSchema
+} from '$lib/validation/crm-catalog';
 import { productIdSchema } from '$lib/validation/catalog';
 import type { Actions, PageServerLoad, RequestEvent } from './$types';
 
@@ -17,7 +22,8 @@ function services(event: RequestEvent) {
 	return {
 		id: parsed.data,
 		pricing: new CrmPricingService(actor),
-		catalog: new CrmCatalogService(actor)
+		catalog: new CrmCatalogService(actor),
+		importer: new PriceImportService(actor)
 	};
 }
 
@@ -39,6 +45,23 @@ export const actions = {
 		if (!parsed.success) return invalidForm(parsed.error);
 		try {
 			return { list: pricing.upsertPriceItem(parsed.data) };
+		} catch (err) {
+			return actionFailure(err);
+		}
+	},
+	// The file replaces every price of the list (tech.md v1.64).
+	import: async (event) => {
+		const { id, pricing, importer } = services(event);
+		const parsed = priceSheetUploadSchema.safeParse(
+			Object.fromEntries(await event.request.formData())
+		);
+		if (!parsed.success) return invalidForm(parsed.error);
+		try {
+			const imported = await importer.replaceFromSheet(
+				id,
+				new Uint8Array(await parsed.data.file.arrayBuffer())
+			);
+			return { list: pricing.getPriceList(id), imported };
 		} catch (err) {
 			return actionFailure(err);
 		}
