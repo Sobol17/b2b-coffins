@@ -1,5 +1,5 @@
 import type { ShopPositionDto } from './crm-shop';
-import type { RequestPriority } from './request';
+import type { RequestPriority, RequestStatus } from './request';
 
 /**
  * The delivery screen, tech.md §8 (C6, v1.43). The driver takes cash at the door, so an assembled
@@ -8,6 +8,8 @@ import type { RequestPriority } from './request';
 
 /** Requests per list; the nearest deadlines come first. */
 export const DELIVERY_LIST_LIMIT = 50;
+/** The delivered block looks this many days back from now. */
+export const DELIVERED_DAYS = 7;
 
 export interface DeliveryLineDto extends ShopPositionDto {
 	readonly itemId: number;
@@ -40,9 +42,26 @@ export interface DeliveryStopDto {
 	readonly totalMinor?: number;
 }
 
+/**
+ * A request already handed over. The status leaves `delivered` in the same transaction, so the
+ * block reads `delivered_at`; no money goes out, only the status the payment left it in.
+ */
+export interface DeliveredStopDto {
+	readonly id: number;
+	readonly number: string;
+	readonly counterpartyName: string;
+	readonly deceasedName: string | null;
+	readonly address: string | null;
+	readonly deliveredAt: string;
+	readonly unitCount: number;
+	readonly status: Extract<RequestStatus, 'delivered' | 'awaiting_payment' | 'paid'>;
+}
+
 export interface DeliveryDto {
 	readonly ready: readonly DeliveryStopDto[];
 	readonly readyTotal: number;
 	readonly planned: readonly DeliveryStopDto[];
 	readonly plannedTotal: number;
+	readonly delivered: readonly DeliveredStopDto[];
+	readonly deliveredTotal: number;
 }

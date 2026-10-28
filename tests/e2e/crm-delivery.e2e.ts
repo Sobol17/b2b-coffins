@@ -61,6 +61,8 @@ test.describe('the delivery screen on a phone', () => {
 
 		await expect(page.getByText('Заявка доставлена').first()).toBeVisible();
 		await expect(stopOf(page, number)).toHaveCount(0);
+		const handed = page.getByTestId('delivery-done').filter({ hasText: number });
+		await expect(handed.getByText('Оплачено')).toBeVisible();
 		expect(statusOf(db, number)).toBe('paid');
 		expect(statusChain(db, number).slice(-3)).toEqual([
 			'ready->delivered',
@@ -78,6 +80,8 @@ test.describe('the delivery screen on a phone', () => {
 		await stopOf(page, number).getByRole('button', { name: 'Доставлено' }).click();
 
 		await expect(page.getByText('Заявка доставлена').first()).toBeVisible();
+		const done = page.getByTestId('delivery-done').filter({ hasText: number });
+		await expect(done.getByText('Ожидает оплаты')).toBeVisible();
 		expect(statusOf(db, number)).toBe('awaiting_payment');
 	});
 });
