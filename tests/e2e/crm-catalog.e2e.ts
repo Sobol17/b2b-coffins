@@ -45,7 +45,6 @@ test('C2 fills and publishes a model through CRM; the portal never receives cost
 	await variant.locator('[data-slot="select-trigger"]').first().click();
 	await page.getByRole('option').first().click();
 	await variant.getByLabel('Базовая цена').fill('1000');
-	await variant.getByLabel('Себестоимость').fill('500');
 	await variant.getByRole('button', { name: 'Добавить вариант' }).click();
 	await expect(page.getByText(`${sku}-190`)).toBeVisible();
 	const variantId = await page

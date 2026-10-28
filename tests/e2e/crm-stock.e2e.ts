@@ -109,8 +109,8 @@ test('C8 DoD: the balance is the sum of the moves and opens into them', async ({
 	await expect(balance(page)).toHaveText('12');
 	await expect(page.getByTestId('move-qty')).toHaveText(['+5', '-5', '+12']);
 	await expect(page.getByText('Ниже порога 10')).toHaveCount(0);
-	// The warehouse draws no money even for a role that may see it.
-	expect(purchaseMoneyKeys(await page.content())).toEqual([]);
+	// The only money of the warehouse is the cost of an item, for a role that may see it (v1.62).
+	expect(new Set(purchaseMoneyKeys(await page.content()))).toEqual(new Set(['costPriceMinor']));
 
 	await page.goto(`/crm/stock?search=${code}`);
 	await expect(page.getByTestId('stock-balance')).toHaveText('12');
