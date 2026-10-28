@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { WORK_ROLES } from '$lib/types/roles';
 import {
 	PAYROLL_ADJUSTMENT_MAX_MINOR,
 	PAYROLL_QTY_MAX,
@@ -52,7 +53,13 @@ const rateMinor = z.coerce
 	.max(PAYROLL_RATE_MAX_MINOR, { error: 'Не больше 1 000 000 ₽' })
 	.multipleOf(100, { error: 'Введите стоимость в целых рублях' });
 
-export const workTypeCreateSchema = z.object({ title: workTitle, rateMinor });
+// An empty select is a general work, not a missing answer.
+const roleCode = z.preprocess(
+	(value) => (value === '' || value === undefined ? null : value),
+	z.enum(WORK_ROLES, { error: 'Выберите роль' }).nullable()
+);
+
+export const workTypeCreateSchema = z.object({ title: workTitle, rateMinor, roleCode });
 export const workTypeUpdateSchema = workTypeCreateSchema.extend({ id });
 
 export const payrollIdSchema = z.object({ id });

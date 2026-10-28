@@ -60,7 +60,12 @@ test.describe.serial('one request through all seven roles', () => {
 		expect(statusOf(db, shared.number)).toBe('in_work');
 	});
 
-	for (const role of ['carpenter', 'painter'] as const satisfies readonly RoleKey[]) {
+	for (const role of [
+		'carpenter',
+		'grinder',
+		'painter',
+		'upholsterer'
+	] as const satisfies readonly RoleKey[]) {
 		// The shop works by position since v1.41: the crew holds accounts and reads the warehouse.
 		test(`${role} reads the warehouse and has no part in the request`, async ({ page }) => {
 			await login(page, role);

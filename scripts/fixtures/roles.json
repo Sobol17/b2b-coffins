@@ -2,7 +2,9 @@
 	{ "code": "owner", "title": "Руководитель" },
 	{ "code": "manager", "title": "Администратор" },
 	{ "code": "carpenter", "title": "Столяр" },
+	{ "code": "grinder", "title": "Шлифовщик" },
 	{ "code": "painter", "title": "Маляр" },
+	{ "code": "upholsterer", "title": "Обивщик" },
 	{ "code": "driver", "title": "Водитель" },
 	{ "code": "cp_admin", "title": "Администратор контрагента" },
 	{ "code": "cp_employee", "title": "Сотрудник контрагента" }

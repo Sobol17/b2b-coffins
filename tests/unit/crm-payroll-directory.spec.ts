@@ -88,41 +88,87 @@ describe('the crew directory', () => {
 	});
 });
 
+describe('works of a shop role (v1.61)', () => {
+	it('lists the works in the order of the shop floor, the general ones last', () => {
+		works().create({ title: 'Упаковка', rateMinor: 3_000, roleCode: null });
+		works().create({ title: 'Обивка крышки', rateMinor: 10_000, roleCode: 'upholsterer' });
+		works().create({ title: 'Лакировка', rateMinor: 12_000, roleCode: 'painter' });
+		works().create({ title: 'Шлифовка', rateMinor: 8_000, roleCode: 'grinder' });
+		works().create({ title: 'Сборка ящика', rateMinor: 20_000, roleCode: 'carpenter' });
+
+		expect(
+			works()
+				.list()
+				.map((work) => [work.roleCode, work.title])
+		).toEqual([
+			['carpenter', 'Сборка ящика'],
+			['grinder', 'Шлифовка'],
+			['painter', 'Лакировка'],
+			['upholsterer', 'Обивка крышки'],
+			[null, 'Упаковка']
+		]);
+	});
+
+	it('moves a work to another role and journals the move', () => {
+		const work = works().create({ title: 'Шлифовка', rateMinor: 8_000, roleCode: 'carpenter' });
+
+		works().update({ id: work.id, title: 'Шлифовка', rateMinor: 8_000, roleCode: 'grinder' });
+
+		expect(works().list()[0]?.roleCode).toBe('grinder');
+		expect(db.select().from(auditLog).all().at(-1)).toMatchObject({
+			action: 'work_type.update',
+			before: { roleCode: 'carpenter' },
+			after: { roleCode: 'grinder' }
+		});
+	});
+
+	it('takes a shop role or nothing, never an office role', () => {
+		const parse = (roleCode: string) =>
+			workTypeCreateSchema.safeParse({ title: 'Раскрой', rateMinor: '15000', roleCode });
+		expect(parse('upholsterer').data?.roleCode).toBe('upholsterer');
+		expect(parse('').data?.roleCode).toBeNull();
+		expect(parse('driver').success).toBe(false);
+		expect(parse('owner').success).toBe(false);
+	});
+});
+
 describe('works and their prices', () => {
 	it('keeps a work as a title and a price of one unit', () => {
-		const work = works().create({ title: 'Сборка ящика', rateMinor: 20_000 });
+		const work = works().create({ title: 'Сборка ящика', rateMinor: 20_000, roleCode: null });
 		expect(works().list()).toEqual([
-			{ id: work.id, title: 'Сборка ящика', rateMinor: 20_000, isActive: true }
+			{ id: work.id, title: 'Сборка ящика', rateMinor: 20_000, roleCode: null, isActive: true }
 		]);
 		expect(actions()).toEqual([{ action: 'work_type.create' }]);
 	});
 
 	it('refuses a second work with the same title', () => {
-		const work = works().create({ title: 'Шлифовка', rateMinor: 8_000 });
-		expect(() => works().create({ title: 'Шлифовка', rateMinor: 9_000 })).toThrow(ValidationError);
-		const other = works().create({ title: 'Лакировка', rateMinor: 12_000 });
-		expect(() => works().update({ id: other.id, title: 'Шлифовка', rateMinor: 1_000 })).toThrow(
+		const work = works().create({ title: 'Шлифовка', rateMinor: 8_000, roleCode: null });
+		expect(() => works().create({ title: 'Шлифовка', rateMinor: 9_000, roleCode: null })).toThrow(
 			ValidationError
 		);
+		const other = works().create({ title: 'Лакировка', rateMinor: 12_000, roleCode: null });
+		expect(() =>
+			works().update({ id: other.id, title: 'Шлифовка', rateMinor: 1_000, roleCode: null })
+		).toThrow(ValidationError);
 		// Saving a work under its own title is not a clash.
-		expect(works().update({ id: work.id, title: 'Шлифовка', rateMinor: 9_000 }).rateMinor).toBe(
-			9_000
-		);
+		expect(
+			works().update({ id: work.id, title: 'Шлифовка', rateMinor: 9_000, roleCode: null }).rateMinor
+		).toBe(9_000);
 	});
 
 	it('journals the old and the new price', () => {
-		const work = works().create({ title: 'Обивка', rateMinor: 10_000 });
-		works().update({ id: work.id, title: 'Обивка', rateMinor: 11_000 });
+		const work = works().create({ title: 'Обивка', rateMinor: 10_000, roleCode: null });
+		works().update({ id: work.id, title: 'Обивка', rateMinor: 11_000, roleCode: null });
 		const row = db.select().from(auditLog).all().at(-1);
 		expect(row).toMatchObject({
 			action: 'work_type.update',
-			before: { title: 'Обивка', rateMinor: 10_000 },
-			after: { title: 'Обивка', rateMinor: 11_000 }
+			before: { title: 'Обивка', rateMinor: 10_000, roleCode: null },
+			after: { title: 'Обивка', rateMinor: 11_000, roleCode: null }
 		});
 	});
 
 	it('switches a work off and on', () => {
-		const work = works().create({ title: 'Упаковка', rateMinor: 3_000 });
+		const work = works().create({ title: 'Упаковка', rateMinor: 3_000, roleCode: null });
 		expect(works().setActive(work.id, false).isActive).toBe(false);
 		expect(works().list()[0]?.isActive).toBe(false);
 		expect(() => works().setActive(999, true)).toThrow(NotFoundError);

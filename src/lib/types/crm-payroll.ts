@@ -1,3 +1,4 @@
+import type { WorkRole } from './roles';
 // Staff, work prices, day sheets and the weekly payroll (C10, tech.md v1.48, crews v1.55). Read by payroll.read only.
 export const PAYROLL_PERIOD_STATUSES = ['open', 'calculated', 'paid'] as const;
 export type PayrollPeriodStatus = (typeof PAYROLL_PERIOD_STATUSES)[number];
@@ -22,6 +23,8 @@ export interface WorkTypeDto {
 	id: number;
 	title: string;
 	rateMinor: number;
+	/** Shop role the work belongs to, null for a general one (v1.61). */
+	roleCode: WorkRole | null;
 	isActive: boolean;
 }
 

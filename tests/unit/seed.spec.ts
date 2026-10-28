@@ -6,6 +6,7 @@ import { migrate } from 'drizzle-orm/better-sqlite3/migrator';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createDb, type Db } from '../../src/lib/server/db/client';
 import { EVENT_KEYS } from '../../src/lib/types/events';
+import { ROLE_CODES } from '../../src/lib/types/roles';
 import { seedCatalog, seedStockBalances, seedStockItems } from '../../scripts/seed/catalog';
 import {
 	seedCounterparties,
@@ -96,7 +97,7 @@ describe('migrations and seed on a clean database', () => {
 	it('creates the fixture set that tech.md K2 asks for', () => {
 		const counts = countAll(db);
 
-		expect(counts.roles).toBe(7);
+		expect(counts.roles).toBe(ROLE_CODES.length);
 		expect(counts.products).toBe(10);
 		expect(counts.counterparties).toBe(2);
 		expect(counts.productVariants).toBeGreaterThan(0);

@@ -36,11 +36,16 @@ async function openModal(page: Page, button: string): Promise<void> {
 	}).toPass();
 }
 
-async function addWork(page: Page, title: string, roubles: number): Promise<void> {
+async function addWork(page: Page, title: string, roubles: number, role?: string): Promise<void> {
 	await page.goto('/crm/payroll/works');
 	await openModal(page, 'Добавить работу');
 	const modal = page.getByTestId('modal');
 	await modal.getByLabel('Название работы').fill(title);
+	if (role) {
+		await modal.getByLabel('Роль').click();
+		await page.getByRole('option', { name: role, exact: true }).click();
+		await expect(page.getByRole('listbox')).toHaveCount(0);
+	}
 	await modal.getByLabel('Стоимость за единицу, ₽').fill(String(roubles));
 	await modal.getByRole('button', { name: 'Добавить', exact: true }).click();
 	await expect(page.getByTestId('modal')).toHaveCount(0);
@@ -63,6 +68,23 @@ const shareOf = (page: Page, fullName: string) =>
 
 const lineOf = (page: Page, fullName: string) =>
 	page.getByRole('row', { name: new RegExp(fullName) });
+
+test('v1.61: a work of the grinder carries its role on the list and in the day', async ({
+	page
+}) => {
+	const work = `E2E Шлифовка ${Date.now()}`;
+	await login(page, 'manager');
+	await addWork(page, work, 400, 'Шлифовщик');
+
+	const row = page.getByTestId('data-table-row').filter({ hasText: work });
+	await expect(row.getByTestId('work-role')).toHaveText('Шлифовщик');
+
+	await page.goto('/crm/payroll');
+	await page.getByTestId('mark-today').click();
+	await page.getByRole('button', { name: 'Добавить работу' }).click();
+	await page.getByTestId('day-entry').getByLabel('Работа').click();
+	await expect(page.getByRole('option', { name: `Шлифовщик: ${work}, 400 ₽` })).toBeVisible();
+});
 
 test('C10: the administrator marks a day, closes the week and pays it out', async ({ page }) => {
 	const suffix = Date.now();

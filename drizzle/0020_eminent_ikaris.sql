@@ -1,0 +1,1 @@
+ALTER TABLE `work_types` ADD `role_code` text;

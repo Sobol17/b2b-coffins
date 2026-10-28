@@ -5,6 +5,7 @@ import { notificationsSync } from './admin/notifications';
 import { payrollBackfillCrews } from './admin/payroll';
 import { priceImport } from './admin/price';
 import { requestTransition } from './admin/request';
+import { rolesSync } from './admin/roles';
 import { userCreate } from './admin/user';
 
 const USAGE = `pnpm admin <command> [options]
@@ -17,6 +18,7 @@ const USAGE = `pnpm admin <command> [options]
   request:transition   --request <number> --to <status> --actor <email> [--reason] [--comment]
   payroll:backfill-crews
   notifications:sync
+  roles:sync
 `;
 
 async function main(): Promise<void> {
@@ -39,6 +41,8 @@ async function main(): Promise<void> {
 			return payrollBackfillCrews(db);
 		case 'notifications:sync':
 			return notificationsSync(db);
+		case 'roles:sync':
+			return rolesSync(db);
 		default:
 			console.error(USAGE);
 			process.exit(1);

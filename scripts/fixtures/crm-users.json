@@ -21,11 +21,25 @@
 		"staffPosition": "Столяр"
 	},
 	{
+		"email": "grinder@workshop.example",
+		"fullName": "Олег Шмелёв",
+		"role": "grinder",
+		"password": "Crm!Grind1",
+		"staffPosition": "Шлифовщик"
+	},
+	{
 		"email": "painter@workshop.example",
 		"fullName": "Виктор Панин",
 		"role": "painter",
 		"password": "Crm!Paint1",
 		"staffPosition": "Маляр"
+	},
+	{
+		"email": "upholsterer@workshop.example",
+		"fullName": "Денис Обухов",
+		"role": "upholsterer",
+		"password": "Crm!Uphol1",
+		"staffPosition": "Обивщик"
 	},
 	{
 		"email": "driver@workshop.example",

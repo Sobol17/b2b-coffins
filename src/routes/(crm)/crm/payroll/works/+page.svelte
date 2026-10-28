@@ -3,7 +3,7 @@
 	import { PAYROLL_TABS } from '$lib/crm/sections';
 	import DirectoryTable from '$lib/crm/payroll/DirectoryTable.svelte';
 	import WorkTypeModal from '$lib/crm/payroll/WorkTypeModal.svelte';
-	import { roubles } from '$lib/crm/payroll/labels';
+	import { roubles, workRoleTitle } from '$lib/crm/payroll/labels';
 	import { Button, Card } from '$lib/ui';
 	import type { WorkTypeDto } from '$lib/types/crm-payroll';
 	import type { PageProps } from './$types';
@@ -22,8 +22,8 @@
 		<div>
 			<h1 class="mb-2 text-3xl">Работы и стоимость</h1>
 			<p class="max-w-2xl text-fg-muted">
-				Сколько мастерская платит за единицу работы. Стоимость работы система делит поровну между
-				теми, кто её сделал.
+				Сколько мастерская платит за единицу работы. У столяра, шлифовщика, маляра и обивщика свои
+				работы. Стоимость работы система делит поровну между теми, кто её сделал.
 			</p>
 		</div>
 		{#if data.canManage}
@@ -42,6 +42,7 @@
 				onEdit={(row) => (editing = row)}
 			>
 				{#snippet own(row: WorkTypeDto)}
+					<span data-testid="work-role">{workRoleTitle(row)}</span> ·
 					<span class="tabular-nums" data-testid="work-rate">{roubles(row.rateMinor)}</span> за единицу
 				{/snippet}
 			</DirectoryTable>

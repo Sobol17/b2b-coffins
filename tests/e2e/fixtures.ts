@@ -5,7 +5,9 @@ export const ACCOUNTS = {
 	owner: { email: 'owner@workshop.example', password: 'Crm!Owner1', scope: 'crm' },
 	manager: { email: 'manager@workshop.example', password: 'Crm!Manager1', scope: 'crm' },
 	carpenter: { email: 'carpenter@workshop.example', password: 'Crm!Carp1', scope: 'crm' },
+	grinder: { email: 'grinder@workshop.example', password: 'Crm!Grind1', scope: 'crm' },
 	painter: { email: 'painter@workshop.example', password: 'Crm!Paint1', scope: 'crm' },
+	upholsterer: { email: 'upholsterer@workshop.example', password: 'Crm!Uphol1', scope: 'crm' },
 	driver: { email: 'driver@workshop.example', password: 'Crm!Driver1', scope: 'crm' },
 	cp_admin: { email: 'admin@ritual-service.example', password: 'Portal!Admin1', scope: 'portal' },
 	cp_employee: {

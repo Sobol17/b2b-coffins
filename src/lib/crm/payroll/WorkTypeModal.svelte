@@ -1,9 +1,10 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
-	import { Button, Input, Modal, MoneyInput, withToast } from '$lib/ui';
+	import { Button, Input, Modal, MoneyInput, Select, withToast } from '$lib/ui';
+	import { WORK_ROLE_OPTIONS } from './labels';
 	import type { WorkTypeDto } from '$lib/types/crm-payroll';
 
-	/* One dialog for a new work and for an edit of one: a title and the price of a unit. */
+	/* One dialog for a new work and for an edit of one: a title, the role and the price of a unit. */
 	let {
 		open,
 		work,
@@ -43,6 +44,13 @@
 				value={work?.title ?? ''}
 				required
 				maxlength={120}
+			/>
+			<Select
+				name="roleCode"
+				label="Роль"
+				placeholder="Выберите роль"
+				options={WORK_ROLE_OPTIONS}
+				value={work?.roleCode ?? ''}
 			/>
 			<MoneyInput
 				name="rateMinor"

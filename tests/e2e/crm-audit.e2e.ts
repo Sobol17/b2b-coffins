@@ -15,7 +15,13 @@ const db = e2eDb();
 const ORIGIN = 'http://localhost:4173';
 const ROLES = Object.keys(ACCOUNTS) as RoleKey[];
 /** Workshop roles that never receive a price (tech.md 8.1). */
-const PRICE_BLIND: readonly RoleKey[] = ['carpenter', 'painter', 'driver'];
+const PRICE_BLIND: readonly RoleKey[] = [
+	'carpenter',
+	'grinder',
+	'painter',
+	'upholsterer',
+	'driver'
+];
 /** The driver collects cash, so the delivery screen names the sum of a request (v1.43). */
 const DRIVER_MONEY: Readonly<Record<string, readonly string[]>> = {
 	'/crm/delivery': ['totalMinor']
