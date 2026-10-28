@@ -22,7 +22,10 @@ export const counterparties = sqliteTable(
 		address: text('address'),
 		phone: text('phone'),
 		email: text('email'),
+		// The list the counterparty pays by: its own personal list once the workshop set any price.
 		priceListId: integer('price_list_id').references(() => priceLists.id),
+		// The regional list that prefilled the personal one and backs it up (v1.64).
+		regionPriceListId: integer('region_price_list_id').references(() => priceLists.id),
 		discountPercent: integer('discount_percent').notNull().default(0), // 0..100, integer percent
 		settlementScheme: text('settlement_scheme', { enum: ['on_fact', 'weekly', 'monthly'] })
 			.notNull()

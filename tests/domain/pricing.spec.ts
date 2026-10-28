@@ -39,6 +39,20 @@ describe('personal unit price', () => {
 		);
 	});
 
+	it('puts the regional list under the personal one and over the base list (v1.64)', () => {
+		fc.assert(
+			fc.property(price, maybePrice, maybePrice, maybePrice, (base, baseList, region, personal) => {
+				const resolved = resolveUnitPrice({
+					basePriceMinor: base,
+					baseListPriceMinor: baseList,
+					regionListPriceMinor: region,
+					personalListPriceMinor: personal
+				});
+				expect(resolved).toBe(personal ?? region ?? baseList ?? base);
+			})
+		);
+	});
+
 	it('never invents a number that none of the sources holds', () => {
 		fc.assert(
 			fc.property(price, maybePrice, maybePrice, (base, baseList, personal) => {

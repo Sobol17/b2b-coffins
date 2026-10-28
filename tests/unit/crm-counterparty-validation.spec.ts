@@ -19,7 +19,12 @@ const requisites = {
 	phone: '',
 	email: ''
 };
-const terms = { priceListId: '', discountPercent: '5', settlementScheme: 'weekly', managerId: '3' };
+const terms = {
+	regionPriceListId: '',
+	discountPercent: '5',
+	settlementScheme: 'weekly',
+	managerId: '3'
+};
 const admin = { adminFullName: 'Анна Смирнова', adminEmail: ' Anna@RS.example ', adminPhone: '' };
 
 describe('C3 counterparty forms', () => {
@@ -49,7 +54,7 @@ describe('C3 counterparty forms', () => {
 
 	it('keeps the contract discount a whole percent and the staff limit within 1..1000', () => {
 		expect(termsInputSchema.parse({ ...terms, staffLimit: '10' })).toEqual({
-			priceListId: null,
+			regionPriceListId: null,
 			discountPercent: 5,
 			settlementScheme: 'weekly',
 			managerId: 3,
@@ -76,7 +81,7 @@ describe('C3 counterparty forms', () => {
 		});
 		expect(parsed.requisites.name).toBe('Ритуал-Сервис');
 		expect(parsed.terms).toEqual({
-			priceListId: null,
+			regionPriceListId: null,
 			discountPercent: 5,
 			settlementScheme: 'weekly',
 			managerId: 3

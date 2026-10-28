@@ -10,6 +10,7 @@ import { OrgService } from '../settings/org.service';
 import { StaffDtoMapper } from '../staff/dto';
 import { StaffRepository, type StaffRow } from '../staff/staff.repository';
 import { CounterpartyBaseService } from './counterparty-base.service';
+import { PersonalListFiller } from './personal-list';
 import { CrmCounterpartyRepository } from './crm-counterparty.repository';
 import type { ActorContext } from '$lib/types/actor';
 import type { CreatedStaffDto, StaffMemberDto } from '$lib/types/counterparty';
@@ -26,7 +27,8 @@ export class CounterpartyAccessService extends CounterpartyBaseService {
 		ctx: ActorContext,
 		private readonly mail: MailDriver,
 		counterparties: CrmCounterpartyRepository = new CrmCounterpartyRepository(),
-		private readonly staff: StaffRepository = new StaffRepository()
+		private readonly staff: StaffRepository = new StaffRepository(),
+		private readonly filler: PersonalListFiller = new PersonalListFiller()
 	) {
 		super(ctx, counterparties);
 	}
@@ -45,6 +47,10 @@ export class CounterpartyAccessService extends CounterpartyBaseService {
 				this.assertLoginFree(input.admin.email, tx);
 				const staffLimit = OrgService.staffLimitDefault();
 				const id = this.counterparties.insert(input.requisites, input.terms, staffLimit, tx);
+				const region = input.terms.regionPriceListId;
+				if (region !== null) {
+					this.filler.fill({ id, name: input.requisites.name }, region, false, tx);
+				}
 				const adminId = this.staff.insertMember(
 					{ ...input.admin, role: 'cp_admin', counterpartyId: id, passwordHash },
 					tx

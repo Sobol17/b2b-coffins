@@ -29,7 +29,10 @@
 				: 'card'
 	);
 	const pricesError = $derived(
-		form && 'action' in form && form.action === 'prices' && 'formError' in form
+		form &&
+			'action' in form &&
+			(form.action === 'prices' || form.action === 'refill') &&
+			'formError' in form
 			? form.formError
 			: undefined
 	);
@@ -92,6 +95,7 @@
 				<PricesPanel
 					prices={data.prices.page}
 					categories={data.prices.categories}
+					hasRegion={card.regionPriceListId !== null}
 					formError={pricesError}
 				/>
 			</Tabs.Content>

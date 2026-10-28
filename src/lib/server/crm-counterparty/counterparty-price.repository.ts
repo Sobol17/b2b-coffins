@@ -133,7 +133,7 @@ export class CounterpartyPriceRepository extends BaseRepository<typeof priceList
 	fork(counterpartyId: number, title: string, copyFromId: number | null, tx: Tx): number {
 		const [list] = this.db(tx)
 			.insert(priceLists)
-			.values({ title, isBase: false })
+			.values({ title, isBase: false, isPersonal: true })
 			.returning({ id: priceLists.id })
 			.all();
 		if (!list) throw new Error('failed to insert price list');
@@ -151,6 +151,19 @@ export class CounterpartyPriceRepository extends BaseRepository<typeof priceList
 			.where(eq(counterparties.id, counterpartyId))
 			.run();
 		return list.id;
+	}
+
+	/** Every entry of `listId` becomes a copy of `fromId`: the refill from the region (v1.64). */
+	replace(listId: number, fromId: number, tx: Tx): number {
+		this.db(tx).delete(priceListItems).where(eq(priceListItems.priceListId, listId)).run();
+		const copied = this.items(fromId, undefined, tx);
+		for (const [variantId, priceMinor] of copied) {
+			this.db(tx)
+				.insert(priceListItems)
+				.values({ priceListId: listId, variantId, priceMinor })
+				.run();
+		}
+		return copied.size;
 	}
 
 	upsert(

@@ -12,6 +12,7 @@ export type { ButtonProps, ButtonSize, ButtonVariant } from './base/button/butto
 export { default as TouchButton } from './TouchButton.svelte';
 
 export { default as Input } from './Input.svelte';
+export { default as FileInput } from './FileInput.svelte';
 export { default as Textarea } from './Textarea.svelte';
 export { default as NumberInput } from './NumberInput.svelte';
 export { default as MoneyInput } from './MoneyInput.svelte';

@@ -126,3 +126,10 @@ export type CompatibilityInput = z.infer<typeof compatibilityInputSchema>;
 export type PriceListInput = z.infer<typeof priceListInputSchema>;
 export type PriceListItemInput = z.infer<typeof priceListItemInputSchema>;
 export type DiscountRuleInput = z.infer<typeof discountRuleInputSchema>;
+
+/** The XLSX of a regional price list (v1.64); the bytes are checked by the importer. */
+export const priceSheetUploadSchema = z.object({
+	file: z
+		.instanceof(File, { error: 'Выберите файл XLSX' })
+		.refine((file) => file.size > 0, { error: 'Выберите файл XLSX' })
+});

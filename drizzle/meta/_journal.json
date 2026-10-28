@@ -155,6 +155,13 @@
       "when": 1793174866886,
       "tag": "0021_lucky_sleepwalker",
       "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "6",
+      "when": 1793176246603,
+      "tag": "0022_equal_bastion",
+      "breakpoints": true
     }
   ]
 }

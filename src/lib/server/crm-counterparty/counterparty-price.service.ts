@@ -1,8 +1,10 @@
 import { ValidationError } from '../core/errors';
+import { PersonalPriceResolver } from '../pricing/personal-price';
 import { PriceRepository } from '../pricing/price.repository';
 import { CounterpartyBaseService } from './counterparty-base.service';
 import { CounterpartyPriceRepository } from './counterparty-price.repository';
 import { CrmCounterpartyRepository } from './crm-counterparty.repository';
+import { PersonalListFiller } from './personal-list';
 import {
 	choosePersonalList,
 	planPersonalPrices,
@@ -28,7 +30,9 @@ export class CounterpartyPriceService extends CounterpartyBaseService {
 		counterparties: CrmCounterpartyRepository = new CrmCounterpartyRepository(),
 		private readonly prices: CounterpartyPriceRepository = new CounterpartyPriceRepository(),
 		private readonly lists: PriceRepository = new PriceRepository(),
-		private readonly now: () => Date = () => new Date()
+		private readonly now: () => Date = () => new Date(),
+		private readonly resolver: PersonalPriceResolver = new PersonalPriceResolver(),
+		private readonly filler: PersonalListFiller = new PersonalListFiller()
 	) {
 		super(ctx, counterparties);
 		// Every cell of the tab is a price: a price-blind role gets no tab at all.
@@ -47,6 +51,10 @@ export class CounterpartyPriceService extends CounterpartyBaseService {
 		const baseId = this.lists.baseLists().find((list) => isPriceListActive(list, at))?.id;
 		const base =
 			baseId === undefined ? new Map<number, number>() : this.lists.itemsFor(baseId, ids);
+		// «Базовая» is what the counterparty pays without its own price: the region first (v1.64).
+		const regionId = this.resolver.activeRegion(counterpartyId, at);
+		const region =
+			regionId === undefined ? new Map<number, number>() : this.lists.itemsFor(regionId, ids);
 		const own = this.lists.counterpartyList(counterpartyId);
 		const personal =
 			own && !own.isBase && isPriceListActive(own, at)
@@ -56,13 +64,31 @@ export class CounterpartyPriceService extends CounterpartyBaseService {
 		return {
 			rows: rows.map((row) => ({
 				...row,
-				basePriceMinor: base.get(row.variantId) ?? row.basePriceMinor,
+				basePriceMinor: region.get(row.variantId) ?? base.get(row.variantId) ?? row.basePriceMinor,
 				personalPriceMinor: personal.get(row.variantId) ?? null
 			})),
 			total,
 			page: query.page,
 			perPage: query.perPage
 		};
+	}
+
+	/**
+	 * «Заполнить из прайса»: the individual prices become the prices of the regional list.
+	 * @throws NotFoundError for an unknown counterparty, ValidationError without a region.
+	 */
+	refill(counterpartyId: number): void {
+		const counterparty = this.requireCounterparty(counterpartyId);
+		const region = counterparty.regionPriceListId;
+		if (region === null) {
+			throw new ValidationError('Выберите региональный прайс-лист в условиях', {
+				field: 'regionPriceListId'
+			});
+		}
+		this.audited({ action: 'counterparty.prices_refill', entity: 'counterparties' }, (tx) => {
+			const outcome = this.filler.fill(counterparty, region, true, tx);
+			return { result: undefined, entityId: counterpartyId, after: { region, outcome } };
+		});
 	}
 
 	categories(): { id: number; title: string }[] {

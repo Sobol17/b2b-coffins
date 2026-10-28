@@ -7,6 +7,9 @@ const PNG = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
 const PDF = [0x25, 0x50, 0x44, 0x46, 0x2d];
 const RIFF = [0x52, 0x49, 0x46, 0x46];
 const WEBP = [0x57, 0x45, 0x42, 0x50];
+// XLSX is a ZIP package: a local file header opens it (v1.64).
+const ZIP = [0x50, 0x4b, 0x03, 0x04];
+export const XLSX_MIME = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
 
 function hasBytes(bytes: Uint8Array, expected: readonly number[], offset = 0): boolean {
 	if (bytes.length < offset + expected.length) return false;
@@ -18,7 +21,8 @@ const MATCHERS: Readonly<Record<string, (bytes: Uint8Array) => boolean>> = {
 	'image/png': (bytes) => hasBytes(bytes, PNG),
 	// A RIFF container names its payload after the four bytes of the chunk size.
 	'image/webp': (bytes) => hasBytes(bytes, RIFF) && hasBytes(bytes, WEBP, 8),
-	'application/pdf': (bytes) => hasBytes(bytes, PDF)
+	'application/pdf': (bytes) => hasBytes(bytes, PDF),
+	[XLSX_MIME]: (bytes) => hasBytes(bytes, ZIP)
 };
 
 /** How many leading bytes a caller has to hand over for any known type. */

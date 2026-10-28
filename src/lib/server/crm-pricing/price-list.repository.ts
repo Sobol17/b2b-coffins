@@ -1,4 +1,4 @@
-import { and, asc, eq, ne } from 'drizzle-orm';
+import { and, asc, eq, inArray, isNull, ne } from 'drizzle-orm';
 import { BaseRepository } from '../core/repository';
 import type { Tx } from '../db/client';
 import { counterparties, priceListItems, priceLists, productVariants } from '../db/schema';
@@ -105,5 +105,31 @@ export class ManagedPriceListRepository extends BaseRepository<typeof priceLists
 				and(eq(priceListItems.priceListId, priceListId), eq(priceListItems.variantId, variantId))
 			)
 			.run();
+	}
+
+	/** Live variants by SKU: what an uploaded sheet may price (v1.64). */
+	variantIdsBySku(skus: readonly string[], tx: Tx): Map<string, number> {
+		if (skus.length === 0) return new Map();
+		const rows = this.db(tx)
+			.select({ id: productVariants.id, sku: productVariants.sku })
+			.from(productVariants)
+			.where(and(inArray(productVariants.sku, [...skus]), isNull(productVariants.deletedAt)))
+			.all();
+		return new Map(rows.map((row) => [row.sku, row.id]));
+	}
+
+	/** The list holds exactly these prices afterwards. */
+	replaceItems(
+		priceListId: number,
+		rows: readonly { variantId: number; priceMinor: number }[],
+		tx: Tx
+	): void {
+		this.db(tx).delete(priceListItems).where(eq(priceListItems.priceListId, priceListId)).run();
+		for (const row of rows) {
+			this.db(tx)
+				.insert(priceListItems)
+				.values({ priceListId, ...row })
+				.run();
+		}
 	}
 }

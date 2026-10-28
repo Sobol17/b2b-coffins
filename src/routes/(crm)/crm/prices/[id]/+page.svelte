@@ -1,7 +1,16 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import { resolve } from '$app/paths';
-	import { Breadcrumbs, Button, Card, MoneyInput, Select, withToast } from '$lib/ui';
+	import {
+		Breadcrumbs,
+		Button,
+		Card,
+		FileInput,
+		MoneyInput,
+		Select,
+		withToast,
+		type ToastSpec
+	} from '$lib/ui';
 	import { formatMinor } from '$lib/utils/format';
 	import type { PageProps } from './$types';
 
@@ -12,6 +21,12 @@
 			label: `${row.productTitle} · ${row.sku}`
 		}))
 	);
+	let importing = $state(false);
+
+	function importedToast(data: Record<string, unknown> | undefined): ToastSpec {
+		const count = typeof data?.['imported'] === 'number' ? data['imported'] : 0;
+		return { title: 'Прайс загружен', description: `Цен в листе: ${count}.` };
+	}
 </script>
 
 <svelte:head><title>{data.list.title} · CRM</title></svelte:head>
@@ -45,6 +60,27 @@
 			</form>
 		</Card.Content></Card.Root
 	>
+	<Card.Root>
+		<Card.Content class="flex flex-col gap-4">
+			<h2 class="text-2xl">Загрузить прайс из файла</h2>
+			<form
+				method="POST"
+				action="?/import"
+				enctype="multipart/form-data"
+				class="flex flex-col gap-4"
+				use:enhance={withToast({ pending: (value) => (importing = value), success: importedToast })}
+			>
+				<FileInput
+					name="file"
+					accept=".xlsx"
+					label="Файл XLSX"
+					hint="Первая строка: «Артикул» и «Цена». Файл заменит все цены листа."
+					required
+				/>
+				<Button type="submit" class="self-start" loading={importing}>Загрузить</Button>
+			</form>
+		</Card.Content>
+	</Card.Root>
 	<Card.Root
 		><Card.Content>
 			<h2 class="mb-4 text-2xl">Позиции прайс-листа</h2>

@@ -2,8 +2,8 @@ import { PriceRepository } from './price.repository';
 import { isPriceListActive, resolveUnitPrice } from '$lib/domain/request/pricing';
 
 /**
- * Turns variant prices into the prices a counterparty pays: its own list, then the base list, then
- * the variant price (tech.md 5.5). The contract discount is not applied here; it belongs to the
+ * Turns variant prices into the prices a counterparty pays: its own list, its regional list, the
+ * base list, then the variant price (tech.md 5.5, v1.64). The contract discount is not applied here; it belongs to the
  * request total (`requests.discount_minor`).
  */
 export class PersonalPriceResolver {
@@ -22,8 +22,12 @@ export class PersonalPriceResolver {
 		// personal list stops applying instead of quoting stale prices.
 		const personalListId = own && !own.isBase && isPriceListActive(own, at) ? own.id : undefined;
 
+		const regionListId = this.activeRegion(counterpartyId, at);
+
 		const baseList =
 			baseListId === undefined ? undefined : this.repo.itemsFor(baseListId, variantIds);
+		const region =
+			regionListId === undefined ? undefined : this.repo.itemsFor(regionListId, variantIds);
 		const personal =
 			personalListId === undefined ? undefined : this.repo.itemsFor(personalListId, variantIds);
 
@@ -33,9 +37,17 @@ export class PersonalPriceResolver {
 				resolveUnitPrice({
 					basePriceMinor: basePrices.get(id) ?? 0,
 					baseListPriceMinor: baseList?.get(id),
+					regionListPriceMinor: region?.get(id),
 					personalListPriceMinor: personal?.get(id)
 				})
 			])
 		);
+	}
+
+	/** A regional list backs the counterparty up while it applies; a base one adds nothing. */
+	activeRegion(counterpartyId: number | null, at: Date): number | undefined {
+		if (counterpartyId === null) return undefined;
+		const region = this.repo.regionList(counterpartyId);
+		return region && !region.isBase && isPriceListActive(region, at) ? region.id : undefined;
 	}
 }

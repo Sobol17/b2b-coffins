@@ -1,7 +1,7 @@
 # tech.md — ядро проекта
 
 **Проект:** B2B-портал + CRM для столярной мастерской (производство гробов)
-**Версия ядра:** v1.63
+**Версия ядра:** v1.64
 **Дата:** 28.10.2026
 **Статус:** этап 1 (портал, P1–P14) завершён 19.09.2026; в этапе 2 (CRM) влиты C1–C8, C10, C12, C15, C13, слайс C14 открыт (чек-лист в §14), C17 (обращения) влит, C18 (финансы) в работе, C16 не начат
 **Владелец файла:** Sobol17 (тимлид и единственный разработчик)
@@ -11,6 +11,7 @@
 
 | Версия | Изменение |
 |---|---|
+| v1.64 | Правка после демо 28.10.2026: региональные прайс-листы. Региональный прайс это обычный небазовый лист `price_lists`, его загружают на странице листа `/crm/prices/[id]` файлом XLSX (form action `import`, право `catalog.manage`, лимит `file.upload`): первая строка «Артикул» и «Цена» (или `sku` и `price`), не больше 2 МБ и 5000 строк, сигнатура ZIP проверяется `matchesSignature`, каждая строка проходит Zod, повтор артикула и неизвестный артикул отклоняют весь файл. Файл заменяет все позиции листа одной транзакцией, аудит `price_list.import`. Чтение листа общее с CLI `price:import` (`lib/server/crm-pricing/price-sheet.ts`). Новые поля: `counterparties.region_price_list_id` (выбор в «Условиях» и при заведении контрагента, только листы с `is_base = false` и `is_personal = false`) и `price_lists.is_personal` (лист индивидуальных цен одного контрагента, его заводит карточка). Поле `priceListId` формы условий заменено на `regionPriceListId`, `CrmCounterpartyCardDto.priceListId` заменено на `regionPriceListId`. При заведении контрагента с регионом и при первой смене региона у контрагента без своего листа система копирует цены региона в его личный лист. Смена региона позже личные цены не трогает: кнопка «Заполнить из прайса» на вкладке «Цены» с подтверждением заменяет их ценами региона (form action `refill`, аудит `counterparty.prices_refill`). Цепочка цены строки: личный лист, затем действующий региональный лист, затем базовый лист, затем `base_price_minor` (`resolveUnitPrice`, поле `regionListPriceMinor`). Колонка «Базовая» вкладки «Цены» показывает ту же цепочку без личного листа. Новый примитив `FileInput`: файл уходит с формой action. Миграция `0022` |
 | v1.63 | Правка после демо 28.10.2026: вкладка отчётов «По контрагентам» (`/crm/reports/counterparties`, `export.xlsx`), право `reports.read`, только руководитель. Продажи те же, что в отчёте продаж: заявки контрагентов в `delivered`, `awaiting_payment`, `paid` по `delivered_at` в окне периода. На строку контрагента: заявки, штуки, сумма после скидки (`total_minor`), себестоимость, маржа, доля маржи, оплачено и число штук без себестоимости. Себестоимость строки заявки это `qty × stock_items.cost_price_minor` её варианта на момент отчёта, не замороженная: правка себестоимости меняет маржу прошлых периодов. Вариант без позиции или позиция с нулём дают 0 и попадают в `uncostedQty`. Маржа и её доля считаются чистой функцией `lib/domain/report/margin.ts`: `margin = total - cost`, доля в базисных пунктах от суммы, `null` при нулевой сумме, сложение долей идёт от сумм. Детализация: параметр `counterpartyId` в адресе открывает заявки контрагента, свежие доставки сверху, со ссылкой на карточку; сумма маржи заявок равна марже строки. Выгрузка: лист «По контрагентам» с итогом, при выбранном контрагенте второй лист «Заявки». Типы `MarginTotalsDto`, `CounterpartyMarginRowDto`, `CounterpartyRequestRowDto`, `CounterpartyReportDto`, схема `counterpartyReportSchema`. Схема БД не менялась |
 | v1.62 | Правка после демо 28.10.2026: себестоимость живёт в складской позиции. `stock_items` получил `cost_price_minor` (целые копейки, по умолчанию 0): себестоимость одной единицы, у изделий и у комплектующих. Её заполняют руками полем «Себестоимость, ₽» в форме позиции склада (`stockItemCreateSchema`, `stockItemUpdateSchema`: целые рубли, от 0 до `STOCK_COST_MAX_MINOR`; пустое поле значит «не прислано», сохранённое значение остаётся). Видят и пишут её только роли с `canSeeCost` (`owner`, `manager`): `StockRowDto.costPriceMinor` и колонка «Себестоимость» реестра приходят только им, `StockChoicesDto.canSeeCost` открывает поле формы, запись от роли без `canSeeCost` отклоняется 403. Аудит `stock.item.update` пишет себестоимость до и после. Поле себестоимости варианта ушло из формы и схемы варианта C2 (`variantInputSchema`), `CrmVariantDto.costPriceMinor` и цена с себестоимостью каталога читают себестоимость учётной позиции варианта; вариант без позиции стоит 0. Колонка `product_variants.cost_price_minor` остаётся до следующей версии: её читает только команда `pnpm admin stock:cost-backfill`, которая переносит заполненную себестоимость варианта в его позицию, если у позиции себестоимость 0; повторный запуск ничего не меняет. Сид пишет себестоимость демо-каталога в позиции. Правило «себестоимость варианта одно число, заполняется руками» (v1.47) читается как «себестоимость позиции склада». Миграция `0021` |
 | v1.61 | Правка после демо 28.10.2026: роли цеха «Шлифовщик» (`grinder`) и «Обивщик» (`upholsterer`). Изделие проходит столяра, шлифовщика, маляра и обивщика, затем попадает на склад; этот порядок задаёт `WORK_ROLES` и тот же порядок ролей в `ROLE_CODES` и `CRM_ROLES`. Права новых ролей совпадают со столяром и маляром: `crm.access`, `catalog.read`, `request.read.own`, `stock.read`; цен они не видят (`canSeePrices = false`), переходов в §6.2 у них нет. Расценки по роли: `work_types` получил nullable колонку `role_code` (`WORK_ROLES`), `null` это общая работа. `WorkTypeDto.roleCode`, форма работы выбирает роль, список работ и выбор работы в рабочем дне идут в порядке цеха, общие работы в конце, в дне работа подписана «Роль: название». Аудит `work_type.update` пишет роль до и после. Делёж суммы записи не менялся. Новые роли приходят на стенд командой `pnpm admin roles:sync`: она повторяет сид ролей из `scripts/fixtures/roles.json` и повторный запуск ничего не меняет. Сид добавил учётные записи шлифовщика и обивщика и роли видам работ. Миграция `0020` |
@@ -373,7 +374,9 @@ export const counterparties = sqliteTable('counterparties', {
   inn: text('inn'), kpp: text('kpp'),
   address: text('address'),
   phone: text('phone'), email: text('email'),
-  priceListId: integer('price_list_id').references(() => priceLists.id),
+  priceListId: integer('price_list_id').references(() => priceLists.id),   // personal list of this counterparty
+  // The region the personal prices were prefilled from (v1.64). Not personal, not base.
+  regionPriceListId: integer('region_price_list_id').references(() => priceLists.id),
   discountPercent: integer('discount_percent').notNull().default(0),   // 0..100, integer percent
   settlementScheme: text('settlement_scheme', { enum: ['on_fact', 'weekly', 'monthly'] }).notNull().default('on_fact'),
   managerId: integer('manager_id').references(() => users.id),
@@ -487,6 +490,8 @@ export const media = sqliteTable('media', {
 export const priceLists = sqliteTable('price_lists', {
   id: pk(), title: text('title').notNull(),
   isBase: integer('is_base', { mode: 'boolean' }).notNull().default(false),
+  // A list of one counterparty's individual prices (v1.64): never offered as a region.
+  isPersonal: integer('is_personal', { mode: 'boolean' }).notNull().default(false),
   validFrom: ts('valid_from'), validTo: ts('valid_to'),
   createdAt: createdAt(), updatedAt: updatedAt()
 });
@@ -518,6 +523,8 @@ export const discountRules = sqliteTable('discount_rules', {
 ```
 
 Индивидуальные цены контрагента (v1.56) пишутся только в лист, который не базовый, действует сейчас и назначен одному этому контрагенту. Иначе сервис заводит новый лист «Индивидуальные цены: <название>», копирует в него позиции прежнего небазового листа и меняет `counterparties.price_list_id`. Выбор листа и план правок делает `lib/domain/pricing/personal-price.ts`: цена 0 удаляет позицию, неизменная цена в план не попадает.
+
+Региональный прайс (v1.64) это лист с `is_base = false` и `is_personal = false`, его выбирают в `counterparties.region_price_list_id`. Регион только предзаполняет личный лист: при заведении контрагента и при смене региона у контрагента без своего листа сервис копирует позиции региона в новый лист с `is_personal = true`. Уже заведённые личные цены смена региона не трогает, их заменяет кнопка «Заполнить из прайса» (`PersonalListFiller.fill(..., overwrite = true)`). Цена строки берётся по цепочке: личный лист, действующий региональный, действующий базовый, `base_price_minor`. Пустое личное поле значит цену региона.
 
 ### 5.6 Заявка (ядро)
 
@@ -1373,7 +1380,7 @@ export interface CrmDeliveryAddressDto extends DeliveryAddressDto { contactName:
 export interface CrmCounterpartyCardDto {
   id: number; name: string; legalName: string | null; inn: string | null; kpp: string | null;
   address: string | null; phone: string | null; email: string | null;
-  priceListId: number | null; discountPercent: number; settlementScheme: SettlementScheme;
+  regionPriceListId: number | null; discountPercent: number; settlementScheme: SettlementScheme;   // v1.64
   managerId: number | null; staffLimit: number; notes: string | null; isActive: boolean;
   contracts: CrmContractDto[]; addresses: CrmDeliveryAddressDto[];
   users: StaffMemberDto[];               // isSelf is always false: a workshop actor has no portal account
@@ -1386,10 +1393,11 @@ export interface CrmPaymentMarkDto {
   isReversed: boolean;                   // a later row cancelled this mark
 }
 export interface CrmCounterpartyChoicesDto {
-  managers: { id: number; fullName: string }[]; priceLists: { id: number; title: string }[];
+  managers: { id: number; fullName: string }[]; priceLists: { id: number; title: string }[];   // regional lists only (v1.64)
 }
 export interface CreatedCounterpartyDto { counterpartyId: number; access: CreatedStaffDto; }
 // Tab «Цены» of the card (v1.56): a role with prices only. personalPriceMinor null means the chain decides.
+// basePriceMinor is the chain without the personal list: region, base list, variant price (v1.64).
 export interface CounterpartyPriceFilters { search?: string; categoryId?: number; }
 export interface CounterpartyPriceRowDto {
   variantId: number; productTitle: string; categoryTitle: string; sku: string; sizeCode: string;
@@ -1859,6 +1867,7 @@ export class RequestDtoMapper {
 | `Checkbox` / `Switch` / `RadioGroup` | `label`, `bind:checked`; у `Checkbox` ещё `name` и `value` для отправки в форме |
 | `DatePicker` / `DateRangePicker` | `bind:value: string`, ISO-строки, `placeholder` по умолчанию «Выберите дату» и «Выберите период» |
 | `FileUpload` | `accept`, `maxSizeMb`, `multiple`, `fields` (доп. поля формы, например владелец файла), `onUploaded(mediaId)` |
+| `FileInput` | `name`, `accept`, `label`, `hint`, `error`, `required`: файл уходит с формой action в `multipart/form-data`, без коллекции загрузок (v1.64) |
 | `DataTable` | `columns`, `rows`, `total`, `query: ListQuery`, `onQueryChange`, `exportUrl`, серверная пагинация; на ширине телефона строка рисуется карточкой: первая колонка заголовком, остальные парами «подпись: значение», пустые пары скрыты, DOM один (v1.56) |
 | `FilterBar` | `fields` (у каждого поля свой `placeholder`), `bind:filters`, сохранение в URL, `pageKey?` (ключ страницы, который сбрасывает смена фильтра, по умолчанию `page`); на телефоне поля открывает кнопка «Фильтры: N» (v1.56) |
 | `Modal` / `Drawer` / `ConfirmDialog` | `open`, `title`, `onClose`, `{#snippet body()}` |
@@ -1967,7 +1976,7 @@ CD нет. Мёрдж в `main` ничего не разворачивает, с
 - **Валидация.** Весь вход через Zod на сервере, включая `FormData`, query-параметры и содержимое импортируемых XLSX. Клиентская валидация только для UX.
 - **CSRF.** Form actions SvelteKit проверяют origin. Мутации через `+server.ts` требуют заголовка `x-requested-with` и совпадения origin. Обе проверки делает `requireOwnCall` из `lib/server/core/http.ts`, эндпоинт своей проверки не пишет (v1.53).
 - **Rate limiting.** Логин, восстановление пароля, создание сотрудника контрагента, отправка заявки, загрузка файла, сообщение обращения (`support.post`, v1.57). Счётчики в `rate_limits`, окно и лимит в конфиге.
-- **Загрузка файлов.** Белый список MIME, проверка сигнатуры файла, лимит размера, генерация имени сервером, запрет исполняемых расширений, хранение вне webroot. Сигнатуры лежат в `lib/domain/files/signature.ts` и общие для вложений заявки и фото каталога (v1.53).
+- **Загрузка файлов.** Белый список MIME, проверка сигнатуры файла, лимит размера, генерация имени сервером, запрет исполняемых расширений, хранение вне webroot. Сигнатуры лежат в `lib/domain/files/signature.ts` и общие для вложений заявки и фото каталога (v1.53). XLSX регионального прайса проверяется по сигнатуре ZIP и в хранилище не попадает (v1.64).
 - **SQL.** Только Drizzle-построитель. Конкатенация строк в SQL запрещена, сырой SQL только через параметризованный `sql` с плейсхолдерами.
 - **Заголовки.** `hooks.server.ts` ставит CSP без `unsafe-eval`, `X-Content-Type-Options`, `Referrer-Policy`, `X-Frame-Options: DENY`, HSTS.
 - **Аудит.** Все изменяющие действия пишутся в `audit_log` через декоратор сервиса. ПДн в логи не попадают.

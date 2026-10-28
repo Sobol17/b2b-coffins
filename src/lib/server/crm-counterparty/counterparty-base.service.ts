@@ -32,13 +32,22 @@ export abstract class CounterpartyBaseService extends BaseService {
 		return row;
 	}
 
-	/** @throws ValidationError for a manager or price list that is not there. */
-	protected validateTerms(terms: Pick<TermsInput, 'managerId' | 'priceListId'>, tx: Tx): void {
+	/**
+	 * A region is a shared list of prices: the base list and a list of one counterparty are not.
+	 * @throws ValidationError for a manager or regional list that is not there.
+	 */
+	protected validateTerms(
+		terms: Pick<TermsInput, 'managerId' | 'regionPriceListId'>,
+		tx: Tx
+	): void {
 		if (terms.managerId !== null && !this.counterparties.isManager(terms.managerId, tx)) {
 			throw new ValidationError('Выберите администратора мастерской', { field: 'managerId' });
 		}
-		if (terms.priceListId !== null && !this.counterparties.priceListExists(terms.priceListId, tx)) {
-			throw new ValidationError('Прайс-лист не найден', { field: 'priceListId' });
+		const region = terms.regionPriceListId;
+		if (region !== null && !this.counterparties.isRegionList(region, tx)) {
+			throw new ValidationError('Выберите региональный прайс-лист', {
+				field: 'regionPriceListId'
+			});
 		}
 	}
 }

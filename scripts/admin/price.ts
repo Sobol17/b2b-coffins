@@ -1,10 +1,10 @@
 import { readFileSync } from 'node:fs';
 import { extname } from 'node:path';
-import ExcelJS from 'exceljs';
 import Papa from 'papaparse';
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 import type { Db } from '../../src/lib/server/db/client';
+import { readPriceSheet, type PriceSheetRow } from '../../src/lib/server/crm-pricing/price-sheet';
 import { priceListItems, priceLists, productVariants } from '../../src/lib/server/db/schema';
 import { toMinor } from '../../src/lib/utils/money';
 import { readOptions, STRING_OPTION } from './args';
@@ -20,24 +20,6 @@ const rowSchema = z.object({
 	price: z.coerce.number().nonnegative()
 });
 
-type PriceRow = z.infer<typeof rowSchema>;
-
-async function readXlsx(file: string): Promise<unknown[]> {
-	const workbook = new ExcelJS.Workbook();
-	await workbook.xlsx.readFile(file);
-	const sheet = workbook.worksheets[0];
-	if (!sheet) throw new Error(`${file} has no worksheet`);
-
-	const header = (sheet.getRow(1).values as unknown[]).map((v) => String(v ?? '').trim());
-	const rows: unknown[] = [];
-	sheet.eachRow((row, index) => {
-		if (index === 1) return;
-		const values = row.values as unknown[];
-		rows.push(Object.fromEntries(header.map((key, i) => [key, values[i]]).filter(([k]) => k)));
-	});
-	return rows;
-}
-
 function readCsv(file: string): unknown[] {
 	const parsed = Papa.parse<Record<string, string>>(readFileSync(file, 'utf8'), {
 		header: true,
@@ -50,12 +32,13 @@ function readCsv(file: string): unknown[] {
 	return parsed.data;
 }
 
-function parseRows(raw: unknown[]): PriceRow[] {
-	const rows: PriceRow[] = [];
+/** CSV stays a console format; XLSX goes through the parser the CRM upload uses (v1.64). */
+function parseCsvRows(raw: unknown[]): PriceSheetRow[] {
+	const rows: PriceSheetRow[] = [];
 	const problems: string[] = [];
 	raw.forEach((row, index) => {
 		const parsed = rowSchema.safeParse(row);
-		if (parsed.success) rows.push(parsed.data);
+		if (parsed.success) rows.push({ sku: parsed.data.sku, priceMinor: toMinor(parsed.data.price) });
 		else problems.push(`row ${index + 2}: ${z.prettifyError(parsed.error)}`);
 	});
 	if (problems.length > 0) throw new Error(problems.join('\n'));
@@ -77,7 +60,9 @@ export async function priceImport(db: Db, argv: readonly string[]): Promise<void
 	if (!list) throw new Error(`price list "${input['price-list']}" not found`);
 
 	const isXlsx = extname(input.file).toLowerCase() === '.xlsx';
-	const rows = parseRows(isXlsx ? await readXlsx(input.file) : readCsv(input.file));
+	const rows = isXlsx
+		? await readPriceSheet(readFileSync(input.file))
+		: parseCsvRows(readCsv(input.file));
 
 	// All or nothing: a partially applied price list would quote two customers differently.
 	const applied = db.transaction((tx) => {
@@ -90,7 +75,7 @@ export async function priceImport(db: Db, argv: readonly string[]): Promise<void
 				.all();
 			if (!variant) throw new Error(`unknown variant sku ${row.sku}`);
 
-			const priceMinor = toMinor(row.price);
+			const { priceMinor } = row;
 			tx.insert(priceListItems)
 				.values({ priceListId: list.id, variantId: variant.id, priceMinor })
 				.onConflictDoUpdate({

@@ -5,6 +5,7 @@
 	import {
 		Button,
 		Card,
+		ConfirmDialog,
 		DataTable,
 		ErrorState,
 		FilterBar,
@@ -21,17 +22,23 @@
 
 	/*
 	 * «Цены» tab of the counterparty card (v1.56): one price per variant for this counterparty.
-	 * An empty field means it pays the base price; the page saves only what changed.
+	 * An empty field means it pays the «Базовая» column, the regional price when the card has a
+	 * region (v1.64). The page saves only what changed.
 	 */
 	let {
 		prices,
 		categories,
+		hasRegion,
 		formError
 	}: {
 		prices: Page<CounterpartyPriceRowDto>;
 		categories: readonly { readonly id: number; readonly title: string }[];
+		hasRegion: boolean;
 		formError: string | undefined;
 	} = $props();
+
+	let refillForm = $state<HTMLFormElement>();
+	let refillOpen = $state(false);
 
 	const PREFIX = 'price';
 
@@ -87,9 +94,15 @@
 	<Card.Header>
 		<Card.Title>Цены для контрагента</Card.Title>
 		<Card.Description>
-			Цена здесь заменяет базовую для этого контрагента. Пустое поле: контрагент платит базовую.
-			Скидка по договору применяется к сумме заявки поверх этих цен.
+			«Базовая» показывает цену регионального прайса, без него цену базового прайса. Цена для
+			контрагента заменяет базовую, пустое поле возвращает базовую. Скидка по договору применяется к
+			сумме заявки поверх этих цен.
 		</Card.Description>
+		{#if hasRegion}
+			<Card.Action>
+				<Button variant="secondary" onclick={() => (refillOpen = true)}>Заполнить из прайса</Button>
+			</Card.Action>
+		{/if}
 	</Card.Header>
 	<Card.Content class="flex flex-col gap-4">
 		<FilterBar {fields} bind:filters pageKey="pricePage" />
@@ -146,3 +159,22 @@
 		</form>
 	</Card.Content>
 </Card.Root>
+
+<form
+	bind:this={refillForm}
+	method="POST"
+	action="?/refill"
+	class="hidden"
+	use:enhance={withToast({ success: 'Цены заполнены из регионального прайса' })}
+></form>
+<ConfirmDialog
+	bind:open={refillOpen}
+	title="Заполнить цены из прайса?"
+	description="Цены контрагента заменятся ценами регионального прайса. Индивидуальные цены пропадут."
+	confirmLabel="Заполнить"
+	danger
+	onConfirm={() => {
+		refillForm?.requestSubmit();
+		refillOpen = false;
+	}}
+/>
