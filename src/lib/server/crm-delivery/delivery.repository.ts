@@ -1,4 +1,4 @@
-import { and, eq, inArray, sql } from 'drizzle-orm';
+import { and, desc, eq, gte, inArray, sql } from 'drizzle-orm';
 import { countExpression } from '../core/list';
 import { BaseRepository } from '../core/repository';
 import { counterparties, deliveryAddresses, requests } from '../db/schema';
@@ -23,6 +23,24 @@ export interface StopRow {
 	readonly contactPhone: string | null;
 	readonly counterpartyPhone: string | null;
 }
+
+export type HandedOverStatus = 'delivered' | 'awaiting_payment' | 'paid';
+
+export interface DeliveredRow {
+	readonly id: number;
+	readonly number: string;
+	readonly status: HandedOverStatus;
+	readonly counterpartyName: string | null;
+	readonly deceasedName: string | null;
+	readonly address: string | null;
+	readonly deliveredAt: Date | null;
+	readonly unitCount: number;
+}
+
+/** Statuses a delivered request may hold: the chain of tech.md 6.2 moves it on at once. */
+const HANDED_OVER: readonly HandedOverStatus[] = ['delivered', 'awaiting_payment', 'paid'];
+
+const UNITS = sql<number>`coalesce((select sum(i.qty) from request_items i where i.request_id = ${requests.id}), 0)`;
 
 /**
  * What the delivery screen reads (tech.md v1.43): counterparty requests on their way to the door.
@@ -70,6 +88,37 @@ export class DeliveryRepository extends BaseRepository<typeof requests> {
 		return row?.count ?? 0;
 	}
 
+	/** Requests handed over since `since`, the newest delivery first. */
+	delivered(since: Date, limit: number): DeliveredRow[] {
+		return this.db()
+			.select({
+				id: requests.id,
+				number: requests.number,
+				status: sql<HandedOverStatus>`${requests.status}`,
+				counterpartyName: counterparties.name,
+				deceasedName: requests.deceasedName,
+				address: deliveryAddresses.address,
+				deliveredAt: requests.deliveredAt,
+				unitCount: UNITS
+			})
+			.from(requests)
+			.leftJoin(counterparties, eq(counterparties.id, requests.counterpartyId))
+			.leftJoin(deliveryAddresses, eq(deliveryAddresses.id, requests.deliveryAddressId))
+			.where(this.handedOver(since))
+			.orderBy(desc(requests.deliveredAt), desc(requests.id))
+			.limit(limit)
+			.all();
+	}
+
+	countDelivered(since: Date): number {
+		const [row] = this.db()
+			.select({ count: countExpression })
+			.from(requests)
+			.where(this.handedOver(since))
+			.all();
+		return row?.count ?? 0;
+	}
+
 	/** The total of each request: the driver takes it whole or not at all (tech.md v1.44). */
 	totals(ids: readonly number[]): Map<number, number> {
 		if (ids.length === 0) return new Map();
@@ -79,6 +128,14 @@ export class DeliveryRepository extends BaseRepository<typeof requests> {
 			.where(inArray(requests.id, [...ids]))
 			.all();
 		return new Map(rows.map((row) => [row.id, row.totalMinor]));
+	}
+
+	private handedOver(since: Date) {
+		return and(
+			inArray(requests.status, [...HANDED_OVER]),
+			eq(requests.isStockRequest, false),
+			gte(requests.deliveredAt, since)
+		);
 	}
 
 	private onTheWay(status: StopStatus) {

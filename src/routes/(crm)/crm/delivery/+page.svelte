@@ -1,7 +1,9 @@
 <script lang="ts">
 	import PushBanner from '$lib/notifications/PushBanner.svelte';
+	import DeliveredStop from '$lib/crm/delivery/DeliveredStop.svelte';
 	import PlannedStop from '$lib/crm/delivery/PlannedStop.svelte';
 	import ReadyStop from '$lib/crm/delivery/ReadyStop.svelte';
+	import { DELIVERED_DAYS } from '$lib/types/crm-delivery';
 	import { Card, EmptyState, InstallPrompt } from '$lib/ui';
 	import type { PageProps } from './$types';
 
@@ -56,6 +58,25 @@
 				{#if data.delivery.plannedTotal > data.delivery.planned.length}
 					<p class="text-sm text-fg-muted">
 						Показаны {data.delivery.planned.length} из {data.delivery.plannedTotal}.
+					</p>
+				{/if}
+			</Card.Content>
+		</Card.Root>
+
+		<Card.Root class="lg:col-span-2">
+			<Card.Header>
+				<Card.Title>Доставлены</Card.Title>
+				<Card.Description>За последние {DELIVERED_DAYS} дней, свежие сверху.</Card.Description>
+			</Card.Header>
+			<Card.Content class="flex flex-col gap-3">
+				{#each data.delivery.delivered as stop (stop.id)}
+					<DeliveredStop {stop} timeZone={data.timezone} />
+				{:else}
+					<EmptyState title="Доставленных заявок нет" />
+				{/each}
+				{#if data.delivery.deliveredTotal > data.delivery.delivered.length}
+					<p class="text-sm text-fg-muted">
+						Показаны {data.delivery.delivered.length} из {data.delivery.deliveredTotal}.
 					</p>
 				{/if}
 			</Card.Content>

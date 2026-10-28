@@ -1,8 +1,8 @@
 import type { PositionTitles } from '../crm-shop/dto';
-import type { StopRow } from './delivery.repository';
+import type { DeliveredRow, StopRow } from './delivery.repository';
 import { isFullyLoaded, loadableQty } from '$lib/domain/request/loading';
 import type { DemandLine } from '$lib/domain/stock/allocation';
-import type { DeliveryLineDto, DeliveryStopDto } from '$lib/types/crm-delivery';
+import type { DeliveredStopDto, DeliveryLineDto, DeliveryStopDto } from '$lib/types/crm-delivery';
 import { navigationUrl } from '$lib/utils/navigation';
 
 /** What one stop needs besides its row: its lines, the fill of the shelf and, if ready, its total. */
@@ -45,6 +45,19 @@ export class DeliveryDtoMapper {
 		};
 		if (!isReady || context.totalMinor === undefined) return base;
 		return { ...base, totalMinor: context.totalMinor };
+	}
+
+	static toDelivered(row: DeliveredRow & { deliveredAt: Date }): DeliveredStopDto {
+		return {
+			id: row.id,
+			number: row.number,
+			counterpartyName: row.counterpartyName ?? '',
+			deceasedName: row.deceasedName,
+			address: row.address,
+			deliveredAt: row.deliveredAt.toISOString(),
+			unitCount: row.unitCount,
+			status: row.status
+		};
 	}
 
 	private static toLine(

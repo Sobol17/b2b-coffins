@@ -12,11 +12,15 @@ import { DeliveryDtoMapper } from './dto';
 import { loadableQty } from '$lib/domain/request/loading';
 import type { ActorContext } from '$lib/types/actor';
 import {
+	DELIVERED_DAYS,
 	DELIVERY_LIST_LIMIT,
+	type DeliveredStopDto,
 	type DeliveryDto,
 	type DeliveryStopDto
 } from '$lib/types/crm-delivery';
 import type { DeliveryLoadInput, DeliveryUnloadInput } from '$lib/validation/crm-delivery';
+
+const DAY_MS = 86_400_000;
 
 /**
  * The delivery screen of C6 (tech.md v1.43): assembled requests to load and take to the door, and
@@ -44,8 +48,20 @@ export class DeliveryService extends BaseService {
 			ready: this.project(ready, snapshot),
 			readyTotal: this.repo.count('ready'),
 			planned: this.project(planned, snapshot),
-			plannedTotal: this.repo.count('in_work')
+			plannedTotal: this.repo.count('in_work'),
+			...this.delivered()
 		};
+	}
+
+	private delivered(): Pick<DeliveryDto, 'delivered' | 'deliveredTotal'> {
+		const since = new Date(this.now().getTime() - DELIVERED_DAYS * DAY_MS);
+		const rows = this.repo.delivered(since, DELIVERY_LIST_LIMIT);
+		const delivered: DeliveredStopDto[] = rows.flatMap((row) =>
+			row.deliveredAt === null
+				? []
+				: [DeliveryDtoMapper.toDelivered({ ...row, deliveredAt: row.deliveredAt })]
+		);
+		return { delivered, deliveredTotal: this.repo.countDelivered(since) };
 	}
 
 	/**
