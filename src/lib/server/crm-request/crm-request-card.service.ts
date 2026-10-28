@@ -69,12 +69,14 @@ export class CrmRequestCardService extends CrmRequestBaseService {
 	private payments(
 		request: SteeredRow
 	): Pick<CrmRequestCardDto, 'canMarkPayment' | 'payments' | 'dueMinor' | 'paidMinor'> {
-		const canMarkPayment =
-			PolicyService.can(this.ctx, 'request.payment.mark') &&
-			acceptsPayment(request.status, request.isStockRequest);
-		if (!this.ctx.canSeePrices) return { canMarkPayment };
 		const rows = this.marks.ofRequest(request.id);
 		const paid = rows.map((row) => row.amountMinor);
+		// A covered request may wait for the rest of the counterparty's debt (v1.65): no more marks.
+		const canMarkPayment =
+			PolicyService.can(this.ctx, 'request.payment.mark') &&
+			acceptsPayment(request.status, request.isStockRequest) &&
+			requestDebtMinor(request.totalMinor, paid) > 0;
+		if (!this.ctx.canSeePrices) return { canMarkPayment };
 		return {
 			canMarkPayment,
 			payments: rows.map((row) => CrmCounterpartyDtoMapper.toPayment(row)),

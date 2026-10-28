@@ -59,6 +59,15 @@ describe('transition guards of tech.md 6.2', () => {
 		]);
 	});
 
+	it('holds a covered request open while the counterparty owes on other requests (v1.65)', () => {
+		assertProperty(
+			fc.property(minor, fc.array(minor, { maxLength: 10 }), minor, (total, marks, other) => {
+				return fullyPaid(total, marks, other) === (fullyPaid(total, marks) && other === 0);
+			})
+		);
+		expect([fullyPaid(1000, [1000], 500), fullyPaid(1000, [1000], 0)]).toEqual([false, true]);
+	});
+
 	it('answers every guard the table can ask about, so none is left undefined', () => {
 		assertProperty(
 			fc.property(
@@ -72,6 +81,7 @@ describe('transition guards of tech.md 6.2', () => {
 						unitPricesMinor,
 						totalMinor,
 						paymentMarksMinor,
+						otherDebtMinor: 0,
 						delivery: STOCK_DELIVERY,
 						loadedLines: []
 					});
@@ -86,6 +96,7 @@ describe('transition guards of tech.md 6.2', () => {
 			unitPricesMinor: [100],
 			totalMinor: 100,
 			paymentMarksMinor: [],
+			otherDebtMinor: 0,
 			delivery: STOCK_DELIVERY,
 			loadedLines: []
 		};
