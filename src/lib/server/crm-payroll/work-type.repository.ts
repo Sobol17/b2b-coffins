@@ -1,15 +1,23 @@
-import { and, asc, desc, eq, inArray, ne } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray, ne, sql } from 'drizzle-orm';
 import { BaseRepository } from '../core/repository';
 import type { Tx } from '../db/client';
 import { workTypes } from '../db/schema';
 import type { WorkTypeDto } from '$lib/types/crm-payroll';
+import { WORK_ROLES, type WorkRole } from '$lib/types/roles';
 
 const COLUMNS = {
 	id: workTypes.id,
 	title: workTypes.title,
 	rateMinor: workTypes.rateMinor,
+	roleCode: workTypes.roleCode,
 	isActive: workTypes.isActive
 };
+
+// Works follow the shop floor (tech.md v1.61): carpenter, grinder, painter, upholsterer, then general.
+const FLOOR_ORDER = sql`case ${workTypes.roleCode} ${sql.join(
+	WORK_ROLES.map((role, index) => sql`when ${role} then ${index}`),
+	sql` `
+)} else ${WORK_ROLES.length} end`;
 
 /** Works and their prices (`work_types`, tech.md v1.48): a short list, read whole. */
 export class WorkTypeRepository extends BaseRepository<typeof workTypes> {
@@ -21,7 +29,7 @@ export class WorkTypeRepository extends BaseRepository<typeof workTypes> {
 		return this.db(tx)
 			.select(COLUMNS)
 			.from(workTypes)
-			.orderBy(desc(workTypes.isActive), asc(workTypes.title), asc(workTypes.id))
+			.orderBy(desc(workTypes.isActive), FLOOR_ORDER, asc(workTypes.title), asc(workTypes.id))
 			.all();
 	}
 
@@ -50,7 +58,7 @@ export class WorkTypeRepository extends BaseRepository<typeof workTypes> {
 		return row !== undefined;
 	}
 
-	insert(input: { title: string; rateMinor: number }, tx?: Tx): number {
+	insert(input: { title: string; rateMinor: number; roleCode: WorkRole | null }, tx?: Tx): number {
 		const [created] = this.db(tx)
 			.insert(workTypes)
 			.values(input)
@@ -62,7 +70,7 @@ export class WorkTypeRepository extends BaseRepository<typeof workTypes> {
 
 	update(
 		id: number,
-		patch: { title?: string; rateMinor?: number; isActive?: boolean },
+		patch: { title?: string; rateMinor?: number; roleCode?: WorkRole | null; isActive?: boolean },
 		tx?: Tx
 	): void {
 		this.db(tx).update(workTypes).set(patch).where(eq(workTypes.id, id)).run();

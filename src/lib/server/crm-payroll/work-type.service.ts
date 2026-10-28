@@ -38,12 +38,13 @@ export class WorkTypeService extends PayrollBaseService {
 		return this.audited({ action: 'work_type.update', entity: 'work_types' }, (tx) => {
 			const before = this.require(input.id, tx);
 			this.assertFreeTitle(input.title, input.id, tx);
-			this.repo.update(input.id, { title: input.title, rateMinor: input.rateMinor }, tx);
+			const { title, rateMinor, roleCode } = input;
+			this.repo.update(input.id, { title, rateMinor, roleCode }, tx);
 			return {
 				result: this.require(input.id, tx),
 				entityId: input.id,
-				before: { title: before.title, rateMinor: before.rateMinor },
-				after: { title: input.title, rateMinor: input.rateMinor }
+				before: { title: before.title, rateMinor: before.rateMinor, roleCode: before.roleCode },
+				after: { title, rateMinor, roleCode }
 			};
 		});
 	}

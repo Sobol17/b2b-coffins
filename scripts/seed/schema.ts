@@ -6,7 +6,7 @@ import { DICT_CODES } from '../../src/lib/types/dicts';
 import { unknownVariables } from '../../src/lib/domain/notification/template';
 import { EVENT_KEYS } from '../../src/lib/types/events';
 import { NOTIFICATION_CHANNELS } from '../../src/lib/types/notifications';
-import { ROLE_CODES } from '../../src/lib/types/roles';
+import { ROLE_CODES, WORK_ROLES } from '../../src/lib/types/roles';
 
 const FIXTURES_DIR = join(import.meta.dirname, '..', 'fixtures');
 
@@ -141,7 +141,8 @@ export const staffFixture = z.object({
 
 export const workTypeFixture = z.object({
 	title: z.string().min(1),
-	rateMinor: z.number().int().nonnegative()
+	rateMinor: z.number().int().nonnegative(),
+	roleCode: z.enum(WORK_ROLES).nullable()
 });
 
 /** Opening balance of a stock item, posted once as an `inventory` move. */

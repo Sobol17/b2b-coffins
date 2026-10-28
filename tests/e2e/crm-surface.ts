@@ -23,7 +23,8 @@ import type { RoleKey } from './fixtures';
 const ROUTES_ROOT = 'src/routes/(crm)';
 const OWNER: readonly RoleKey[] = ['owner'];
 const ADMINS: readonly RoleKey[] = ['owner', 'manager'];
-const CRM_ROLES: readonly RoleKey[] = ['owner', 'manager', 'carpenter', 'painter', 'driver'];
+const SHOP: readonly RoleKey[] = ['carpenter', 'grinder', 'painter', 'upholsterer'];
+const CRM_ROLES: readonly RoleKey[] = ['owner', 'manager', ...SHOP, 'driver'];
 
 interface SectionRights {
 	readonly prefix: string;
@@ -38,7 +39,7 @@ const SECTIONS: readonly SectionRights[] = [
 	{ prefix: '/crm/reports', readers: OWNER },
 	{ prefix: '/crm/finance', readers: OWNER },
 	{ prefix: '/crm/payroll', readers: ADMINS },
-	{ prefix: '/crm/stock', readers: [...ADMINS, 'carpenter', 'painter'], writers: ADMINS },
+	{ prefix: '/crm/stock', readers: [...ADMINS, ...SHOP], writers: ADMINS },
 	{ prefix: '/crm/delivery', readers: [...ADMINS, 'driver'] },
 	{ prefix: '/crm/shop', readers: ADMINS },
 	{ prefix: '/crm/board', readers: ADMINS },

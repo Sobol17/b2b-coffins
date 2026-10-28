@@ -8,13 +8,15 @@ const SHOWN_ROLE: Readonly<Record<RoleKey, string>> = {
 	owner: 'Руководитель',
 	manager: 'Администратор',
 	carpenter: 'Столяр',
+	grinder: 'Шлифовщик',
 	painter: 'Маляр',
+	upholsterer: 'Обивщик',
 	driver: 'Водитель',
 	cp_admin: 'cp_admin',
 	cp_employee: 'cp_employee'
 };
 
-test.describe('login and contour isolation across all seven roles', () => {
+test.describe('login and contour isolation across all nine roles', () => {
 	for (const role of ROLES) {
 		const account = ACCOUNTS[role];
 		const home = HOME_BY_SCOPE[account.scope];

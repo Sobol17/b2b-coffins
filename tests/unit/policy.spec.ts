@@ -1,8 +1,21 @@
 import { describe, expect, it } from 'vitest';
 import { ACTIONS, PolicyService } from '../../src/lib/server/auth/policy';
-import { CRM_ROLES, PORTAL_ROLES, ROLE_CODES, type RoleCode } from '../../src/lib/types/roles';
+import {
+	CRM_ROLES,
+	PORTAL_ROLES,
+	ROLE_CODES,
+	WORK_ROLES,
+	type RoleCode
+} from '../../src/lib/types/roles';
 
-const PRICE_BLIND: readonly RoleCode[] = ['cp_employee', 'carpenter', 'painter', 'driver'];
+const PRICE_BLIND: readonly RoleCode[] = [
+	'cp_employee',
+	'carpenter',
+	'grinder',
+	'painter',
+	'upholsterer',
+	'driver'
+];
 
 describe('PolicyService, the single point of permission checks', () => {
 	it('keeps every role inside its own contour', () => {
@@ -42,7 +55,7 @@ describe('PolicyService, the single point of permission checks', () => {
 			expect(PolicyService.can({ roles: [role] }, 'support.any')).toBe(true);
 			expect(PolicyService.can({ roles: [role] }, 'support.own')).toBe(false);
 		}
-		for (const role of ['driver', 'carpenter', 'painter'] as const) {
+		for (const role of ['driver', 'carpenter', 'grinder', 'painter', 'upholsterer'] as const) {
 			expect(PolicyService.can({ roles: [role] }, 'support.own')).toBe(false);
 			expect(PolicyService.can({ roles: [role] }, 'support.any')).toBe(false);
 		}
@@ -59,11 +72,29 @@ describe('PolicyService, the single point of permission checks', () => {
 		for (const action of ACTIONS) {
 			expect(PolicyService.can({ roles: ['owner'] }, action)).toBe(!portalOnly.includes(action));
 		}
-		for (const role of ['carpenter', 'painter', 'driver'] as const) {
+		for (const role of ['carpenter', 'grinder', 'painter', 'upholsterer', 'driver'] as const) {
 			expect(PolicyService.can({ roles: [role] }, 'settings.manage')).toBe(false);
 			expect(PolicyService.can({ roles: [role] }, 'payroll.manage')).toBe(false);
 			expect(PolicyService.can({ roles: [role] }, 'request.read.any')).toBe(false);
 		}
+	});
+
+	it('gives the grinder and the upholsterer what the carpenter has (v1.61)', () => {
+		for (const role of ['grinder', 'upholsterer'] as const) {
+			expect(PolicyService.scopeOf([role])).toBe('crm');
+			for (const action of ACTIONS) {
+				expect(PolicyService.can({ roles: [role] }, action)).toBe(
+					PolicyService.can({ roles: ['carpenter'] }, action)
+				);
+			}
+		}
+	});
+
+	it('keeps the shop roles in the order of the floor: carpenter, grinder, painter, upholsterer', () => {
+		expect(WORK_ROLES).toEqual(['carpenter', 'grinder', 'painter', 'upholsterer']);
+		const crm = [...CRM_ROLES];
+		expect(crm.indexOf('grinder')).toBe(crm.indexOf('carpenter') + 1);
+		expect(crm.indexOf('upholsterer')).toBe(crm.indexOf('painter') + 1);
 	});
 
 	it('denies everything to an actor with no roles at all', () => {

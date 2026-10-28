@@ -37,6 +37,14 @@ export type Action = (typeof ACTIONS)[number];
  * Role to action matrix. Hiding a button is cosmetics; this table is what actually decides,
  * and every mutating route calls it before it touches a service.
  */
+// The shop crew reads the warehouse only; payroll pays them, the system gives them no screens.
+const SHOP_GRANTS: readonly Action[] = [
+	'crm.access',
+	'catalog.read',
+	'request.read.own',
+	'stock.read'
+];
+
 const GRANTS: Readonly<Record<RoleCode, readonly Action[]>> = {
 	// Owner holds every action except the portal ones: that contour belongs to counterparties, and
 	// the agency price is the counterparty's own number, not a workshop setting.
@@ -62,8 +70,10 @@ const GRANTS: Readonly<Record<RoleCode, readonly Action[]>> = {
 		'payroll.manage',
 		'support.any'
 	],
-	carpenter: ['crm.access', 'catalog.read', 'request.read.own', 'stock.read'],
-	painter: ['crm.access', 'catalog.read', 'request.read.own', 'stock.read'],
+	carpenter: SHOP_GRANTS,
+	grinder: SHOP_GRANTS,
+	painter: SHOP_GRANTS,
+	upholsterer: SHOP_GRANTS,
 	// The delivery screen of C6: loading and «Доставлено» (tech.md v1.43).
 	driver: ['crm.access', 'request.read.own', 'delivery.work'],
 	cp_admin: [
@@ -90,7 +100,14 @@ export function contourAccess(actor: Pick<ActorContext, 'scope'>): Action {
 }
 
 /** Roles that must never see a price field, on any screen or in any response body. */
-const PRICE_BLIND_ROLES: readonly RoleCode[] = ['cp_employee', 'carpenter', 'painter', 'driver'];
+const PRICE_BLIND_ROLES: readonly RoleCode[] = [
+	'cp_employee',
+	'carpenter',
+	'grinder',
+	'painter',
+	'upholsterer',
+	'driver'
+];
 
 export class PolicyService {
 	static can(actor: Pick<ActorContext, 'roles'>, action: Action): boolean {

@@ -104,6 +104,12 @@ docker compose exec app pnpm admin payroll:backfill-crews
 docker compose exec app pnpm admin notifications:sync
 ```
 
+Обновление, которое добавляет роли (с ядра v1.61 это шлифовщик и обивщик), требует ещё одного запуска. Без него руководитель не сможет выдать новую роль сотруднику. Повторный запуск ничего не меняет.
+
+```bash
+docker compose exec app pnpm admin roles:sync
+```
+
 ## Команды администратора
 
 CLI из `tech.md` §2 работает внутри контейнера:

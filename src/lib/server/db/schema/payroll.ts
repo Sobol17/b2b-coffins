@@ -1,5 +1,6 @@
 import { integer, sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqlite-core';
 import { PAYROLL_PERIOD_STATUSES } from '$lib/types/crm-payroll';
+import { WORK_ROLES } from '$lib/types/roles';
 import { bool, createdAt, money, pk, ts, updatedAt } from './_shared';
 import { users } from './users';
 
@@ -20,6 +21,7 @@ export const workTypes = sqliteTable(
 		id: pk(),
 		title: text('title').notNull(),
 		rateMinor: money('rate_minor'), // price of one unit of the work
+		roleCode: text('role_code', { enum: WORK_ROLES }), // shop role of the work, null for a general one (v1.61)
 		isActive: bool('is_active').notNull().default(true),
 		createdAt: createdAt()
 	},

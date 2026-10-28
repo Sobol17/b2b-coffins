@@ -3,22 +3,24 @@ import type { SettlementScheme, StaffStatus } from '$lib/types/counterparty';
 import type { PaymentMethod } from '$lib/types/crm-counterparty';
 import type { CrmRole, NumberingPeriod } from '$lib/types/crm';
 import type { DictCode } from '$lib/types/dicts';
-import type { RoleCode } from '$lib/types/roles';
+import { CRM_ROLES, type RoleCode } from '$lib/types/roles';
 
 /** Same titles as the `roles` seed: the shell, the forms and the tables speak one language. */
 export const ROLE_TITLE: Readonly<Record<RoleCode, string>> = {
 	owner: 'Руководитель',
 	manager: 'Администратор',
 	carpenter: 'Столяр',
+	grinder: 'Шлифовщик',
 	painter: 'Маляр',
+	upholsterer: 'Обивщик',
 	driver: 'Водитель',
 	cp_admin: 'Администратор контрагента',
 	cp_employee: 'Сотрудник контрагента'
 };
 
-export const CRM_ROLE_OPTIONS: readonly (SelectOption & { value: CrmRole })[] = (
-	['owner', 'manager', 'carpenter', 'painter', 'driver'] as const
-).map((value) => ({ value, label: ROLE_TITLE[value] }));
+export const CRM_ROLE_OPTIONS: readonly (SelectOption & { value: CrmRole })[] = CRM_ROLES.map(
+	(value) => ({ value, label: ROLE_TITLE[value] })
+);
 
 export const USER_STATUS_OPTIONS: readonly (SelectOption & { value: StaffStatus })[] = [
 	{ value: 'active', label: 'Активен' },

@@ -256,7 +256,12 @@ describe('closing a week', () => {
 		const closed = weeks().week(WEEK);
 		expect(closed).toMatchObject({ status: 'calculated', closedByName: 'Марина Круглова' });
 		expect(closed.closedAt).toBe('2026-10-11T15:00:00.000Z');
-		new WorkTypeService(actor).update({ id: assembly, title: 'Сборка', rateMinor: 99_900 });
+		new WorkTypeService(actor).update({
+			id: assembly,
+			title: 'Сборка',
+			rateMinor: 99_900,
+			roleCode: null
+		});
 		expect(() => days().save({ date: WEEK, staffIds: [], entries: [] })).toThrow(ConflictError);
 		expect(() => adjust(anna, 'plus', 1)).toThrow(ConflictError);
 		expect(figures()).toEqual([

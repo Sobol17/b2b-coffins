@@ -4,7 +4,7 @@
 	import { PAYROLL_QTY_MAX, type WorkDayDto } from '$lib/types/crm-payroll';
 	import DaySummary from './DaySummary.svelte';
 	import { draftsOf, previewOf, rateOf, setCrewMember } from './day-draft';
-	import { roubles } from './labels';
+	import { roubles, workTitle } from './labels';
 
 	/*
 	 * The whole day in one form: tick who came, then add each work with its quantity and the
@@ -24,7 +24,7 @@
 	const works = $derived(
 		day.workTypes.map((work) => ({
 			value: String(work.id),
-			label: `${work.title}, ${roubles(work.rateMinor)}`
+			label: `${workTitle(work)}, ${roubles(work.rateMinor)}`
 		}))
 	);
 	const present = $derived(people.filter((row) => row.present));

@@ -223,8 +223,8 @@ describe('the price of a work is frozen in the day', () => {
 	it('keeps the old price in an old entry and takes the new one for a new entry', () => {
 		days().save({ date: TODAY, staffIds: [anna], entries: [solo(boxes, 10, anna)] });
 		const works = new WorkTypeService(actor);
-		works.update({ id: boxes, title: 'Сборка ящика', rateMinor: 25_000 });
-		works.update({ id: sanding, title: 'Шлифовка', rateMinor: 9_000 });
+		works.update({ id: boxes, title: 'Сборка ящика', rateMinor: 25_000, roleCode: null });
+		works.update({ id: sanding, title: 'Шлифовка', rateMinor: 9_000, roleCode: null });
 
 		expect(days().get(TODAY).totalMinor).toBe(200_000);
 		const resaved = days().save({
@@ -247,7 +247,12 @@ describe('the price of a work is frozen in the day', () => {
 
 	it('keeps the frozen price for a second crew of a work already on the day', () => {
 		days().save({ date: TODAY, staffIds: [anna, boris], entries: [solo(boxes, 1, anna)] });
-		new WorkTypeService(actor).update({ id: boxes, title: 'Сборка ящика', rateMinor: 25_000 });
+		new WorkTypeService(actor).update({
+			id: boxes,
+			title: 'Сборка ящика',
+			rateMinor: 25_000,
+			roleCode: null
+		});
 		const day = days().save({
 			date: TODAY,
 			staffIds: [anna, boris],
