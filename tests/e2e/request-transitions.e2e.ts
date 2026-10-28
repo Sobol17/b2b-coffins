@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test';
 import { sendRequest } from './portal-flow';
 import {
+	clearOtherDebts,
 	e2eDb,
 	loadUp,
 	markPaidInFull,
@@ -21,6 +22,8 @@ test('a delivery that collects the cash walks the request to paid', async ({ pag
 	// A payment taken before the move; the C6 screen writes the cash itself (crm-delivery.e2e.ts).
 	markPaidInFull(db, number, 'driver');
 	loadUp(db, number);
+	// A request closes only when its counterparty owes nothing else (tech.md v1.65).
+	clearOtherDebts(db, number);
 	expect(transition(number, 'delivered', 'driver').ok).toBe(true);
 
 	// Nobody moves the request past delivered: the system chains both automatic steps.

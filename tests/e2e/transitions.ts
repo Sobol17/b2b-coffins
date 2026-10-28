@@ -149,6 +149,51 @@ export function markPaidInFull(db: Db, number: string, actor: RoleKey): void {
 		.run();
 }
 
+/**
+ * Covers with marks every other open request of the counterparty that owns `number`. The e2e
+ * database keeps the requests of earlier runs, and a request closes only when its counterparty owes
+ * nothing else (tech.md v1.65). The covered ones close together with `number`.
+ */
+export function clearOtherDebts(db: Db, number: string): void {
+	const id = requestId(db, number);
+	const [own] = db
+		.select({ counterpartyId: requests.counterpartyId })
+		.from(requests)
+		.where(eq(requests.id, id))
+		.all();
+	if (!own?.counterpartyId) return;
+	const others = db
+		.select({ id: requests.id, total: requests.totalMinor })
+		.from(requests)
+		.where(
+			and(
+				eq(requests.counterpartyId, own.counterpartyId),
+				inArray(requests.status, ['delivered', 'awaiting_payment'])
+			)
+		)
+		.all()
+		.filter((row) => row.id !== id);
+	for (const other of others) {
+		const marks = db
+			.select({ amount: paymentMarks.amountMinor })
+			.from(paymentMarks)
+			.where(eq(paymentMarks.requestId, other.id))
+			.all()
+			.reduce((sum, mark) => sum + mark.amount, 0);
+		if (marks >= other.total) continue;
+		db.insert(paymentMarks)
+			.values({
+				requestId: other.id,
+				amountMinor: other.total - marks,
+				paidAt: new Date(),
+				method: 'bank',
+				createdById: userId(db, 'manager')
+			})
+			.run();
+		db.update(requests).set({ paidMinor: other.total }).where(eq(requests.id, other.id)).run();
+	}
+}
+
 /** The total of a request and the signed sum of its payment marks, straight from the database. */
 export function moneyOf(db: Db, number: string): { totalMinor: number; marksMinor: number } {
 	const id = requestId(db, number);

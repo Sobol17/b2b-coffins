@@ -1,7 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import { enterRequest } from './crm-flow';
 import { crmNavLink, login, openCrmMenu } from './fixtures';
-import { e2eDb, statusChain, statusOf, stockUp, transition } from './transitions';
+import { clearOtherDebts, e2eDb, statusChain, statusOf, stockUp, transition } from './transitions';
 
 const ORIGIN = 'http://localhost:4173';
 // White is left to this spec: the portal orders walnut, C4 takes black, C5 wenge.
@@ -57,6 +57,8 @@ test.describe('the delivery screen on a phone', () => {
 		const done = stop.getByRole('button', { name: 'Доставлено' });
 		expect((await done.boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(44);
 		await stop.getByLabel('Принял оплату наличными').check();
+		// A request closes only when its counterparty owes nothing else (tech.md v1.65).
+		clearOtherDebts(db, number);
 		await done.click();
 
 		await expect(page.getByText('Заявка доставлена').first()).toBeVisible();
