@@ -77,3 +77,10 @@ export const numberingFormSchema = z.object({
 export type RequisitesForm = z.infer<typeof requisitesFormSchema>;
 export type CharityForm = z.infer<typeof charityFormSchema>;
 export type NumberingForm = z.infer<typeof numberingFormSchema>;
+
+/** The transfer confirmation of the fund block (v1.66); the bytes are checked by the service. */
+export const charityDocumentUploadSchema = z.object({
+	file: z
+		.instanceof(File, { error: 'Выберите файл PDF' })
+		.refine((file) => file.size > 0, { error: 'Выберите файл PDF' })
+});

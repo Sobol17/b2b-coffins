@@ -1,8 +1,11 @@
 import { fail } from '@sveltejs/kit';
 import type { z } from 'zod';
 import { requireAction, requireScope } from '$lib/server/auth/guard';
+import { CharityDocumentService } from '$lib/server/charity/charity-document.service';
+import { formAction } from '$lib/server/core/http';
 import { CrmSettingsService } from '$lib/server/settings/crm-settings.service';
 import {
+	charityDocumentUploadSchema,
 	charityFormSchema,
 	numberingFormSchema,
 	requisitesFormSchema,
@@ -37,8 +40,14 @@ function saving<S extends z.ZodType>(
 	};
 }
 
+function documentService(locals: App.Locals, url: URL): CharityDocumentService {
+	const actor = requireScope(locals.actor, 'crm', url.pathname);
+	return new CharityDocumentService(requireAction(actor, 'settings.manage'));
+}
+
 export const load: PageServerLoad = ({ locals, url }) => ({
-	settings: settingsService(locals, url).read()
+	settings: settingsService(locals, url).read(),
+	charityDocument: documentService(locals, url).current()
 });
 
 export const actions = {
@@ -52,6 +61,16 @@ export const actions = {
 		service.saveNumbering(input)
 	),
 	charity: saving('charity', charityFormSchema, (service, input) => service.saveCharity(input)),
+	charityDocument: ({ request, locals, url }) => {
+		const service = documentService(locals, url);
+		return formAction(request, 'charityDocument', charityDocumentUploadSchema, async (input) =>
+			service.replace(Buffer.from(await input.file.arrayBuffer()))
+		);
+	},
+	charityDocumentRemove: async ({ locals, url }) => {
+		await documentService(locals, url).remove();
+		return { action: 'charityDocumentRemove', saved: true };
+	},
 	staffLimit: saving('staffLimit', staffLimitFormSchema, (service, input) =>
 		service.saveStaffLimitDefault(input.staffLimitDefault)
 	)

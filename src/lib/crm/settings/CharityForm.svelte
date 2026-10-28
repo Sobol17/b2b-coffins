@@ -1,15 +1,21 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import { Button, Card, Input, withToast } from '$lib/ui';
+	import type { CharityDocumentDto } from '$lib/types/charity';
+	import CharityDocumentField from './CharityDocumentField.svelte';
 	import { fieldError, type SettingsFormResult } from './types';
 
 	let {
 		rateBp,
 		fund,
+		document,
+		timeZone,
 		result
 	}: {
 		rateBp: number | null;
 		fund: { readonly title: string; readonly url?: string } | null;
+		document: CharityDocumentDto | null;
+		timeZone: string;
 		result: SettingsFormResult | null | undefined;
 	} = $props();
 
@@ -26,7 +32,7 @@
 			пересчитываются.
 		</Card.Description>
 	</Card.Header>
-	<Card.Content>
+	<Card.Content class="flex flex-col gap-6">
 		<form
 			method="POST"
 			action="?/charity"
@@ -60,5 +66,6 @@
 			/>
 			<Button type="submit" class="self-start">Сохранить данные фонда</Button>
 		</form>
+		<CharityDocumentField {document} {timeZone} />
 	</Card.Content>
 </Card.Root>

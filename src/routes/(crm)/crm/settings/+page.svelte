@@ -16,7 +16,13 @@
 	<h1 class="text-3xl">Настройки мастерской</h1>
 	<RequisitesForm requisites={settings.requisites} result={form} />
 	<NumberingForm numbering={settings.numbering} result={form} />
-	<CharityForm rateBp={settings.charityRateBp} fund={settings.charityFund} result={form} />
+	<CharityForm
+		rateBp={settings.charityRateBp}
+		fund={settings.charityFund}
+		document={data.charityDocument}
+		timeZone={settings.timezone}
+		result={form}
+	/>
 	<GeneralForm
 		timezone={settings.timezone}
 		staffLimitDefault={settings.staffLimitDefault}
