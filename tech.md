@@ -1,7 +1,7 @@
 # tech.md — ядро проекта
 
 **Проект:** B2B-портал + CRM для столярной мастерской (производство гробов)
-**Версия ядра:** v1.65
+**Версия ядра:** v1.66
 **Дата:** 28.10.2026
 **Статус:** этап 1 (портал, P1–P14) завершён 19.09.2026; в этапе 2 (CRM) влиты C1–C8, C10, C12, C15, C13, слайс C14 открыт (чек-лист в §14), C17 (обращения) влит, C18 (финансы) в работе, C16 не начат
 **Владелец файла:** Sobol17 (тимлид и единственный разработчик)
@@ -11,6 +11,7 @@
 
 | Версия | Изменение |
 |---|---|
+| v1.66 | Правка после демо 28.10.2026: подтверждение перевода в фонд. Блок «Благотворительный фонд» настроек CRM принимает один файл PDF (form action `charityDocument`, право `settings.manage`, только руководитель, лимит `file.upload`, не больше 10 МБ, сигнатура PDF проверяется `checkCharityDocument` из `lib/domain/charity/document.ts`). Новый файл заменяет прежний: прежняя строка `media` и файл на диске удаляются, прежний адрес отвечает 404. Кнопка «Удалить» с подтверждением снимает файл (form action `charityDocumentRemove`). Аудит `charity.document_replace` и `charity.document_remove` по сущности `media`. Хранение: `media.owner_scope` получил значение `charity` (`owner_id` пустой), путь `charity/<случайное>.pdf`, текущий файл называет новый ключ `settings.charity.transfer_media_id` (положительное целое, `charityDocumentIdSchema`). Чтение через `/api/files/[id]`: файл `charity` отдаётся, только если он текущий, любой роли портала по праву `portal.access` и роли CRM с `settings.manage`. `CharityBannerDto.transferDocumentUrl` (адрес файла или `null`) показывает ссылку «Подтверждение перевода в фонд, PDF» на главной портала всем ролям: файл говорит о фонде, а не о закупках. Новый тип `CharityDocumentDto`, сервис `CharityDocumentService`. Схема БД в SQLite не менялась: перечисление `owner_scope` проверяет TypeScript, миграции нет |
 | v1.65 | Правка после демо 28.10.2026: оплата общего долга контрагента. Заявки контрагента закрываются вместе, когда он погашает весь долг. Guard `fullyPaid` получил факт `otherDebtMinor` (долг контрагента по другим заявкам в `delivered` и `awaiting_payment`): заявка уходит в `paid`, только когда её отметки покрывают сумму и `otherDebtMinor = 0`. Пример: долг 30 000 ₽ по трём заявкам, оплата 15 000 ₽ не закрывает ни одной, следующие 15 000 ₽ переводят в `paid` все три. Так же ведут себя отметка в карточке заявки и наличные у двери: заявка, оплаченная целиком, ждёт в `awaiting_payment`, пока у контрагента есть другой долг. Карточка контрагента, вкладка «Заявки и оплаты»: блок «Оплата долга» (form action `pay`, схема `paymentMarkSchema`, право `request.payment.mark`, только роли с ценами). Сервис `CounterpartyPaymentService.pay` разносит сумму по заявкам в `awaiting_payment` от старой доставки к новой чистой функцией `allocatePayment` (`lib/domain/payment/allocate.ts`): каждая заявка берёт свой остаток целиком, прежде чем следующая получит деньги. Разнесение пишется обычными отметками `payment_marks` этих заявок, с той же датой, способом и комментарием. Сумма больше долга отклоняется, сумма в пределах рубля от долга считается долгом. Затем `RequestTransitionService.settleCounterparty` проводит автоматический шаг для каждой ждущей заявки контрагента. Аудит `payment.counterparty` по сущности `counterparties` с разнесением и закрытыми заявками. Событие `request.payment_marked` уходит по каждой заявке, которая получила деньги и осталась ждать. Карточка заявки: `canMarkPayment` ложно при нулевом остатке, вместо формы строка «Заявка оплачена. Она перейдёт в «Оплачено», когда контрагент погасит весь долг». Новый тип `CounterpartyPaymentResult`. Схема БД не менялась |
 | v1.64 | Правка после демо 28.10.2026: региональные прайс-листы. Региональный прайс это обычный небазовый лист `price_lists`, его загружают на странице листа `/crm/prices/[id]` файлом XLSX (form action `import`, право `catalog.manage`, лимит `file.upload`): первая строка «Артикул» и «Цена» (или `sku` и `price`), не больше 2 МБ и 5000 строк, сигнатура ZIP проверяется `matchesSignature`, каждая строка проходит Zod, повтор артикула и неизвестный артикул отклоняют весь файл. Файл заменяет все позиции листа одной транзакцией, аудит `price_list.import`. Чтение листа общее с CLI `price:import` (`lib/server/crm-pricing/price-sheet.ts`). Новые поля: `counterparties.region_price_list_id` (выбор в «Условиях» и при заведении контрагента, только листы с `is_base = false` и `is_personal = false`) и `price_lists.is_personal` (лист индивидуальных цен одного контрагента, его заводит карточка). Поле `priceListId` формы условий заменено на `regionPriceListId`, `CrmCounterpartyCardDto.priceListId` заменено на `regionPriceListId`. При заведении контрагента с регионом и при первой смене региона у контрагента без своего листа система копирует цены региона в его личный лист. Смена региона позже личные цены не трогает: кнопка «Заполнить из прайса» на вкладке «Цены» с подтверждением заменяет их ценами региона (form action `refill`, аудит `counterparty.prices_refill`). Цепочка цены строки: личный лист, затем действующий региональный лист, затем базовый лист, затем `base_price_minor` (`resolveUnitPrice`, поле `regionListPriceMinor`). Колонка «Базовая» вкладки «Цены» показывает ту же цепочку без личного листа. Новый примитив `FileInput`: файл уходит с формой action. Миграция `0022` |
 | v1.63 | Правка после демо 28.10.2026: вкладка отчётов «По контрагентам» (`/crm/reports/counterparties`, `export.xlsx`), право `reports.read`, только руководитель. Продажи те же, что в отчёте продаж: заявки контрагентов в `delivered`, `awaiting_payment`, `paid` по `delivered_at` в окне периода. На строку контрагента: заявки, штуки, сумма после скидки (`total_minor`), себестоимость, маржа, доля маржи, оплачено и число штук без себестоимости. Себестоимость строки заявки это `qty × stock_items.cost_price_minor` её варианта на момент отчёта, не замороженная: правка себестоимости меняет маржу прошлых периодов. Вариант без позиции или позиция с нулём дают 0 и попадают в `uncostedQty`. Маржа и её доля считаются чистой функцией `lib/domain/report/margin.ts`: `margin = total - cost`, доля в базисных пунктах от суммы, `null` при нулевой сумме, сложение долей идёт от сумм. Детализация: параметр `counterpartyId` в адресе открывает заявки контрагента, свежие доставки сверху, со ссылкой на карточку; сумма маржи заявок равна марже строки. Выгрузка: лист «По контрагентам» с итогом, при выбранном контрагенте второй лист «Заявки». Типы `MarginTotalsDto`, `CounterpartyMarginRowDto`, `CounterpartyRequestRowDto`, `CounterpartyReportDto`, схема `counterpartyReportSchema`. Схема БД не менялась |
@@ -477,7 +478,7 @@ export const media = sqliteTable('media', {
   mime: text('mime').notNull(),
   sizeBytes: integer('size_bytes').notNull(),
   width: integer('width'), height: integer('height'),
-  ownerScope: text('owner_scope', { enum: ['product', 'request', 'contract', 'import'] }).notNull(),
+  ownerScope: text('owner_scope', { enum: ['product', 'request', 'contract', 'import', 'charity'] }).notNull(),   // charity: v1.66
   ownerId: integer('owner_id'),
   sortOrder: integer('sort_order').notNull().default(0),
   uploadedBy: integer('uploaded_by').references(() => users.id),
@@ -867,9 +868,9 @@ export const settings = sqliteTable('settings', {
 });
 ```
 
-Ключи `settings`: `org.requisites`, `org.timezone`, `charity.rate_bp`, `charity.fund`, `counterparty.staff_limit_default`, `payroll.week_closing_day`, `notifications.enabled`. Ключ `crm.ip_allowlist` выведен в v1.37 вместе с IP-фильтром.
+Ключи `settings`: `org.requisites`, `org.timezone`, `charity.rate_bp`, `charity.fund`, `charity.transfer_media_id` (v1.66), `counterparty.staff_limit_default`, `payroll.week_closing_day`, `notifications.enabled`. Ключ `crm.ip_allowlist` выведен в v1.37 вместе с IP-фильтром.
 
-Форма `charity.rate_bp`: целое число базисных пунктов от 0 до 10000. Форма `charity.fund`: `{ title: string; url?: string }` (v1.18). Форма `notifications.enabled`: `boolean`, `false` останавливает разворот любых событий в уведомления (v1.19).
+Форма `charity.rate_bp`: целое число базисных пунктов от 0 до 10000. Форма `charity.fund`: `{ title: string; url?: string }` (v1.18). Форма `charity.transfer_media_id`: положительное целое, `media.id` файла подтверждения перевода с `owner_scope = 'charity'` (v1.66). Форма `notifications.enabled`: `boolean`, `false` останавливает разворот любых событий в уведомления (v1.19).
 
 Форма `org.requisites` (v1.37, `ogrn` с v1.56): `{ name: string; inn?: string; kpp?: string; ogrn?: string; address?: string; phone?: string; email?: string; bank?: string; bik?: string; account?: string }`. ИНН 10 или 12 цифр, КПП и БИК по 9 цифр, ОГРН 13 цифр или ОГРНИП 15 цифр, расчётный счёт 20 цифр. Гостю уходят телефон, адрес и оператор: название, ИНН, ОГРН, почта (`OrgService.publicContacts`, v1.56). КПП, банк, БИК и счёт с сервера не уходят. Форма `counterparty.staff_limit_default`: целое от 1 до 1000, лимит нового контрагента при создании (v1.37).
 
@@ -1240,7 +1241,10 @@ export interface CharityBannerDto {
   fundTitle: string; fundUrl: string | null;
   publicTotalMinor: number; publicYearMinor: number; publicRequestCount: number;
   ownTotalMinor?: number;                // scope cp:{id}; hidden from a price-blind role, it reveals the purchase volume
+  transferDocumentUrl: string | null;    // /api/files/[id] of the transfer confirmation, every portal role (v1.66)
 }
+// The transfer confirmation in the fund block of the CRM settings (v1.66).
+export interface CharityDocumentDto { url: string; sizeBytes: number; uploadedAt: string; }
 
 // list.ts — one shape for every registry in the app
 export interface ListQuery<F = Record<string, unknown>> {

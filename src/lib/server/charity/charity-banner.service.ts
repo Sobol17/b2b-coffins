@@ -1,6 +1,7 @@
 import { PolicyService } from '../auth/policy';
 import { BaseService } from '../core/service';
 import { OrgService } from '../settings/org.service';
+import { charityDocumentUrl } from './charity-document.service';
 import { CharityTotalsRepository } from './charity-totals.repository';
 import { CharitySettings } from './charity-settings';
 import { formatCharityScope, yearInZone } from '$lib/domain/charity/rate';
@@ -41,8 +42,15 @@ export class CharityBannerService extends BaseService {
 			publicTotalMinor: all?.amountMinor ?? 0,
 			publicYearMinor: year?.amountMinor ?? 0,
 			publicRequestCount: all?.requestCount ?? 0,
+			transferDocumentUrl: this.documentUrl(),
 			...definedProps({ ownTotalMinor: this.ownTotal() })
 		};
+	}
+
+	/** The transfer confirmation is public to the portal: it shows the fund, not a purchase. */
+	private documentUrl(): string | null {
+		const id = this.settings.documentId();
+		return id === null ? null : charityDocumentUrl(id);
 	}
 
 	/** The own row is read only for a role with prices: the sum reveals the purchase volume. */

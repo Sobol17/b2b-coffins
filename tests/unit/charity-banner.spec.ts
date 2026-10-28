@@ -47,7 +47,8 @@ describe('charity banner (P8)', () => {
 			publicTotalMinor: all,
 			publicYearMinor: all,
 			publicRequestCount: 2,
-			ownTotalMinor: own
+			ownTotalMinor: own,
+			transferDocumentUrl: null
 		});
 	});
 

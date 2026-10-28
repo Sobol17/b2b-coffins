@@ -29,4 +29,9 @@ export class SettingsRepository extends BaseRepository<typeof settings> {
 			})
 			.run();
 	}
+
+	/** Drops a key: its reader answers as if it was never set. */
+	remove(key: string, tx?: Tx): void {
+		this.db(tx).delete(settings).where(eq(settings.key, key)).run();
+	}
 }

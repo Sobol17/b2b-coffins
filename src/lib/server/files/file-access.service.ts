@@ -1,5 +1,6 @@
 import { PolicyService } from '../auth/policy';
 import { CatalogRepository } from '../catalog/catalog.repository';
+import { CharitySettings } from '../charity/charity-settings';
 import { config } from '../config';
 import { ForbiddenError, NotFoundError } from '../core/errors';
 import { BaseService } from '../core/service';
@@ -17,7 +18,8 @@ export class FileAccessService extends BaseService {
 		private readonly mediaRows: MediaRepository = new MediaRepository(),
 		private readonly catalog: CatalogRepository = new CatalogRepository(),
 		private readonly root: string = config.FILES_DIR,
-		private readonly requests: RequestCardRepository = new RequestCardRepository()
+		private readonly requests: RequestCardRepository = new RequestCardRepository(),
+		private readonly charity: CharitySettings = new CharitySettings()
 	) {
 		super(ctx);
 	}
@@ -33,6 +35,7 @@ export class FileAccessService extends BaseService {
 	}
 
 	private assertReadable(row: MediaRow): void {
+		if (row.ownerScope === 'charity') return this.assertCharityDocument(row.id);
 		if (row.ownerId === null) throw new ForbiddenError('file.read');
 		// An attachment follows its request: whoever may open the card may open what hangs on it.
 		if (row.ownerScope === 'request') return this.assertAttachment(row.ownerId);
@@ -42,6 +45,19 @@ export class FileAccessService extends BaseService {
 		const visibility = { publishedOnly: !PolicyService.can(this.ctx, 'catalog.manage') };
 		// A photo of a hidden product answers as missing, like the product itself.
 		if (!this.catalog.findProduct(row.ownerId, visibility)) throw new NotFoundError('file');
+	}
+
+	/**
+	 * The transfer confirmation (v1.66): every portal role reads it from the home page, the CRM
+	 * reads it where it is uploaded. A replaced file answers as missing.
+	 */
+	private assertCharityDocument(mediaId: number): void {
+		if (this.charity.documentId() !== mediaId) throw new NotFoundError('file');
+		if (this.ctx.scope === 'portal') {
+			this.assert(PolicyService.can(this.ctx, 'portal.access'), 'portal.access');
+			return;
+		}
+		this.assert(PolicyService.can(this.ctx, 'settings.manage'), 'settings.manage');
 	}
 
 	/** The workshop side reads every request (C4); the shop crew has no screen since v1.41. */

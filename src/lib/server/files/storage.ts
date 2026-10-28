@@ -1,4 +1,4 @@
-import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { dirname, isAbsolute, relative, resolve } from 'node:path';
 import { config } from '../config';
 
@@ -49,4 +49,14 @@ export async function writeStoredFile(
 	if (full === null) throw new Error(`stored path escapes the files root: ${relativePath}`);
 	await mkdir(dirname(full), { recursive: true });
 	await writeFile(full, bytes);
+}
+
+/** Removes a file the server placed itself; a file already gone is not an error. */
+export async function removeStoredFile(
+	relativePath: string,
+	root: string = config.FILES_DIR
+): Promise<void> {
+	const full = storedFilePath(relativePath, root);
+	if (full === null) throw new Error(`stored path escapes the files root: ${relativePath}`);
+	await rm(full, { force: true });
 }

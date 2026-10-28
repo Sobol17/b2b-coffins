@@ -49,6 +49,17 @@
 					<span data-testid="charity-fund" class="text-link">«{banner.fundTitle}»</span>
 				{/if}
 			</h2>
+			{#if banner.transferDocumentUrl}
+				<!-- eslint-disable svelte/no-navigation-without-resolve -- a stored file, not an app route -->
+				<a
+					data-testid="charity-document"
+					class="self-start text-sm text-link underline hover:text-link-hover"
+					href={banner.transferDocumentUrl}
+					target="_blank"
+					rel="noopener">Подтверждение перевода в фонд, PDF</a
+				>
+				<!-- eslint-enable svelte/no-navigation-without-resolve -->
+			{/if}
 			{#if banner.ownTotalMinor !== undefined}
 				<p data-testid="charity-own" class="text-fg-muted">
 					Вклад ваших заявок: {formatMinor(banner.ownTotalMinor)} ₽

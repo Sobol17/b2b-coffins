@@ -116,7 +116,7 @@ export const media = sqliteTable(
 		width: integer('width'),
 		height: integer('height'),
 		ownerScope: text('owner_scope', {
-			enum: ['product', 'request', 'contract', 'import']
+			enum: ['product', 'request', 'contract', 'import', 'charity']
 		}).notNull(),
 		ownerId: integer('owner_id'),
 		sortOrder: integer('sort_order').notNull().default(0),
