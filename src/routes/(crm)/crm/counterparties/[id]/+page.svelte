@@ -7,6 +7,7 @@
 	import ContractsPanel from '$lib/crm/counterparties/ContractsPanel.svelte';
 	import CounterpartyForms from '$lib/crm/counterparties/CounterpartyForms.svelte';
 	import DebtIndicator from '$lib/crm/counterparties/DebtIndicator.svelte';
+	import DebtPaymentForm from '$lib/crm/counterparties/DebtPaymentForm.svelte';
 	import PaymentsTable from '$lib/crm/counterparties/PaymentsTable.svelte';
 	import PricesPanel from '$lib/crm/counterparties/PricesPanel.svelte';
 	import RequestHistory from '$lib/crm/counterparties/RequestHistory.svelte';
@@ -101,6 +102,9 @@
 			</Tabs.Content>
 		{/if}
 		<Tabs.Content value="ledger" class="flex flex-col gap-6 pt-4">
+			{#if card.debt && card.debt.debtMinor > 0}
+				<DebtPaymentForm debtMinor={card.debt.debtMinor} timeZone={data.timezone} />
+			{/if}
 			<Card.Root>
 				<Card.Header><Card.Title>История заявок</Card.Title></Card.Header>
 				<Card.Content>
