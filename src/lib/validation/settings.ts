@@ -50,6 +50,9 @@ export const charityFundSchema = z.object({
 
 export type CharityFund = z.infer<typeof charityFundSchema>;
 
+/** `settings.charity.transfer_media_id`: the PDF of the transfer to the fund (v1.66). */
+export const charityDocumentIdSchema = z.number().int().positive();
+
 /** `settings.notifications.enabled`: the workshop-wide switch of every notification (P9). */
 export const notificationsEnabledSchema = z.boolean();
 

@@ -6,7 +6,7 @@ export interface MediaRow {
 	readonly id: number;
 	readonly path: string;
 	readonly mime: string;
-	readonly ownerScope: 'product' | 'request' | 'contract' | 'document' | 'import';
+	readonly ownerScope: 'product' | 'request' | 'contract' | 'import' | 'charity';
 	readonly ownerId: number | null;
 }
 

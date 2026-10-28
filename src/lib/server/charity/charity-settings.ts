@@ -1,6 +1,11 @@
 import { SettingsRepository } from '../settings/settings.repository';
 import type { Tx } from '../db/client';
-import { charityFundSchema, charityRateSchema, type CharityFund } from '$lib/validation/settings';
+import {
+	charityDocumentIdSchema,
+	charityFundSchema,
+	charityRateSchema,
+	type CharityFund
+} from '$lib/validation/settings';
 
 /** Charity keys of `settings`, parsed on read like every other JSON setting. */
 export class CharitySettings {
@@ -26,6 +31,14 @@ export class CharitySettings {
 	/** The fund the banner names, or null when the workshop has not set one yet. */
 	fund(): CharityFund | null {
 		const parsed = charityFundSchema.safeParse(this.repo.findValue('charity.fund'));
+		return parsed.success ? parsed.data : null;
+	}
+
+	/** `media.id` of the transfer confirmation, or null while none is uploaded (v1.66). */
+	documentId(tx?: Tx): number | null {
+		const parsed = charityDocumentIdSchema.safeParse(
+			this.repo.findValue('charity.transfer_media_id', tx)
+		);
 		return parsed.success ? parsed.data : null;
 	}
 }
