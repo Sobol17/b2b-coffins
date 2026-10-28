@@ -5,6 +5,7 @@ import { resolve } from '$app/paths';
 export const REPORT_TABS = [
 	{ href: resolve('/crm/reports'), label: 'Сводка' },
 	{ href: resolve('/crm/reports/sales'), label: 'Продажи' },
+	{ href: resolve('/crm/reports/counterparties'), label: 'По контрагентам' },
 	{ href: resolve('/crm/reports/stock'), label: 'Склад' },
 	{ href: resolve('/crm/reports/funnel'), label: 'Воронка' },
 	{ href: resolve('/crm/reports/lost'), label: 'Отменённые и отклонённые' },

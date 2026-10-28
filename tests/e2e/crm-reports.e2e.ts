@@ -7,12 +7,13 @@ import { e2eDb, loadUp, stockUp, transition } from './transitions';
 const PATHS = [
 	'/crm/reports',
 	'/crm/reports/sales',
+	'/crm/reports/counterparties',
 	'/crm/reports/stock',
 	'/crm/reports/funnel',
 	'/crm/reports/lost',
 	'/crm/reports/charity'
 ];
-const SHEETS = ['sales', 'stock', 'funnel', 'lost', 'charity'].map(
+const SHEETS = ['sales', 'counterparties', 'stock', 'funnel', 'lost', 'charity'].map(
 	(name) => `/crm/reports/${name}/export.xlsx`
 );
 // The calendar year of the run: the request delivered below falls inside it.
@@ -46,6 +47,17 @@ test('C13: the owner reads the period, downloads a sheet and records a transfer'
 	const sheet = await page.request.get(`/crm/reports/sales/export.xlsx${RANGE}`);
 	expect(sheet.status()).toBe(200);
 	expect(sheet.headers()['content-type']).toContain('spreadsheetml');
+
+	// v1.63: the margin by counterparty opens into the requests behind it.
+	await page.goto(`/crm/reports/counterparties${RANGE}`);
+	await expect(page.getByTestId('margin-total')).toBeVisible();
+	await page.getByRole('link', { name: 'Ритуал-Сервис' }).click();
+	await expect(page).toHaveURL(/counterpartyId=\d+/);
+	await expect(page.getByTestId('margin-request').filter({ hasText: number })).toBeVisible();
+	const margins = await page.request.get(
+		`/crm/reports/counterparties/export.xlsx${new URL(page.url()).search}`
+	);
+	expect(margins.status()).toBe(200);
 
 	await page.goto(`/crm/reports/charity${RANGE}`);
 	const remainder = page.getByTestId('tile-remainder');

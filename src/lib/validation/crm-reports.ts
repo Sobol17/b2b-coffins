@@ -48,6 +48,10 @@ export const salesReportSchema = z
 	})
 	.superRefine(checkRange);
 
+export const counterpartyReportSchema = z
+	.object({ ...rangeShape, counterpartyId: z.preprocess(blankToNull, id.nullable()) })
+	.superRefine(checkRange);
+
 export const stockTurnoverSchema = z
 	.object({ ...rangeShape, kind: z.preprocess(blankToNull, z.enum(STOCK_KINDS).nullable()) })
 	.superRefine(checkRange);
@@ -74,6 +78,7 @@ export const charityTransferReverseSchema = z.object({
 
 export type ReportRangeInput = z.infer<typeof reportRangeSchema>;
 export type SalesReportInput = z.infer<typeof salesReportSchema>;
+export type CounterpartyReportInput = z.infer<typeof counterpartyReportSchema>;
 export type StockTurnoverInput = z.infer<typeof stockTurnoverSchema>;
 export type LostReportInput = z.infer<typeof lostReportSchema>;
 export type CharityTransferInput = z.infer<typeof charityTransferSchema>;
