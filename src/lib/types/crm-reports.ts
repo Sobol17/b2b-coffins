@@ -54,6 +54,36 @@ export type SalesReportDto = SalesRowsDto & {
 	totals: SalesTotalsDto;
 };
 
+/** Sold requests with their cost and margin (v1.63). The cost is today's cost of the stock items. */
+export interface MarginTotalsDto {
+	requestCount: number;
+	qty: number;
+	totalMinor: number; // after the discount, what the counterparty pays
+	costMinor: number;
+	marginMinor: number;
+	marginBp: number | null; // share of the margin in the total, null for a total of zero
+	paidMinor: number;
+	uncostedQty: number; // pieces whose stock item has no cost: the margin overstates them
+}
+export interface CounterpartyMarginRowDto extends MarginTotalsDto {
+	counterpartyId: number;
+	title: string;
+}
+export interface CounterpartyRequestRowDto extends Omit<MarginTotalsDto, 'requestCount'> {
+	requestId: number;
+	number: string;
+	status: RequestStatus;
+	deliveredAt: string;
+}
+export interface CounterpartyReportDto {
+	range: ReportRangeDto;
+	counterpartyId: number | null;
+	totals: MarginTotalsDto;
+	rows: CounterpartyMarginRowDto[];
+	/** The requests of the chosen counterparty; empty while none is chosen. */
+	requests: CounterpartyRequestRowDto[];
+}
+
 export interface StockTurnoverRowDto {
 	stockItemId: number;
 	optionId: number | null;

@@ -1,7 +1,7 @@
 # tech.md — ядро проекта
 
 **Проект:** B2B-портал + CRM для столярной мастерской (производство гробов)
-**Версия ядра:** v1.62
+**Версия ядра:** v1.63
 **Дата:** 28.10.2026
 **Статус:** этап 1 (портал, P1–P14) завершён 19.09.2026; в этапе 2 (CRM) влиты C1–C8, C10, C12, C15, C13, слайс C14 открыт (чек-лист в §14), C17 (обращения) влит, C18 (финансы) в работе, C16 не начат
 **Владелец файла:** Sobol17 (тимлид и единственный разработчик)
@@ -11,6 +11,7 @@
 
 | Версия | Изменение |
 |---|---|
+| v1.63 | Правка после демо 28.10.2026: вкладка отчётов «По контрагентам» (`/crm/reports/counterparties`, `export.xlsx`), право `reports.read`, только руководитель. Продажи те же, что в отчёте продаж: заявки контрагентов в `delivered`, `awaiting_payment`, `paid` по `delivered_at` в окне периода. На строку контрагента: заявки, штуки, сумма после скидки (`total_minor`), себестоимость, маржа, доля маржи, оплачено и число штук без себестоимости. Себестоимость строки заявки это `qty × stock_items.cost_price_minor` её варианта на момент отчёта, не замороженная: правка себестоимости меняет маржу прошлых периодов. Вариант без позиции или позиция с нулём дают 0 и попадают в `uncostedQty`. Маржа и её доля считаются чистой функцией `lib/domain/report/margin.ts`: `margin = total - cost`, доля в базисных пунктах от суммы, `null` при нулевой сумме, сложение долей идёт от сумм. Детализация: параметр `counterpartyId` в адресе открывает заявки контрагента, свежие доставки сверху, со ссылкой на карточку; сумма маржи заявок равна марже строки. Выгрузка: лист «По контрагентам» с итогом, при выбранном контрагенте второй лист «Заявки». Типы `MarginTotalsDto`, `CounterpartyMarginRowDto`, `CounterpartyRequestRowDto`, `CounterpartyReportDto`, схема `counterpartyReportSchema`. Схема БД не менялась |
 | v1.62 | Правка после демо 28.10.2026: себестоимость живёт в складской позиции. `stock_items` получил `cost_price_minor` (целые копейки, по умолчанию 0): себестоимость одной единицы, у изделий и у комплектующих. Её заполняют руками полем «Себестоимость, ₽» в форме позиции склада (`stockItemCreateSchema`, `stockItemUpdateSchema`: целые рубли, от 0 до `STOCK_COST_MAX_MINOR`; пустое поле значит «не прислано», сохранённое значение остаётся). Видят и пишут её только роли с `canSeeCost` (`owner`, `manager`): `StockRowDto.costPriceMinor` и колонка «Себестоимость» реестра приходят только им, `StockChoicesDto.canSeeCost` открывает поле формы, запись от роли без `canSeeCost` отклоняется 403. Аудит `stock.item.update` пишет себестоимость до и после. Поле себестоимости варианта ушло из формы и схемы варианта C2 (`variantInputSchema`), `CrmVariantDto.costPriceMinor` и цена с себестоимостью каталога читают себестоимость учётной позиции варианта; вариант без позиции стоит 0. Колонка `product_variants.cost_price_minor` остаётся до следующей версии: её читает только команда `pnpm admin stock:cost-backfill`, которая переносит заполненную себестоимость варианта в его позицию, если у позиции себестоимость 0; повторный запуск ничего не меняет. Сид пишет себестоимость демо-каталога в позиции. Правило «себестоимость варианта одно число, заполняется руками» (v1.47) читается как «себестоимость позиции склада». Миграция `0021` |
 | v1.61 | Правка после демо 28.10.2026: роли цеха «Шлифовщик» (`grinder`) и «Обивщик» (`upholsterer`). Изделие проходит столяра, шлифовщика, маляра и обивщика, затем попадает на склад; этот порядок задаёт `WORK_ROLES` и тот же порядок ролей в `ROLE_CODES` и `CRM_ROLES`. Права новых ролей совпадают со столяром и маляром: `crm.access`, `catalog.read`, `request.read.own`, `stock.read`; цен они не видят (`canSeePrices = false`), переходов в §6.2 у них нет. Расценки по роли: `work_types` получил nullable колонку `role_code` (`WORK_ROLES`), `null` это общая работа. `WorkTypeDto.roleCode`, форма работы выбирает роль, список работ и выбор работы в рабочем дне идут в порядке цеха, общие работы в конце, в дне работа подписана «Роль: название». Аудит `work_type.update` пишет роль до и после. Делёж суммы записи не менялся. Новые роли приходят на стенд командой `pnpm admin roles:sync`: она повторяет сид ролей из `scripts/fixtures/roles.json` и повторный запуск ничего не меняет. Сид добавил учётные записи шлифовщика и обивщика и роли видам работ. Миграция `0020` |
 | v1.60 | Правка после демо 28.10.2026: блок «Доставлены» на `/crm/delivery`. Статус `delivered` в той же транзакции уходит в `awaiting_payment` или `paid`, поэтому блок читает `requests.delivered_at`, а не статус: заявки контрагентов в `delivered`, `awaiting_payment` и `paid`, доставленные за последние `DELIVERED_DAYS` (7) дней, свежие сверху, не больше `DELIVERY_LIST_LIMIT`. Строка `DeliveredStopDto` несёт номер, контрагента, умершего, адрес, момент доставки, число штук и статус; денег в ней нет. `DeliveryDto` получил `delivered` и `deliveredTotal`. Права экрана прежние (`delivery.work`). Схема БД не менялась |
@@ -251,7 +252,7 @@ src/
       +layout.server.ts           guard: только роли CRM
       crm/
         board/ , requests/ , catalog/ , counterparties/ , stock/ , payroll/ , settings/
-        reports/                  дашборд; sales/, stock/, funnel/, lost/, charity/, у каждого export.xlsx (v1.51)
+        reports/                  дашборд; sales/, counterparties/ (v1.63), stock/, funnel/, lost/, charity/, у каждого export.xlsx (v1.51)
         shop/                     цех: очередь выпуска позиций и наполнение заявок (v1.41)
         delivery/                 доставка: погрузка по строкам, «Доставлено», заявки в работе для плана (v1.43)
         notifications/            личная лента, переключатели и журнал; read/ отмечает прочтение (v1.49)
@@ -1622,6 +1623,21 @@ export type SalesRowsDto =
   | { group: 'counterparty'; rows: SalesByCounterpartyRowDto[] }
   | { group: 'model'; rows: SalesByModelRowDto[] }
   | { group: 'period'; bucket: SalesBucket; rows: SalesByPeriodRowDto[] };
+// By counterparty with the margin (v1.63): cost = qty × today's stock item cost, margin = total - cost.
+export interface MarginTotalsDto {
+  requestCount: number; qty: number; totalMinor: number; costMinor: number; marginMinor: number;
+  marginBp: number | null;                           // share of the margin in the total, null for a total of zero
+  paidMinor: number; uncostedQty: number;            // pieces whose stock item has no cost
+}
+export interface CounterpartyMarginRowDto extends MarginTotalsDto { counterpartyId: number; title: string; }
+export interface CounterpartyRequestRowDto extends Omit<MarginTotalsDto, 'requestCount'> {
+  requestId: number; number: string; status: RequestStatus; deliveredAt: string;
+}
+export interface CounterpartyReportDto {
+  range: ReportRangeDto; counterpartyId: number | null; totals: MarginTotalsDto;
+  rows: CounterpartyMarginRowDto[];                  // the highest margin first
+  requests: CounterpartyRequestRowDto[];             // of the chosen counterparty, the newest delivery first; empty without one
+}
 export type SalesReportDto = SalesRowsDto & {
   range: ReportRangeDto;
   counterpartyId: number | null;
@@ -2194,7 +2210,7 @@ CONTRACT GAP
 **C15. PWA и Web Push** (бывший K6, перенесён в v1.8, идёт сразу за C12 с v1.49, контракт v1.50). `manifest.webmanifest` с иконками и shortcuts, регистрация push-only service worker по §17, обработчики `push` и `notificationclick`, кнопка установки и инструкция для iOS. Реальный драйвер Web Push на VAPID-ключах, подписки в `push_subscriptions`, канал push в матрице уведомлений портала и CRM, шаблоны push с переменными по событию (§7.3), их правка, предпросмотр и тестовая отправка себе, журнал отправок всех людей для руководителя, push водителю при переходе в `ready`, отзыв протухших подписок джобом `session.cleanup`. Кеширование, офлайн-фолбэк и фоновая синхронизация не делаются.
 **DoD:** приложение ставится на домашний экран Android и iOS и открывается в standalone-режиме, водитель получает push в момент готовности и открывает карточку заявки из уведомления, Cache Storage пуст.
 
-**C13. Отчёты и аналитика (контракт v1.51).** Дашборд руководителя, продажи по контрагентам, моделям и периодам, складские движения и оборачиваемость, выплаты, воронка заявок, отменённые и отклонённые заявки, отчёт по благотворительности с реестром перечислений и остатком «начислено, но не перечислено», фильтры и экспорт. Раздел видит только руководитель, перечисление гасится сторно, выгрузка синхронная.
+**C13. Отчёты и аналитика (контракт v1.51).** Дашборд руководителя, продажи по контрагентам, моделям и периодам, маржа по контрагентам с заявками (v1.63), складские движения и оборачиваемость, выплаты, воронка заявок, отменённые и отклонённые заявки, отчёт по благотворительности с реестром перечислений и остатком «начислено, но не перечислено», фильтры и экспорт. Раздел видит только руководитель, перечисление гасится сторно, выгрузка синхронная.
 **DoD:** руководитель получает цифры за период без выгрузки в Excel вручную, сумма на баннере сходится с отчётом.
 
 **C14. Стабилизация и приёмка.** Сквозное e2e по всем семи ролям, нагрузочная проверка реестров на 10 тыс. заявок и 50 тыс. движений, аудит безопасности (права на переходы, прямые ссылки, сокрытие цен, загрузка файлов), правки UX по итогам пилота, инструкции по ролям, первичное наполнение справочников, каталога и видов работ. Стенд разворачивается по `docs/deploy.md` (v1.21).

@@ -117,6 +117,7 @@ const PAST_DAY = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString().sl
 const QUERIES: Readonly<Record<string, string>> = {
 	'/crm/payroll/sheet.xlsx': `?week=${PAST_DAY}`,
 	'/crm/reports/sales/export.xlsx': RANGE,
+	'/crm/reports/counterparties/export.xlsx': RANGE,
 	'/crm/reports/stock/export.xlsx': RANGE,
 	'/crm/reports/funnel/export.xlsx': RANGE,
 	'/crm/reports/lost/export.xlsx': RANGE,
