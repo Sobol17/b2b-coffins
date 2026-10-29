@@ -4,6 +4,7 @@ import { withTransaction } from '../../src/lib/server/core/tx';
 import { CrmRequestItemsService } from '../../src/lib/server/crm-request/crm-request-items.service';
 import { CrmRequestPriorityService } from '../../src/lib/server/crm-request/crm-request-priority.service';
 import { ShopDispatch } from '../../src/lib/server/crm-shop/shop-dispatch';
+import { ShopTaskService } from '../../src/lib/server/crm-shop/shop-task.service';
 import { jobQueue, requestItems, shopTasks } from '../../src/lib/server/db/schema';
 import { seedShopWorld } from './helpers/crm-shop';
 import { migratedDatabase } from './helpers/db';
@@ -153,5 +154,32 @@ describe('edits of the request (tech.md §20.4)', () => {
 		});
 
 		expect(pieces(id)).toEqual([['carpenter', 1, 0]]);
+	});
+
+	it('closes a visit whose only line was removed', () => {
+		const id = inWork(1);
+		const carpenter = new ShopTaskService(actors.carpenter);
+		const [first] = visitsOf(id, 'carpenter');
+		const [job] = jobsOf(id);
+		carpenter.progress({ jobId: job?.id ?? 0, doneQty: 1 });
+		carpenter.complete(first?.id ?? 0);
+		new CrmRequestItemsService(actors.manager).addLine(id, {
+			variantId: volga,
+			optionId: white,
+			qty: 1,
+			comment: 'Ещё один'
+		});
+		const [, second] = db.select().from(requestItems).where(eq(requestItems.requestId, id)).all();
+
+		new CrmRequestItemsService(actors.manager).removeLine(id, {
+			itemId: second?.id ?? 0,
+			comment: 'Лишнее'
+		});
+
+		// A jobless visit could never be completed and would swallow later pieces of the request.
+		const late = visitsOf(id, 'carpenter').at(-1);
+		expect(late?.id).not.toBe(first?.id);
+		expect(late?.completedAt).not.toBeNull();
+		expect(late?.completedById).toBeNull();
 	});
 });

@@ -46,7 +46,8 @@ export class ShopDispatch {
 			}
 		}
 		this.jobs.deleteJobs(removed, tx);
-		if (removed.length > 0) this.jobs.closeEmptied(this.now(), tx);
+		// Not only after own deletions: a removed line takes its jobs with it by the cascade.
+		this.jobs.closeEmptied(this.now(), tx);
 		return { added, shrunk, openedTaskIds };
 	}
 
