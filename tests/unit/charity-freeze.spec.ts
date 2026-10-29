@@ -101,7 +101,10 @@ describe('charity freeze on delivery (P8)', () => {
 			.set({ isStockRequest: true, counterpartyId: null })
 			.where(eq(requests.id, id))
 			.run();
-		drive(id, 'delivered');
+		drive(id, 'in_work');
+		// A stock request is readied by the upholsterer (tech.md §6.2); the stations are not the point here.
+		db.update(requests).set({ status: 'ready' }).where(eq(requests.id, id)).run();
+		move(actors.driver, id, 'delivered');
 
 		expect(statusOf(id)).toBe('awaiting_payment');
 		expect(charityOf(db, id)).toMatchObject({ rateBp: null, amountMinor: null });

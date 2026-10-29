@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { stationTitle } from '$lib/crm/shop/labels';
 	import { enhance } from '$app/forms';
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
@@ -34,7 +35,8 @@
 			href: resolve(`/crm/requests/${card.id}`),
 			tags: [
 				...(card.priority === 'urgent' ? [PRIORITY_TITLE.urgent] : []),
-				...card.flags.map((flag) => FLAG_TITLE[flag])
+				...card.flags.map((flag) => FLAG_TITLE[flag]),
+				...card.stations.map(stationTitle)
 			]
 		};
 	}

@@ -13,6 +13,7 @@ import {
 	stockMoves
 } from '../../../src/lib/server/db/schema';
 import { httpStatusFor } from '../../../src/lib/server/core/errors';
+import { withTransaction } from '../../../src/lib/server/core/tx';
 import { RequestTransitionService } from '../../../src/lib/server/request/request-transition.service';
 import type { ActorContext } from '../../../src/lib/types/actor';
 import type { DictCode } from '../../../src/lib/types/dicts';
@@ -47,6 +48,36 @@ export function refused(run: () => unknown): { name: string; status: number } {
 		};
 	}
 	return { name: 'no refusal', status: 200 };
+}
+
+/** The automatic readiness the services run after a stock move (tech.md §6.2, invariant 5). */
+export function settleWork(ctx: ActorContext): number[] {
+	return withTransaction((tx) => new RequestTransitionService(ctx).settleWork(tx));
+}
+
+const unlinked = new Map<number, number | null>();
+
+/** Takes the stock item off a variant, the way a catalog left half-filled looks. */
+export function unlinkStock(variantId: number): void {
+	const [row] = database
+		.select({ stockItemId: productVariants.stockItemId })
+		.from(productVariants)
+		.where(eq(productVariants.id, variantId))
+		.all();
+	unlinked.set(variantId, row?.stockItemId ?? null);
+	database
+		.update(productVariants)
+		.set({ stockItemId: null })
+		.where(eq(productVariants.id, variantId))
+		.run();
+}
+
+export function relinkStock(variantId: number): void {
+	database
+		.update(productVariants)
+		.set({ stockItemId: unlinked.get(variantId) ?? null })
+		.where(eq(productVariants.id, variantId))
+		.run();
 }
 
 /**

@@ -1,4 +1,6 @@
+import { ROLE_TITLE } from '$lib/crm/labels';
 import type { ShopPositionDto } from '$lib/types/crm-shop';
+import type { WorkRole } from '$lib/types/roles';
 
 /** "Модель «Лада», 180, ЛДСП": one name for a position on every block of the shop floor. */
 export function positionTitle(position: ShopPositionDto): string {
@@ -8,4 +10,9 @@ export function positionTitle(position: ShopPositionDto): string {
 /** A colourless position is a position of its own (tech.md v1.41), so it is named, not left blank. */
 export function colourTitle(position: ShopPositionDto): string {
 	return position.colorTitle ?? 'Без цвета';
+}
+
+/** A station is named after its role: «Столяр», «Шлифовщик», «Маляр», «Обивщик». */
+export function stationTitle(station: WorkRole): string {
+	return ROLE_TITLE[station];
 }

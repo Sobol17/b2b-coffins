@@ -6,6 +6,7 @@ export const DEMO_PEOPLE = {
 	employee: 'employee@ritual-service.example',
 	manager: 'manager@workshop.example',
 	driver: 'driver@workshop.example',
+	carpenter: 'carpenter@workshop.example',
 	owner: 'owner@workshop.example'
 } as const;
 

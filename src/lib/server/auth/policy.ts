@@ -1,6 +1,13 @@
 import { checkTransition, type TransitionInput } from '$lib/domain/request/state-machine';
 import type { ActorContext } from '$lib/types/actor';
-import { CRM_ROLES, PORTAL_ROLES, type RoleCode, type Scope } from '$lib/types/roles';
+import {
+	CRM_ROLES,
+	PORTAL_ROLES,
+	WORK_ROLES,
+	type RoleCode,
+	type Scope,
+	type WorkRole
+} from '$lib/types/roles';
 
 export const ACTIONS = [
 	'portal.access',
@@ -29,7 +36,9 @@ export const ACTIONS = [
 	'support.own',
 	'support.any',
 	// The owner's money page (tech.md v1.58): income, expenses and the feed.
-	'finance.manage'
+	'finance.manage',
+	// The stations of the shop (tech.md §20.4): a shop role works its own, the heads any.
+	'shop.work'
 ] as const;
 export type Action = (typeof ACTIONS)[number];
 
@@ -37,12 +46,13 @@ export type Action = (typeof ACTIONS)[number];
  * Role to action matrix. Hiding a button is cosmetics; this table is what actually decides,
  * and every mutating route calls it before it touches a service.
  */
-// The shop crew reads the warehouse only; payroll pays them, the system gives them no screens.
+// The shop crew reads the warehouse and works its station; payroll pays them.
 const SHOP_GRANTS: readonly Action[] = [
 	'crm.access',
 	'catalog.read',
 	'request.read.own',
-	'stock.read'
+	'stock.read',
+	'shop.work'
 ];
 
 const GRANTS: Readonly<Record<RoleCode, readonly Action[]>> = {
@@ -68,7 +78,8 @@ const GRANTS: Readonly<Record<RoleCode, readonly Action[]>> = {
 		'delivery.work',
 		'payroll.read',
 		'payroll.manage',
-		'support.any'
+		'support.any',
+		'shop.work'
 	],
 	carpenter: SHOP_GRANTS,
 	grinder: SHOP_GRANTS,
@@ -110,6 +121,15 @@ const PRICE_BLIND_ROLES: readonly RoleCode[] = [
 ];
 
 export class PolicyService {
+	/**
+	 * Stations the actor works (tech.md §19): the own shop roles in floor order, all four for a head
+	 * of the workshop. A visit of any other station answers 403.
+	 */
+	static stationsOf(actor: Pick<ActorContext, 'roles'>): WorkRole[] {
+		if (actor.roles.includes('owner') || actor.roles.includes('manager')) return [...WORK_ROLES];
+		return WORK_ROLES.filter((station) => actor.roles.includes(station));
+	}
+
 	static can(actor: Pick<ActorContext, 'roles'>, action: Action): boolean {
 		return actor.roles.some((role) => GRANTS[role].includes(action));
 	}

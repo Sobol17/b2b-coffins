@@ -6,12 +6,19 @@ import type { PushMessage } from './drivers/push';
 import { NotificationRuleRepository } from './notification-rule.repository';
 import { NotificationRepository } from './notification.repository';
 import { PushFactsRepository, type RecipientFacts } from './push-facts.repository';
+import { ShopFactsRepository } from './shop-facts.repository';
 import { SupportFactsRepository } from './support-facts.repository';
+import { ROLE_TITLE } from '$lib/crm/labels';
 import { clip } from '$lib/domain/notification/delivery';
 import { eventPath, type Audience } from '$lib/domain/notification/link';
 import { renderTemplate, type TemplateValues } from '$lib/domain/notification/template';
 import { excerpt } from '$lib/domain/support/excerpt';
-import { REQUEST_EVENT_KEYS, SUPPORT_EVENT_KEYS, type EventKey } from '$lib/types/events';
+import {
+	REQUEST_EVENT_KEYS,
+	SHOP_EVENT_KEYS,
+	SUPPORT_EVENT_KEYS,
+	type EventKey
+} from '$lib/types/events';
 import { REQUEST_STATUS_META } from '$lib/ui/status';
 import { formatDate, isoDay } from '$lib/utils/format';
 
@@ -23,6 +30,7 @@ export interface PushMessageDeps {
 	readonly requests: NotificationRepository;
 	readonly facts: PushFactsRepository;
 	readonly support: Pick<SupportFactsRepository, 'occurrence'>;
+	readonly shop: Pick<ShopFactsRepository, 'occurrence'>;
 	readonly timeZone: () => string;
 	readonly origin: string;
 }
@@ -47,6 +55,7 @@ export class PushMessageService {
 			requests: deps.requests ?? new NotificationRepository(),
 			facts: deps.facts ?? new PushFactsRepository(),
 			support: deps.support ?? new SupportFactsRepository(),
+			shop: deps.shop ?? new ShopFactsRepository(),
 			timeZone: deps.timeZone ?? (() => OrgService.timezone()),
 			origin: deps.origin ?? config.ORIGIN
 		};
@@ -80,6 +89,7 @@ export class PushMessageService {
 
 	private scene(key: EventKey, id: number, to: RecipientFacts, tx?: Tx): Scene | null {
 		if (SUPPORT_EVENT_KEYS.includes(key)) return this.supportScene(key, id, to, tx);
+		if (SHOP_EVENT_KEYS.includes(key)) return this.shopScene(key, id, tx);
 		if (REQUEST_EVENT_KEYS.includes(key)) return this.requestScene(key, id, to, tx);
 		return key === 'stock.below_threshold' ? this.stockScene(id, tx) : this.weekScene(id, tx);
 	}
@@ -115,6 +125,22 @@ export class PushMessageService {
 		};
 		if (act.body !== null) values['excerpt'] = excerpt(act.body);
 		return { path, values };
+	}
+
+	/** A worker learns the number and the urgency; the counterparty and the money stay out. */
+	private shopScene(key: EventKey, id: number, tx?: Tx): Scene | null {
+		const visit = this.deps.shop.occurrence(id, tx);
+		if (!visit) return null;
+		const path = eventPath(key, id, 'crm_floor');
+		return {
+			path,
+			values: {
+				number: visit.requestNumber,
+				station: ROLE_TITLE[visit.station],
+				priority: visit.priority === 'urgent' ? 'срочная' : 'обычная',
+				url: this.deps.origin + path
+			}
+		};
 	}
 
 	private stockScene(id: number, tx?: Tx): Scene | null {

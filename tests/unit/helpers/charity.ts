@@ -47,11 +47,10 @@ export function seedCharityWorld(db: Db) {
 
 	/** Walks a sent request forward to `upTo` the way P5 allows it. */
 	function drive(id: number, upTo: Extract<RequestStatus, 'in_work' | 'ready' | 'delivered'>) {
+		// Stock on the shelf before acceptance: the system readies the request on the move.
+		if (upTo !== 'in_work') stockUp(id);
 		move(actors.manager, id, 'in_work');
-		if (upTo === 'in_work') return;
-		stockUp(id);
-		move(actors.manager, id, 'ready');
-		if (upTo === 'ready') return;
+		if (upTo === 'in_work' || upTo === 'ready') return;
 		loadUp(id);
 		move(actors.driver, id, 'delivered');
 	}

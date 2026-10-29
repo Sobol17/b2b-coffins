@@ -23,7 +23,8 @@ export const GUARD_CODES = [
 	'pricesFixed',
 	'fullyPaid',
 	'deliveryFilled',
-	'fullyLoaded'
+	'fullyLoaded',
+	'stockLinked'
 ] as const;
 export type GuardCode = (typeof GUARD_CODES)[number];
 

@@ -1,7 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import { enterRequest } from './crm-flow';
 import { crmNavLink, login, openCrmMenu } from './fixtures';
-import { clearOtherDebts, e2eDb, statusChain, statusOf, stockUp, transition } from './transitions';
+import { acceptReady, clearOtherDebts, e2eDb, statusChain, statusOf } from './transitions';
 
 const ORIGIN = 'http://localhost:4173';
 // White is left to this spec: the portal orders walnut, C4 takes black, C5 wenge.
@@ -13,9 +13,7 @@ async function assembledRequest(page: Page, qty: number): Promise<{ number: stri
 	await login(page, 'manager');
 	const number = await enterRequest(page, `Соколов Семён ${Date.now()}`, COLOUR, qty);
 	const id = new URL(page.url()).pathname.split('/').at(-1) ?? '';
-	expect(transition(number, 'in_work', 'manager').ok).toBe(true);
-	stockUp(db, number);
-	expect(transition(number, 'ready', 'manager').ok).toBe(true);
+	acceptReady(db, number);
 	await page.context().clearCookies();
 	return { number, id };
 }

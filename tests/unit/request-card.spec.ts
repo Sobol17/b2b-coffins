@@ -30,9 +30,8 @@ function card(id: number, ctx = adminCtx) {
 
 /** Drives the request to `paid`, so the card has the full history including the automatic steps. */
 function deliver(id: number): void {
-	move(managerCtx, id, 'in_work');
 	stockUp(id);
-	move(managerCtx, id, 'ready');
+	move(managerCtx, id, 'in_work');
 	pay(id, totalOf(id), driverId);
 	loadUp(id);
 	move(driverCtx, id, 'delivered');

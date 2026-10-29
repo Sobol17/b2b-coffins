@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { ConflictError, ForbiddenError, NotFoundError } from '../../src/lib/server/core/errors';
+import { ForbiddenError, NotFoundError } from '../../src/lib/server/core/errors';
 import { CrmRequestCardService } from '../../src/lib/server/crm-request/crm-request-card.service';
 import { CrmRequestCreateService } from '../../src/lib/server/crm-request/crm-request-create.service';
 import { CrmRequestPriorityService } from '../../src/lib/server/crm-request/crm-request-priority.service';
@@ -13,7 +13,7 @@ import {
 	seedOrderingWorld,
 	variantId
 } from './helpers/portal-requests';
-import { move } from './helpers/transitions';
+import { move, settleWork } from './helpers/transitions';
 
 const db = migratedDatabase();
 const world = seedOrderingWorld(db);
@@ -84,11 +84,10 @@ describe('the workshop card of a request (C4)', () => {
 		]);
 	});
 
-	it('says which guard stops the assembly', () => {
+	it('keeps a stock request in work until the stations make it (tech.md §6.2)', () => {
 		const id = newRequest('stock');
-		move(manager, id, 'in_work');
-		expect(() => move(manager, id, 'ready')).toThrow(ConflictError);
-		expect(() => move(manager, id, 'ready')).toThrow('На складе не хватает позиций заявки');
+		expect(move(manager, id, 'in_work').status).toBe('in_work');
+		expect(settleWork(manager)).toEqual([]);
 	});
 
 	it('does not open a draft of the cart or an unknown request', () => {

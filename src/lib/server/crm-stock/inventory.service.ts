@@ -1,4 +1,5 @@
 import { ConflictError, NotFoundError, ValidationError } from '../core/errors';
+import { ShopFlow } from '../crm-shop/shop-flow';
 import type { Tx } from '../db/client';
 import { StockFillRepository } from '../stock/stock-fill.repository';
 import { StockThreshold } from '../stock/stock-threshold';
@@ -118,6 +119,8 @@ export class InventoryService extends StockBaseService {
 			for (const stockItemId of new Set(moved.map((line) => line.stockItemId))) {
 				this.threshold.watch(stockItemId, tx, now);
 			}
+			// The shelf changed: the shop and the readiness follow in the same transaction (§20.4).
+			ShopFlow.afterChange(this.ctx, tx);
 			return {
 				result: undefined,
 				entityId: id,

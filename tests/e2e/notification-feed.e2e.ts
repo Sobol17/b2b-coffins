@@ -3,16 +3,14 @@ import { isNull } from 'drizzle-orm';
 import { notificationFeed } from '../../src/lib/server/db/schema';
 import { login, logout, openBell } from './fixtures';
 import { sendRequest } from './portal-flow';
-import { e2eDb, stockUp, transition } from './transitions';
+import { acceptReady, e2eDb } from './transitions';
 
 const db = e2eDb();
 const ORIGIN = 'http://localhost:4173';
 const QUEUE_TIMEOUT = 15_000;
 
 function toReady(number: string): void {
-	expect(transition(number, 'in_work', 'manager').ok).toBe(true);
-	stockUp(db, number);
-	expect(transition(number, 'ready', 'manager').ok).toBe(true);
+	acceptReady(db, number);
 }
 
 /** Rows of the event feed; the delivery log below it draws its rows with the same testid. */

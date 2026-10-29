@@ -100,6 +100,26 @@ describe('request state machine, invariants of tech.md 6.2', () => {
 		}
 	});
 
+	it('readies a request only by the system once it is covered (tech.md §6.2, invariant 5)', () => {
+		const ready = findTransition('in_work', 'ready');
+		expect([ready?.roles, ready?.auto]).toEqual([['system'], true]);
+		expect(checkTransition(permissive('in_work', 'ready', ['manager', 'owner']))).toEqual({
+			ok: false,
+			denial: { code: 'role_not_allowed' }
+		});
+	});
+
+	it('accepts a request only when every line has a stock item (tech.md §6.2, invariant 10)', () => {
+		const accept = findTransition('new', 'in_work');
+		expect(accept?.guards).toEqual(['pricesFixed', 'stockLinked']);
+		expect(
+			checkTransition({
+				...permissive('new', 'in_work', ['manager']),
+				guards: { ...ALL_GUARDS_UP, stockLinked: false }
+			})
+		).toEqual({ ok: false, denial: { code: 'guard_failed', guard: 'stockLinked' } });
+	});
+
 	it('blocks ready until stock fills the whole request (v1.41)', () => {
 		const guarded = TRANSITIONS.filter((t) => t.guards?.includes('stockCovered'));
 		expect(guarded.map((t) => `${t.from}->${t.to}`)).toEqual(['in_work->ready']);

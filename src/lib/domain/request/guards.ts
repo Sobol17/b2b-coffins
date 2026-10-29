@@ -4,8 +4,13 @@ import type { GuardCode } from '$lib/types/request';
 
 /** What the server knows about a request before it asks the state machine. */
 export interface GuardFacts {
-	/** Every line filled from free stock by `allocateStock` (tech.md v1.41). */
+	/**
+	 * A counterparty request: every line filled from stock by `allocateStock`. A stock request: every
+	 * line made past the upholsterer (tech.md §6.2, invariant 5).
+	 */
 	readonly stockCovered: boolean;
+	/** The variant of every line has a stock item (invariant 10). */
+	readonly stockLinked: boolean;
 	/** Frozen unit price of every line of the request. */
 	readonly unitPricesMinor: readonly number[];
 	readonly totalMinor: number;
@@ -40,6 +45,7 @@ export function fullyPaid(
 export function evaluateGuards(facts: GuardFacts): Record<GuardCode, boolean> {
 	return {
 		stockCovered: facts.stockCovered,
+		stockLinked: facts.stockLinked,
 		pricesFixed: pricesFixed(facts.unitPricesMinor),
 		fullyPaid: fullyPaid(facts.totalMinor, facts.paymentMarksMinor, facts.otherDebtMinor),
 		deliveryFilled: isDeliveryFilled(facts.delivery),

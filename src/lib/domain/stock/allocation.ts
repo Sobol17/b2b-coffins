@@ -1,11 +1,11 @@
 import type { RequestStatus } from '$lib/types/request';
 
 /**
- * Who takes stock first (tech.md v1.41). `held`: a counterparty request already assembled, its pieces
- * wait on the shelf for the driver; `work`: a counterparty request in work; `stock`: a stock request
- * in work, served last because it only plans production for the shelf.
+ * Who takes stock first (tech.md §20.4). `held`: a counterparty request already assembled, its pieces
+ * wait on the shelf for the driver; `work`: a counterparty request in work. A stock request takes
+ * nothing: what the shop makes for it lands on the shelf as free stock.
  */
-export const FILL_TIERS = ['held', 'work', 'stock'] as const;
+export const FILL_TIERS = ['held', 'work'] as const;
 export type FillTier = (typeof FILL_TIERS)[number];
 
 /** One line of a request that wants pieces from stock. */
@@ -24,15 +24,6 @@ export interface DemandLine {
 	readonly deliveryAt: Date | null;
 }
 
-export interface ProductionNeed {
-	readonly variantId: number;
-	readonly optionId: number | null;
-	readonly neededQty: number;
-	readonly requestCount: number;
-	readonly nearestDeliveryAt: Date | null;
-	readonly hasUrgent: boolean;
-}
-
 /** The stock position of a product: one stock item in one colour. */
 export function positionKey(stockItemId: number, optionId: number | null): string {
 	return `${stockItemId}:${optionId ?? '-'}`;
@@ -46,10 +37,11 @@ export function shelfWant(line: Pick<DemandLine, 'qty' | 'loadedQty'>): number {
 	return Math.max(0, line.qty - line.loadedQty);
 }
 
-/** A stock request in `ready` holds nothing: its pieces are free stock for everyone else. */
+/** A stock request never holds stock, in work or assembled. */
 export function fillTier(status: RequestStatus, isStockRequest: boolean): FillTier | null {
-	if (status === 'ready') return isStockRequest ? null : 'held';
-	if (status === 'in_work') return isStockRequest ? 'stock' : 'work';
+	if (isStockRequest) return null;
+	if (status === 'ready') return 'held';
+	if (status === 'in_work') return 'work';
 	return null;
 }
 
@@ -103,45 +95,24 @@ export function isCovered(
 }
 
 /**
- * What the shop still has to make: the unfilled pieces of requests in work, per variant and colour.
- * Held requests are complete by the guard, so only `work` and `stock` lines can lack anything.
+ * Requests ahead of the line in `fillOrder` that hold pieces of its position: they are why the line
+ * gets less than it wants. @returns request ids in queue order, the line's own request left out.
  */
-export function productionNeeds(
+export function heldAhead(
+	line: DemandLine,
 	lines: readonly DemandLine[],
 	filled: ReadonlyMap<number, number>
-): ProductionNeed[] {
-	const needs = new Map<string, ProductionNeed>();
-	const requests = new Map<string, Set<number>>();
-	for (const line of lines) {
-		const missing = shelfWant(line) - (filled.get(line.itemId) ?? 0);
-		if (line.tier === 'held' || missing <= 0) continue;
-		const key = `${line.variantId}:${line.optionId ?? '-'}`;
-		const seen = requests.get(key) ?? new Set<number>();
-		requests.set(key, seen.add(line.requestId));
-		const need = needs.get(key);
-		needs.set(key, {
-			variantId: line.variantId,
-			optionId: line.optionId,
-			neededQty: (need?.neededQty ?? 0) + missing,
-			requestCount: seen.size,
-			hasUrgent: (need?.hasUrgent ?? false) || line.isUrgent,
-			nearestDeliveryAt: earlier(need?.nearestDeliveryAt ?? null, line.deliveryAt)
-		});
+): number[] {
+	if (line.stockItemId === null) return [];
+	const key = positionKey(line.stockItemId, line.optionId);
+	const ahead: number[] = [];
+	for (const other of [...lines].sort(fillOrder)) {
+		if (other.itemId === line.itemId) break;
+		if (other.requestId === line.requestId || other.stockItemId === null) continue;
+		if (positionKey(other.stockItemId, other.optionId) !== key) continue;
+		if ((filled.get(other.itemId) ?? 0) > 0 && !ahead.includes(other.requestId)) {
+			ahead.push(other.requestId);
+		}
 	}
-	return [...needs.values()].sort(needOrder);
-}
-
-function earlier(a: Date | null, b: Date | null): Date | null {
-	if (a === null) return b;
-	if (b === null) return a;
-	return a.getTime() <= b.getTime() ? a : b;
-}
-
-function needOrder(a: ProductionNeed, b: ProductionNeed): number {
-	return (
-		Number(b.hasUrgent) - Number(a.hasUrgent) ||
-		deadlineRank(a.nearestDeliveryAt) - deadlineRank(b.nearestDeliveryAt) ||
-		a.variantId - b.variantId ||
-		(a.optionId ?? 0) - (b.optionId ?? 0)
-	);
+	return ahead;
 }

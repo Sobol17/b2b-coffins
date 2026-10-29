@@ -2,6 +2,7 @@ import { PolicyService } from '../auth/policy';
 import { ConflictError, ForbiddenError, NotFoundError, ValidationError } from '../core/errors';
 import { BaseService } from '../core/service';
 import type { Tx } from '../db/client';
+import { ShopDispatch } from '../crm-shop/shop-dispatch';
 import { OutboxRequestEffects, type RequestEffects } from './request-effects';
 import {
 	RequestTransitionRepository,
@@ -25,7 +26,8 @@ const GUARD_REFUSAL: Readonly<Record<GuardCode, string>> = {
 	pricesFixed: 'У позиций заявки нет цены',
 	fullyPaid: 'Заявка оплачена не полностью',
 	deliveryFilled: 'Заполните адрес, срок доставки и ФИО умершего',
-	fullyLoaded: 'Погрузите все позиции заявки'
+	fullyLoaded: 'Погрузите все позиции заявки',
+	stockLinked: 'У варианта нет складской позиции, свяжите её в каталоге'
 };
 
 /**
@@ -86,6 +88,18 @@ export class RequestTransitionService extends BaseService {
 			.filter((id) => this.chainAutoSteps(id, 'awaiting_payment', tx) === 'paid');
 	}
 
+	/**
+	 * Readies every request in work the stock or the upholsterer now covers (tech.md §6.2, invariant 5).
+	 * Runs in the transaction of the action that changed the fill and, like `settleCounterparty`, does
+	 * not check the actor's reach: the step is the system's, not the actor's.
+	 * @returns ids of the requests that moved to `ready`.
+	 */
+	settleWork(tx: Tx): number[] {
+		return this.repo
+			.inWorkIds(tx)
+			.filter((id) => this.chainAutoSteps(id, 'in_work', tx) === 'ready');
+	}
+
 	private run(
 		requestId: number,
 		input: RequestTransitionInput,
@@ -97,6 +111,8 @@ export class RequestTransitionService extends BaseService {
 
 			this.step(request.id, transition, this.ctx.userId, input, tx);
 			const extra = afterMove(request, tx);
+			// An accepted request asks the shop for what the shelf lacks before it may turn ready.
+			if (transition.to === 'in_work') new ShopDispatch().run(tx);
 			const status = this.chainAutoSteps(request.id, transition.to, tx);
 
 			return {

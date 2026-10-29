@@ -3,7 +3,7 @@ import { desc, eq } from 'drizzle-orm';
 import { auditLog, notifications, pushSubscriptions, users } from '../../src/lib/server/db/schema';
 import { ACCOUNTS, login, logout, purchaseMoneyKeys, type RoleKey } from './fixtures';
 import { sendRequest } from './portal-flow';
-import { e2eDb, stockUp, transition } from './transitions';
+import { acceptReady, e2eDb } from './transitions';
 
 const db = e2eDb();
 const ORIGIN = 'http://localhost:4173';
@@ -34,9 +34,7 @@ function clean(): void {
 async function readyRequest(page: Page): Promise<string> {
 	const number = await sendRequest(page, 'cp_admin');
 	await logout(page);
-	expect(transition(number, 'in_work', 'manager').ok).toBe(true);
-	stockUp(db, number);
-	expect(transition(number, 'ready', 'manager').ok).toBe(true);
+	acceptReady(db, number);
 	return number;
 }
 
@@ -94,8 +92,8 @@ test('C15: a person without a device gets the bell and no push row', async ({ pa
 test('C15: the owner edits a template, previews it and the change is audited', async ({ page }) => {
 	await login(page, 'owner');
 	await page.goto(TEMPLATES);
-	// One push template per event, support threads included (v1.57).
-	await expect(page.getByTestId('template-card')).toHaveCount(13);
+	// One push template per event, support threads and station visits included (tech.md §20.4).
+	await expect(page.getByTestId('template-card')).toHaveCount(14);
 	const card = page.getByTestId('template-card').filter({ hasText: 'Заявка готова к выдаче' });
 	const text = card.getByLabel('Текст');
 	const saved = page.getByTestId('toast').filter({ hasText: 'Шаблон сохранён' });

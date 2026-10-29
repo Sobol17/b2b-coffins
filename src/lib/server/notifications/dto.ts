@@ -44,8 +44,8 @@ export class NotificationDtoMapper {
 			id: row.id,
 			eventKey: row.eventKey,
 			requestId: row.requestId,
-			requestNumber: row.requestNumber,
-			entityId: row.stockItemId ?? row.weekId ?? row.supportThreadId,
+			requestNumber: row.requestNumber ?? row.shopRequestNumber,
+			entityId: row.stockItemId ?? row.weekId ?? row.supportThreadId ?? row.shopTaskId,
 			entityLabel: row.stockItemTitle ?? week ?? row.supportSubject,
 			isRead: row.readAt !== null,
 			createdAt: row.createdAt.toISOString()

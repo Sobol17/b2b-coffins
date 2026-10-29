@@ -3,13 +3,15 @@ import type { RegistrySummary } from '../request/request-registry.repository';
 import type { CrmListRow } from './crm-request-list.repository';
 import { attentionFlags } from '$lib/domain/request/attention';
 import type { CrmRequestListItemDto } from '$lib/types/crm-request';
+import type { WorkRole } from '$lib/types/roles';
 
 /** Role projection of a workshop list row (tech.md 8.1): money keys only when the row has them. */
 export class CrmRequestDtoMapper {
 	static toListItem(
 		row: CrmListRow,
 		summary: RegistrySummary | undefined,
-		now: Date
+		now: Date,
+		stations: readonly WorkRole[] = []
 	): CrmRequestListItemDto {
 		return {
 			...RegistryDtoMapper.toListItem(row, summary),
@@ -24,7 +26,8 @@ export class CrmRequestDtoMapper {
 					scheme: row.isStockRequest ? null : row.scheme
 				},
 				now
-			)
+			),
+			stations
 		};
 	}
 }

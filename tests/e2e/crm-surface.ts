@@ -1,6 +1,6 @@
 import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
-import { desc, isNull, ne, type SQL } from 'drizzle-orm';
+import { desc, eq, isNull, ne, type SQL } from 'drizzle-orm';
 import type { AnySQLiteColumn, SQLiteTable } from 'drizzle-orm/sqlite-core';
 import type { Db } from '../../src/lib/server/db/client';
 import {
@@ -9,6 +9,7 @@ import {
 	priceLists,
 	products,
 	requests,
+	shopTasks,
 	stockItems,
 	supportThreads
 } from '../../src/lib/server/db/schema';
@@ -41,7 +42,7 @@ const SECTIONS: readonly SectionRights[] = [
 	{ prefix: '/crm/payroll', readers: ADMINS },
 	{ prefix: '/crm/stock', readers: [...ADMINS, ...SHOP], writers: ADMINS },
 	{ prefix: '/crm/delivery', readers: [...ADMINS, 'driver'] },
-	{ prefix: '/crm/shop', readers: ADMINS },
+	{ prefix: '/crm/shop', readers: [...ADMINS, ...SHOP] },
 	{ prefix: '/crm/board', readers: ADMINS },
 	{ prefix: '/crm/requests', readers: ADMINS },
 	{ prefix: '/crm/catalog', readers: ADMINS },
@@ -69,7 +70,18 @@ export interface Screen {
 	readonly path: string;
 	/** False when the database holds no object for the route parameter: its owner then gets 404. */
 	readonly exists: boolean;
+	/** Who may open this very object, when it is narrower than its section. */
+	readonly readers?: readonly RoleKey[];
 }
+
+/** A visit belongs to its station (tech.md §19): the sweep opens a carpenter visit. */
+const OBJECT_READERS: Readonly<Record<string, readonly RoleKey[]>> = {
+	'/crm/shop/[id]': [...ADMINS, 'carpenter']
+};
+
+/** Readers of one screen: the object's own when it has them, else its section's. */
+export const screenReaders = (screen: Screen): readonly RoleKey[] =>
+	screen.readers ?? readersOf(screen.path);
 
 export interface ActionTarget {
 	readonly path: string;
@@ -104,7 +116,14 @@ function parameters(db: Db): Readonly<Record<string, number | null>> {
 		'/crm/counterparties/[id]': lastId(db, counterparties, counterparties.id),
 		'/crm/catalog/[id]': lastId(db, products, products.id, isNull(products.deletedAt)),
 		'/crm/prices/[id]': lastId(db, priceLists, priceLists.id),
-		'/crm/support/[id]': lastId(db, supportThreads, supportThreads.id)
+		'/crm/support/[id]': lastId(db, supportThreads, supportThreads.id),
+		'/crm/shop/[id]': lastId(
+			db,
+			shopTasks,
+			shopTasks.id,
+			// A closed visit still opens for reading, so any carpenter visit will do.
+			eq(shopTasks.station, 'carpenter')
+		)
 	};
 }
 
@@ -133,7 +152,12 @@ function concrete(template: string, ids: Readonly<Record<string, number | null>>
 		return { path: template + (QUERIES[template] ?? ''), exists: true };
 	if (!(template in ids)) throw new Error(`no id source is declared for ${template}`);
 	const id = ids[template] ?? null;
-	return { path: template.replace('[id]', String(id ?? 1)), exists: id !== null };
+	const readers = OBJECT_READERS[template];
+	return {
+		path: template.replace('[id]', String(id ?? 1)),
+		exists: id !== null,
+		...(readers ? { readers } : {})
+	};
 }
 
 /** Every page and every GET endpoint of the CRM, with real ids in place of the parameters. */

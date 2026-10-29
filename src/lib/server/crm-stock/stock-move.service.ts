@@ -1,4 +1,5 @@
 import { ConflictError, NotFoundError, ValidationError } from '../core/errors';
+import { ShopFlow } from '../crm-shop/shop-flow';
 import type { Tx } from '../db/client';
 import { StockThreshold } from '../stock/stock-threshold';
 import { StockDtoMapper, isManualMove } from './dto';
@@ -72,6 +73,8 @@ export class StockMoveService extends StockBaseService {
 				tx
 			);
 			this.threshold.watch(stockItemId, tx, this.now());
+			// The shelf changed: the shop and the readiness follow in the same transaction (§20.4).
+			ShopFlow.afterChange(this.ctx, tx);
 			return { result: id, entityId: id, after: { stockItemId, ...input } };
 		});
 	}
@@ -102,6 +105,8 @@ export class StockMoveService extends StockBaseService {
 				tx
 			);
 			this.threshold.watch(stockItemId, tx, this.now());
+			// The shelf changed: the shop and the readiness follow in the same transaction (§20.4).
+			ShopFlow.afterChange(this.ctx, tx);
 			return {
 				result: id,
 				entityId: id,

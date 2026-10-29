@@ -97,6 +97,26 @@ describe('PolicyService, the single point of permission checks', () => {
 		expect(crm.indexOf('upholsterer')).toBe(crm.indexOf('painter') + 1);
 	});
 
+	it('opens the stations to the shop crew and the workshop heads only (tech.md §19)', () => {
+		for (const role of [...WORK_ROLES, 'manager', 'owner'] as const) {
+			expect(PolicyService.can({ roles: [role] }, 'shop.work')).toBe(true);
+		}
+		for (const role of ['driver', 'cp_admin', 'cp_employee'] as const) {
+			expect(PolicyService.can({ roles: [role] }, 'shop.work')).toBe(false);
+		}
+	});
+
+	it('scopes a shop role to its own stations and a head to all four', () => {
+		expect(PolicyService.stationsOf({ roles: ['painter', 'grinder'] })).toEqual([
+			'grinder',
+			'painter'
+		]);
+		expect(PolicyService.stationsOf({ roles: ['carpenter', 'driver'] })).toEqual(['carpenter']);
+		expect(PolicyService.stationsOf({ roles: ['manager'] })).toEqual([...WORK_ROLES]);
+		expect(PolicyService.stationsOf({ roles: ['owner'] })).toEqual([...WORK_ROLES]);
+		expect(PolicyService.stationsOf({ roles: ['driver'] })).toEqual([]);
+	});
+
 	it('denies everything to an actor with no roles at all', () => {
 		for (const action of ACTIONS) {
 			expect(PolicyService.can({ roles: [] }, action)).toBe(false);

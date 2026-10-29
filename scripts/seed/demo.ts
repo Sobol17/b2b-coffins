@@ -9,7 +9,9 @@ import {
 	requests
 } from '../../src/lib/server/db/schema';
 import { DeliveryService } from '../../src/lib/server/crm-delivery/delivery.service';
+import { ShopTaskService } from '../../src/lib/server/crm-shop/shop-task.service';
 import { ShopService } from '../../src/lib/server/crm-shop/shop.service';
+import { StockMoveService } from '../../src/lib/server/crm-stock/stock-move.service';
 import { charityRecountHandler } from '../../src/lib/server/queue/handlers/charity-recount';
 import { notificationFanoutHandler } from '../../src/lib/server/queue/handlers/notification-fanout';
 import { Worker } from '../../src/lib/server/queue/worker';
@@ -81,6 +83,7 @@ function loadPeople(db: Db): People {
 		employee: actorContext(db, DEMO_PEOPLE.employee),
 		manager: actorContext(db, DEMO_PEOPLE.manager),
 		driver: actorContext(db, DEMO_PEOPLE.driver),
+		carpenter: actorContext(db, DEMO_PEOPLE.carpenter),
 		owner: actorContext(db, DEMO_PEOPLE.owner)
 	};
 }
@@ -134,14 +137,19 @@ function advance(db: Db, people: People, id: number, scenario: DemoScenario): vo
 	}
 
 	move(people.manager, 'in_work');
-	if (scenario.stage === 'in_work') return;
-	// The shop works by position (tech.md v1.41): the manager marks the pieces made, then assembles.
-	const shop = new ShopService(people.manager);
+	if (scenario.stage === 'in_work') return passCarpenter(people.carpenter, id);
+	// The pieces reach the shelf as a purchase; the system readies the request (tech.md §6.2).
+	const moves = new StockMoveService(people.manager);
 	for (const line of scenario.lines) {
 		const variantId = variantIdOf(db, line.sku);
-		shop.produce({ variantId, optionId: colorIdOf(db, variantId, line.color), qty: line.qty });
+		moves.create(stockItemIdOf(db, variantId), {
+			type: 'purchase',
+			optionId: colorIdOf(db, variantId, line.color),
+			qty: line.qty,
+			reasonId: null,
+			comment: 'Демо'
+		});
 	}
-	move(people.manager, 'ready');
 	if (scenario.stage === 'ready') return;
 	// The driver loads every line on the delivery screen (tech.md v1.43); the paid scenario is the
 	// one where he takes the cash at the door.
@@ -150,6 +158,19 @@ function advance(db: Db, people: People, id: number, scenario: DemoScenario): vo
 		delivery.load({ itemId: line.itemId, qty: line.qty });
 	}
 	new RequestTransitionService(people.driver).deliver(id, scenario.stage === 'paid');
+}
+
+/** The request in work has passed the carpenter and waits for the grinder (tech.md §20.4). */
+function passCarpenter(carpenter: ActorContext, requestId: number): void {
+	const [station] = new ShopService(carpenter).overview({}).stations;
+	const visit = station?.fresh.find((row) => row.requestId === requestId);
+	if (!visit) return;
+	const tasks = new ShopTaskService(carpenter);
+	tasks.take(visit.id);
+	for (const job of new ShopService(carpenter).task(visit.id).jobs) {
+		tasks.progress({ jobId: job.id, doneQty: job.qty });
+	}
+	tasks.complete(visit.id);
 }
 
 /** Reads the queue out in this process, so the bell of every demo account is filled at once. */
@@ -166,6 +187,16 @@ function variantIdOf(db: Db, sku: string): number {
 		.all();
 	if (!row) throw new Error(`variant ${sku} not found, run pnpm seed first`);
 	return row.id;
+}
+
+function stockItemIdOf(db: Db, variantId: number): number {
+	const [row] = db
+		.select({ stockItemId: productVariants.stockItemId })
+		.from(productVariants)
+		.where(eq(productVariants.id, variantId))
+		.all();
+	if (!row?.stockItemId) throw new Error(`variant ${variantId} has no stock item`);
+	return row.stockItemId;
 }
 
 function colorIdOf(db: Db, variantId: number, title: string): number {

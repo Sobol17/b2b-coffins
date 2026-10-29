@@ -6,6 +6,7 @@ import { payrollBackfillCrews } from './admin/payroll';
 import { priceImport } from './admin/price';
 import { requestTransition } from './admin/request';
 import { rolesSync } from './admin/roles';
+import { shopSyncCommand } from './admin/shop';
 import { stockCostBackfillCommand } from './admin/stock';
 import { userCreate } from './admin/user';
 
@@ -21,6 +22,7 @@ const USAGE = `pnpm admin <command> [options]
   notifications:sync
   roles:sync
   stock:cost-backfill
+  shop:sync
 `;
 
 async function main(): Promise<void> {
@@ -47,6 +49,8 @@ async function main(): Promise<void> {
 			return rolesSync(db);
 		case 'stock:cost-backfill':
 			return stockCostBackfillCommand(db);
+		case 'shop:sync':
+			return shopSyncCommand(db);
 		default:
 			console.error(USAGE);
 			process.exit(1);

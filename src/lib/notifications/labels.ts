@@ -29,7 +29,11 @@ export const EVENT_LABEL: Readonly<Record<EventKey, EventLabel>> = {
 	'payroll.week_closed': { title: 'Неделя закрыта', hint: 'Ведомость готова к выплате' },
 	'support.opened': { title: 'Новое обращение', hint: 'Контрагент задал вопрос' },
 	'support.message_posted': { title: 'Новое сообщение', hint: 'Ответ в обращении' },
-	'support.closed': { title: 'Обращение закрыто', hint: 'Переписка завершена' }
+	'support.closed': { title: 'Обращение закрыто', hint: 'Переписка завершена' },
+	'shop.task_arrived': {
+		title: 'Новая заявка на станции',
+		hint: 'Заявка пришла в работу на вашу станцию'
+	}
 };
 
 /** What a feed line is about: the request number, the stock item, the payroll week or the thread. */

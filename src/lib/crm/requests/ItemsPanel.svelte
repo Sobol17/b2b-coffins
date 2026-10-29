@@ -1,5 +1,6 @@
 <script lang="ts">
 	import LineModal from './LineModal.svelte';
+	import LineShop from './LineShop.svelte';
 	import EntityList from '$lib/crm/EntityList.svelte';
 	import { Button, Card, PriceCell } from '$lib/ui';
 	import type { CrmRequestCardDto, CrmRequestVariantChoice } from '$lib/types/crm-request';
@@ -17,6 +18,7 @@
 
 	const editable = $derived(card.itemsEdit !== 'closed');
 	const rows = $derived([...card.items]);
+	const shopOf = $derived(new Map(card.shop.map((line) => [line.itemId, line])));
 
 	let modalOpen = $state(false);
 	let editing = $state<RequestItemDto | null>(null);
@@ -57,6 +59,10 @@
 							)}
 						</div>
 						<div class="text-xs text-fg-faint">{row.sku}</div>
+						{#if shopOf.get(row.id)}
+							{@const shop = shopOf.get(row.id)}
+							{#if shop}<LineShop {shop} />{/if}
+						{/if}
 					</div>
 					<div class="text-right tabular-nums">
 						<div class="font-medium">{row.qty} шт</div>

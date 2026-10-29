@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { SHOP_PRODUCE_MAX } from '$lib/types/crm-shop';
+import { SHOP_JOB_MAX } from '$lib/types/crm-shop';
 import { checkbox } from './fields';
 
 const id = z.coerce.number().int().positive();
@@ -11,7 +11,7 @@ export const deliveryLoadSchema = z.object({
 		.number({ error: 'Укажите количество' })
 		.int({ error: 'Количество должно быть целым' })
 		.min(1, { error: 'Не меньше одной штуки' })
-		.max(SHOP_PRODUCE_MAX, { error: `Не больше ${SHOP_PRODUCE_MAX} штук за раз` })
+		.max(SHOP_JOB_MAX, { error: `Не больше ${SHOP_JOB_MAX} штук за раз` })
 });
 export type DeliveryLoadInput = z.infer<typeof deliveryLoadSchema>;
 

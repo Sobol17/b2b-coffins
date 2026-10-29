@@ -2,7 +2,14 @@ import { expect, test, type Page } from '@playwright/test';
 import { count } from 'drizzle-orm';
 import { auditLog } from '../../src/lib/server/db/schema';
 import { enterRequest } from './crm-flow';
-import { crmActions, crmScreens, readersOf, writersOf, type Screen } from './crm-surface';
+import {
+	crmActions,
+	crmScreens,
+	readersOf,
+	screenReaders,
+	writersOf,
+	type Screen
+} from './crm-surface';
 import { ACCOUNTS, login, purchaseMoneyKeys, type RoleKey } from './fixtures';
 import { e2eDb } from './transitions';
 
@@ -58,7 +65,7 @@ for (const role of ROLES) {
 		await login(page, role);
 
 		for (const screen of screens) {
-			const allowed = readersOf(screen.path).includes(role);
+			const allowed = screenReaders(screen).includes(role);
 			const expected = !allowed ? 403 : screen.exists ? 200 : 404;
 			expect(await statusOf(page, screen.path), screen.path).toBe(expected);
 		}
@@ -77,7 +84,7 @@ for (const role of PRICE_BLIND) {
 	test(`${role}: no data answer of the CRM carries a price`, async ({ page }) => {
 		await login(page, role);
 		const readable = screens.filter(
-			(screen) => readersOf(screen.path).includes(role) && !screen.path.includes('.xlsx')
+			(screen) => screenReaders(screen).includes(role) && !screen.path.includes('.xlsx')
 		);
 		expect(readable.length).toBeGreaterThan(1);
 

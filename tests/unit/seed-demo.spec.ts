@@ -1,4 +1,4 @@
-import { eq, like } from 'drizzle-orm';
+import { eq, isNull, like } from 'drizzle-orm';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { seedCatalog, seedStockBalances, seedStockItems } from '../../scripts/seed/catalog';
 import { seedDemo } from '../../scripts/seed/demo';
@@ -24,6 +24,7 @@ import {
 	notifications,
 	requestStatusHistory,
 	requests,
+	shopTasks,
 	users
 } from '../../src/lib/server/db/schema';
 import { migratedDatabase } from './helpers/db';
@@ -136,6 +137,17 @@ describe('pnpm seed:demo (v1.23)', () => {
 		);
 
 		for (const row of feedOf(EMPLOYEE)) expect(own).toContain(row.requestId);
+	});
+
+	it('leaves the request in work at the grinder, past the carpenter (tech.md §20.4)', () => {
+		const open = db
+			.select({ station: shopTasks.station })
+			.from(shopTasks)
+			.where(isNull(shopTasks.completedAt))
+			.all()
+			.map((row) => row.station);
+		expect(open).toContain('grinder');
+		expect(open).not.toContain('carpenter');
 	});
 
 	it('leaves no job behind', () => {

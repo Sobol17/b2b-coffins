@@ -13,6 +13,8 @@ import {
 	productVariants,
 	rateLimits,
 	requests,
+	shopJobs,
+	shopTasks,
 	stockMoves
 } from '../../../src/lib/server/db/schema';
 import type { ActorContext } from '../../../src/lib/types/actor';
@@ -96,6 +98,9 @@ export function seedOrderingWorld(db: Db): OrderingWorld {
 
 export function resetRequests(db: Db): void {
 	// Stock moves point at requests (C6 loads), and the fill of v1.41 reads them: both go together.
+	// Shop jobs point at production moves and visits (C19): they go first.
+	db.delete(shopJobs).run();
+	db.delete(shopTasks).run();
 	db.delete(stockMoves).run();
 	db.delete(requests).run();
 	db.delete(jobQueue).run();

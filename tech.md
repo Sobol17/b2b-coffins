@@ -1,9 +1,9 @@
 # tech.md — ядро проекта
 
 **Проект:** B2B-портал + CRM для столярной мастерской (производство гробов)
-**Версия ядра:** v2.0
+**Версия ядра:** v2.1
 **Дата:** 29.10.2026
-**Статус:** каркас и этап 1 (портал) закрыты; в этапе 2 (CRM) влиты C1–C8, C10, C12, C13, C15, C17, C18; C14 закрывается частями, C16 не начат (§14)
+**Статус:** каркас и этап 1 (портал) закрыты; в этапе 2 (CRM) влиты C1–C8, C10, C12, C13, C15, C17, C18; C14 закрывается частями, C19 (станции цеха) в работе, C16 не начат (§14)
 **Владелец файла:** Sobol17 (тимлид и единственный разработчик)
 **Источник требований:** `TZ_B2B_CRM_stolyarka_v06.md`
 
@@ -47,6 +47,7 @@
 | `notifications:sync` | вставляет из фикстур недостающие правила и шаблоны, правку руководителя не трогает |
 | `roles:sync` | роли из `scripts/fixtures/roles.json` |
 | `stock:cost-backfill` | переносит себестоимость варианта в его складскую позицию, если у позиции 0 |
+| `shop:sync` | прогон досылки цеха §20.4 и автоматических шагов `in_work -> ready`: так заявки, принятые до станций, получают задания |
 
 ---
 
@@ -197,7 +198,7 @@ src/
       crm/
         board/ , requests/ , catalog/ , counterparties/ , stock/ , payroll/ , settings/
         reports/                  дашборд; sales/, counterparties/, stock/, funnel/, lost/, charity/, у каждого export.xlsx
-        shop/                     цех: очередь выпуска позиций и наполнение заявок
+        shop/                     станции цеха: списки визитов, визит [id]
         delivery/                 доставка: погрузка по строкам, «Доставлено», заявки в работе для плана
         notifications/            личная лента, переключатели и журнал; read/ отмечает прочтение
         support/                  обращения контрагентов: реестр и переписка
@@ -889,6 +890,49 @@ export const financeEntries = sqliteTable('finance_entries', {
 
 ---
 
+### 5.12 Цех
+
+```ts
+// src/lib/server/db/schema/shop.ts
+// A visit of one request to one station. It holds «Взять в работу» and «Выполнено»; its jobs are the pieces.
+export const shopTasks = sqliteTable('shop_tasks', {
+  id: pk(),
+  requestId: integer('request_id').notNull().references(() => requests.id, { onDelete: 'cascade' }),
+  station: text('station', { enum: WORK_ROLES }).notNull(),
+  takenAt: ts('taken_at'),
+  takenById: integer('taken_by_id').references(() => users.id),
+  completedAt: ts('completed_at'),
+  completedById: integer('completed_by_id').references(() => users.id),   // null when the dispatch emptied it
+  createdAt: createdAt()
+}, (t) => ({
+  stationIdx: index('shop_tasks_station_idx').on(t.station, t.completedAt),
+  requestIdx: index('shop_tasks_request_idx').on(t.requestId)
+}));
+
+// Pieces of one request line the stations make. The job rides from visit to visit until the upholsterer.
+export const shopJobs = sqliteTable('shop_jobs', {
+  id: pk(),
+  requestItemId: integer('request_item_id').notNull().references(() => requestItems.id, { onDelete: 'cascade' }),
+  taskId: integer('task_id').notNull().references(() => shopTasks.id),   // the current visit, the last one once finished
+  qty: integer('qty').notNull(),
+  doneQty: integer('done_qty').notNull().default(0),                     // pieces done at the current station
+  finishedAt: ts('finished_at'),
+  productionMoveId: integer('production_move_id').references(() => stockMoves.id),
+  createdAt: createdAt(), updatedAt: updatedAt()
+}, (t) => ({
+  itemIdx: index('shop_jobs_item_idx').on(t.requestItemId, t.finishedAt),
+  taskIdx: index('shop_jobs_task_idx').on(t.taskId)
+}));
+```
+
+Инварианты:
+
+- открытый визит (`completed_at` пуст) у пары «заявка, станция» один;
+- задание без `finished_at` открыто и принадлежит открытому визиту; на пару «строка, визит» открыто одно задание, пришедшие штуки прибавляются к нему;
+- `0 ≤ done_qty ≤ qty`, `qty > 0`;
+- `finished_at` и `production_move_id` заданы вместе, только у задания, которое прошло обивщика; движение `production` пишется без `request_id` и `request_item_id`: колонка `request_item_id` у движения значит погрузку (§6.2, инвариант 9);
+- визит, у которого досылка сняла все задания, закрывается с пустым `completed_by_id`.
+
 ## 6. Машина состояний заявки
 
 Единственный источник правды — `src/lib/domain/request/state-machine.ts`. Сервер проверяет переход через неё, UI через неё же решает, какие кнопки рисовать. Дублировать правила в компонентах запрещено.
@@ -915,13 +959,13 @@ export const financeEntries = sqliteTable('finance_entries', {
 export const TRANSITIONS: readonly Transition[] = [
   { from: 'draft',  to: 'new',       roles: ['cp_admin','cp_employee','manager','owner'], ownOnly: true,
     guards: ['deliveryFilled'] },
-  { from: 'new',    to: 'in_work',   roles: ['manager','owner'], guards: ['pricesFixed'],
+  { from: 'new',    to: 'in_work',   roles: ['manager','owner'], guards: ['pricesFixed','stockLinked'],
     effects: ['audit','emit:request.accepted'] },
   { from: 'new',    to: 'cancelled', roles: ['cp_admin','cp_employee','manager','owner'], ownOnly: true,
     effects: ['emit:request.cancelled'] },
   { from: 'new',    to: 'rejected',  roles: ['manager','owner'], requiresReason: true,
     effects: ['emit:request.rejected'] },
-  { from: 'in_work', to: 'ready',    roles: ['manager','owner'],
+  { from: 'in_work', to: 'ready',    roles: ['system'], auto: true,
     guards: ['stockCovered'], effects: ['emit:request.ready'] },
   { from: 'ready',  to: 'delivered', roles: ['driver','manager','owner'],
     guards: ['fullyLoaded'], effects: ['freezeCharity','emit:request.delivered'] },
@@ -937,13 +981,14 @@ export const TRANSITIONS: readonly Transition[] = [
 2. Каждый переход пишет строку в `request_status_history` в той же транзакции.
 3. `charityAmountMinor` заполняется ровно один раз, в момент первого перехода в `delivered`, и дальше не меняется ни при смене ставки, ни при правке цен.
 4. Складское движение пишется в транзакции своего действия: отметки выпуска (C5), погрузки или её снятия (C6). Провал движения откатывает действие. Переход статуса движений не пишет: списание со склада делает погрузка.
-5. Переход в `ready` невозможен, пока свободный остаток склада не наполняет каждую строку заявки целиком: это guard `stockCovered`, наполнение считает `allocateStock`. Исполнителей у заявки нет: цех работает по позициям, заявку в `ready` доставляет любой водитель.
+5. `in_work -> ready` делает только система, автоматическим шагом в транзакции действия, которое покрыло заявку: приём, «Выполнено» обивщика, складское движение, смена приоритета, правка состава (§20.4). Guard `stockCovered`: у заявки контрагента `allocateStock` наполняет каждую строку целиком, у заявки на склад станции сделали каждую строку целиком (сумма `qty` её заданий с `finished_at` не меньше `qty` строки). Исполнителей у заявки нет: станцию ведёт вся роль, заявку в `ready` доставляет любой водитель.
+10. Заявка уходит в `in_work`, только если вариант каждой строки связан со складской позицией: это guard `stockLinked`. Иначе сделанное станциями некуда положить.
 6. Заявка на склад (`isStockRequest = true`) не порождает благотворительное отчисление и не имеет контрагента.
 7. Автоматический шаг берётся в транзакции действия, которое открыло ему дорогу, и только если его guard-ы прошли. Действие — либо ручной переход, либо отметка оплаты из C7. Человек автоматический шаг не инициирует: роль `system` недоступна ни одному пользователю. Шаги идут цепочкой, пока очередной guard не остановит её, поэтому доставка с принятыми наличными доходит до `paid` одним действием водителя, а доставка с оплатой по счёту останавливается на `awaiting_payment` до отметки. Guard `fullyPaid` держит покрытую заявку в `awaiting_payment`, пока у контрагента есть долг по другим заявкам. Отметка, которая гасит последний долг, проводит автоматический шаг для всех ждущих заявок контрагента в своей транзакции (`settleCounterparty`).
 8. Заявка контрагента уходит из `draft` только с заполненными `deliveryAddressId`, `deliveryAt` и `deceasedName`: это guard `deliveryFilled`. Заявка на склад (`isStockRequest = true`) его не требует. `deliveryAt` замораживается на этом переходе вместе с ценами и дальше не меняется ни одним переходом: срок сдвигается только отменой и новой заявкой.
 9. Заявка контрагента уходит в `delivered` только погруженной целиком: это guard `fullyLoaded`. Погружено по строке равно минус сумме движений склада с её `request_item_id`. Заявка на склад его не требует.
 
-Коды guard-ов: `stockCovered`, `pricesFixed`, `fullyPaid`, `deliveryFilled`, `fullyLoaded` (`GUARD_CODES` в `lib/types/request.ts`). Коды эффектов: `audit`, `freezeCharity`, `emit:request.accepted`, `emit:request.cancelled`, `emit:request.rejected`, `emit:request.ready`, `emit:request.delivered`, `emit:request.paid` (`EFFECT_CODES`).
+Коды guard-ов: `stockCovered`, `pricesFixed`, `fullyPaid`, `deliveryFilled`, `fullyLoaded`, `stockLinked` (`GUARD_CODES` в `lib/types/request.ts`). Коды эффектов: `audit`, `freezeCharity`, `emit:request.accepted`, `emit:request.cancelled`, `emit:request.rejected`, `emit:request.ready`, `emit:request.delivered`, `emit:request.paid` (`EFFECT_CODES`).
 
 ### 6.3 Компенсация вместо удаления
 
@@ -990,7 +1035,8 @@ export const EVENT_KEYS = [
   'request.cancelled', 'request.rejected',
   'request.payment_marked', 'request.paid',
   'stock.below_threshold', 'payroll.week_closed',
-  'support.opened', 'support.message_posted', 'support.closed'
+  'support.opened', 'support.message_posted', 'support.closed',
+  'shop.task_arrived'
 ] as const;
 ```
 
@@ -1012,6 +1058,8 @@ export const EVENT_KEYS = [
 - `notifications.payload` хранит `{ entityId }`, текст письма собирается в `notification.dispatch` из БД на момент отправки.
 
 Переменные шаблона привязаны к событию (`EVENT_TEMPLATE_VARIABLES`). События заявки: `{{number}}`, `{{status}}` (подпись из `lib/ui/status.ts`), `{{url}}`, `{{counterparty}}`, `{{externalNumber}}`. `stock.below_threshold`: `{{item}}` (название позиции), `{{code}}`, `{{balance}}`, `{{threshold}}`, `{{unit}}`, `{{url}}`. `payroll.week_closed`: `{{period}}` (границы недели в `org.timezone`), `{{url}}`. `{{url}}` это `ORIGIN` плюс путь по адресату: `/portal/requests/{id}` человеку портала, `/crm/requests/{id}` человеку мастерской с правом `request.read.any`, `/crm/delivery` остальным людям мастерской, `/crm/stock/{id}` у события склада, `/crm/payroll?week={дата начала}` у события выплат. Подстановка идёт в один проход, значение с фигурными скобками не раскрывается. Денежных переменных нет. Переменная вне набора своего события роняет сид и отклоняется при сохранении шаблона в CRM. Фикстура держит по одному шаблону push на событие, сид вставляет отсутствующий шаблон и не перетирает правку руководителя. В `PushMessage.url` уходит тот же путь без `ORIGIN`.
+
+Событие цеха. `shop.task_arrived` несёт id визита (`shop_tasks.id`) и публикуется только при создании визита: штуки, пришедшие в открытый визит, события не дают. Адресаты это активные люди мастерской, у которых есть роль станции визита; к событию они относятся только этой ролью. Правила `push` есть у `carpenter`, `grinder`, `painter`, `upholsterer`. Переменные шаблона: `{{number}}` (номер заявки), `{{station}}` (подпись роли из `ROLE_TITLE`), `{{priority}}` («срочная» или «обычная»), `{{url}}`. Ссылка `/crm/shop/{id визита}`. Строка колокольчика отдаёт `entityId` равным id визита и `requestNumber` его заявки, `requestId` пуст.
 
 События обращений. `support.opened` и `support.closed` несут id обращения, `support.message_posted` id сообщения, поэтому каждое сообщение даёт ровно один разворот. Первое сообщение обращения отдельного `support.message_posted` не даёт. Адресатов считает `supportRecipients` (`lib/domain/support/recipients.ts`) по стороне автора действия: действие портала идёт активным людям мастерской, действие мастерской идёт каждому `cp_admin` контрагента и автору обращения; если `cp_admin` пишет в обращение сотрудника или закрывает его, автор обращения тоже получает событие. Автор действия не получает событие никогда: это исключение из правила «инициатор из адресатов не исключается». Автора fanout читает из `support_messages.author_id`, `support_threads.created_by_id` или `closed_by_id`. Роли дальше режет матрица: правила `push` есть у `manager` и `owner` на все три события и у `cp_admin` и `cp_employee` на `support.message_posted` и `support.closed`. Переменные шаблонов: `{{thread}}` (номер обращения), `{{subject}}`, `{{counterparty}}`, `{{author}}` (ФИО автора действия), `{{url}}`; у `support.opened` и `support.message_posted` ещё `{{excerpt}}`, начало текста до 100 символов, обрезанное по слову. Ссылка `/portal/support/{id обращения}` человеку портала и `/crm/support/{id обращения}` человеку мастерской. На стенд новые правила и шаблоны приходят командой `pnpm admin notifications:sync`: она вставляет только отсутствующие строки фикстур и не трогает правку руководителя.
 
@@ -1371,6 +1419,7 @@ export interface CrmRequestFilters {
 export interface CrmRequestListItemDto extends RequestListItemDto {
   counterpartyId: number | null; isStockRequest: boolean; deliveryAt: string | null;
   flags: AttentionFlag[];
+  stations: WorkRole[];                  // stations holding open jobs of the request, in shop order
 }
 export interface CrmBoardColumnDto { status: RequestStatus; total: number; cards: CrmRequestListItemDto[]; }
 export interface CrmBoardDto { columns: CrmBoardColumnDto[]; }
@@ -1383,6 +1432,7 @@ export interface CrmRequestCardDto extends Omit<RequestCardDto, 'comments' | 'su
   canMarkPayment: boolean;               // awaiting_payment, a counterparty request, the right request.payment.mark, a rest above zero
   payments?: CrmPaymentMarkDto[];        // newest first, role with prices only
   dueMinor?: number;                     // max(0, totalMinor - sum of the marks); 0 for a stock request
+  shop: CrmLineShopDto[];                // one per line while the request is in_work, empty otherwise
 }
 export interface CrmRequestChoicesDto {
   counterparties: { id: number; name: string }[];
@@ -1391,26 +1441,47 @@ export interface CrmRequestChoicesDto {
 }
 export interface CreatedCrmRequestDto { id: number; number: string; }
 
-// crm-shop.ts — the shop floor (C5). Work goes by position, a request is filled from stock. No money keys.
-export const SHOP_REQUEST_LIMIT = 50;               // requests in work shown at once, the number search reaches the rest
-export const SHOP_PRODUCE_MAX = 999;                // pieces in one production mark
-export interface ShopPositionDto {                   // a stock position of a product: the variant plus its colour
+// crm-shop.ts — the shop stations (C19). A visit is a request at a station; a job is the pieces of a line there.
+// No money keys, no counterparty, no address and no deceased name for any role.
+export const SHOP_TASK_LIMIT = 50;                  // visits shown per station and list, the number search reaches the rest
+export const SHOP_JOB_MAX = 999;                    // pieces in one job, the line limit of the cart
+export interface ShopTaskListItemDto {
+  id: number; requestId: number; number: string; station: WorkRole; priority: RequestPriority;
+  isStockRequest: boolean; deliveryAt: string | null; takenAt: string | null;
+  unitCount: number; doneCount: number;              // pieces of the visit and pieces done at this station
+}
+export interface ShopStationDto {
+  station: WorkRole;
+  fresh: ShopTaskListItemDto[];                       // not taken yet, in station order (§20.4)
+  taken: ShopTaskListItemDto[];
+  total: number;                                     // open visits of the station matching the search
+}
+export interface ShopDto { stations: ShopStationDto[]; }   // the actor's stations; manager and owner get all four
+export interface ShopPositionDto {                   // a stock position of a product: the variant plus its colour; delivery reuses it
   variantId: number; optionId: number | null;
   productTitle: string; sku: string; sizeCode: string; materialTitle: string; colorTitle: string | null;
 }
-export interface ShopQueueRowDto extends ShopPositionDto {
-  neededQty: number;                                 // pieces the requests in work still lack
-  stockQty: number;                                  // balance of the position, never below zero
-  requestCount: number; nearestDeliveryAt: string | null; hasUrgent: boolean;
-  canProduce: boolean;                               // false when the variant has no stock item
+export interface ShopJobDto extends ShopPositionDto {
+  id: number; itemId: number;
+  engraving: string | null; comment: string | null;
+  qty: number; doneQty: number;
 }
-export interface ShopLineDto extends ShopPositionDto { itemId: number; qty: number; filledQty: number; }
-export interface ShopRequestDto {
-  id: number; number: string; priority: RequestPriority; isStockRequest: boolean; counterpartyName: string | null;
-  deliveryAt: string | null; unitCount: number; filledCount: number; lines: ShopLineDto[];
-  canAssemble: boolean;                              // every line filled: guard stockCovered of tech.md 6.2
+export interface ShopTaskDto {
+  id: number; requestId: number; number: string; station: WorkRole; priority: RequestPriority;
+  isStockRequest: boolean; deliveryAt: string | null; comment: string | null;
+  takenAt: string | null; takenByName: string | null; completedAt: string | null;
+  jobs: ShopJobDto[];
+  canTake: boolean;                                  // open and not taken
+  canComplete: boolean;                              // open, has jobs, every job done to the piece
 }
-export interface ShopDto { queue: ShopQueueRowDto[]; requests: ShopRequestDto[]; requestTotal: number; }
+// The shop side of a request line on the CRM card and of a card on the board.
+export interface CrmLineShopDto {
+  itemId: number;
+  fromStockQty: number;                              // pieces allocateStock gives the line now
+  stations: { station: WorkRole; qty: number; doneQty: number }[];   // open jobs, in shop order
+  madeQty: number;                                   // pieces that passed the upholsterer
+  heldBy: string[];                                  // numbers of requests ahead in fillOrder that hold this position
+}
 
 // crm-delivery.ts — the delivery screen (C6). The driver takes cash, so an assembled request carries its sums.
 export const DELIVERY_LIST_LIMIT = 50;              // requests per list; the nearest deadlines come first
@@ -2081,6 +2152,9 @@ CONTRACT GAP
 
 **DoD:** сквозной сценарий отработан всеми ролями на реальных данных, контрольный пример по выплатам сходится до копейки, акт приёмки подписан.
 
+**C19. Станции цеха.** Дизайн `docs/superpowers/specs/2026-10-29-shop-stations-design.md`, план `docs/superpowers/plans/2026-10-29-shop-stations.md`. Таблицы §5.12, автоматический `in_work -> ready` и guard `stockLinked` §6.2, событие `shop.task_arrived` §7.3, право `shop.work` §19, правила §20.4. Уходят очередь выпуска по позициям, «Сделано N» и «Заявка собрана».
+**DoD:** администратор принимает заявку, столяр получает пуш и видит её в «Новых», берёт в работу, отмечает и нажимает «Выполнено»; заявка проходит шлифовщика, маляра и обивщика и становится «Готов к выдаче» без администратора; срочная заявка забирает гроб у обычной, у обычной строка появляется у столяра; шлифовщик по ссылке на визит столяра получает 403.
+
 **C16. Бот МАКС.** Драйвер канала `max` на Bot API: привязка чата к пользователю, отправка по матрице §7.3, лог доставки и ретраи тем же `notification.dispatch`. Привязка чата открывает разрыв контракта и поднимается блоком CONTRACT GAP в начале слайса. Канал становится живым, то есть входит в `LIVE_CHANNELS`.
 **DoD:** пользователь привязывает чат один раз и получает событие ботом, отказ бота виден в логе доставки и уходит в ретрай, повторная отправка того же уведомления второго сообщения не создаёт.
 
@@ -2488,7 +2562,8 @@ Payload push-уведомления не содержит цен, персона
 | `counterparty.staff.manage` | `owner`, `manager`, `cp_admin` | люди контрагента |
 | `prices.manage` | `cp_admin` | «Мои цены» портала |
 | `stock.read` | `owner`, `manager`, роли цеха | склад на чтение |
-| `stock.manage` | `owner`, `manager` | движения, позиции, инвентаризации, цех |
+| `stock.manage` | `owner`, `manager` | движения, позиции, инвентаризации |
+| `shop.work` | `owner`, `manager`, роли цеха | экран цеха и визиты: роль цеха только своей станции, `owner` и `manager` всех |
 | `delivery.work` | `owner`, `manager`, `driver` | экран доставки, погрузка, «Доставлено» |
 | `payroll.read`, `payroll.manage` | `owner`, `manager` | выплаты |
 | `reports.read` | `owner` | отчёты |
@@ -2504,7 +2579,8 @@ Payload push-уведомления не содержит цен, персона
 ### 19.3 Видимость заявок
 
 - Портал: `cp_admin` видит все отправленные заявки своего контрагента, `cp_employee` только свои. Черновик в реестры не попадает.
-- Работник мастерской без `request.read.any` видит отправленные заявки только в статусах, из которых его роль делает переход §6.2 (`reachableStatuses` в `state-machine.ts`). Водитель видит заявки в `ready`. У ролей цеха переходов нет, заявки им не видны.
+- Работник мастерской без `request.read.any` видит отправленные заявки только в статусах, из которых его роль делает переход §6.2 (`reachableStatuses` в `state-machine.ts`). Водитель видит заявки в `ready`.
+- Роль цеха видит заявку только как визит своей станции на экране цеха, и только поля `ShopTaskDto`. Визит чужой станции отвечает 403. Человек с двумя ролями цеха видит обе станции.
 - Доска, реестр и карточка CRM отвечают 403 водителю и ролям цеха.
 
 ### 19.4 Экраны CRM
@@ -2516,7 +2592,7 @@ Payload push-уведомления не содержит цен, персона
 | `/crm` | все роли CRM | | плитки разделов роли |
 | `/crm/board` | `owner`, `manager` | | доска заявок §20.3 |
 | `/crm/requests`, `/new`, `/[id]`, `/export.xlsx` | `owner`, `manager` | | реестр, заведение, карточка §20.3 |
-| `/crm/shop` | `owner`, `manager` | | цех §20.4 |
+| `/crm/shop`, `/[id]` | `owner`, `manager`, роли цеха (визит своей станции) | | станции цеха §20.4 |
 | `/crm/delivery` | `owner`, `manager`, `driver` | | доставка §20.5 |
 | `/crm/support`, `/[id]` | `owner`, `manager` | | обращения §20.13 |
 | `/crm/stock`, `/[id]`, `/inventories`, `/inventories/[id]`, выгрузки | `owner`, `manager`, роли цеха | `owner`, `manager` | склад §20.9 |
@@ -2572,7 +2648,7 @@ Payload push-уведомления не содержит цен, персона
 
 ### 20.3 Заявки в CRM
 
-**Доска** `/crm/board` рисует шесть колонок `BOARD_STATUSES`, в колонке не больше `BOARD_COLUMN_LIMIT` карточек и общий счётчик; колонка `paid` берёт заявки, оплаченные за последние `BOARD_PAID_DAYS` дней. Порядок карточек: срочные, затем ближний `deliveryAt`, заявки без срока в конце. Перенос карточки идёт через `RequestTransitionService`: машина состояний решает, отказ по guard-у называет его словами.
+**Доска** `/crm/board` рисует шесть колонок `BOARD_STATUSES`, в колонке не больше `BOARD_COLUMN_LIMIT` карточек и общий счётчик; колонка `paid` берёт заявки, оплаченные за последние `BOARD_PAID_DAYS` дней. Порядок карточек: срочные, затем ближний `deliveryAt`, заявки без срока в конце. Перенос карточки идёт через `RequestTransitionService`: машина состояний решает, отказ по guard-у называет его словами. В «Готов к выдаче» карточку не переносят: туда заявку ставит система (§6.2, инвариант 5). Карточка «В работе» несёт метки станций, где лежат её открытые задания.
 
 **Фильтры** доски и реестра (`CrmRequestFilters`): статус (только реестр), контрагент или «на склад», приоритет, флаг внимания, окно дат по `submittedAt`; поиск по номеру, своему номеру контрагента, названию контрагента и ФИО умершего. Сортировки `CRM_REQUEST_SORTS`, по сумме только роли с ценами.
 
@@ -2588,12 +2664,20 @@ Payload push-уведомления не содержит цен, персона
 
 ### 20.4 Цех
 
-Цех работает по позициям «вариант, цвет», а не по заявкам. Экран `/crm/shop` («Цех») открывают `owner` и `manager` (`request.read.any` и `stock.manage`), роли цеха экранов не имеют и читают только склад.
+Изделие проходит станции по порядку `WORK_ROLES`: столяр, шлифовщик, маляр, обивщик, затем склад. Исключений по моделям нет. Станцию ведёт вся роль: визит видят все её люди, отметки делает любой из них. `owner` и `manager` делают на любой станции всё то же. Схема в §5.12, типы в §8.
 
-- **Очередь выпуска** `ShopQueueRowDto`: позиции, которых не хватает заявкам в работе, с ближайшим сроком и числом заявок. Цен на экране нет.
-- **«Сделано N»** пишет движение `production` на `+N` без заявки и аудит `stock.produce`. Вариант без складской позиции и цвет вне матрицы варианта сервер отклоняет, в одной отметке не больше `SHOP_PRODUCE_MAX` штук. Комплектующие отметка не списывает.
-- **Наполнение** считает `allocateStock` (`lib/domain/stock/allocation.ts`): остаток позиции раздаётся строкам по `fillOrder`: заявки контрагентов в `ready` (изделия лежат на складе до погрузки), затем заявки контрагентов в `in_work` (срочные, ближний `deliveryAt`, без срока в конце, затем по порядку заведения), затем заявки на склад в `in_work`. Заявка на склад в `ready` остаток не держит, отрицательный остаток ничего не наполняет, строка хочет `qty − loadedQty`.
-- **«Заявка собрана»** переводит `in_work -> ready` по guard-у `stockCovered`: каждая строка наполнена целиком. Поиск заявки по номеру.
+- **Раздача склада** считается на лету: `allocateStock` отдаёт остаток позиции «вариант, цвет» строкам по `fillOrder`: заявки контрагентов в `ready`, затем заявки контрагентов в `in_work` (срочные, ближний `deliveryAt`, без срока в конце, затем порядок заведения). Отрицательный остаток ничего не наполняет, строка хочет `qty − loadedQty`. Заявка на склад в раздаче не участвует (`fillTier` даёт ей `null`): она ничего не берёт с полки, сделанное для неё ложится на полку свободным остатком.
+- **Досылка** (`planDispatch` в `lib/domain/shop/dispatch.ts`, применяет `ShopDispatch`) сравнивает раздачу с цехом. Для строки заявки контрагента в `in_work` `нужно = shelfWant − наполнено − в цеху`, для строки заявки на склад в `in_work` `нужно = qty − сделано − в цеху`, где «в цеху» это сумма `qty` открытых заданий строки, а «сделано» сумма `qty` заданий с `finished_at`. При `нужно > 0` столько штук приходит столяру. При `нужно < 0` лишнее снимается только с задания столяра и только из несделанных штук; задание, ставшее нулём, удаляется. Задания дальше по станциям доделываются. Строки заявок вне `in_work` досылка не трогает.
+- **Когда идёт досылка.** В транзакции каждого действия, которое меняет раздачу или цех: приём заявки (до автоматических шагов), смена приоритета, правка состава, «Выполнено» обивщика, ручное движение и его сторно, проведение инвентаризации, погрузка и её снятие. Кроме приёма, за досылкой в той же транзакции идут автоматические шаги `in_work -> ready` по всем заявкам в работе (`ShopFlow.afterChange`). Повторный прогон на тех же данных ничего не меняет.
+- **Визит.** Штуки, пришедшие на станцию, ложатся в открытый визит заявки на этой станции; если его нет, визит создаётся и публикует `shop.task_arrived`. «Взять в работу» ставит `taken_at` и `taken_by_id` один раз, повтор ничего не пишет. Счётчик задания принимает новое значение `done_qty` от 0 до `qty`, а не прибавку. «Выполнено» открыто, когда у визита есть задания и каждое сделано целиком; оно закрывает визит, и каждое задание переходит в визит следующей станции с `done_qty = 0`. На обивщике задание завершается: пишется движение `production` на `+qty` по позиции строки, `finished_at` и `production_move_id`. Повторное «Выполнено» по закрытому визиту отвечает 409 и ничего не пишет.
+- **Порядок визитов** на станции: срочные, ближний `deliveryAt`, без срока, затем `accepted_at` заявки, затем id визита. Списки «Новые» (визит не взят) и «В работе» (взят), поиск по номеру заявки, не больше `SHOP_TASK_LIMIT` визитов в списке.
+- **Готовность** ставит система (§6.2, инвариант 5). Открытые задания заявки, ставшей `ready`, остаются: досылка снимает несделанное у столяра, остальное доделывается и ложится на полку.
+- **Что видит исполнитель:** номер заявки, «Срочно», срок доставки, комментарий заявки, по заданию модель, артикул, размер, материал, цвет, гравировку, комментарий строки, «Нужно N шт» и счётчик «Сделано N из M» (строка из одной штуки рисуется чекбоксом). Цен, контрагента, адреса и ФИО умершего нет.
+- **Экран** `/crm/shop` по праву `shop.work`: станции актора, у `owner` и `manager` все четыре с переключением. Визит `/crm/shop/[id]` с кнопками «Взять в работу», «Выполнено» и счётчиками заданий. Экран рассчитан на телефон, тач-цели не меньше 44 px. Роли цеха получают «Цех» первым пунктом меню.
+- **Карточка заявки CRM** показывает по строке `CrmLineShopDto`: «Со склада N», станции с «Сделано N из M», сделанное и номера заявок, которые держат позицию выше по очереди.
+- Удалённая правкой строка теряет задания вместе с собой. Приход изделия помимо станций пишут приходом или корректировкой склада.
+
+Аудит: `shop.task.take`, `shop.job.progress` (до и после `done_qty`), `shop.task.complete` (id заданий, следующая станция, id движений `production`) по `shop_tasks`.
 
 ### 20.5 Доставка
 
@@ -2647,10 +2731,10 @@ Payload push-уведомления не содержит цен, персона
 - **Ручное движение.** `purchase` (приход) только с плюсом, причина необязательна. `adjustment` (корректировка) со знаком и с обязательной причиной из `stock_move_reason`. Ноль отклоняется, у изделия цвет обязан входить в матрицу варианта, у комплектующего цвета нет, `occurred_at` ставит сервер, в одном движении не больше `STOCK_MOVE_MAX` единиц.
 - **Сторно** (§6.3) есть только у `purchase` и `adjustment`, один раз на движение, сторно само не сторнируется. Выпуск исправляет корректировка, погрузку снимает экран доставки, инвентаризацию исправляет новая инвентаризация.
 - **Инвентаризация** идёт через черновик своего вида (изделия или комплектующие), открытый черновик на вид один. Черновик получает строку на каждую активную позицию вида, у изделия на каждую пару «позиция, цвет» с хотя бы одним движением; его можно сохранять и удалить. «Провести» в одной транзакции пересчитывает `expected_qty` по остатку на момент проведения и пишет движение `inventory` на `actual − expected` по каждой строке с расхождением. Проведённая инвентаризация не правится и не удаляется.
-- **Порог** считается по позиции целиком, у изделия по сумме цветов; порог 0 выключает проверку. Движение, после которого остаток ниже порога, ставит `stock.threshold.check` в своей транзакции: ручное движение, сторно, проведение инвентаризации, выпуск, погрузка и её снятие. Хендлер читает остаток заново и публикует `stock.below_threshold`, если он всё ещё ниже. Уведомление приходит одно на позицию за всё время, дальше низкий и отрицательный остаток видны подсветкой реестра и фильтром «ниже порога».
+- **Порог** считается по позиции целиком, у изделия по сумме цветов; порог 0 выключает проверку. Движение, после которого остаток ниже порога, ставит `stock.threshold.check` в своей транзакции: ручное движение, сторно, проведение инвентаризации, погрузка и её снятие. Те же действия запускают досылку цеха §20.4. Хендлер читает остаток заново и публикует `stock.below_threshold`, если он всё ещё ниже. Уведомление приходит одно на позицию за всё время, дальше низкий и отрицательный остаток видны подсветкой реестра и фильтром «ниже порога».
 - **Выгрузки** реестра и журнала позиции в XLSX синхронные.
 
-Аудит: `stock.item.create`, `stock.item.update` (себестоимость до и после), `stock.move.create`, `stock.move.reverse`, `stock.inventory.create`, `stock.inventory.save`, `stock.inventory.apply`, `stock.inventory.delete`, `stock.produce`.
+Аудит: `stock.item.create`, `stock.item.update` (себестоимость до и после), `stock.move.create`, `stock.move.reverse`, `stock.inventory.create`, `stock.inventory.save`, `stock.inventory.apply`, `stock.inventory.delete`.
 
 ### 20.10 Выплаты
 

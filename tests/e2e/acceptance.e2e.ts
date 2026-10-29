@@ -1,7 +1,8 @@
 import { expect, test, type Page } from '@playwright/test';
 import { crmNavLink, login, openBell, purchaseMoneyKeys, type RoleKey } from './fixtures';
 import { openCard, sendRequest } from './portal-flow';
-import { clearOtherDebts, e2eDb, moneyOf, statusChain, statusOf, stockUp } from './transitions';
+import { passStation } from './shop-flow';
+import { clearOtherDebts, e2eDb, emptyShelf, moneyOf, statusChain, statusOf } from './transitions';
 
 /*
  * The acceptance scenario of stage 2 (tech.md 14, C14): one request goes from the cart of a
@@ -54,6 +55,8 @@ test.describe.serial('one request through all seven roles', () => {
 		await page.getByTestId('bell-item').filter({ hasText: shared.number }).first().click();
 		await expect(page).toHaveURL(/\/crm\/requests\/\d+$/);
 		shared.card = new URL(page.url()).pathname;
+		// The shelves of the shared database may hold the piece: take it off so the stations make it.
+		emptyShelf(db, shared.number);
 		await page.getByRole('button', { name: 'Принять в работу' }).click();
 
 		await expect(page.locator('[data-slot="badge"]').filter({ hasText: 'В работе' })).toBeVisible();
@@ -66,34 +69,18 @@ test.describe.serial('one request through all seven roles', () => {
 		'painter',
 		'upholsterer'
 	] as const satisfies readonly RoleKey[]) {
-		// The shop works by position since v1.41: the crew holds accounts and reads the warehouse.
-		test(`${role} reads the warehouse and has no part in the request`, async ({ page }) => {
+		// Every product passes the four stations in turn (tech.md §20.4), each on its own account.
+		test(`${role} takes the request at the station and passes it on`, async ({ page }) => {
 			await login(page, role);
 
-			await expectSections(page, ['Склад'], ['Заявки', 'Цех', 'Доставка', 'Выплаты', 'Отчёты']);
-			expect((await page.goto('/crm/stock'))?.status()).toBe(200);
+			await expectSections(page, ['Цех', 'Склад'], ['Заявки', 'Доставка', 'Выплаты', 'Отчёты']);
 			expect((await page.goto(shared.card))?.status()).toBe(403);
+			await passStation(page, shared.number);
+			expect(purchaseMoneyKeys(await page.content())).toEqual([]);
 		});
 	}
 
-	test('manager marks the made piece on the shop floor and assembles the request', async ({
-		page
-	}) => {
-		// The shelves of the shared database may owe pieces to old loadings: one piece is left to make.
-		stockUp(db, shared.number, 1);
-		await login(page, 'manager');
-		await page.goto(`/crm/shop?q=${encodeURIComponent(shared.number)}`);
-		const request = page.getByTestId('shop-request').filter({ hasText: shared.number });
-		await expect(request.getByTestId('shop-fill')).toHaveText('Наполнено 0 из 1');
-
-		const row = page.getByTestId('shop-queue-row').filter({ hasText: 'Модель «Волга»' }).first();
-		await row.getByLabel('Штук').fill('1');
-		await row.getByRole('button', { name: 'Сделано' }).click();
-		await expect(page.getByText('Выпуск отмечен')).toBeVisible();
-		await expect(request.getByTestId('shop-fill')).toHaveText('Наполнено 1 из 1');
-		await request.getByRole('button', { name: 'Заявка собрана' }).click();
-
-		await expect(request).toHaveCount(0);
+	test('the last station leaves the request ready for the driver', () => {
 		expect(statusOf(db, shared.number)).toBe('ready');
 	});
 

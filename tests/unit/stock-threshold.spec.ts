@@ -1,6 +1,5 @@
 import pino from 'pino';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { ShopService } from '../../src/lib/server/crm-shop/shop.service';
 import { InventoryService } from '../../src/lib/server/crm-stock/inventory.service';
 import { StockMoveService } from '../../src/lib/server/crm-stock/stock-move.service';
 import { backoffSeconds } from '../../src/lib/server/queue/backoff';
@@ -11,13 +10,7 @@ import { Worker } from '../../src/lib/server/queue/worker';
 import { StockThreshold } from '../../src/lib/server/stock/stock-threshold';
 import { fanoutJobs, resetInventories, stockItemId, thresholdJobs } from './helpers/crm-stock';
 import { insertUser, migratedDatabase } from './helpers/db';
-import {
-	crmActor,
-	optionId,
-	resetRequests,
-	seedOrderingWorld,
-	variantId
-} from './helpers/portal-requests';
+import { crmActor, optionId, resetRequests, seedOrderingWorld } from './helpers/portal-requests';
 
 const db = migratedDatabase();
 seedOrderingWorld(db);
@@ -82,16 +75,7 @@ describe('which moves raise the signal (tech.md v1.45)', () => {
 		expect(thresholdJobs(db)).toEqual([]);
 	});
 
-	it('watches a production mark of the shop floor and an applied inventory', () => {
-		db.run(`update stock_items set min_threshold = 5 where id = ${VOLGA}`);
-		new ShopService(manager).produce({
-			variantId: variantId(db, 'MDL-201-180-PIN'),
-			optionId: WALNUT,
-			qty: 2
-		});
-		expect(thresholdJobs(db).map((job) => job.payload)).toEqual([{ stockItemId: VOLGA }]);
-		db.run(`update stock_items set min_threshold = 0 where id = ${VOLGA}`);
-
+	it('watches an applied inventory', () => {
 		purchase(PINE, 50);
 		const inventory = new InventoryService(manager);
 		const id = inventory.create({ kind: 'component', comment: null });
