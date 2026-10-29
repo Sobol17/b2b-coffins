@@ -12,6 +12,7 @@ import { DeliveryService } from '../../src/lib/server/crm-delivery/delivery.serv
 import { ShopService } from '../../src/lib/server/crm-shop/shop.service';
 import { charityRecountHandler } from '../../src/lib/server/queue/handlers/charity-recount';
 import { notificationFanoutHandler } from '../../src/lib/server/queue/handlers/notification-fanout';
+import { withTransaction } from '../../src/lib/server/core/tx';
 import { Worker } from '../../src/lib/server/queue/worker';
 import { DraftService } from '../../src/lib/server/request/draft.service';
 import { RequestSubmitService } from '../../src/lib/server/request/request-submit.service';
@@ -141,7 +142,8 @@ function advance(db: Db, people: People, id: number, scenario: DemoScenario): vo
 		const variantId = variantIdOf(db, line.sku);
 		shop.produce({ variantId, optionId: colorIdOf(db, variantId, line.color), qty: line.qty });
 	}
-	move(people.manager, 'ready');
+	// Readiness is the system's step (tech.md §6.2, invariant 5): it follows the pieces on the shelf.
+	withTransaction((tx) => new RequestTransitionService(people.manager).settleWork(tx));
 	if (scenario.stage === 'ready') return;
 	// The driver loads every line on the delivery screen (tech.md v1.43); the paid scenario is the
 	// one where he takes the cash at the door.

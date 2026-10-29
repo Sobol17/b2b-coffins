@@ -23,10 +23,11 @@ function assertProperty(property: fc.IPropertyWithHooks<unknown[]>): void {
 }
 
 describe('transition flow of tech.md 6.2', () => {
-	it('chains the automatic steps that close a delivered request', () => {
+	it('chains the automatic steps that ready a request and close a delivered one', () => {
 		const followed = REQUEST_STATUSES.filter((s) => autoFollowUp(s) !== undefined);
 
-		expect(followed).toEqual(['delivered', 'awaiting_payment']);
+		expect(followed).toEqual(['in_work', 'delivered', 'awaiting_payment']);
+		expect(autoFollowUp('in_work')).toBe('ready');
 		expect(autoFollowUp('delivered')).toBe('awaiting_payment');
 		expect(autoFollowUp('awaiting_payment')).toBe('paid');
 	});

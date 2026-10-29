@@ -7,7 +7,7 @@ import { DraftService } from '../../../src/lib/server/request/draft.service';
 import { RequestSubmitService } from '../../../src/lib/server/request/request-submit.service';
 import { insertUser } from './db';
 import { crmActor, optionId, portalActor, seedOrderingWorld, variantId } from './portal-requests';
-import { move } from './transitions';
+import { move, settleWork } from './transitions';
 
 const DAY_MS = 86_400_000;
 
@@ -53,7 +53,7 @@ export function seedDeliveryWorld(db: Db) {
 	function assembled(qty: number): number {
 		const id = inWork(qty);
 		produce(qty);
-		move(actors.manager, id, 'ready');
+		settleWork(actors.manager);
 		return id;
 	}
 

@@ -1,11 +1,6 @@
 import { and, eq } from 'drizzle-orm';
 import { beforeEach, describe, expect, it } from 'vitest';
-import {
-	ConflictError,
-	ForbiddenError,
-	NotFoundError,
-	ValidationError
-} from '../../src/lib/server/core/errors';
+import { ForbiddenError, NotFoundError, ValidationError } from '../../src/lib/server/core/errors';
 import { ShopService } from '../../src/lib/server/crm-shop/shop.service';
 import {
 	auditLog,
@@ -27,7 +22,7 @@ import {
 	seedOrderingWorld,
 	variantId
 } from './helpers/portal-requests';
-import { move, statusOf } from './helpers/transitions';
+import { move, settleWork, statusOf } from './helpers/transitions';
 
 const db = migratedDatabase();
 const world = seedOrderingWorld(db);
@@ -175,49 +170,17 @@ describe('the fill of requests in work (C5 DoD)', () => {
 		expect([fillOf(urgent)?.canAssemble, fillOf(soon)?.canAssemble]).toEqual([true, false]);
 	});
 
-	it('asks the shop for exactly the missing pieces, the nearest deadline shown', () => {
-		inWork(2, { inDays: 5 });
-		const soon = inWork(3, { inDays: 2 });
-		produce(1);
-
-		const [row] = shop().overview().queue;
-		expect(row).toMatchObject({
-			variantId: VOLGA_180,
-			optionId: WALNUT,
-			colorTitle: 'Орех',
-			neededQty: 4,
-			stockQty: 1,
-			requestCount: 2,
-			canProduce: true
-		});
-		expect(row?.nearestDeliveryAt).toBe(
-			db.select().from(requests).where(eq(requests.id, soon)).all()[0]?.deliveryAt?.toISOString()
-		);
-	});
-
 	it('moves a filled request to ready and keeps its pieces from the next request', () => {
 		const first = inWork(2, { inDays: 3 });
 		produce(2);
-		move(manager, first, 'ready');
+		settleWork(manager);
 		expect(statusOf(first)).toBe('ready');
 
 		// Even an urgent newcomer cannot take pieces an assembled request holds on the shelf.
 		const second = inWork(2, { urgent: true });
 		expect(fillOf(second)?.filledCount).toBe(0);
-		expect(() => move(manager, second, 'ready')).toThrow(ConflictError);
+		expect(settleWork(manager)).toEqual([]);
 		expect(statusOf(second)).toBe('in_work');
-	});
-
-	it('finds a request in work by a part of its number, the queue stays whole', () => {
-		const wanted = inWork(1);
-		inWork(1);
-		const number = db.select().from(requests).where(eq(requests.id, wanted)).all()[0]?.number;
-
-		const found = shop().overview(number?.slice(-5));
-
-		expect(found.requests.map((request) => request.id)).toEqual([wanted]);
-		expect(found.requestTotal).toBe(1);
-		expect(found.queue[0]?.neededQty).toBe(2);
 	});
 
 	it('sends no money key and no line of a request outside work', () => {

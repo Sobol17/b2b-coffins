@@ -285,7 +285,7 @@ describe('requests that hold a position ahead of a line (tech.md §20.4)', () =>
 		expect(last && heldAhead(last, lines, filled)).toEqual([3]);
 	});
 
-	it('never names the line\'s own request or one behind it in the queue', () => {
+	it("never names the line's own request or one behind it in the queue", () => {
 		assertProperty(
 			fc.property(demand, balances, (lines, stock) => {
 				const filled = allocateStock(lines, stock);

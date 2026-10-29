@@ -9,3 +9,4 @@ export * from './system';
 export * from './users';
 export * from './support';
 export * from './finance';
+export * from './shop';

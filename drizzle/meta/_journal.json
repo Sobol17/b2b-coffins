@@ -162,6 +162,13 @@
       "when": 1793176246603,
       "tag": "0022_equal_bastion",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "6",
+      "when": 1793252050412,
+      "tag": "0023_steep_zemo",
+      "breakpoints": true
     }
   ]
 }

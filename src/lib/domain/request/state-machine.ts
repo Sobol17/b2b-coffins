@@ -17,7 +17,8 @@ export const TRANSITIONS: readonly Transition[] = [
 		from: 'new',
 		to: 'in_work',
 		roles: ['manager', 'owner'],
-		guards: ['pricesFixed'],
+		// Without a stock item the pieces the stations make have nowhere to land (invariant 10).
+		guards: ['pricesFixed', 'stockLinked'],
 		effects: ['audit', 'emit:request.accepted']
 	},
 	{
@@ -37,8 +38,9 @@ export const TRANSITIONS: readonly Transition[] = [
 	{
 		from: 'in_work',
 		to: 'ready',
-		// The shop works by position and the request is assembled from stock (tech.md v1.41).
-		roles: ['manager', 'owner'],
+		// The shelf or the upholsterer decides readiness, never a person (tech.md §6.2, invariant 5).
+		roles: ['system'],
+		auto: true,
 		guards: ['stockCovered'],
 		effects: ['emit:request.ready']
 	},

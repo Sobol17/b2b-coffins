@@ -21,9 +21,12 @@ import {
 	move,
 	pay,
 	refused,
+	relinkStock,
+	settleWork,
 	statusOf,
 	stockUp,
-	totalOf
+	totalOf,
+	unlinkStock
 } from './helpers/transitions';
 
 const db = migratedDatabase();
@@ -63,11 +66,9 @@ function sent(): number {
  * mark written before the delivery move, the way the driver's checkbox will write it in C6.
  */
 function drive(id: number, upTo: RequestStatus): void {
+	if (upTo !== 'in_work') stockUp(id);
 	move(managerCtx, id, 'in_work');
-	if (upTo === 'in_work') return;
-	stockUp(id);
-	move(managerCtx, id, 'ready');
-	if (upTo === 'ready') return;
+	if (upTo === 'in_work' || upTo === 'ready') return;
 	if (upTo === 'paid') pay(id, totalOf(id), driverId);
 	loadUp(id);
 	move(driverCtx, id, 'delivered');
@@ -167,19 +168,55 @@ describe('request transitions (P5)', () => {
 		expect(move(managerCtx, id, 'in_work').status).toBe('in_work');
 	});
 
-	it('answers 409 in words until stock fills every line of the request (v1.41)', () => {
+	it('readies a request on acceptance when the shelf already covers it (tech.md §6.2)', () => {
+		const id = sent();
+		stockUp(id);
+
+		expect(move(managerCtx, id, 'in_work').status).toBe('ready');
+		expect(history(id).at(-1)).toMatchObject({
+			fromStatus: 'in_work',
+			toStatus: 'ready',
+			actorId: null
+		});
+	});
+
+	it('keeps an uncovered request in work and lets nobody ready it by hand (invariant 5)', () => {
+		const id = sent();
+
+		expect(move(managerCtx, id, 'in_work').status).toBe('in_work');
+		expect(refused(() => move(managerCtx, id, 'ready'))).toEqual({
+			name: 'ForbiddenError',
+			status: 403
+		});
+		expect(statusOf(id)).toBe('in_work');
+	});
+
+	it('readies every covered request in work once stock arrives (settleWork)', () => {
 		const id = sent();
 		move(managerCtx, id, 'in_work');
-
-		expect(refused(() => move(managerCtx, id, 'ready'))).toEqual({
-			name: 'ConflictError',
-			status: 409
-		});
-		expect(() => move(managerCtx, id, 'ready')).toThrow('На складе не хватает позиций заявки');
-		expect(statusOf(id)).toBe('in_work');
-
 		stockUp(id);
-		expect(move(managerCtx, id, 'ready').status).toBe('ready');
+
+		expect(settleWork(managerCtx)).toEqual([id]);
+		expect(statusOf(id)).toBe('ready');
+		expect(settleWork(managerCtx)).toEqual([]);
+	});
+
+	it('refuses to accept a line whose variant has no stock item (invariant 10)', () => {
+		const id = sent();
+		unlinkStock(VOLGA_180);
+
+		try {
+			expect(refused(() => move(managerCtx, id, 'in_work'))).toEqual({
+				name: 'ConflictError',
+				status: 409
+			});
+			expect(() => move(managerCtx, id, 'in_work')).toThrow(
+				'У варианта нет складской позиции, свяжите её в каталоге'
+			);
+			expect(statusOf(id)).toBe('new');
+		} finally {
+			relinkStock(VOLGA_180);
+		}
 	});
 
 	it('answers 403 on a request of another counterparty', () => {
@@ -202,7 +239,6 @@ describe('request transitions (P5)', () => {
 	it('keeps the shop crew out of the assembly (v1.41)', () => {
 		const id = sent();
 		move(managerCtx, id, 'in_work');
-		stockUp(id);
 
 		expect(refused(() => move(carpenterCtx, id, 'ready')).status).toBe(403);
 		expect(statusOf(id)).toBe('in_work');
@@ -218,7 +254,7 @@ describe('request transitions (P5)', () => {
 			status: 403
 		});
 		stockUp(id);
-		move(managerCtx, id, 'ready');
+		settleWork(managerCtx);
 		loadUp(id);
 
 		expect(move(driverCtx, id, 'delivered').status).toBe('awaiting_payment');

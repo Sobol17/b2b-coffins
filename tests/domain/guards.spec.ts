@@ -78,6 +78,7 @@ describe('transition guards of tech.md 6.2', () => {
 				(stockCovered, unitPricesMinor, totalMinor, paymentMarksMinor) => {
 					const guards = evaluateGuards({
 						stockCovered,
+						stockLinked: stockCovered,
 						unitPricesMinor,
 						totalMinor,
 						paymentMarksMinor,
@@ -93,6 +94,7 @@ describe('transition guards of tech.md 6.2', () => {
 
 	it('passes the stock fill through as guard stockCovered (v1.41)', () => {
 		const facts = {
+			stockLinked: true,
 			unitPricesMinor: [100],
 			totalMinor: 100,
 			paymentMarksMinor: [],
@@ -104,6 +106,23 @@ describe('transition guards of tech.md 6.2', () => {
 		expect([
 			evaluateGuards({ ...facts, stockCovered: false }).stockCovered,
 			evaluateGuards({ ...facts, stockCovered: true }).stockCovered
+		]).toEqual([false, true]);
+	});
+
+	it('passes the stock links through as guard stockLinked (tech.md §6.2, invariant 10)', () => {
+		const facts = {
+			stockCovered: true,
+			unitPricesMinor: [100],
+			totalMinor: 100,
+			paymentMarksMinor: [],
+			otherDebtMinor: 0,
+			delivery: STOCK_DELIVERY,
+			loadedLines: []
+		};
+
+		expect([
+			evaluateGuards({ ...facts, stockLinked: false }).stockLinked,
+			evaluateGuards({ ...facts, stockLinked: true }).stockLinked
 		]).toEqual([false, true]);
 	});
 });
