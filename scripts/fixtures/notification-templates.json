@@ -76,5 +76,11 @@
 		"channel": "push",
 		"subject": "Обращение №{{thread}} закрыто",
 		"body": "{{subject}}"
+	},
+	{
+		"eventKey": "shop.task_arrived",
+		"channel": "push",
+		"subject": "Новая заявка {{number}}",
+		"body": "{{station}}: {{priority}} заявка в работу"
 	}
 ]

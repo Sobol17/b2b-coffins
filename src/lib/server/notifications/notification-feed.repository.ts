@@ -1,4 +1,5 @@
 import { and, desc, eq, inArray, isNull, sql } from 'drizzle-orm';
+import { alias } from 'drizzle-orm/sqlite-core';
 import { countExpression } from '../core/list';
 import { BaseRepository } from '../core/repository';
 import type { Tx } from '../db/client';
@@ -6,6 +7,7 @@ import {
 	notificationFeed,
 	payrollPeriods,
 	requests,
+	shopTasks,
 	stockItems,
 	supportMessages,
 	supportThreads,
@@ -25,9 +27,13 @@ export interface FeedRow {
 	readonly weekStartsOn: Date | null;
 	readonly supportThreadId: number | null;
 	readonly supportSubject: string | null;
+	readonly shopTaskId: number | null;
+	readonly shopRequestNumber: string | null;
 	readonly readAt: Date | null;
 	readonly createdAt: Date;
 }
+
+const visitRequest = alias(requests, 'feed_visit_request');
 
 const threadIdOfFeed = sql<number>`coalesce(${supportMessages.threadId}, case when ${notificationFeed.eventKey} in ('support.opened', 'support.closed') then ${notificationFeed.entityId} end)`;
 
@@ -79,6 +85,8 @@ export class NotificationFeedRepository extends BaseRepository<typeof notificati
 				weekStartsOn: payrollPeriods.startsOn,
 				supportThreadId: supportThreads.id,
 				supportSubject: supportThreads.subject,
+				shopTaskId: shopTasks.id,
+				shopRequestNumber: visitRequest.number,
 				readAt: notificationFeed.readAt,
 				createdAt: notificationFeed.createdAt
 			})
@@ -127,6 +135,17 @@ export class NotificationFeedRepository extends BaseRepository<typeof notificati
 					workshop ? undefined : eq(supportThreads.counterpartyId, users.counterpartyId)
 				)
 			)
+			// A visit is the workshop's: it names its request by number only (tech.md 7.3).
+			.leftJoin(
+				shopTasks,
+				workshop
+					? and(
+							eq(shopTasks.id, notificationFeed.entityId),
+							eq(notificationFeed.eventKey, 'shop.task_arrived')
+						)
+					: never
+			)
+			.leftJoin(visitRequest, eq(visitRequest.id, shopTasks.requestId))
 			.where(this.own(ctx))
 			.orderBy(desc(notificationFeed.createdAt), desc(notificationFeed.id))
 			.limit(limit)

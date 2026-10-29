@@ -4,6 +4,7 @@ import { NotificationFeedRepository } from '../../notifications/notification-fee
 import { NotificationRuleRepository } from '../../notifications/notification-rule.repository';
 import { NotificationRepository, type Person } from '../../notifications/notification.repository';
 import { PushSubscriptionRepository } from '../../notifications/push-subscription.repository';
+import { ShopFactsRepository } from '../../notifications/shop-facts.repository';
 import { SupportFactsRepository } from '../../notifications/support-facts.repository';
 import { SettingsRepository } from '../../settings/settings.repository';
 import { defineHandler } from '../job-handler';
@@ -18,7 +19,12 @@ import {
 	type RoleRule
 } from '$lib/domain/notification/matrix';
 import { supportRecipients } from '$lib/domain/support/recipients';
-import { REQUEST_EVENT_KEYS, SUPPORT_EVENT_KEYS, type EventKey } from '$lib/types/events';
+import {
+	REQUEST_EVENT_KEYS,
+	SHOP_EVENT_KEYS,
+	SUPPORT_EVENT_KEYS,
+	type EventKey
+} from '$lib/types/events';
 import { LIVE_CHANNELS } from '$lib/types/notifications';
 import type { RoleCode } from '$lib/types/roles';
 import { notificationsEnabledSchema } from '$lib/validation/settings';
@@ -30,6 +36,7 @@ export interface FanoutDeps {
 	readonly isEnabled: () => boolean;
 	readonly feed?: NotificationFeedRepository;
 	readonly support?: Pick<SupportFactsRepository, 'occurrence'>;
+	readonly shop?: Pick<ShopFactsRepository, 'occurrence'>;
 }
 
 /** One person and the roles they hold towards this very event. */
@@ -59,6 +66,7 @@ interface Plan {
 export function createNotificationFanoutHandler(deps: FanoutDeps) {
 	const feed = deps.feed ?? new NotificationFeedRepository();
 	const support = deps.support ?? new SupportFactsRepository();
+	const shop = deps.shop ?? new ShopFactsRepository();
 	return defineHandler({
 		topic: 'notification.fanout',
 		schema: JOB_PAYLOAD_SCHEMAS['notification.fanout'],
@@ -81,6 +89,7 @@ export function createNotificationFanoutHandler(deps: FanoutDeps) {
 
 	function addresseesOf(event: Occurrence, tx: Tx): Addressee[] {
 		if (SUPPORT_EVENT_KEYS.includes(event.eventKey)) return supportAddressees(event, tx);
+		if (SHOP_EVENT_KEYS.includes(event.eventKey)) return shopAddressees(event, tx);
 		const workshop = deps.notifications.crmPeople(tx);
 		if (!REQUEST_EVENT_KEYS.includes(event.eventKey)) {
 			// Stock and payroll are the workshop's own business: the portal never hears of them.
@@ -102,6 +111,16 @@ export function createNotificationFanoutHandler(deps: FanoutDeps) {
 				roles: workshopRolesTowards(person.roles, counterpartyId === null)
 			}))
 		];
+	}
+
+	/** A visit concerns its station only: the people of that role, towards it by that role alone. */
+	function shopAddressees(event: Occurrence, tx: Tx): Addressee[] {
+		const visit = shop.occurrence(event.entityId, tx);
+		if (!visit) return [];
+		return deps.notifications
+			.crmPeople(tx)
+			.filter((person) => person.roles.includes(visit.station))
+			.map((person) => ({ person, roles: [visit.station] }));
 	}
 
 	/**

@@ -12,7 +12,9 @@ export const EVENT_KEYS = [
 	// Counterparty questions (tech.md 7.3, v1.57). A message event carries the message id.
 	'support.opened',
 	'support.message_posted',
-	'support.closed'
+	'support.closed',
+	// A visit of a request to a station (tech.md 7.3, §20.4): the entity is the visit, not the request.
+	'shop.task_arrived'
 ] as const;
 export type EventKey = (typeof EVENT_KEYS)[number];
 
@@ -24,4 +26,9 @@ export const REQUEST_EVENT_KEYS = EVENT_KEYS.filter((key) =>
 /** Events of a support thread: the feed and the push lead them to the thread, not to a request. */
 export const SUPPORT_EVENT_KEYS = EVENT_KEYS.filter((key) =>
 	key.startsWith('support.')
+) as readonly EventKey[];
+
+/** Events of a shop visit: the feed and the push lead them to the visit on its station. */
+export const SHOP_EVENT_KEYS = EVENT_KEYS.filter((key) =>
+	key.startsWith('shop.')
 ) as readonly EventKey[];

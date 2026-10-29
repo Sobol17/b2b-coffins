@@ -232,5 +232,29 @@
 		"roleCode": "cp_employee",
 		"channel": "push",
 		"enabled": true
+	},
+	{
+		"eventKey": "shop.task_arrived",
+		"roleCode": "carpenter",
+		"channel": "push",
+		"enabled": true
+	},
+	{
+		"eventKey": "shop.task_arrived",
+		"roleCode": "grinder",
+		"channel": "push",
+		"enabled": true
+	},
+	{
+		"eventKey": "shop.task_arrived",
+		"roleCode": "painter",
+		"channel": "push",
+		"enabled": true
+	},
+	{
+		"eventKey": "shop.task_arrived",
+		"roleCode": "upholsterer",
+		"channel": "push",
+		"enabled": true
 	}
 ]

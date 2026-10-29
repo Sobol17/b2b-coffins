@@ -3,6 +3,7 @@ import { EVENT_KEYS, type EventKey } from '$lib/types/events';
 const REQUEST_VARIABLES = ['number', 'status', 'url', 'counterparty', 'externalNumber'] as const;
 const STOCK_VARIABLES = ['item', 'code', 'balance', 'threshold', 'unit', 'url'] as const;
 const PAYROLL_VARIABLES = ['period', 'url'] as const;
+const SHOP_VARIABLES = ['number', 'station', 'priority', 'url'] as const;
 const SUPPORT_VARIABLES = [
 	'thread',
 	'subject',
@@ -16,7 +17,7 @@ const SUPPORT_CLOSED_VARIABLES = SUPPORT_VARIABLES.filter((name) => name !== 'ex
 
 export type TemplateValues = Readonly<Record<string, string>>;
 
-type EventGroup = 'request' | 'stock' | 'payroll' | 'support' | 'support_closed';
+type EventGroup = 'request' | 'stock' | 'payroll' | 'support' | 'support_closed' | 'shop';
 
 /** Every event names its group: a new key without one fails the typecheck, not the payroll set. */
 const GROUP_OF: Readonly<Record<EventKey, EventGroup>> = {
@@ -32,7 +33,8 @@ const GROUP_OF: Readonly<Record<EventKey, EventGroup>> = {
 	'payroll.week_closed': 'payroll',
 	'support.opened': 'support',
 	'support.message_posted': 'support',
-	'support.closed': 'support_closed'
+	'support.closed': 'support_closed',
+	'shop.task_arrived': 'shop'
 };
 
 function perEvent<T>(byGroup: Readonly<Record<EventGroup, T>>): Readonly<Record<EventKey, T>> {
@@ -48,7 +50,8 @@ export const EVENT_TEMPLATE_VARIABLES: Readonly<Record<EventKey, readonly string
 	stock: STOCK_VARIABLES,
 	payroll: PAYROLL_VARIABLES,
 	support: SUPPORT_VARIABLES,
-	support_closed: SUPPORT_CLOSED_VARIABLES
+	support_closed: SUPPORT_CLOSED_VARIABLES,
+	shop: SHOP_VARIABLES
 });
 
 const PLACEHOLDER = /\{\{\s*([A-Za-z]+)\s*\}\}/g;
@@ -109,5 +112,11 @@ export const TEMPLATE_SAMPLES: Readonly<Record<EventKey, TemplateValues>> =
 			counterparty: SUPPORT_SAMPLE.counterparty,
 			author: SUPPORT_SAMPLE.author,
 			url: SUPPORT_SAMPLE.url
+		},
+		shop: {
+			number: '2026-0042',
+			station: 'Столяр',
+			priority: 'срочная',
+			url: 'https://example.ru/crm/shop/9'
 		}
 	});

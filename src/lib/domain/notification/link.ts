@@ -1,4 +1,9 @@
-import { REQUEST_EVENT_KEYS, SUPPORT_EVENT_KEYS, type EventKey } from '$lib/types/events';
+import {
+	REQUEST_EVENT_KEYS,
+	SHOP_EVENT_KEYS,
+	SUPPORT_EVENT_KEYS,
+	type EventKey
+} from '$lib/types/events';
 
 /** Who reads the event: a portal person, a workshop person with the registry, or one without it. */
 export type Audience = 'portal' | 'crm_registry' | 'crm_floor';
@@ -16,6 +21,8 @@ export function eventPath(
 	if (SUPPORT_EVENT_KEYS.includes(eventKey)) {
 		return audience === 'portal' ? `/portal/support/${entityId}` : `/crm/support/${entityId}`;
 	}
+	// Only a workshop person with the station hears of a visit, so there is no portal path.
+	if (SHOP_EVENT_KEYS.includes(eventKey)) return `/crm/shop/${entityId}`;
 	if (REQUEST_EVENT_KEYS.includes(eventKey)) {
 		if (audience === 'portal') return `/portal/requests/${entityId}`;
 		return audience === 'crm_registry' ? `/crm/requests/${entityId}` : '/crm/delivery';
