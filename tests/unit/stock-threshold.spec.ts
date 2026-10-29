@@ -10,13 +10,7 @@ import { Worker } from '../../src/lib/server/queue/worker';
 import { StockThreshold } from '../../src/lib/server/stock/stock-threshold';
 import { fanoutJobs, resetInventories, stockItemId, thresholdJobs } from './helpers/crm-stock';
 import { insertUser, migratedDatabase } from './helpers/db';
-import {
-	crmActor,
-	optionId,
-	resetRequests,
-	seedOrderingWorld,
-	variantId
-} from './helpers/portal-requests';
+import { crmActor, optionId, resetRequests, seedOrderingWorld } from './helpers/portal-requests';
 
 const db = migratedDatabase();
 seedOrderingWorld(db);
