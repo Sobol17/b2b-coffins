@@ -116,6 +116,13 @@ docker compose exec app pnpm admin roles:sync
 docker compose exec app pnpm admin stock:cost-backfill
 ```
 
+Обновление до ядра v2.1 переводит цех на станции. Заявки, принятые до обновления, заданий на станциях не имеют, а «Готов к выдаче» теперь ставит только система. Запустите после старта контейнера сначала `notifications:sync`, чтобы пришли правила и текст пуша о новой заявке на станции, затем досылку. Она отправит столяру недостающие штуки заявок в работе и переведёт покрытые складом заявки в «Готов к выдаче». Повторный запуск ничего не меняет.
+
+```bash
+docker compose exec app pnpm admin notifications:sync
+docker compose exec app pnpm admin shop:sync
+```
+
 ## Команды администратора
 
 CLI из `tech.md` §2 работает внутри контейнера:
