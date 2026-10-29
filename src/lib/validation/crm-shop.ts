@@ -4,6 +4,9 @@ import { WORK_ROLES } from '$lib/types/roles';
 
 const id = z.coerce.number().int().positive();
 
+/** The visit of `/crm/shop/[id]`. */
+export const shopTaskIdSchema = id;
+
 /** «Взять в работу» and «Выполнено» name the visit only. */
 export const shopTaskSchema = z.object({ taskId: id });
 

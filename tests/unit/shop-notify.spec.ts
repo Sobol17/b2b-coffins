@@ -24,6 +24,7 @@ import { createNotificationFanoutHandler } from '../../src/lib/server/queue/hand
 import { Worker } from '../../src/lib/server/queue/worker';
 import { eventPath } from '../../src/lib/domain/notification/link';
 import { unknownVariables } from '../../src/lib/domain/notification/template';
+import { crmFeedHref } from '../../src/lib/crm/notifications/feed-href';
 import { EVENT_LABEL } from '../../src/lib/notifications/labels';
 import type { WorkRole } from '../../src/lib/types/roles';
 import { seedCharityWorld } from './helpers/charity';
@@ -125,6 +126,7 @@ describe('shop.task_arrived reaches the station of the visit (tech.md §7.3)', (
 			entityId: taskId,
 			requestNumber: number
 		});
+		expect(item && crmFeedHref(false)(item)).toBe(`/crm/shop/${taskId}`);
 		expect(EVENT_LABEL['shop.task_arrived']).toEqual({
 			title: 'Новая заявка на станции',
 			hint: 'Заявка пришла в работу на вашу станцию'
