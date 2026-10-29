@@ -1,6 +1,7 @@
 import { PolicyService } from '../auth/policy';
 import { CounterpartyDetailRepository } from '../crm-counterparty/counterparty-detail.repository';
 import { CrmCounterpartyDtoMapper } from '../crm-counterparty/dto';
+import { ShopLineReader } from '../crm-shop/shop-lines';
 import { PaymentMarkRepository } from '../payment/payment-mark.repository';
 import { DraftItemRepository } from '../request/draft-item.repository';
 import { CardDtoMapper } from '../request/card.dto';
@@ -31,7 +32,8 @@ export class CrmRequestCardService extends CrmRequestBaseService {
 		private readonly choiceLists: CrmRequestChoicesRepository = new CrmRequestChoicesRepository(),
 		private readonly addressBook: CounterpartyDetailRepository = new CounterpartyDetailRepository(),
 		private readonly now: () => Date = () => new Date(),
-		private readonly marks: PaymentMarkRepository = new PaymentMarkRepository()
+		private readonly marks: PaymentMarkRepository = new PaymentMarkRepository(),
+		private readonly shopLines: ShopLineReader = new ShopLineReader()
 	) {
 		super(ctx, requests);
 	}
@@ -61,6 +63,7 @@ export class CrmRequestCardService extends CrmRequestBaseService {
 			isStockRequest: request.isStockRequest,
 			flags: this.flags(request),
 			itemsEdit: itemsEditMode(request.status),
+			shop: this.shopLines.forRequest(request, itemIds),
 			...this.payments(request)
 		};
 	}

@@ -1,3 +1,5 @@
+import type { CrmLineShopDto } from './crm-shop';
+import type { WorkRole } from './roles';
 import type { CrmPaymentMarkDto } from './crm-counterparty';
 import type { RequestCardDto, RequestListItemDto, RequestPriority, RequestStatus } from './request';
 
@@ -43,6 +45,8 @@ export interface CrmRequestListItemDto extends RequestListItemDto {
 	readonly isStockRequest: boolean;
 	readonly deliveryAt: string | null;
 	readonly flags: readonly AttentionFlag[];
+	/** Stations holding open jobs of the request, in shop order. */
+	readonly stations: readonly WorkRole[];
 }
 
 export interface CrmBoardColumnDto {
@@ -75,6 +79,8 @@ export interface CrmRequestCardDto extends Omit<RequestCardDto, 'comments' | 'su
 	readonly payments?: readonly CrmPaymentMarkDto[];
 	/** The total less the payment marks, never below zero; zero for a stock request. */
 	readonly dueMinor?: number;
+	/** One per line while the request is in work, empty otherwise. */
+	readonly shop: readonly CrmLineShopDto[];
 }
 
 export interface CrmRequestVariantChoice {

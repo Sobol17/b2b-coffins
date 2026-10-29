@@ -1,3 +1,4 @@
+import { ShopJobRepository } from '../crm-shop/shop-job.repository';
 import { offsetFor } from '../core/list';
 import { RequestRegistryRepository } from '../request/request-registry.repository';
 import { OrgService } from '../settings/org.service';
@@ -36,7 +37,8 @@ export class CrmRequestListService extends CrmRequestBaseService {
 		private readonly registry: RequestRegistryRepository = new RequestRegistryRepository(),
 		private readonly choices: CrmRequestChoicesRepository = new CrmRequestChoicesRepository(),
 		private readonly timeZone: string = OrgService.timezone(),
-		private readonly now: () => Date = () => new Date()
+		private readonly now: () => Date = () => new Date(),
+		private readonly shopJobs: ShopJobRepository = new ShopJobRepository()
 	) {
 		super(ctx);
 	}
@@ -107,6 +109,9 @@ export class CrmRequestListService extends CrmRequestBaseService {
 	private project(rows: readonly CrmListRow[], now: Date): CrmRequestListItemDto[] {
 		const ids = rows.map((row) => row.id);
 		const summaries = this.registry.summaries(ids);
-		return rows.map((row) => CrmRequestDtoMapper.toListItem(row, summaries.get(row.id), now));
+		const stations = this.shopJobs.stationsByRequest(ids);
+		return rows.map((row) =>
+			CrmRequestDtoMapper.toListItem(row, summaries.get(row.id), now, stations.get(row.id))
+		);
 	}
 }

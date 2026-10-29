@@ -3,7 +3,7 @@ import { BaseRepository } from '../core/repository';
 import type { Tx } from '../db/client';
 import { requestItems, requests, shopJobs, shopTasks } from '../db/schema';
 import type { OpenJob } from '$lib/domain/shop/dispatch';
-import type { WorkRole } from '$lib/types/roles';
+import { WORK_ROLES, type WorkRole } from '$lib/types/roles';
 
 /** A line of a stock request in work and the pieces the stations already finished for it. */
 export interface StockLineRow {
@@ -29,6 +29,38 @@ export class ShopJobRepository extends BaseRepository<typeof shopJobs> {
 			.groupBy(shopJobs.requestItemId)
 			.all();
 		return new Map(rows.map((row) => [row.itemId, Number(row.qty)]));
+	}
+
+	/** Stations holding open jobs of each request, in shop order (the board tags). */
+	stationsByRequest(requestIds: readonly number[], tx?: Tx): Map<number, WorkRole[]> {
+		const result = new Map<number, WorkRole[]>();
+		if (requestIds.length === 0) return result;
+		const rows = this.db(tx)
+			.selectDistinct({ requestId: shopTasks.requestId, station: shopTasks.station })
+			.from(shopJobs)
+			.innerJoin(shopTasks, eq(shopTasks.id, shopJobs.taskId))
+			.where(and(inArray(shopTasks.requestId, [...requestIds]), isNull(shopJobs.finishedAt)))
+			.all();
+		for (const row of rows)
+			result.set(row.requestId, [...(result.get(row.requestId) ?? []), row.station]);
+		for (const [id, stations] of result) {
+			result.set(
+				id,
+				WORK_ROLES.filter((station) => stations.includes(station))
+			);
+		}
+		return result;
+	}
+
+	/** Request numbers by id, for the card line that names who holds the shelf. */
+	numbers(requestIds: readonly number[], tx?: Tx): Map<number, string> {
+		if (requestIds.length === 0) return new Map();
+		const rows = this.db(tx)
+			.select({ id: requests.id, number: requests.number })
+			.from(requests)
+			.where(inArray(requests.id, [...requestIds]))
+			.all();
+		return new Map(rows.map((row) => [row.id, row.number]));
 	}
 
 	/** Every job not yet past the upholsterer, with the station of its visit. */
