@@ -1457,9 +1457,12 @@ export interface ShopStationDto {
   total: number;                                     // open visits of the station matching the search
 }
 export interface ShopDto { stations: ShopStationDto[]; }   // the actor's stations; manager and owner get all four
-export interface ShopJobDto {
-  id: number; itemId: number;
+export interface ShopPositionDto {                   // a stock position of a product: the variant plus its colour; delivery reuses it
+  variantId: number; optionId: number | null;
   productTitle: string; sku: string; sizeCode: string; materialTitle: string; colorTitle: string | null;
+}
+export interface ShopJobDto extends ShopPositionDto {
+  id: number; itemId: number;
   engraving: string | null; comment: string | null;
   qty: number; doneQty: number;
 }
