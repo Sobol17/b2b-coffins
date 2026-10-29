@@ -2,6 +2,7 @@ import { PolicyService } from '../auth/policy';
 import { ConflictError, NotFoundError, ValidationError } from '../core/errors';
 import { BaseService } from '../core/service';
 import { PositionTitles } from '../crm-shop/dto';
+import { ShopFlow } from '../crm-shop/shop-flow';
 import { ShopRepository } from '../crm-shop/shop.repository';
 import type { Tx } from '../db/client';
 import { LoadingRepository, type LoadingLineRow } from '../stock/loading.repository';
@@ -85,6 +86,7 @@ export class DeliveryService extends BaseService {
 				throw new ConflictError('На складе не хватает позиций для погрузки');
 			}
 			this.writeMove(line, -input.qty, null, tx);
+			ShopFlow.afterChange(this.ctx, tx);
 			return { result: undefined, entityId: line.requestId, after: { ...input } };
 		});
 	}
@@ -101,6 +103,7 @@ export class DeliveryService extends BaseService {
 				throw new ValidationError('По строке ничего не погружено', { field: 'itemId' });
 			}
 			for (const move of open) this.writeMove(line, -move.qty, move.id, tx);
+			ShopFlow.afterChange(this.ctx, tx);
 			const qty = -open.reduce((sum, move) => sum + move.qty, 0);
 			return { result: undefined, entityId: line.requestId, after: { ...input, qty } };
 		});

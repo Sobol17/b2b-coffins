@@ -1,4 +1,5 @@
 import { ConflictError } from '../core/errors';
+import { ShopFlow } from '../crm-shop/shop-flow';
 import { CrmRequestBaseService } from './crm-request-base.service';
 import { CrmRequestRepository } from './crm-request.repository';
 import { PRIORITY_TITLE } from '$lib/crm/requests/labels';
@@ -29,6 +30,8 @@ export class CrmRequestPriorityService extends CrmRequestBaseService {
 					const note = `Приоритет: ${PRIORITY_TITLE[priority]}`;
 					this.requests.insertNote(request.id, request.status, this.ctx.userId, note, tx);
 				}
+				// An urgent request takes the shelf first, so the fill and the shop move with it.
+				ShopFlow.afterChange(this.ctx, tx);
 			}
 			return {
 				result: undefined,

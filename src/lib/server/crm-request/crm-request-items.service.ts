@@ -1,4 +1,5 @@
 import { ConflictError, NotFoundError, ValidationError } from '../core/errors';
+import { ShopFlow } from '../crm-shop/shop-flow';
 import type { Tx } from '../db/client';
 import { DraftItemRepository, type DraftLineRow } from '../request/draft-item.repository';
 import { DraftWriter } from '../request/draft-writer';
@@ -99,6 +100,8 @@ export class CrmRequestItemsService extends CrmRequestBaseService {
 				this.pricer.repriceFrozen(request.id, request.counterpartyId, request, tx);
 				const note = `${summary}. ${change.comment ?? ''}`.trim();
 				this.requests.insertNote(request.id, request.status, this.ctx.userId, note, tx);
+				// Lines of a request in work changed: the shop gets or gives back the difference.
+				ShopFlow.afterChange(this.ctx, tx);
 			}
 			return {
 				result: undefined,

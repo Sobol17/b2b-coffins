@@ -2,6 +2,7 @@ import { PolicyService } from '../auth/policy';
 import { ConflictError, ForbiddenError, NotFoundError, ValidationError } from '../core/errors';
 import { BaseService } from '../core/service';
 import type { Tx } from '../db/client';
+import { ShopDispatch } from '../crm-shop/shop-dispatch';
 import { OutboxRequestEffects, type RequestEffects } from './request-effects';
 import {
 	RequestTransitionRepository,
@@ -110,6 +111,8 @@ export class RequestTransitionService extends BaseService {
 
 			this.step(request.id, transition, this.ctx.userId, input, tx);
 			const extra = afterMove(request, tx);
+			// An accepted request asks the shop for what the shelf lacks before it may turn ready.
+			if (transition.to === 'in_work') new ShopDispatch().run(tx);
 			const status = this.chainAutoSteps(request.id, transition.to, tx);
 
 			return {
