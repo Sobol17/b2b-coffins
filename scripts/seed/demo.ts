@@ -9,6 +9,8 @@ import {
 	requests
 } from '../../src/lib/server/db/schema';
 import { DeliveryService } from '../../src/lib/server/crm-delivery/delivery.service';
+import { ShopTaskService } from '../../src/lib/server/crm-shop/shop-task.service';
+import { ShopService } from '../../src/lib/server/crm-shop/shop.service';
 import { StockMoveService } from '../../src/lib/server/crm-stock/stock-move.service';
 import { charityRecountHandler } from '../../src/lib/server/queue/handlers/charity-recount';
 import { notificationFanoutHandler } from '../../src/lib/server/queue/handlers/notification-fanout';
@@ -81,6 +83,7 @@ function loadPeople(db: Db): People {
 		employee: actorContext(db, DEMO_PEOPLE.employee),
 		manager: actorContext(db, DEMO_PEOPLE.manager),
 		driver: actorContext(db, DEMO_PEOPLE.driver),
+		carpenter: actorContext(db, DEMO_PEOPLE.carpenter),
 		owner: actorContext(db, DEMO_PEOPLE.owner)
 	};
 }
@@ -134,7 +137,7 @@ function advance(db: Db, people: People, id: number, scenario: DemoScenario): vo
 	}
 
 	move(people.manager, 'in_work');
-	if (scenario.stage === 'in_work') return;
+	if (scenario.stage === 'in_work') return passCarpenter(people.carpenter, id);
 	// The pieces reach the shelf as a purchase; the system readies the request (tech.md §6.2).
 	const moves = new StockMoveService(people.manager);
 	for (const line of scenario.lines) {
@@ -155,6 +158,19 @@ function advance(db: Db, people: People, id: number, scenario: DemoScenario): vo
 		delivery.load({ itemId: line.itemId, qty: line.qty });
 	}
 	new RequestTransitionService(people.driver).deliver(id, scenario.stage === 'paid');
+}
+
+/** The request in work has passed the carpenter and waits for the grinder (tech.md §20.4). */
+function passCarpenter(carpenter: ActorContext, requestId: number): void {
+	const [station] = new ShopService(carpenter).overview({}).stations;
+	const visit = station?.fresh.find((row) => row.requestId === requestId);
+	if (!visit) return;
+	const tasks = new ShopTaskService(carpenter);
+	tasks.take(visit.id);
+	for (const job of new ShopService(carpenter).task(visit.id).jobs) {
+		tasks.progress({ jobId: job.id, doneQty: job.qty });
+	}
+	tasks.complete(visit.id);
 }
 
 /** Reads the queue out in this process, so the bell of every demo account is filled at once. */
