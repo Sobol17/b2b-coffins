@@ -27,8 +27,7 @@ export const load: LayoutServerLoad = ({ locals, url, cookies }) => {
 		// Navigation only: every page and action checks its own right on the server again.
 		can: {
 			requests: PolicyService.can(actor, 'request.read.any'),
-			shop:
-				PolicyService.can(actor, 'request.read.any') && PolicyService.can(actor, 'stock.manage'),
+			shop: PolicyService.can(actor, 'shop.work'),
 			delivery: PolicyService.can(actor, 'delivery.work'),
 			stock: PolicyService.can(actor, 'stock.read'),
 			payroll: PolicyService.can(actor, 'payroll.read'),

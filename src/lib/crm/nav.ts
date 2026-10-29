@@ -76,7 +76,7 @@ export function crmNav(can: CrmNavRights): CrmNavLink[] {
 				href: resolve('/crm/shop'),
 				label: 'Цех',
 				icon: HammerIcon,
-				hint: 'Что сделать сегодня и отметка готовых изделий'
+				hint: 'Заявки на станциях и отметка сделанного'
 			}
 		},
 		{

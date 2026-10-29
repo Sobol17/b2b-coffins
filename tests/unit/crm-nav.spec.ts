@@ -56,3 +56,10 @@ describe('CRM sections and finance (v1.58)', () => {
 		expect(books({ ...NONE, stock: true, payroll: true, reports: true })).not.toContain('Финансы');
 	});
 });
+
+describe('CRM sections of the shop crew (tech.md §20.4)', () => {
+	it('puts «Цех» first for a shop role, with the stations in its hint', () => {
+		const [first] = crmNav({ ...NONE, shop: true, stock: true });
+		expect(first).toMatchObject({ label: 'Цех', hint: 'Заявки на станциях и отметка сделанного' });
+	});
+});
