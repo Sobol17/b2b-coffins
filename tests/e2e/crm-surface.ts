@@ -1,6 +1,6 @@
 import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
-import { and, desc, eq, isNull, ne, type SQL } from 'drizzle-orm';
+import { desc, eq, isNull, ne, type SQL } from 'drizzle-orm';
 import type { AnySQLiteColumn, SQLiteTable } from 'drizzle-orm/sqlite-core';
 import type { Db } from '../../src/lib/server/db/client';
 import {
@@ -121,7 +121,8 @@ function parameters(db: Db): Readonly<Record<string, number | null>> {
 			db,
 			shopTasks,
 			shopTasks.id,
-			and(eq(shopTasks.station, 'carpenter'), isNull(shopTasks.completedAt))
+			// A closed visit still opens for reading, so any carpenter visit will do.
+			eq(shopTasks.station, 'carpenter')
 		)
 	};
 }

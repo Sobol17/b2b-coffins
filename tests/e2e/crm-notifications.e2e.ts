@@ -3,7 +3,7 @@ import { isNull } from 'drizzle-orm';
 import { notificationFeed, notifications } from '../../src/lib/server/db/schema';
 import { login, logout, openBell, purchaseMoneyKeys, queueIdle, type RoleKey } from './fixtures';
 import { sendRequest } from './portal-flow';
-import { e2eDb, stockUp, transition } from './transitions';
+import { acceptReady, e2eDb } from './transitions';
 
 const db = e2eDb();
 const ORIGIN = 'http://localhost:4173';
@@ -62,9 +62,7 @@ test('C12: a ready request reaches the driver, and the line leads to the deliver
 	page
 }) => {
 	const number = await freshRequest(page, 'driver');
-	expect(transition(number, 'in_work', 'manager').ok).toBe(true);
-	stockUp(db, number);
-	expect(transition(number, 'ready', 'manager').ok).toBe(true);
+	acceptReady(db, number);
 
 	// The driver hears of the request once: only when there is something to carry.
 	await expectBell(page, '1');
@@ -122,8 +120,9 @@ test('C12: the owner reads the matrix and cannot change it', async ({ page }) =>
 	await page.goto('/crm/settings/notifications');
 
 	const matrix = page.getByTestId('notification-matrix');
-	// One row per event: ten of the request flow, stock and payroll, three of support threads (v1.57).
-	await expect(matrix.getByTestId('data-table-row')).toHaveCount(13);
+	// One row per event: ten of the request flow, stock and payroll, three of support threads (v1.57)
+	// and the visit of a station (tech.md §20.4).
+	await expect(matrix.getByTestId('data-table-row')).toHaveCount(14);
 	const lowShelf = matrix.getByTestId('data-table-row').filter({ hasText: 'Остаток ниже порога' });
 	await expect(lowShelf.getByTestId('matrix-cell')).toHaveCount(2);
 	await expect(lowShelf).toContainText('Колокольчик');

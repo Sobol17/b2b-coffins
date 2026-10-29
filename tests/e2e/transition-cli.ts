@@ -26,14 +26,29 @@ export function transition(
 	actor: RoleKey,
 	note: { reason?: string; comment?: string } = {}
 ): TransitionResult {
-	let result = runTransition(number, to, actor, note);
-	for (let attempt = 1; attempt < LOCK_ATTEMPTS && isLocked(result); attempt++) {
-		Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, LOCK_PAUSE_MS * attempt);
-		result = runTransition(number, to, actor, note);
-	}
+	const result = retried(() => runTransition(number, to, actor, note));
 	if (!result.ok) {
 		// Specs assert on `ok` alone; the reason of an unexpected refusal belongs in the run log.
 		console.error(`request:transition ${number} -> ${to} failed:\n${result.output}`);
+	}
+	return result;
+}
+
+/**
+ * `pnpm admin shop:sync` (tech.md §2): the dispatch and the readiness after pieces a spec put on
+ * the shelf by hand, which no service saw being written.
+ */
+export function shopSync(): TransitionResult {
+	const result = retried(() => runAdmin(['admin', 'shop:sync']));
+	if (!result.ok) console.error(`shop:sync failed:\n${result.output}`);
+	return result;
+}
+
+function retried(run: () => TransitionResult): TransitionResult {
+	let result = run();
+	for (let attempt = 1; attempt < LOCK_ATTEMPTS && isLocked(result); attempt++) {
+		Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, LOCK_PAUSE_MS * attempt);
+		result = run();
 	}
 	return result;
 }
@@ -60,8 +75,12 @@ function runTransition(
 		...(note.reason ? ['--reason', note.reason] : []),
 		...(note.comment ? ['--comment', note.comment] : [])
 	];
+	return runAdmin(argv);
+}
+
+function runAdmin(argv: readonly string[]): TransitionResult {
 	try {
-		const output = execFileSync('pnpm', argv, {
+		const output = execFileSync('pnpm', [...argv], {
 			encoding: 'utf8',
 			stdio: 'pipe',
 			env: { ...process.env, DATABASE_PATH: E2E_DATABASE_PATH }

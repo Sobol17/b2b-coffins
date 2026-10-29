@@ -2,13 +2,13 @@ import { expect, test, type Page } from '@playwright/test';
 import { enterRequest } from './crm-flow';
 import { login } from './fixtures';
 import {
+	acceptReady,
 	clearOtherDebts,
 	e2eDb,
 	loadUp,
 	moneyOf,
 	statusChain,
 	statusOf,
-	stockUp,
 	transition
 } from './transitions';
 
@@ -22,9 +22,7 @@ async function awaitingPayment(page: Page): Promise<{ number: string; id: string
 	await login(page, 'manager');
 	const number = await enterRequest(page, `Орлов Олег ${Date.now()}`, COLOUR, 1);
 	const id = new URL(page.url()).pathname.split('/').at(-1) ?? '';
-	expect(transition(number, 'in_work', 'manager').ok).toBe(true);
-	stockUp(db, number);
-	expect(transition(number, 'ready', 'manager').ok).toBe(true);
+	acceptReady(db, number);
 	loadUp(db, number);
 	expect(transition(number, 'delivered', 'manager').ok).toBe(true);
 	expect(statusOf(db, number)).toBe('awaiting_payment');

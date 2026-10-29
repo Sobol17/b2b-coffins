@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
 import { enterRequest } from './crm-flow';
 import { login, purchaseMoneyKeys } from './fixtures';
-import { e2eDb, stockUp } from './transitions';
+import { e2eDb, emptyShelf, shopSync, stockUp } from './transitions';
 
 test('C4 DoD: a manager takes a request from entry to ready in the CRM, changes after the launch land in history', async ({
 	page
@@ -9,10 +9,12 @@ test('C4 DoD: a manager takes a request from entry to ready in the CRM, changes 
 	const deceased = `Петров Пётр ${Date.now()}`;
 	await login(page, 'manager');
 	const number = await enterRequest(page, deceased);
+	emptyShelf(e2eDb(), number);
 
-	// The shop works by position (v1.41): a priced request goes into work with nobody on it.
+	// Nothing on the shelf: the move into work sends the pieces to the carpenter (tech.md §20.4).
 	await page.getByRole('button', { name: 'Принять в работу' }).click();
 	await expect(page.locator('[data-slot="badge"]').filter({ hasText: 'В работе' })).toBeVisible();
+	await expect(page.getByTestId('line-shop')).toContainText('Столяр: сделано 0 из 1');
 
 	// After the launch the reason is required and goes into history with the change.
 	await page.getByRole('button', { name: 'Изменить' }).first().click();
@@ -23,12 +25,14 @@ test('C4 DoD: a manager takes a request from entry to ready in the CRM, changes 
 	await expect(page.getByTestId('request-history')).toContainText('Клиент попросил ещё два');
 	await expect(page.getByTestId('request-history')).toContainText('→ 3');
 
-	// The guard answers in words: the stock does not fill the request yet.
-	await page.getByRole('button', { name: 'Заявка собрана' }).click();
-	await expect(page.getByText('На складе не хватает позиций заявки')).toBeVisible();
+	// The added pieces follow to the carpenter; nobody readies the request by hand.
+	await expect(page.getByTestId('line-shop')).toContainText('Столяр: сделано 0 из 3');
+	await expect(page.getByRole('button', { name: 'Заявка собрана' })).toHaveCount(0);
 
+	// Stock that turns up covers the request: the system readies it and calls the pieces back.
 	stockUp(e2eDb(), number);
-	await page.getByRole('button', { name: 'Заявка собрана' }).click();
+	expect(shopSync().ok).toBe(true);
+	await page.reload();
 	await expect(
 		page.locator('[data-slot="badge"]').filter({ hasText: 'Готов к выдаче' })
 	).toBeVisible();
@@ -49,13 +53,13 @@ test('C4: the board shows the request in its column and a dropped card asks the 
 	const card = board.locator('[data-slot="kanban-card"]').filter({ hasText: number });
 	await expect(card).toHaveAttribute('data-status', 'new');
 
-	// The arrow key moves the card to «В работе»; the next step waits for the stock to fill it.
+	// The arrow key moves the card to «В работе»; «Готов к выдаче» belongs to the system alone.
 	await card.getByRole('link').focus();
 	await page.keyboard.press('ArrowRight');
 	await expect(card).toHaveAttribute('data-status', 'in_work');
 	await card.getByRole('link').focus();
 	await page.keyboard.press('ArrowRight');
-	await expect(page.getByText('На складе не хватает позиций заявки')).toBeVisible();
+	await expect(page.getByText('Недостаточно прав для этого действия')).toBeVisible();
 	await expect(card).toHaveAttribute('data-status', 'in_work');
 
 	await card.getByRole('link').click();

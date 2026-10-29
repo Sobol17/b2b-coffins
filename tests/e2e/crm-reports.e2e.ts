@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test';
 import { charityTransfers } from '../../src/lib/server/db/schema';
 import { crmNavLink, login, logout } from './fixtures';
 import { sendRequest } from './portal-flow';
-import { e2eDb, loadUp, stockUp, transition } from './transitions';
+import { acceptReady, e2eDb, loadUp, transition } from './transitions';
 
 const PATHS = [
 	'/crm/reports',
@@ -31,9 +31,7 @@ test('C13: the owner reads the period, downloads a sheet and records a transfer'
 }) => {
 	// A delivered request of this run: a fresh database has nothing accrued to the fund.
 	const number = await sendRequest(page, 'cp_admin');
-	expect(transition(number, 'in_work', 'manager').ok).toBe(true);
-	stockUp(db, number);
-	expect(transition(number, 'ready', 'manager').ok).toBe(true);
+	acceptReady(db, number);
 	loadUp(db, number);
 	expect(transition(number, 'delivered', 'driver').ok).toBe(true);
 	await logout(page);

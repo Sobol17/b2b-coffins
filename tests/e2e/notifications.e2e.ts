@@ -1,7 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import { login, logout, purchaseMoneyKeys } from './fixtures';
 import { sendRequest } from './portal-flow';
-import { e2eDb, stockUp, transition } from './transitions';
+import { acceptReady, e2eDb } from './transitions';
 
 const db = e2eDb();
 const ORIGIN = 'http://localhost:4173';
@@ -9,9 +9,7 @@ const SETTINGS = '/portal/profile/notifications';
 const QUEUE_TIMEOUT = 15_000;
 
 function toReady(number: string): void {
-	expect(transition(number, 'in_work', 'manager').ok).toBe(true);
-	stockUp(db, number);
-	expect(transition(number, 'ready', 'manager').ok).toBe(true);
+	acceptReady(db, number);
 }
 
 /** The page carries the event feed too, so every assertion here names the block it looks in. */

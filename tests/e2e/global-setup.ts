@@ -1,4 +1,4 @@
-import { and, eq, inArray, isNull, like } from 'drizzle-orm';
+import { and, eq, inArray, isNull, like, or } from 'drizzle-orm';
 import { migrate } from 'drizzle-orm/better-sqlite3/migrator';
 import { hashPassword } from '../../src/lib/server/auth/password';
 import { createDb, type Db } from '../../src/lib/server/db/client';
@@ -9,6 +9,8 @@ import {
 	requests,
 	roles,
 	sessions,
+	shopJobs,
+	shopTasks,
 	stockMoves,
 	userNotificationPrefs,
 	userRoles,
@@ -16,6 +18,7 @@ import {
 } from '../../src/lib/server/db/schema';
 import { removeCatalogLeftovers } from './catalog-leftovers';
 import { TEMP_ACCOUNTS } from './fixtures';
+import { SHELF_MARK } from './shelf';
 import { seedCatalog, seedStockBalances, seedStockItems } from '../../scripts/seed/catalog';
 import {
 	seedCounterparties,
@@ -83,14 +86,18 @@ export default async function globalSetup(): Promise<void> {
 	// than deleted: a disabled account frees its seat of the staff limit for the next run.
 	db.update(users).set({ isActive: false }).where(like(users.email, 'e2e.%')).run();
 	db.update(users).set({ failedAttempts: 0, lockedUntil: null }).run();
-	// The fill of v1.41 hands stock out across every request in work or assembled. Leftovers of an
-	// earlier run would take the pieces a spec makes, so a run starts with none of them and no
-	// production: the opening balances of the seed stay.
+	// The fill hands stock out across every request in work or ready (tech.md §20.4). Leftovers of an
+	// earlier run would take the pieces a spec stocks, so a run starts with none of them, no station
+	// visits and none of the moves the helpers wrote: the opening balances of the seed stay.
 	db.update(requests)
 		.set({ status: 'cancelled' })
 		.where(inArray(requests.status, ['in_work', 'ready']))
 		.run();
-	db.delete(stockMoves).where(eq(stockMoves.type, 'production')).run();
+	db.delete(shopJobs).run();
+	db.delete(shopTasks).run();
+	db.delete(stockMoves)
+		.where(or(eq(stockMoves.type, 'production'), eq(stockMoves.comment, SHELF_MARK)))
+		.run();
 	// Items the CRM admin spec adds: nothing references them, so each run starts without them.
 	db.delete(dictItems).where(like(dictItems.code, 'e2e%')).run();
 }
