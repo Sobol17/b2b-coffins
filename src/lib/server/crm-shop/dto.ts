@@ -1,6 +1,11 @@
-import type { ShopRepository, ShopRequestRow, VariantTitleRow } from './shop.repository';
-import { isCovered, type DemandLine } from '$lib/domain/stock/allocation';
-import type { ShopLineDto, ShopPositionDto, ShopRequestDto } from '$lib/types/crm-shop';
+import type { ShopJobRow, ShopRepository, ShopTaskRow, VariantTitleRow } from './shop.repository';
+import type { DemandLine } from '$lib/domain/stock/allocation';
+import type {
+	ShopJobDto,
+	ShopPositionDto,
+	ShopTaskDto,
+	ShopTaskListItemDto
+} from '$lib/types/crm-shop';
 
 /** Names of the positions one screen shows, read once for the whole screen. */
 export class PositionTitles {
@@ -43,42 +48,59 @@ export class PositionTitles {
 	}
 }
 
-/** Projection of the shop floor (tech.md v1.41). No money column is ever read for it. */
+/** «Выполнено» opens once the visit has jobs and every one is done to the piece. */
+export function isVisitDone(jobs: readonly Pick<ShopJobRow, 'qty' | 'doneQty'>[]): boolean {
+	return jobs.length > 0 && jobs.every((job) => job.doneQty >= job.qty);
+}
+
+/** Projection of the stations (tech.md §8). No money, counterparty, address or deceased is read. */
 export class ShopDtoMapper {
-	static toRequest(
-		row: ShopRequestRow,
-		lines: readonly DemandLine[],
-		filled: ReadonlyMap<number, number>,
-		titles: PositionTitles
-	): ShopRequestDto {
-		const shown = lines.map((line) => ShopDtoMapper.toLine(line, filled, titles));
-		const unitCount = shown.reduce((sum, line) => sum + line.qty, 0);
-		const filledCount = shown.reduce((sum, line) => sum + line.filledQty, 0);
+	static toListItem(row: ShopTaskRow): ShopTaskListItemDto {
 		return {
 			id: row.id,
+			requestId: row.requestId,
 			number: row.number,
+			station: row.station,
 			priority: row.priority,
 			isStockRequest: row.isStockRequest,
-			counterpartyName: row.counterpartyName,
 			deliveryAt: row.deliveryAt?.toISOString() ?? null,
-			unitCount,
-			filledCount,
-			lines: shown,
-			// The same rule as guard stockCovered, so the button never offers what the move refuses.
-			canAssemble: isCovered(lines, filled)
+			takenAt: row.takenAt?.toISOString() ?? null,
+			unitCount: row.unitCount,
+			doneCount: row.doneCount
 		};
 	}
 
-	private static toLine(
-		line: DemandLine,
-		filled: ReadonlyMap<number, number>,
+	static toTask(
+		row: ShopTaskRow,
+		jobs: readonly ShopJobRow[],
+		colours: ReadonlyMap<number, number>,
 		titles: PositionTitles
-	): ShopLineDto {
+	): ShopTaskDto {
+		const open = row.completedAt === null;
 		return {
-			...titles.position(line.variantId, line.optionId),
-			itemId: line.itemId,
-			qty: line.qty,
-			filledQty: filled.get(line.itemId) ?? 0
+			...ShopDtoMapper.toListItem(row),
+			comment: row.comment,
+			takenByName: row.takenByName,
+			completedAt: row.completedAt?.toISOString() ?? null,
+			jobs: jobs.map((job) => ShopDtoMapper.toJob(job, colours.get(job.itemId) ?? null, titles)),
+			canTake: open && row.takenAt === null,
+			canComplete: open && isVisitDone(jobs)
+		};
+	}
+
+	private static toJob(
+		job: ShopJobRow,
+		optionId: number | null,
+		titles: PositionTitles
+	): ShopJobDto {
+		return {
+			...titles.position(job.variantId, optionId),
+			id: job.id,
+			itemId: job.itemId,
+			engraving: job.engraving,
+			comment: job.comment,
+			qty: job.qty,
+			doneQty: job.doneQty
 		};
 	}
 }

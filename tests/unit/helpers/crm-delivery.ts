@@ -1,13 +1,18 @@
 import { eq } from 'drizzle-orm';
 import type { Db } from '../../../src/lib/server/db/client';
-import { deliveryAddresses, requests, stockMoves } from '../../../src/lib/server/db/schema';
+import {
+	deliveryAddresses,
+	productVariants,
+	requests,
+	stockMoves
+} from '../../../src/lib/server/db/schema';
 import { DeliveryService } from '../../../src/lib/server/crm-delivery/delivery.service';
-import { ShopService } from '../../../src/lib/server/crm-shop/shop.service';
+import { StockMoveService } from '../../../src/lib/server/crm-stock/stock-move.service';
 import { DraftService } from '../../../src/lib/server/request/draft.service';
 import { RequestSubmitService } from '../../../src/lib/server/request/request-submit.service';
 import { insertUser } from './db';
 import { crmActor, optionId, portalActor, seedOrderingWorld, variantId } from './portal-requests';
-import { move, settleWork } from './transitions';
+import { move } from './transitions';
 
 const DAY_MS = 86_400_000;
 
@@ -49,16 +54,27 @@ export function seedDeliveryWorld(db: Db) {
 		return id;
 	}
 
-	/** Made on the shop floor and assembled: the request waits on the shelf for the driver. */
+	/** Pieces on the shelf, then the request: the system readies it and it waits for the driver. */
 	function assembled(qty: number): number {
 		const id = inWork(qty);
 		produce(qty);
-		settleWork(actors.manager);
 		return id;
 	}
 
+	/** Pieces reach the shelf as a purchase: the stations are not the point of these specs. */
 	function produce(qty: number): void {
-		new ShopService(actors.manager).produce({ variantId: volga, optionId: walnut, qty });
+		const [variant] = db
+			.select({ stockItemId: productVariants.stockItemId })
+			.from(productVariants)
+			.where(eq(productVariants.id, volga))
+			.all();
+		new StockMoveService(actors.manager).create(variant?.stockItemId ?? 0, {
+			type: 'purchase',
+			optionId: walnut,
+			qty,
+			reasonId: null,
+			comment: null
+		});
 	}
 
 	/** Pieces lost from the shelf outside the fill: the count a loading cannot rely on. */

@@ -1,91 +1,70 @@
 import { PolicyService } from '../auth/policy';
-import { NotFoundError, ValidationError } from '../core/errors';
-import { BaseService } from '../core/service';
-import { StockFill } from '../stock/stock-fill';
-import { StockThreshold } from '../stock/stock-threshold';
+import { ForbiddenError } from '../core/errors';
+import { StockFillRepository } from '../stock/stock-fill.repository';
 import { PositionTitles, ShopDtoMapper } from './dto';
+import { ShopBaseService } from './shop-base.service';
 import { ShopRepository } from './shop.repository';
+import { stationOrder } from '$lib/domain/shop/stations';
 import type { ActorContext } from '$lib/types/actor';
-import { SHOP_REQUEST_LIMIT, type ShopDto } from '$lib/types/crm-shop';
-import type { ShopProduceInput } from '$lib/validation/crm-shop';
+import {
+	SHOP_TASK_LIMIT,
+	type ShopDto,
+	type ShopStationDto,
+	type ShopTaskDto
+} from '$lib/types/crm-shop';
+import type { WorkRole } from '$lib/types/roles';
 
-/**
- * The shop floor of C5 (tech.md v1.41): what to make, the production marks and the fill of the
- * requests in work. It reads every request and writes stock, so it needs both rights.
- */
-export class ShopService extends BaseService {
+export interface ShopQuery {
+	readonly search?: string;
+	readonly station?: WorkRole;
+}
+
+/** What a station sees (tech.md §20.4): its visits in order and one visit with its jobs. */
+export class ShopService extends ShopBaseService {
 	constructor(
 		ctx: ActorContext,
-		private readonly shop: ShopRepository = new ShopRepository(),
-		private readonly fill: StockFill = new StockFill(),
-		private readonly now: () => Date = () => new Date(),
-		private readonly threshold: StockThreshold = new StockThreshold()
+		shop: ShopRepository = new ShopRepository(),
+		private readonly lines: StockFillRepository = new StockFillRepository()
 	) {
-		super(ctx);
-		this.assert(
-			ctx.scope === 'crm' && PolicyService.can(ctx, 'request.read.any'),
-			'request.read.any'
+		super(ctx, shop);
+	}
+
+	/** @throws ForbiddenError for a station the actor does not work. */
+	overview(query: ShopQuery): ShopDto {
+		const own = PolicyService.stationsOf(this.ctx);
+		if (query.station !== undefined && !own.includes(query.station)) {
+			throw new ForbiddenError('shop.work');
+		}
+		const stations = query.station === undefined ? own : [query.station];
+		return { stations: stations.map((station) => this.station(station, query.search)) };
+	}
+
+	/** @throws NotFoundError for an unknown visit, ForbiddenError for one of another station. */
+	task(taskId: number): ShopTaskDto {
+		const task = this.requireTask(taskId);
+		const jobs = this.shop.jobsOf(task.id);
+		const colours = this.lines.colours(jobs.map((job) => job.itemId));
+		const titles = PositionTitles.read(
+			this.shop,
+			jobs.map((job) => ({ variantId: job.variantId, optionId: colours.get(job.itemId) ?? null }))
 		);
-		this.assert(PolicyService.can(ctx, 'stock.manage'), 'stock.manage');
+		return ShopDtoMapper.toTask(task, jobs, colours, titles);
 	}
 
-	/** The production queue over all requests in work and the fill of those the search shows. */
-	overview(search?: string): ShopDto {
-		const snapshot = this.fill.read();
-		const rows = this.shop.requestsInWork(search, SHOP_REQUEST_LIMIT);
-		const shown = new Set(rows.map((row) => row.id));
-		const lines = snapshot.lines
-			.filter((line) => shown.has(line.requestId))
-			.sort((a, b) => a.itemId - b.itemId);
-		const titles = PositionTitles.read(this.shop, lines);
-		return {
-			// The station screens of C19 replace the production queue.
-			queue: [],
-			requests: rows.map((row) =>
-				ShopDtoMapper.toRequest(
-					row,
-					lines.filter((line) => line.requestId === row.id),
-					snapshot.filled,
-					titles
+	private station(station: WorkRole, search: string | undefined): ShopStationDto {
+		const rows = this.shop
+			.openTasks(station, search)
+			.sort((a, b) =>
+				stationOrder(
+					{ ...a, isUrgent: a.priority === 'urgent' },
+					{ ...b, isUrgent: b.priority === 'urgent' }
 				)
-			),
-			requestTotal: this.shop.countInWork(search)
-		};
-	}
-
-	/**
-	 * Pieces made on the shop floor land on the shelf; the fill hands them to the requests.
-	 * @throws NotFoundError for an unknown variant, ValidationError for a variant without a stock
-	 * item or a colour outside its matrix.
-	 */
-	produce(input: ShopProduceInput): void {
-		this.audited({ action: 'stock.produce', entity: 'stock_moves' }, (tx) => {
-			const variant = this.shop.stockItemOf(input.variantId, tx);
-			if (!variant) throw new NotFoundError('variant');
-			if (variant.stockItemId === null) {
-				throw new ValidationError('У варианта нет складской позиции, свяжите её в каталоге', {
-					field: 'variantId'
-				});
-			}
-			if (
-				input.optionId !== null &&
-				!this.shop.isVariantColour(input.variantId, input.optionId, tx)
-			) {
-				throw new ValidationError('Этого цвета нет у варианта', { field: 'optionId' });
-			}
-			const moveId = this.shop.insertProduction(
-				{
-					stockItemId: variant.stockItemId,
-					optionId: input.optionId,
-					qty: input.qty,
-					actorId: this.ctx.userId,
-					occurredAt: this.now()
-				},
-				tx
 			);
-			// A mark may still leave the item under its threshold: the signal is due (tech.md v1.45).
-			this.threshold.watch(variant.stockItemId, tx, this.now());
-			return { result: undefined, entityId: moveId, after: { ...input } };
-		});
+		const list = (taken: boolean) =>
+			rows
+				.filter((row) => (row.takenAt !== null) === taken)
+				.slice(0, SHOP_TASK_LIMIT)
+				.map(ShopDtoMapper.toListItem);
+		return { station, fresh: list(false), taken: list(true), total: rows.length };
 	}
 }

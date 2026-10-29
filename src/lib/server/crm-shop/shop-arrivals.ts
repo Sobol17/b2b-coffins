@@ -25,6 +25,26 @@ export class ShopArrivals {
 		return { taskId, opened };
 	}
 
+	/**
+	 * A finished job moves on to the next station. A job of the same line already open there takes
+	 * the pieces over, so the visit keeps one job per line.
+	 */
+	forward(
+		job: { id: number; itemId: number; requestId: number; qty: number },
+		station: WorkRole,
+		tx: Tx
+	): { taskId: number; opened: boolean } {
+		const target = this.visit(job.requestId, station, tx);
+		const open = this.jobs.openJobIn(target.taskId, job.itemId, tx);
+		if (open) {
+			this.jobs.setJobQty(open.id, open.qty + job.qty, tx);
+			this.jobs.deleteJobs([job.id], tx);
+		} else {
+			this.jobs.moveJob(job.id, target.taskId, tx);
+		}
+		return target;
+	}
+
 	private visit(requestId: number, station: WorkRole, tx: Tx): { taskId: number; opened: boolean } {
 		const open = this.jobs.openTask(requestId, station, tx);
 		if (open !== undefined) return { taskId: open, opened: false };

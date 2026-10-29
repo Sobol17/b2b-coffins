@@ -9,10 +9,9 @@ import {
 	requests
 } from '../../src/lib/server/db/schema';
 import { DeliveryService } from '../../src/lib/server/crm-delivery/delivery.service';
-import { ShopService } from '../../src/lib/server/crm-shop/shop.service';
+import { StockMoveService } from '../../src/lib/server/crm-stock/stock-move.service';
 import { charityRecountHandler } from '../../src/lib/server/queue/handlers/charity-recount';
 import { notificationFanoutHandler } from '../../src/lib/server/queue/handlers/notification-fanout';
-import { withTransaction } from '../../src/lib/server/core/tx';
 import { Worker } from '../../src/lib/server/queue/worker';
 import { DraftService } from '../../src/lib/server/request/draft.service';
 import { RequestSubmitService } from '../../src/lib/server/request/request-submit.service';
@@ -136,14 +135,18 @@ function advance(db: Db, people: People, id: number, scenario: DemoScenario): vo
 
 	move(people.manager, 'in_work');
 	if (scenario.stage === 'in_work') return;
-	// The shop works by position (tech.md v1.41): the manager marks the pieces made, then assembles.
-	const shop = new ShopService(people.manager);
+	// The pieces reach the shelf as a purchase; the system readies the request (tech.md §6.2).
+	const moves = new StockMoveService(people.manager);
 	for (const line of scenario.lines) {
 		const variantId = variantIdOf(db, line.sku);
-		shop.produce({ variantId, optionId: colorIdOf(db, variantId, line.color), qty: line.qty });
+		moves.create(stockItemIdOf(db, variantId), {
+			type: 'purchase',
+			optionId: colorIdOf(db, variantId, line.color),
+			qty: line.qty,
+			reasonId: null,
+			comment: 'Демо'
+		});
 	}
-	// Readiness is the system's step (tech.md §6.2, invariant 5): it follows the pieces on the shelf.
-	withTransaction((tx) => new RequestTransitionService(people.manager).settleWork(tx));
 	if (scenario.stage === 'ready') return;
 	// The driver loads every line on the delivery screen (tech.md v1.43); the paid scenario is the
 	// one where he takes the cash at the door.
@@ -168,6 +171,16 @@ function variantIdOf(db: Db, sku: string): number {
 		.all();
 	if (!row) throw new Error(`variant ${sku} not found, run pnpm seed first`);
 	return row.id;
+}
+
+function stockItemIdOf(db: Db, variantId: number): number {
+	const [row] = db
+		.select({ stockItemId: productVariants.stockItemId })
+		.from(productVariants)
+		.where(eq(productVariants.id, variantId))
+		.all();
+	if (!row?.stockItemId) throw new Error(`variant ${variantId} has no stock item`);
+	return row.stockItemId;
 }
 
 function colorIdOf(db: Db, variantId: number, title: string): number {

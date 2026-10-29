@@ -1,20 +1,21 @@
-import { and, eq, inArray, isNull } from 'drizzle-orm';
-import { countExpression } from '../core/list';
+import { and, eq, inArray, isNull, sql } from 'drizzle-orm';
 import { BaseRepository } from '../core/repository';
 import { containsText } from '../core/search';
 import type { Tx } from '../db/client';
 import {
-	counterparties,
 	dictItems,
 	options,
-	productOptions,
 	productVariants,
 	products,
+	requestItems,
 	requests,
-	stockMoves
+	shopJobs,
+	shopTasks,
+	stockMoves,
+	users
 } from '../db/schema';
-import { BOARD_ORDER } from '../crm-request/crm-request-query';
 import type { RequestPriority } from '$lib/types/request';
+import type { WorkRole } from '$lib/types/roles';
 
 export interface VariantTitleRow {
 	readonly id: number;
@@ -25,13 +26,34 @@ export interface VariantTitleRow {
 	readonly stockItemId: number | null;
 }
 
-export interface ShopRequestRow {
+/** A visit with what the crew may know of its request: no money, no counterparty, no deceased. */
+export interface ShopTaskRow {
 	readonly id: number;
+	readonly requestId: number;
 	readonly number: string;
+	readonly station: WorkRole;
 	readonly priority: RequestPriority;
 	readonly isStockRequest: boolean;
-	readonly counterpartyName: string | null;
 	readonly deliveryAt: Date | null;
+	readonly acceptedAt: Date | null;
+	readonly comment: string | null;
+	readonly takenAt: Date | null;
+	readonly takenByName: string | null;
+	readonly completedAt: Date | null;
+	readonly unitCount: number;
+	readonly doneCount: number;
+}
+
+export interface ShopJobRow {
+	readonly id: number;
+	readonly taskId: number;
+	readonly itemId: number;
+	readonly variantId: number;
+	readonly stockItemId: number | null;
+	readonly engraving: string | null;
+	readonly comment: string | null;
+	readonly qty: number;
+	readonly doneQty: number;
 }
 
 export interface ProductionMove {
@@ -42,10 +64,10 @@ export interface ProductionMove {
 	readonly occurredAt: Date;
 }
 
-/** What the shop floor reads besides the fill, and the production move it writes (tech.md v1.41). */
-export class ShopRepository extends BaseRepository<typeof stockMoves> {
+/** What the station screens read and the production move the upholsterer writes (tech.md §20.4). */
+export class ShopRepository extends BaseRepository<typeof shopTasks> {
 	constructor() {
-		super(stockMoves);
+		super(shopTasks);
 	}
 
 	variantTitles(ids: readonly number[]): VariantTitleRow[] {
@@ -76,65 +98,33 @@ export class ShopRepository extends BaseRepository<typeof stockMoves> {
 		return new Map(rows.map((row) => [row.id, row.title]));
 	}
 
-	/** Requests in work, in the order the workshop takes them on; the search goes by number. */
-	requestsInWork(search: string | undefined, limit: number): ShopRequestRow[] {
-		return this.db()
-			.select({
-				id: requests.id,
-				number: requests.number,
-				priority: requests.priority,
-				isStockRequest: requests.isStockRequest,
-				counterpartyName: counterparties.name,
-				deliveryAt: requests.deliveryAt
-			})
-			.from(requests)
-			.leftJoin(counterparties, eq(counterparties.id, requests.counterpartyId))
-			.where(this.inWork(search))
-			.orderBy(...BOARD_ORDER)
-			.limit(limit)
-			.all();
-	}
-
-	countInWork(search: string | undefined): number {
-		const [row] = this.db()
-			.select({ count: countExpression })
-			.from(requests)
-			.where(this.inWork(search))
-			.all();
-		return row?.count ?? 0;
-	}
-
-	/** The stock item of a live variant, or undefined for an unknown or deleted one. */
-	stockItemOf(variantId: number, tx?: Tx): { stockItemId: number | null } | undefined {
-		const [row] = this.db(tx)
-			.select({ stockItemId: productVariants.stockItemId })
-			.from(productVariants)
-			.where(and(eq(productVariants.id, variantId), isNull(productVariants.deletedAt)))
-			.all();
-		return row;
-	}
-
-	/** A colour the variant is made in: the compatibility matrix of C2 says which. */
-	isVariantColour(variantId: number, optionId: number, tx?: Tx): boolean {
-		return (
-			this.db(tx)
-				.select({ optionId: productOptions.optionId })
-				.from(productOptions)
-				.innerJoin(options, eq(options.id, productOptions.optionId))
-				.where(
-					and(
-						eq(productOptions.variantId, variantId),
-						eq(productOptions.optionId, optionId),
-						eq(options.kind, 'color')
-					)
-				)
-				.all().length > 0
+	/** Open visits of a station, unordered: the domain orders them; the search goes by number. */
+	openTasks(station: WorkRole, search: string | undefined): ShopTaskRow[] {
+		return this.tasks(
+			and(
+				eq(shopTasks.station, station),
+				isNull(shopTasks.completedAt),
+				search === undefined ? undefined : containsText(requests.number, search)
+			)
 		);
+	}
+
+	task(taskId: number, tx?: Tx): ShopTaskRow | undefined {
+		return this.tasks(eq(shopTasks.id, taskId), tx)[0];
+	}
+
+	/** Jobs of the visit not past the upholsterer, with the line they make. */
+	jobsOf(taskId: number, tx?: Tx): ShopJobRow[] {
+		return this.jobs(and(eq(shopJobs.taskId, taskId), isNull(shopJobs.finishedAt)), tx);
+	}
+
+	job(jobId: number, tx?: Tx): ShopJobRow | undefined {
+		return this.jobs(and(eq(shopJobs.id, jobId), isNull(shopJobs.finishedAt)), tx)[0];
 	}
 
 	/** Made for the shelf, not for a request: the fill decides who gets the pieces. */
 	insertProduction(move: ProductionMove, tx: Tx): number {
-		const [row] = this.db(tx)
+		const [row] = tx
 			.insert(stockMoves)
 			.values({ ...move, type: 'production', requestId: null })
 			.returning({ id: stockMoves.id })
@@ -143,10 +133,57 @@ export class ShopRepository extends BaseRepository<typeof stockMoves> {
 		return row.id;
 	}
 
-	private inWork(search: string | undefined) {
-		return and(
-			eq(requests.status, 'in_work'),
-			search === undefined ? undefined : containsText(requests.number, search)
-		);
+	private tasks(where: ReturnType<typeof and>, tx?: Tx): ShopTaskRow[] {
+		const open = isNull(shopJobs.finishedAt);
+		return this.db(tx)
+			.select({
+				id: shopTasks.id,
+				requestId: shopTasks.requestId,
+				number: requests.number,
+				station: shopTasks.station,
+				priority: requests.priority,
+				isStockRequest: requests.isStockRequest,
+				deliveryAt: requests.deliveryAt,
+				acceptedAt: requests.acceptedAt,
+				comment: requests.comment,
+				takenAt: shopTasks.takenAt,
+				takenByName: users.fullName,
+				completedAt: shopTasks.completedAt,
+				unitCount: sql<number>`coalesce(sum(case when ${open} then ${shopJobs.qty} end), 0)`,
+				doneCount: sql<number>`coalesce(sum(case when ${open} then ${shopJobs.doneQty} end), 0)`
+			})
+			.from(shopTasks)
+			.innerJoin(requests, eq(requests.id, shopTasks.requestId))
+			.leftJoin(users, eq(users.id, shopTasks.takenById))
+			.leftJoin(shopJobs, eq(shopJobs.taskId, shopTasks.id))
+			.where(where)
+			.groupBy(shopTasks.id)
+			.all()
+			.map((row) => ({
+				...row,
+				unitCount: Number(row.unitCount),
+				doneCount: Number(row.doneCount)
+			}));
+	}
+
+	private jobs(where: ReturnType<typeof and>, tx?: Tx): ShopJobRow[] {
+		return this.db(tx)
+			.select({
+				id: shopJobs.id,
+				taskId: shopJobs.taskId,
+				itemId: shopJobs.requestItemId,
+				variantId: requestItems.variantId,
+				stockItemId: productVariants.stockItemId,
+				engraving: requestItems.engraving,
+				comment: requestItems.comment,
+				qty: shopJobs.qty,
+				doneQty: shopJobs.doneQty
+			})
+			.from(shopJobs)
+			.innerJoin(requestItems, eq(requestItems.id, shopJobs.requestItemId))
+			.innerJoin(productVariants, eq(productVariants.id, requestItems.variantId))
+			.where(where)
+			.orderBy(shopJobs.requestItemId)
+			.all();
 	}
 }

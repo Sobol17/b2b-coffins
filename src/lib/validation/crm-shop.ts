@@ -1,25 +1,25 @@
 import { z } from 'zod';
-import { SHOP_PRODUCE_MAX } from '$lib/types/crm-shop';
+import { SHOP_JOB_MAX } from '$lib/types/crm-shop';
+import { WORK_ROLES } from '$lib/types/roles';
 
 const id = z.coerce.number().int().positive();
 
-/** One production mark of the shop floor: a position and the pieces made (tech.md v1.41). */
-export const shopProduceSchema = z.object({
-	variantId: id,
-	// An empty field is the colourless position of the variant, not a missing value.
-	optionId: z.preprocess(
-		(value) => (value === '' || value === undefined ? null : value),
-		id.nullable()
-	),
-	qty: z.coerce
+/** «Взять в работу» and «Выполнено» name the visit only. */
+export const shopTaskSchema = z.object({ taskId: id });
+
+/** The counter of a job takes the new count, not an increment (tech.md §20.4). */
+export const shopProgressSchema = z.object({
+	jobId: id,
+	doneQty: z.coerce
 		.number({ error: 'Укажите количество' })
 		.int({ error: 'Количество должно быть целым' })
-		.min(1, { error: 'Не меньше одной штуки' })
-		.max(SHOP_PRODUCE_MAX, { error: `Не больше ${SHOP_PRODUCE_MAX} штук за раз` })
+		.min(0, { error: 'Не меньше нуля' })
+		.max(SHOP_JOB_MAX, { error: `Не больше ${SHOP_JOB_MAX} штук` })
 });
-export type ShopProduceInput = z.infer<typeof shopProduceSchema>;
+export type ShopProgressInput = z.infer<typeof shopProgressSchema>;
 
-export const shopAssembleSchema = z.object({ requestId: id });
+/** The station switch of the heads. A tampered value shows the default, not a 422 page. */
+export const shopStationSchema = z.enum(WORK_ROLES).optional().catch(undefined);
 
 /** The number search of the shop. A tampered value is dropped, not turned into a 422 page. */
 export const shopSearchSchema = z

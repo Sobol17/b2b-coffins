@@ -121,6 +121,44 @@ export class ShopJobRepository extends BaseRepository<typeof shopJobs> {
 			.run();
 	}
 
+	/** «Взять в работу» once: a second press finds the visit taken and changes nothing. */
+	takeTask(taskId: number, userId: number, at: Date, tx: Tx): boolean {
+		return (
+			tx
+				.update(shopTasks)
+				.set({ takenAt: at, takenById: userId })
+				.where(and(eq(shopTasks.id, taskId), isNull(shopTasks.takenAt)))
+				.run().changes > 0
+		);
+	}
+
+	setDone(jobId: number, doneQty: number, tx: Tx): void {
+		tx.update(shopJobs).set({ doneQty }).where(eq(shopJobs.id, jobId)).run();
+	}
+
+	/** Closes an open visit; false when another press closed it first. */
+	closeTask(taskId: number, userId: number, at: Date, tx: Tx): boolean {
+		return (
+			tx
+				.update(shopTasks)
+				.set({ completedAt: at, completedById: userId })
+				.where(and(eq(shopTasks.id, taskId), isNull(shopTasks.completedAt)))
+				.run().changes > 0
+		);
+	}
+
+	/** The job rides on to the next visit and starts its counter there from zero. */
+	moveJob(jobId: number, taskId: number, tx: Tx): void {
+		tx.update(shopJobs).set({ taskId, doneQty: 0 }).where(eq(shopJobs.id, jobId)).run();
+	}
+
+	finishJob(jobId: number, moveId: number, at: Date, tx: Tx): void {
+		tx.update(shopJobs)
+			.set({ finishedAt: at, productionMoveId: moveId })
+			.where(eq(shopJobs.id, jobId))
+			.run();
+	}
+
 	/** Open visits the dispatch left without a job: nobody closed them, so nobody is named. */
 	closeEmptied(at: Date, tx: Tx): number {
 		const jobless = notExists(
