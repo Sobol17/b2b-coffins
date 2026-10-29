@@ -5,9 +5,9 @@ import {
 	allocateStock,
 	fillOrder,
 	fillTier,
+	heldAhead,
 	isCovered,
 	positionKey,
-	productionNeeds,
 	shelfWant,
 	type DemandLine
 } from '../../src/lib/domain/stock/allocation';
@@ -158,17 +158,16 @@ describe('fill of requests from stock (tech.md v1.41)', () => {
 		expect([filled.get(3), filled.get(2), filled.get(1)]).toEqual([2, 1, 0]);
 	});
 
-	it('keeps the pieces of an assembled request on the shelf and serves a stock request last', () => {
+	it('keeps the pieces of an assembled request on the shelf before an urgent one in work', () => {
 		const stock = new Map([[positionKey(101, 11), 3]]);
 		const lines = [
-			lineOf({ itemId: 1, qty: 2, tier: 'stock', isUrgent: true }),
 			lineOf({ itemId: 2, qty: 2, tier: 'work', isUrgent: true }),
 			lineOf({ itemId: 3, qty: 2, tier: 'held' })
 		];
 
 		const filled = allocateStock(lines, stock);
 
-		expect([filled.get(3), filled.get(2), filled.get(1)]).toEqual([2, 1, 0]);
+		expect([filled.get(3), filled.get(2)]).toEqual([2, 1]);
 	});
 
 	it('keeps two colours of one variant apart', () => {
@@ -202,7 +201,7 @@ describe('fill of requests from stock (tech.md v1.41)', () => {
 		expect(isCovered([], filled)).toBe(false);
 	});
 
-	it('lets only a counterparty request hold stock once assembled', () => {
+	it('keeps a stock request out of the fill in work and assembled', () => {
 		expect([
 			fillTier('ready', false),
 			fillTier('ready', true),
@@ -210,7 +209,7 @@ describe('fill of requests from stock (tech.md v1.41)', () => {
 			fillTier('in_work', true),
 			fillTier('new', false),
 			fillTier('delivered', false)
-		]).toEqual(['held', null, 'work', 'stock', null, null]);
+		]).toEqual(['held', null, 'work', null, null, null]);
 	});
 });
 
@@ -259,46 +258,48 @@ describe('loading of an assembled request (tech.md v1.43)', () => {
 	});
 });
 
-describe('production queue of the shop (tech.md v1.41)', () => {
-	it('asks for exactly the pieces the requests in work lack', () => {
+describe('requests that hold a position ahead of a line (tech.md §20.4)', () => {
+	it('names the urgent request that took the only piece from a normal one', () => {
+		const stock = new Map([[positionKey(101, 11), 1]]);
+		const urgent = lineOf({ itemId: 1, requestId: 7, isUrgent: true });
+		const normal = lineOf({ itemId: 2, requestId: 9 });
+		const lines = [normal, urgent];
+		const filled = allocateStock(lines, stock);
+
+		expect(heldAhead(normal, lines, filled)).toEqual([7]);
+		expect(heldAhead(urgent, lines, filled)).toEqual([]);
+	});
+
+	it('skips other positions, empty holders and the request itself', () => {
+		const stock = new Map([[positionKey(101, 11), 1]]);
+		const lines = [
+			lineOf({ itemId: 1, requestId: 3, isUrgent: true }),
+			lineOf({ itemId: 2, requestId: 4, isUrgent: true, optionId: 12 }),
+			lineOf({ itemId: 3, requestId: 5, isUrgent: true }),
+			lineOf({ itemId: 4, requestId: 5 }),
+			lineOf({ itemId: 5, requestId: 6 })
+		];
+		const filled = allocateStock(lines, stock);
+		const last = lines[4];
+
+		expect(last && heldAhead(last, lines, filled)).toEqual([3]);
+	});
+
+	it('never names the line\'s own request or one behind it in the queue', () => {
 		assertProperty(
 			fc.property(demand, balances, (lines, stock) => {
 				const filled = allocateStock(lines, stock);
-				const lacking = sum(
-					lines
-						.filter((row) => row.tier !== 'held')
-						.map((row) => shelfWant(row) - (filled.get(row.itemId) ?? 0))
-				);
-				return sum(productionNeeds(lines, filled).map((need) => need.neededQty)) === lacking;
+				const ordered = [...lines].sort(fillOrder);
+				return lines.every((row) => {
+					const ahead = heldAhead(row, lines, filled);
+					const firstOwn = ordered.findIndex((other) => other.itemId === row.itemId);
+					return ahead.every(
+						(requestId) =>
+							requestId !== row.requestId &&
+							ordered.findIndex((other) => other.requestId === requestId) < firstOwn
+					);
+				});
 			})
 		);
-	});
-
-	it('lists a position once and never with nothing to make', () => {
-		assertProperty(
-			fc.property(demand, balances, (lines, stock) => {
-				const needs = productionNeeds(lines, allocateStock(lines, stock));
-				const keys = needs.map((need) => `${need.variantId}:${need.optionId}`);
-				return new Set(keys).size === keys.length && needs.every((need) => need.neededQty > 0);
-			})
-		);
-	});
-
-	it('puts an urgent position first and a near deadline before a far one', () => {
-		const lines = [
-			lineOf({ itemId: 1, variantId: 1, deliveryAt: new Date(base + 3 * DAY_MS) }),
-			lineOf({ itemId: 2, variantId: 2, deliveryAt: new Date(base + DAY_MS) }),
-			lineOf({ itemId: 3, variantId: 3, isUrgent: true }),
-			lineOf({ itemId: 4, variantId: 2, requestId: 9, deliveryAt: new Date(base + 2 * DAY_MS) })
-		];
-
-		const needs = productionNeeds(lines, new Map());
-
-		expect(needs.map((need) => [need.variantId, need.neededQty, need.requestCount])).toEqual([
-			[3, 1, 1],
-			[2, 2, 2],
-			[1, 1, 1]
-		]);
-		expect(needs[1]?.nearestDeliveryAt).toEqual(new Date(base + DAY_MS));
 	});
 });

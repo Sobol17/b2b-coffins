@@ -5,7 +5,6 @@ import { StockFill } from '../stock/stock-fill';
 import { StockThreshold } from '../stock/stock-threshold';
 import { PositionTitles, ShopDtoMapper } from './dto';
 import { ShopRepository } from './shop.repository';
-import { productionNeeds } from '$lib/domain/stock/allocation';
 import type { ActorContext } from '$lib/types/actor';
 import { SHOP_REQUEST_LIMIT, type ShopDto } from '$lib/types/crm-shop';
 import type { ShopProduceInput } from '$lib/validation/crm-shop';
@@ -38,10 +37,10 @@ export class ShopService extends BaseService {
 		const lines = snapshot.lines
 			.filter((line) => shown.has(line.requestId))
 			.sort((a, b) => a.itemId - b.itemId);
-		const needs = productionNeeds(snapshot.lines, snapshot.filled);
-		const titles = PositionTitles.read(this.shop, [...needs, ...lines]);
+		const titles = PositionTitles.read(this.shop, lines);
 		return {
-			queue: needs.map((need) => ShopDtoMapper.toQueueRow(need, titles, snapshot.balances)),
+			// The station screens of C19 replace the production queue.
+			queue: [],
 			requests: rows.map((row) =>
 				ShopDtoMapper.toRequest(
 					row,

@@ -1,16 +1,6 @@
 import type { ShopRepository, ShopRequestRow, VariantTitleRow } from './shop.repository';
-import {
-	isCovered,
-	positionKey,
-	type DemandLine,
-	type ProductionNeed
-} from '$lib/domain/stock/allocation';
-import type {
-	ShopLineDto,
-	ShopPositionDto,
-	ShopQueueRowDto,
-	ShopRequestDto
-} from '$lib/types/crm-shop';
+import { isCovered, type DemandLine } from '$lib/domain/stock/allocation';
+import type { ShopLineDto, ShopPositionDto, ShopRequestDto } from '$lib/types/crm-shop';
 
 /** Names of the positions one screen shows, read once for the whole screen. */
 export class PositionTitles {
@@ -55,25 +45,6 @@ export class PositionTitles {
 
 /** Projection of the shop floor (tech.md v1.41). No money column is ever read for it. */
 export class ShopDtoMapper {
-	static toQueueRow(
-		need: ProductionNeed,
-		titles: PositionTitles,
-		balances: ReadonlyMap<string, number>
-	): ShopQueueRowDto {
-		const stockItemId = titles.stockItemOf(need.variantId);
-		const balance =
-			stockItemId === null ? 0 : (balances.get(positionKey(stockItemId, need.optionId)) ?? 0);
-		return {
-			...titles.position(need.variantId, need.optionId),
-			neededQty: need.neededQty,
-			stockQty: Math.max(0, balance),
-			requestCount: need.requestCount,
-			nearestDeliveryAt: need.nearestDeliveryAt?.toISOString() ?? null,
-			hasUrgent: need.hasUrgent,
-			canProduce: stockItemId !== null
-		};
-	}
-
 	static toRequest(
 		row: ShopRequestRow,
 		lines: readonly DemandLine[],
