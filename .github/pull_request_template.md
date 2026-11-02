@@ -1,7 +1,7 @@
 ## Change
 
 Describe the problem, the resulting behavior, and the acceptance criteria.
-Reference the task or slice and its plan when applicable.
+Reference an existing task when applicable; no slice ID or plan is required.
 
 ## Contracts
 

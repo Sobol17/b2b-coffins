@@ -1,6 +1,6 @@
 # C15 PWA and Web Push Implementation Plan
 
-> Перед продолжением прочитай корневые `AGENTS.md`, `PLANS.md` и актуальный `tech.md`. Сверь шаги с кодом и git: чекбоксы этого плана могут отставать от реализации. Установка внешнего workflow не требуется.
+> Архив первоначальной разработки. При обращении к этому материалу следуй корневому `AGENTS.md` и читай только нужный блок `tech.md`. Сверяй шаги с кодом и git; пустые чекбоксы не запускают работу автоматически.
 
 **Goal:** The app installs to a home screen and delivers the events of tech.md 7.3 as system notifications; a driver gets a push the moment a request turns `ready` and opens it from the notification.
 
