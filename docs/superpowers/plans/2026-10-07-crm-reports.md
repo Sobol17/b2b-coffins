@@ -3516,7 +3516,7 @@ for (const role of ['manager', 'driver', 'cp_admin'] as const) {
 pnpm lint && pnpm check && pnpm test:unit && SESSION_SECRET=... pnpm test:e2e && SESSION_SECRET=... pnpm build
 ```
 
-Ожидание: всё зелёное, покрытие `lib/domain/**` не ниже 90% строк. Упавший чужой e2e, в котором `manager` открывал что-то по `reports.read`, это следствие решения 1 спеки: поправить тест, а не право.
+Ожидание: всё зелёное, без порога покрытия (`tech.md` §10). Упавший чужой e2e, в котором `manager` открывал что-то по `reports.read`, это следствие решения 1 спеки: поправить тест, а не право.
 
 - [ ] **Step 4: DoD на продовой сборке.** `pnpm seed && pnpm seed:demo`, `node build`, войти руководителем: сумма на баннере портала (`/portal`, войти `cp_admin`, значение счётчика «всего») равна плитке «Начислено всего» на `/crm/reports/charity`. Снять скриншоты дашборда и отчёта по фонду.
 

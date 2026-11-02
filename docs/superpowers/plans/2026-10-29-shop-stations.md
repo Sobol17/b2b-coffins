@@ -101,7 +101,7 @@ export function isMadeByShop(
 - [ ] **Step 2: Тесты `dispatch`.** Строка `wantQty 3, filled 1`, заданий нет: один шаг `add` на 2. Та же строка с заданием столяра `qty 2`: план пуст. `filled 3` при задании столяра `qty 2, done 1`: `shrink` до 1. `filled 3` при задании маляра `qty 2`: план пуст (дальше столяра не снимаем). `isMadeByShop([])` ложно, `[{qty 2, madeQty 2}]` истинно. Property (fast-check): после применения плана к `jobs` повторный `planDispatch` пуст; ни один `shrink` не опускает `qty` ниже `doneQty`; сумма `qty` открытых заданий строки после плана не меньше `max(0, wantQty − filledQty)` минус штуки за столяром.
 - [ ] **Step 3:** тесты падают.
 - [ ] **Step 4:** реализация; чистый домен без импортов сервера.
-- [ ] **Step 5:** тесты зелёные, покрытие `lib/domain/shop/**` не ниже 90% (`pnpm test:unit --coverage`).
+- [ ] **Step 5:** затронутые тесты зелёные; состав проверок по риску из `tech.md` §10, без порога покрытия.
 - [ ] **Step 6:** `git commit -m "feat(crm): plan the shop dispatch in the domain"`
 
 ### Task 3: Схема, guard-ы и автоматический переход в `ready`

@@ -3638,7 +3638,7 @@ Run, with `SESSION_SECRET` exported and port 4173 free:
 pnpm lint && pnpm check && pnpm test:unit && pnpm test:e2e && pnpm build
 ```
 
-Expected: all green; coverage of `lib/domain/**` at 90% lines or more. Then on a clean database: `rm -f data/gate.db && DATABASE_PATH=./data/gate.db pnpm db:migrate && DATABASE_PATH=./data/gate.db pnpm seed`. Expected: no error, ten rows in `notification_templates`.
+Expected: all green; no coverage threshold (tech.md §10). Then on a clean database: `rm -f data/gate.db && DATABASE_PATH=./data/gate.db pnpm db:migrate && DATABASE_PATH=./data/gate.db pnpm seed`. Expected: no error, ten rows in `notification_templates`.
 
 Check file sizes: `wc -l` on every file this plan created or touched, none above 250.
 

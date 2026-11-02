@@ -10,7 +10,7 @@ are unchanged. Explain schema, permission, event, and DTO changes when present.
 
 ## Validation
 
-- [ ] Local gate: lint, check, unit with domain coverage, e2e, build
+- [ ] Local gate: lint, check, unit, e2e, build
 - [ ] Clean database: migrations, seed, production health smoke
 - [ ] Self-review against tech.md §13.3–13.5
 

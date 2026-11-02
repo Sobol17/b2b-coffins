@@ -597,7 +597,7 @@ git commit -m "test(portal): cover support chat end to end"
 - [ ] **Step 2: Гейт целиком**
 
 Run: `pnpm lint && pnpm check && pnpm test:unit && pnpm test:e2e && pnpm build`
-Expected: все пять команд зелёные; покрытие `lib/domain/**` не ниже 90% строк.
+Expected: все пять команд зелёные; порога покрытия нет (`tech.md` §10).
 
 - [ ] **Step 3: Commit**
 

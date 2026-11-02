@@ -141,8 +141,8 @@ Expected: FAIL, модуль не найден.
 
 - [ ] **Step 4: Прогнать тесты с покрытием**
 
-Run: `pnpm vitest run tests/domain/finance-summary.spec.ts --coverage --coverage.include=src/lib/domain/finance/**`
-Expected: PASS, строки `summary.ts` покрыты не меньше чем на 90%.
+Run: `pnpm exec vitest run tests/domain/finance-summary.spec.ts`
+Expected: PASS, примеры и инварианты расчёта проверены по `tech.md` §10.
 
 - [ ] **Step 5: Commit**
 
