@@ -15,6 +15,12 @@ export default defineConfig({
 	plugins: [tailwindcss(), sveltekit()],
 	test: {
 		expect: { requireAssertions: true },
+		coverage: {
+			provider: 'v8',
+			include: ['src/lib/domain/**/*.ts'],
+			reporter: ['text-summary', 'lcov'],
+			thresholds: { lines: 90 }
+		},
 		projects: [
 			{
 				extends: './vite.config.ts',
