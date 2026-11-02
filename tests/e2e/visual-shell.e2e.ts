@@ -148,6 +148,12 @@ test.describe('portal shell on a phone', () => {
 		page
 	}) => {
 		await page.goto('/');
+		// Cyrillic fallback metrics vary by OS; exercise a wide font before checking the layout.
+		const heading = page.getByRole('heading', { name: 'Благотворительный проект', exact: true });
+		await heading.evaluate((element) => {
+			element.style.fontFamily = 'Verdana, sans-serif';
+		});
+		expect(await heading.evaluate((element) => element.scrollWidth - element.clientWidth)).toBe(0);
 		expect(await horizontalOverflow(page)).toBeLessThanOrEqual(0);
 
 		await login(page, 'cp_admin');
