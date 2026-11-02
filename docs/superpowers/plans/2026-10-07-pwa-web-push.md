@@ -1,6 +1,6 @@
 # C15 PWA and Web Push Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> Архив. Действующие инструкции: [AGENTS.md](../../../AGENTS.md).
 
 **Goal:** The app installs to a home screen and delivers the events of tech.md 7.3 as system notifications; a driver gets a push the moment a request turns `ready` and opens it from the notification.
 
@@ -23,7 +23,7 @@
 - TypeScript strict, no `any`. Services extend `BaseService`, repositories `BaseRepository`. Files at most 250 lines, functions at most 40.
 - Migrations only through `pnpm db:generate`. UI only from `lib/ui` primitives and tokens of `src/app.css`.
 - Comments in English and about why. Placeholders in the short form «Введите …».
-- Commits: Conventional Commits in English, scope from the list in `CLAUDE.md`, no co-author trailers, no generator lines, no emoji.
+- Commits: Conventional Commits in English, scope from the list in `AGENTS.md`, no co-author trailers, no generator lines, no emoji.
 - Local e2e and build need `SESSION_SECRET` in the shell; stop a stale preview on port 4173 before `pnpm test:e2e`.
 
 ## Review Focus
@@ -3638,7 +3638,7 @@ Run, with `SESSION_SECRET` exported and port 4173 free:
 pnpm lint && pnpm check && pnpm test:unit && pnpm test:e2e && pnpm build
 ```
 
-Expected: all green; coverage of `lib/domain/**` at 90% lines or more. Then on a clean database: `rm -f data/gate.db && DATABASE_PATH=./data/gate.db pnpm db:migrate && DATABASE_PATH=./data/gate.db pnpm seed`. Expected: no error, ten rows in `notification_templates`.
+Expected: all green; no coverage threshold (tech.md §10). Then on a clean database: `rm -f data/gate.db && DATABASE_PATH=./data/gate.db pnpm db:migrate && DATABASE_PATH=./data/gate.db pnpm seed`. Expected: no error, ten rows in `notification_templates`.
 
 Check file sizes: `wc -l` on every file this plan created or touched, none above 250.
 

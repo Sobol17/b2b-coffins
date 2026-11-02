@@ -1,6 +1,6 @@
 # Правки портала P10–P13: план реализации
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> Архив. Действующие инструкции: [AGENTS.md](../../../AGENTS.md).
 
 **Goal:** Закрыть шесть правок бизнеса от 19.09.2026 четырьмя слайсами портала: чистка профиля, обязательная отгрузка в заявке, фид уведомлений с колокольчиком и канал МАКС в контракте, примеры работ и блок фонда на лендинге.
 
@@ -30,7 +30,7 @@
 - Коммиты Conventional Commits на английском: `type(scope): summary`, императив, строчная буква, без точки, до 50 символов. Автор берётся из `git config`, `--author` не используем. Следов нейросети в сообщениях нет.
 - Один слайс = одна ветка = один PR. Ветки: `feat/portal-profile-cleanup` (P10), `feat/request-delivery-required` (P11), `feat/notification-feed` (P12), `feat/landing-works-charity` (P13).
 - Перед PR локально зелёные `pnpm lint`, `pnpm check`, `pnpm test:unit`, `pnpm test:e2e`, `pnpm build`.
-- Порог покрытия `src/lib/domain/**` — 90% строк.
+- Порога покрытия нет; объём проверок определяется риском по `tech.md` §10.
 - Локальный прогон e2e и `vite build` требует `SESSION_SECRET` в окружении: ни Playwright, ни сборка не читают `.env`.
 - Тесты очереди работают на реальных часах: `visible_at` целые секунды, замороженные часы воркера пропускают джобы.
 

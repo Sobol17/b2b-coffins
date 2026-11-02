@@ -1,5 +1,7 @@
 # C2 CRM Catalog and Prices Implementation Plan
 
+> Архив. Действующие инструкции: [AGENTS.md](../../../AGENTS.md).
+
 > **For agentic workers:** Implement the tasks in order with red, green, refactor cycles. This plan is executed in the current session.
 
 **Goal:** An owner or manager fills and publishes the catalog from an empty CRM; only the owner receives cost prices.

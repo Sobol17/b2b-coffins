@@ -1,6 +1,6 @@
 # C17. Обращения контрагентов: план реализации
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> Архив. Действующие инструкции: [AGENTS.md](../../../AGENTS.md).
 
 **Goal:** контрагент заводит обращение из личного кабинета, мастерская отвечает из CRM, обе стороны получают пуш и строку колокольчика, закрытое обращение не принимает сообщений.
 
@@ -597,7 +597,7 @@ git commit -m "test(portal): cover support chat end to end"
 - [ ] **Step 2: Гейт целиком**
 
 Run: `pnpm lint && pnpm check && pnpm test:unit && pnpm test:e2e && pnpm build`
-Expected: все пять команд зелёные; покрытие `lib/domain/**` не ниже 90% строк.
+Expected: все пять команд зелёные; порога покрытия нет (`tech.md` §10).
 
 - [ ] **Step 3: Commit**
 

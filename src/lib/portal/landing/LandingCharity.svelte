@@ -18,7 +18,7 @@
 		class="grid grid-cols-1 items-center gap-8 rounded-card bg-surface-raised p-8 sm:p-11 lg:grid-cols-[1fr_auto]"
 	>
 		<div>
-			<h2 class="mb-2 text-3xl sm:text-4xl">Благотворительный проект</h2>
+			<h2 class="mb-2 text-3xl wrap-anywhere sm:text-4xl">Благотворительный проект</h2>
 			<p class="max-w-2xl text-fg-muted">
 				С каждой оплаченной заявки мастерская перечисляет
 				<span class="text-fg">{rate} %</span>

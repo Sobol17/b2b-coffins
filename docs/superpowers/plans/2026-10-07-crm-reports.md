@@ -1,6 +1,6 @@
 # C13. Отчёты и аналитика: план реализации
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> Архив. Действующие инструкции: [AGENTS.md](../../../AGENTS.md).
 
 **Goal:** Руководитель видит в CRM дашборд, пять отчётов за период с выгрузкой в XLSX и ведёт реестр перечислений в фонд со сторно.
 
@@ -3516,10 +3516,10 @@ for (const role of ['manager', 'driver', 'cp_admin'] as const) {
 pnpm lint && pnpm check && pnpm test:unit && SESSION_SECRET=... pnpm test:e2e && SESSION_SECRET=... pnpm build
 ```
 
-Ожидание: всё зелёное, покрытие `lib/domain/**` не ниже 90% строк. Упавший чужой e2e, в котором `manager` открывал что-то по `reports.read`, это следствие решения 1 спеки: поправить тест, а не право.
+Ожидание: всё зелёное, без порога покрытия (`tech.md` §10). Упавший чужой e2e, в котором `manager` открывал что-то по `reports.read`, это следствие решения 1 спеки: поправить тест, а не право.
 
 - [ ] **Step 4: DoD на продовой сборке.** `pnpm seed && pnpm seed:demo`, `node build`, войти руководителем: сумма на баннере портала (`/portal`, войти `cp_admin`, значение счётчика «всего») равна плитке «Начислено всего» на `/crm/reports/charity`. Снять скриншоты дашборда и отчёта по фонду.
 
 - [ ] **Step 5: Сверка контракта.** Перечитать `tech.md` v1.51 и спеку против кода: имена DTO, роутов, действий аудита. Расхождение, найденное по ходу (например, `charityReportSchema`), исправить в `tech.md` и спеке тем же коммитом.
 
-- [ ] **Step 6: Commit** `test(crm): walk the reports as the owner and as a stranger`, затем прогон чек-листа «перед PR» из `CLAUDE.md`. PR открывается после слова владельца.
+- [ ] **Step 6: Commit** `test(crm): walk the reports as the owner and as a stranger`, затем прогон чек-листа «перед PR» из `AGENTS.md`. PR открывается после слова владельца.

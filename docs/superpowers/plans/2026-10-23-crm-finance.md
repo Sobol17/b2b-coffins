@@ -1,6 +1,6 @@
 # C18 Финансы мастерской: план реализации
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> Архив. Действующие инструкции: [AGENTS.md](../../../AGENTS.md).
 
 **Goal:** страница `/crm/finance` для руководителя: форма ручной операции, аналитика за период и лента, где оплаты заявок, выплаты бригаде и перечисления в фонд появляются сами.
 
@@ -24,8 +24,8 @@
 - UI только из `lib/ui`, `lib/crm/reports` и `lib/crm/ReportTable.svelte`; цвета только токенами (`text-success`, `text-danger`, `bg-success`, `bg-danger`); библиотеку графиков не подключаем.
 - Плейсхолдеры короткие: «Введите сумму», «Выберите дату», «Введите комментарий», «Выберите тип», «Выберите источник».
 - Тексты без em-dash. Комментарии в коде на английском и объясняют почему.
-- Коммиты `type(scope): summary` на английском, scope из списка CLAUDE.md (`crm`, `ui`, `ci`), без трейлеров и следов нейросети.
-- Перед `pnpm test:e2e` и `pnpm build`: `SESSION_SECRET` в окружении, убить процесс на порту 4173, не запускать сборку параллельно с e2e.
+- Коммиты `type(scope): summary` на английском, scope из списка AGENTS.md (`crm`, `ui`, `ci`), без трейлеров и следов нейросети.
+- Перед `pnpm test:e2e` и `pnpm build`: `SESSION_SECRET` в окружении, проверить, что порт 4173 свободен; чужие процессы не останавливать, не запускать сборку параллельно с e2e.
 
 ## Review Focus
 
@@ -141,8 +141,8 @@ Expected: FAIL, модуль не найден.
 
 - [ ] **Step 4: Прогнать тесты с покрытием**
 
-Run: `pnpm vitest run tests/domain/finance-summary.spec.ts --coverage --coverage.include=src/lib/domain/finance/**`
-Expected: PASS, строки `summary.ts` покрыты не меньше чем на 90%.
+Run: `pnpm exec vitest run tests/domain/finance-summary.spec.ts`
+Expected: PASS, примеры и инварианты расчёта проверены по `tech.md` §10.
 
 - [ ] **Step 5: Commit**
 
@@ -354,7 +354,7 @@ Expected: PASS, 0 ошибок.
 
 - [ ] **Step 5: Проверить страницу в браузере**
 
-Запустить dev-превью (`dev` из `.claude/launch.json`, переменные в строке запуска), войти руководителем, внести, изменить и удалить операцию, проверить ширину 375 px: нет горизонтальной прокрутки страницы, график прокручивается внутри карточки.
+Запустить dev-превью по `docs/agent-workflow.md`, войти руководителем, внести, изменить и удалить операцию, проверить ширину 375 px: нет горизонтальной прокрутки страницы, график прокручивается внутри карточки.
 
 - [ ] **Step 6: Прогнать e2e слайса и аудит маршрутов**
 
