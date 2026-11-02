@@ -1,6 +1,6 @@
 # C19 Станции цеха: план реализации
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> Перед продолжением прочитай корневые `AGENTS.md`, `PLANS.md` и актуальный `tech.md`. Сверь шаги с кодом и git: чекбоксы этого плана могут отставать от реализации. Установка внешнего workflow не требуется.
 
 **Goal:** столяр, шлифовщик, маляр и обивщик видят заявки своей станции, берут их в работу, отмечают сделанное и передают дальше; после обивщика гробы приходят на склад, и заявка сама становится «Готов к выдаче».
 
@@ -22,7 +22,7 @@
 - Аудит: `shop.task.take`, `shop.job.progress`, `shop.task.complete` по сущности `shop_tasks`.
 - Миграция только `pnpm db:generate`. Файл до 250 строк, функция до 40. `any` запрещён. UI только из `lib/ui`, тач-цели от 44 px (`TouchButton`).
 - Комментарии в коде на английском и объясняют почему. Коммиты `type(scope): summary`, scope `crm`, `stock`, `request`, `ui`, без трейлеров и следов нейросети.
-- Перед `pnpm test:e2e` и `pnpm build`: `SESSION_SECRET` в окружении, убить процесс на порту 4173, сборку не гонять параллельно с e2e. Спеки e2e начинают с `emptyCart`, склад выравнивают `stockUp`.
+- Перед `pnpm test:e2e` и `pnpm build`: `SESSION_SECRET` в окружении, проверить, что порт 4173 свободен; чужие процессы не останавливать, сборку не гонять параллельно с e2e. Спеки e2e начинают с `emptyCart`, склад выравнивают `stockUp`.
 
 ## Review Focus
 
@@ -215,7 +215,7 @@ export function isMadeByShop(
 - `/crm/shop/[id]`: load `task`; actions `take`, `progress`, `complete`; каждое сначала `requireScope(..., 'crm')` и `requireAction(actor, 'shop.work')`, затем разбор формы (§12). Строка с `qty 1` рисуется `Checkbox` (форма шлёт `doneQty` 0 или 1), иначе «Нужно N шт» и `NumberInput` с «Сделано N из M». Кнопки `TouchButton`; «Выполнено» неактивна без `canComplete`. Исход action через `withToast`.
 
 - [ ] **Step 1:** роуты и компоненты, `InstallPrompt` и `PushBanner` остаются на `/crm/shop`.
-- [ ] **Step 2:** `pnpm check`, `pnpm lint` зелёные; dev-сервер (`dev` из `.claude/launch.json`): столяр видит визит, отмечает и закрывает его, на ширине 375 px нет горизонтальной прокрутки.
+- [ ] **Step 2:** `pnpm check`, `pnpm lint` зелёные; dev-сервер по `docs/agent-workflow.md`: столяр видит визит, отмечает и закрывает его, на ширине 375 px нет горизонтальной прокрутки.
 - [ ] **Step 3:** `git commit -m "feat(crm): add the station screens"`
 
 ### Task 9: Доска и карточка заявки

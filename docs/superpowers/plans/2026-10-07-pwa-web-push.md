@@ -1,6 +1,6 @@
 # C15 PWA and Web Push Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> Перед продолжением прочитай корневые `AGENTS.md`, `PLANS.md` и актуальный `tech.md`. Сверь шаги с кодом и git: чекбоксы этого плана могут отставать от реализации. Установка внешнего workflow не требуется.
 
 **Goal:** The app installs to a home screen and delivers the events of tech.md 7.3 as system notifications; a driver gets a push the moment a request turns `ready` and opens it from the notification.
 
@@ -23,7 +23,7 @@
 - TypeScript strict, no `any`. Services extend `BaseService`, repositories `BaseRepository`. Files at most 250 lines, functions at most 40.
 - Migrations only through `pnpm db:generate`. UI only from `lib/ui` primitives and tokens of `src/app.css`.
 - Comments in English and about why. Placeholders in the short form «Введите …».
-- Commits: Conventional Commits in English, scope from the list in `CLAUDE.md`, no co-author trailers, no generator lines, no emoji.
+- Commits: Conventional Commits in English, scope from the list in `AGENTS.md`, no co-author trailers, no generator lines, no emoji.
 - Local e2e and build need `SESSION_SECRET` in the shell; stop a stale preview on port 4173 before `pnpm test:e2e`.
 
 ## Review Focus

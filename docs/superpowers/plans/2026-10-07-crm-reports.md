@@ -1,6 +1,6 @@
 # C13. Отчёты и аналитика: план реализации
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> Перед продолжением прочитай корневые `AGENTS.md`, `PLANS.md` и актуальный `tech.md`. Сверь шаги с кодом и git: чекбоксы этого плана могут отставать от реализации. Установка внешнего workflow не требуется.
 
 **Goal:** Руководитель видит в CRM дашборд, пять отчётов за период с выгрузкой в XLSX и ведёт реестр перечислений в фонд со сторно.
 
@@ -3522,4 +3522,4 @@ pnpm lint && pnpm check && pnpm test:unit && SESSION_SECRET=... pnpm test:e2e &&
 
 - [ ] **Step 5: Сверка контракта.** Перечитать `tech.md` v1.51 и спеку против кода: имена DTO, роутов, действий аудита. Расхождение, найденное по ходу (например, `charityReportSchema`), исправить в `tech.md` и спеке тем же коммитом.
 
-- [ ] **Step 6: Commit** `test(crm): walk the reports as the owner and as a stranger`, затем прогон чек-листа «перед PR» из `CLAUDE.md`. PR открывается после слова владельца.
+- [ ] **Step 6: Commit** `test(crm): walk the reports as the owner and as a stranger`, затем прогон чек-листа «перед PR» из `AGENTS.md`. PR открывается после слова владельца.

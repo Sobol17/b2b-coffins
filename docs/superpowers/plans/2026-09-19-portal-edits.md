@@ -1,6 +1,6 @@
 # Правки портала P10–P13: план реализации
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> Перед продолжением прочитай корневые `AGENTS.md`, `PLANS.md` и актуальный `tech.md`. Сверь шаги с кодом и git: чекбоксы этого плана могут отставать от реализации. Установка внешнего workflow не требуется.
 
 **Goal:** Закрыть шесть правок бизнеса от 19.09.2026 четырьмя слайсами портала: чистка профиля, обязательная отгрузка в заявке, фид уведомлений с колокольчиком и канал МАКС в контракте, примеры работ и блок фонда на лендинге.
 

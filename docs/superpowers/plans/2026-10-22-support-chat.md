@@ -1,6 +1,6 @@
 # C17. Обращения контрагентов: план реализации
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> Перед продолжением прочитай корневые `AGENTS.md`, `PLANS.md` и актуальный `tech.md`. Сверь шаги с кодом и git: чекбоксы этого плана могут отставать от реализации. Установка внешнего workflow не требуется.
 
 **Goal:** контрагент заводит обращение из личного кабинета, мастерская отвечает из CRM, обе стороны получают пуш и строку колокольчика, закрытое обращение не принимает сообщений.
 
