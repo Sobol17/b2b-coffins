@@ -1,4 +1,4 @@
-import { and, eq, inArray, isNull, like, or } from 'drizzle-orm';
+import { and, eq, inArray, isNull, like, or, sql } from 'drizzle-orm';
 import { migrate } from 'drizzle-orm/better-sqlite3/migrator';
 import { hashPassword } from '../../src/lib/server/auth/password';
 import { createDb, type Db } from '../../src/lib/server/db/client';
@@ -11,6 +11,9 @@ import {
 	sessions,
 	shopJobs,
 	shopTasks,
+	shopUnits,
+	shopUnitWorks,
+	workEntries,
 	stockMoves,
 	userNotificationPrefs,
 	userRoles,
@@ -93,6 +96,11 @@ export default async function globalSetup(): Promise<void> {
 		.set({ status: 'cancelled' })
 		.where(inArray(requests.status, ['in_work', 'ready']))
 		.run();
+	db.delete(workEntries)
+		.where(sql`${workEntries.shopUnitWorkId} is not null`)
+		.run();
+	db.delete(shopUnitWorks).run();
+	db.delete(shopUnits).run();
 	db.delete(shopJobs).run();
 	db.delete(shopTasks).run();
 	db.delete(stockMoves)

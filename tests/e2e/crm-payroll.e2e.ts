@@ -8,7 +8,8 @@ import {
 	workDays,
 	workEntries,
 	workEntryStaff,
-	workTypes
+	workTypes,
+	shopUnitWorks
 } from '../../src/lib/server/db/schema';
 import { crmNavLink, login } from './fixtures';
 import { e2eDb } from './transitions';
@@ -22,6 +23,7 @@ test.beforeAll(() => {
 	db.delete(payrollPeriods).run();
 	db.delete(workEntryStaff).run();
 	db.delete(workEntries).run();
+	db.delete(shopUnitWorks).run();
 	db.delete(workDayStaff).run();
 	db.delete(workDays).run();
 	db.delete(workTypes).where(like(workTypes.title, 'E2E %')).run();

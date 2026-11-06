@@ -137,7 +137,7 @@ function advance(db: Db, people: People, id: number, scenario: DemoScenario): vo
 	}
 
 	move(people.manager, 'in_work');
-	if (scenario.stage === 'in_work') return passCarpenter(people.carpenter, id);
+	if (scenario.stage === 'in_work') return passCarpenter(people.manager, id);
 	// The pieces reach the shelf as a purchase; the system readies the request (tech.md §6.2).
 	const moves = new StockMoveService(people.manager);
 	for (const line of scenario.lines) {

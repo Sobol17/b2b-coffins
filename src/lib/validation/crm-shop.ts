@@ -9,6 +9,7 @@ export const shopTaskIdSchema = id;
 
 /** «Взять в работу» and «Выполнено» name the visit only. */
 export const shopTaskSchema = z.object({ taskId: id });
+export const shopUnitSchema = z.object({ unitId: id });
 
 /** The counter of a job takes the new count, not an increment (tech.md §20.4). */
 export const shopProgressSchema = z.object({

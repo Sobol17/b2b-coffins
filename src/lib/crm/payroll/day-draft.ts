@@ -35,10 +35,13 @@ export function previewOf(
 	presentIds: readonly number[],
 	drafts: readonly DayEntryDraft[]
 ): { totalMinor: number; shares: StaffShare[] } {
-	const entries = drafts.map((draft) => ({
-		amountMinor: (Number(draft.qty) || 0) * (rateOf(day, draft.workTypeId) ?? 0),
-		staffIds: presentIds.filter((id) => draft.crew.includes(id))
-	}));
+	const entries = [
+		...drafts.map((draft) => ({
+			amountMinor: (Number(draft.qty) || 0) * (rateOf(day, draft.workTypeId) ?? 0),
+			staffIds: presentIds.filter((id) => draft.crew.includes(id))
+		})),
+		...(day.autoEntries ?? [])
+	];
 	const valid = entries.filter((entry) => entry.staffIds.length > 0);
 	return {
 		totalMinor: entries.reduce((sum, entry) => sum + entry.amountMinor, 0),
