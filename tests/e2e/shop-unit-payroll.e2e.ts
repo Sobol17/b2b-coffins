@@ -72,18 +72,6 @@ test('a worker claims one piece, earns pending pay and receives confirmed pay wi
 	await page.getByTestId('mark-today').click();
 	await expect(page).toHaveURL(/\/crm\/payroll\/day\/\d{4}-\d{2}-\d{2}$/);
 	const dayPath = new URL(page.url()).pathname;
-	for (const worker of [own, other]) {
-		await page
-			.getByTestId('day-staff')
-			.getByRole('checkbox', { name: new RegExp(worker.fullName) })
-			.check();
-		await page
-			.getByTestId('day-carpenters')
-			.getByRole('checkbox', { name: worker.fullName, exact: true })
-			.check();
-	}
-	await page.getByRole('button', { name: 'Сохранить день' }).click();
-	await expect(page.getByText('День сохранён').first()).toBeVisible();
 	await page.context().clearCookies();
 	await login(page, 'carpenter');
 	await page.goto(`/crm/shop?q=${encodeURIComponent(number)}`);
@@ -94,6 +82,15 @@ test('a worker claims one piece, earns pending pay and receives confirmed pay wi
 	const unitId = await piece.getAttribute('data-unit-id');
 	await piece.getByRole('button', { name: 'Взять в работу', exact: true }).click();
 	await expect(piece.getByRole('button', { name: 'Выполнено', exact: true })).toBeEnabled();
+	await expect(page.getByTestId('toast').filter({ hasText: 'Изделие в работе' })).toBeVisible();
+	// Reuse the enhanced form after claiming the piece: no navigation may recreate its callback.
+	await piece.getByRole('button', { name: 'Выполнено', exact: true }).click();
+	await expect(
+		page
+			.getByTestId('toast')
+			.filter({ hasText: 'Работа выполнена, начисление ожидает подтверждения' })
+	).toBeVisible();
+	await expect(page.getByTestId('shop-job-count')).toContainText('Сделано 1 из 1');
 	await page.context().clearCookies();
 	await login(page, 'manager');
 	const stolen = await page.request.post(`${visitPath}?/takeUnit`, {
@@ -104,26 +101,39 @@ test('a worker claims one piece, earns pending pay and receives confirmed pay wi
 	expect(refusal, JSON.stringify(refusal)).toMatchObject({ type: 'failure', status: 409 });
 	await page.context().clearCookies();
 	await login(page, 'carpenter');
-	await page.goto(visitPath);
-	await page
-		.getByTestId('shop-unit')
-		.first()
-		.getByRole('button', { name: 'Выполнено', exact: true })
-		.click();
-	await expect(page.getByTestId('shop-job-count')).toContainText('Сделано 1 из 1');
 	await page.goto('/crm/salary');
-	await expect(page.getByTestId('salary-pending')).toHaveText('425 ₽');
+	await expect(page.getByTestId('salary-pending')).toHaveText('Ждёт расчёта');
+	await expect(page.getByTestId('salary-work')).toContainText('Ждёт состава бригады');
 	await expect(page.getByText(other.fullName, { exact: true })).toHaveCount(0);
 	await page.context().clearCookies();
 	await login(page, 'manager');
-	await page.goto(dayPath);
-	await page.getByRole('button', { name: 'Подтвердить работы дня', exact: true }).click();
-	await expect(page.getByText('Работы дня подтверждены').first()).toBeVisible();
+	await page.goto('/crm/payroll');
+	await expect(page.getByTestId('week-pending')).toContainText('1 работа');
+	await expect(page.getByRole('button', { name: 'Закрыть неделю', exact: true })).toBeDisabled();
+	await page.getByTestId('week-pending').getByRole('link').click();
+	await expect(page).toHaveURL(new RegExp(dayPath + '$'));
+	for (const worker of [own, other]) {
+		await page
+			.getByTestId('day-staff')
+			.getByRole('checkbox', { name: new RegExp(worker.fullName) })
+			.check();
+		await page
+			.getByTestId('day-carpenters')
+			.getByRole('checkbox', { name: worker.fullName, exact: true })
+			.check();
+	}
+	await page
+		.getByRole('button', { name: 'Сохранить день и подтвердить работы', exact: true })
+		.first()
+		.click();
+	await expect(page.getByText('День сохранён, работы подтверждены').first()).toBeVisible();
 	await page.context().clearCookies();
 	await login(page, 'carpenter');
 	await page.goto(`/crm/salary?staffId=${other.id}`);
 	await expect(page.getByTestId('salary-pending')).toHaveText('0 ₽');
 	await expect(page.getByTestId('salary-accrued')).toHaveText('425 ₽');
+	await expect(page.getByTestId('salary-work')).toContainText('Начислено');
+	await expect(page.getByTestId('salary-work')).toContainText('425 ₽');
 	await expect(page.getByText(other.fullName, { exact: true })).toHaveCount(0);
 	const forbidden = await page.request.post(`${dayPath}?/confirm`, {
 		headers: { origin: ORIGIN },
@@ -153,7 +163,9 @@ test('a worker claims one piece, earns pending pay and receives confirmed pay wi
 	await page.context().clearCookies();
 	await login(page, 'carpenter');
 	await page.goto('/crm/salary');
-	await expect(page.getByTestId('salary-paid')).toBeVisible();
+	await expect(page.getByTestId('salary-paid')).toContainText('425 ₽');
+	await expect(page.getByTestId('salary-payout')).toHaveText('0 ₽');
+	await expect(page.getByTestId('salary-work')).toContainText('Выплачено');
 	await page.setViewportSize({ width: 390, height: 844 });
 	expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(
 		true
