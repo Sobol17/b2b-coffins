@@ -33,6 +33,14 @@ const PRICE_BLIND: readonly RoleKey[] = [
 const DRIVER_MONEY: Readonly<Record<string, readonly string[]>> = {
 	'/crm/delivery': ['totalMinor']
 };
+/** Own earnings are allowed only on the personal payroll screen, never product prices. */
+const OWN_PAYROLL_MONEY = [
+	'pendingMinor',
+	'accruedMinor',
+	'adjustmentMinor',
+	'payoutMinor',
+	'shareMinor'
+];
 
 let screens: Screen[] = [];
 
@@ -91,7 +99,12 @@ for (const role of PRICE_BLIND) {
 		for (const { path } of readable) {
 			const response = await page.request.get(`${path}/__data.json`);
 			expect(response.status(), path).toBe(200);
-			const allowed = role === 'driver' ? (DRIVER_MONEY[path] ?? []) : [];
+			const allowed =
+				path === '/crm/salary'
+					? OWN_PAYROLL_MONEY
+					: role === 'driver'
+						? (DRIVER_MONEY[path] ?? [])
+						: [];
 			const leaked = purchaseMoneyKeys(await response.text()).filter(
 				(key) => !allowed.includes(key)
 			);

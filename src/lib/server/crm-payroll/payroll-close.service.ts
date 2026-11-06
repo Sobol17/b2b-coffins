@@ -33,15 +33,7 @@ export class PayrollCloseService extends PayrollBaseService {
 	close(date: string): void {
 		this.audited({ action: 'payroll.close', entity: 'payroll_periods' }, (tx) => {
 			const week = this.reader.read(date, tx);
-			if (
-				new ShopUnitWorkRepository().pending(
-					this.calendar.instantOf(week.startsOn),
-					this.calendar.instantOf(week.endsOn),
-					tx
-				).length
-			) {
-				throw new ConflictError('Сначала подтвердите все выполненные работы недели');
-			}
+			this.assertNoPending(week.startsOn, week.endsOn, tx);
 			if (week.period && week.period.status !== 'open') {
 				throw new ConflictError('Неделя уже закрыта');
 			}
@@ -128,6 +120,18 @@ export class PayrollCloseService extends PayrollBaseService {
 				after: { staffId: line.staffId, paidAt: null }
 			};
 		});
+	}
+
+	private assertNoPending(startsOn: string, endsOn: string, tx: Tx): void {
+		if (
+			new ShopUnitWorkRepository().pending(
+				this.calendar.instantOf(startsOn),
+				this.calendar.instantOf(endsOn),
+				tx
+			).length
+		) {
+			throw new ConflictError('Сначала подтвердите все выполненные работы недели');
+		}
 	}
 
 	/** Writes the figures of the sheet into the lines and drops the lines the sheet does not show. */

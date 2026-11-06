@@ -66,13 +66,24 @@ export class ShopJobRepository extends BaseRepository<typeof shopJobs> {
 
 	/** Every job not yet past the upholsterer, with the station of its visit. */
 	openJobs(tx?: Tx): OpenJob[] {
+		return this.readOpenJobs(tx, false);
+	}
+
+	/** Dispatch must retain claimed pieces even before the worker finishes them. */
+	dispatchJobs(tx?: Tx): OpenJob[] {
+		return this.readOpenJobs(tx, true);
+	}
+
+	private readOpenJobs(tx: Tx | undefined, preserveClaims: boolean): OpenJob[] {
 		return this.db(tx)
 			.select({
 				id: shopJobs.id,
 				itemId: shopJobs.requestItemId,
 				station: shopTasks.station,
 				qty: shopJobs.qty,
-				doneQty: sql<number>`max(${shopJobs.doneQty}, (select count(*) from shop_units u left join shop_unit_works w on w.unit_id = u.id and w.station = ${shopTasks.station} where u.job_id = ${shopJobs.id} and (u.legacy_done = 1 or w.id is not null)))`
+				doneQty: preserveClaims
+					? sql<number>`max(${shopJobs.doneQty}, (select count(*) from shop_units u left join shop_unit_works w on w.unit_id = u.id and w.station = ${shopTasks.station} where u.job_id = ${shopJobs.id} and (u.legacy_done = 1 or w.id is not null)))`
+					: shopJobs.doneQty
 			})
 			.from(shopJobs)
 			.innerJoin(shopTasks, eq(shopTasks.id, shopJobs.taskId))
