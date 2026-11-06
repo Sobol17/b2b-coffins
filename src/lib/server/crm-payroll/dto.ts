@@ -10,7 +10,8 @@ export class PayrollDtoMapper {
 			fullName: row.fullName,
 			position: row.position,
 			isActive: row.isActive,
-			hasAccount: row.userId !== null
+			hasAccount: row.userId !== null,
+			userId: row.userId
 		};
 	}
 

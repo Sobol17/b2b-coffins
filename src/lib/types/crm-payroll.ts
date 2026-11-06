@@ -27,6 +27,7 @@ export interface WorkTypeDto {
 	/** Shop role the work belongs to, null for a general one (v1.61). */
 	roleCode: WorkRole | null;
 	variantId?: number | null;
+	variantLabel?: string | null;
 	isActive: boolean;
 }
 

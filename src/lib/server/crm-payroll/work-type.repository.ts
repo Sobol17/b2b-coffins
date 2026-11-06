@@ -1,15 +1,21 @@
-import { and, asc, desc, eq, inArray, ne, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray, isNull, ne, sql } from 'drizzle-orm';
 import { BaseRepository } from '../core/repository';
 import type { Tx } from '../db/client';
-import { workTypes } from '../db/schema';
+import { products, productVariants, workTypes } from '../db/schema';
 import type { WorkTypeDto } from '$lib/types/crm-payroll';
 import { WORK_ROLES, type WorkRole } from '$lib/types/roles';
+
+const VARIANT_LABEL = sql<
+	string | null
+>`${productVariants.sku} || ' · ' || ${products.title} || ' · ' || ${productVariants.sizeCode}`;
 
 const COLUMNS = {
 	id: workTypes.id,
 	title: workTypes.title,
 	rateMinor: workTypes.rateMinor,
 	roleCode: workTypes.roleCode,
+	variantId: workTypes.variantId,
+	variantLabel: VARIANT_LABEL,
 	isActive: workTypes.isActive
 };
 
@@ -29,12 +35,20 @@ export class WorkTypeRepository extends BaseRepository<typeof workTypes> {
 		return this.db(tx)
 			.select(COLUMNS)
 			.from(workTypes)
+			.leftJoin(productVariants, eq(productVariants.id, workTypes.variantId))
+			.leftJoin(products, eq(products.id, productVariants.productId))
 			.orderBy(desc(workTypes.isActive), FLOOR_ORDER, asc(workTypes.title), asc(workTypes.id))
 			.all();
 	}
 
 	find(id: number, tx?: Tx): WorkTypeDto | undefined {
-		const [row] = this.db(tx).select(COLUMNS).from(workTypes).where(eq(workTypes.id, id)).all();
+		const [row] = this.db(tx)
+			.select(COLUMNS)
+			.from(workTypes)
+			.leftJoin(productVariants, eq(productVariants.id, workTypes.variantId))
+			.leftJoin(products, eq(products.id, productVariants.productId))
+			.where(eq(workTypes.id, id))
+			.all();
 		return row;
 	}
 
@@ -43,6 +57,8 @@ export class WorkTypeRepository extends BaseRepository<typeof workTypes> {
 		return this.db(tx)
 			.select(COLUMNS)
 			.from(workTypes)
+			.leftJoin(productVariants, eq(productVariants.id, workTypes.variantId))
+			.leftJoin(products, eq(products.id, productVariants.productId))
 			.where(inArray(workTypes.id, [...ids]))
 			.all();
 	}
@@ -58,7 +74,65 @@ export class WorkTypeRepository extends BaseRepository<typeof workTypes> {
 		return row !== undefined;
 	}
 
-	insert(input: { title: string; rateMinor: number; roleCode: WorkRole | null }, tx?: Tx): number {
+	/** Descriptive projection only: choosing a payroll position never selects product prices. */
+	variantChoices(): { id: number; label: string }[] {
+		return this.db()
+			.select({ id: productVariants.id, label: VARIANT_LABEL })
+			.from(productVariants)
+			.innerJoin(products, eq(products.id, productVariants.productId))
+			.where(and(isNull(productVariants.deletedAt), isNull(products.deletedAt)))
+			.orderBy(asc(products.title), asc(productVariants.sku))
+			.all()
+			.map((row) => ({ id: row.id, label: row.label ?? '' }));
+	}
+
+	variantExists(id: number, tx?: Tx): boolean {
+		return (
+			this.db(tx)
+				.select({ id: productVariants.id })
+				.from(productVariants)
+				.innerJoin(products, eq(products.id, productVariants.productId))
+				.where(
+					and(
+						eq(productVariants.id, id),
+						isNull(productVariants.deletedAt),
+						isNull(products.deletedAt)
+					)
+				)
+				.get() !== undefined
+		);
+	}
+
+	variantRoleTaken(
+		variantId: number,
+		roleCode: WorkRole,
+		exceptId: number | null,
+		tx?: Tx
+	): boolean {
+		return (
+			this.db(tx)
+				.select({ id: workTypes.id })
+				.from(workTypes)
+				.where(
+					and(
+						eq(workTypes.variantId, variantId),
+						eq(workTypes.roleCode, roleCode),
+						exceptId === null ? undefined : ne(workTypes.id, exceptId)
+					)
+				)
+				.get() !== undefined
+		);
+	}
+
+	insert(
+		input: {
+			title: string;
+			rateMinor: number;
+			roleCode: WorkRole | null;
+			variantId?: number | null;
+		},
+		tx?: Tx
+	): number {
 		const [created] = this.db(tx)
 			.insert(workTypes)
 			.values(input)
@@ -70,7 +144,13 @@ export class WorkTypeRepository extends BaseRepository<typeof workTypes> {
 
 	update(
 		id: number,
-		patch: { title?: string; rateMinor?: number; roleCode?: WorkRole | null; isActive?: boolean },
+		patch: {
+			title?: string;
+			rateMinor?: number;
+			roleCode?: WorkRole | null;
+			variantId?: number | null;
+			isActive?: boolean;
+		},
 		tx?: Tx
 	): void {
 		this.db(tx).update(workTypes).set(patch).where(eq(workTypes.id, id)).run();

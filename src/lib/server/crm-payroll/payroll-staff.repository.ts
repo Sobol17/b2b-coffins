@@ -1,4 +1,4 @@
-import { asc, desc, eq, inArray, isNull, and } from 'drizzle-orm';
+import { asc, desc, eq, inArray, isNull, and, ne } from 'drizzle-orm';
 import { BaseRepository } from '../core/repository';
 import type { Tx } from '../db/client';
 import { staff, users } from '../db/schema';
@@ -85,7 +85,41 @@ export class PayrollStaffRepository extends BaseRepository<typeof staff> {
 			.all();
 	}
 
-	insert(input: { fullName: string; position: string | null }, tx?: Tx): number {
+	userChoices(): { id: number; fullName: string }[] {
+		return this.db()
+			.select({ id: users.id, fullName: users.fullName })
+			.from(users)
+			.where(and(eq(users.scope, 'crm'), isNull(users.deletedAt)))
+			.orderBy(asc(users.fullName), asc(users.id))
+			.all();
+	}
+
+	userExists(id: number, tx?: Tx): boolean {
+		return (
+			this.db(tx)
+				.select({ id: users.id })
+				.from(users)
+				.where(and(eq(users.id, id), eq(users.scope, 'crm'), isNull(users.deletedAt)))
+				.get() !== undefined
+		);
+	}
+
+	userTaken(userId: number, exceptId: number | null, tx?: Tx): boolean {
+		return (
+			this.db(tx)
+				.select({ id: staff.id })
+				.from(staff)
+				.where(
+					and(eq(staff.userId, userId), exceptId === null ? undefined : ne(staff.id, exceptId))
+				)
+				.get() !== undefined
+		);
+	}
+
+	insert(
+		input: { fullName: string; position: string | null; userId?: number | null },
+		tx?: Tx
+	): number {
 		const [created] = this.db(tx).insert(staff).values(input).returning({ id: staff.id }).all();
 		if (!created) throw new Error('failed to insert a staff row');
 		return created.id;
@@ -93,7 +127,12 @@ export class PayrollStaffRepository extends BaseRepository<typeof staff> {
 
 	update(
 		id: number,
-		patch: { fullName?: string; position?: string | null; isActive?: boolean },
+		patch: {
+			fullName?: string;
+			position?: string | null;
+			userId?: number | null;
+			isActive?: boolean;
+		},
 		tx?: Tx
 	): void {
 		this.db(tx).update(staff).set(patch).where(eq(staff.id, id)).run();
