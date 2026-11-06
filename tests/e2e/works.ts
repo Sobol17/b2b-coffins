@@ -38,6 +38,15 @@ export function seedWorks(): SeededWorks {
 	};
 }
 
+/** Enough published covers to make the landing carousel scroll on a phone. */
+export function seedCarouselWorks(): void {
+	seedWorks();
+	const db = e2eDb();
+	for (let index = 1; index <= 3; index += 1) {
+		cover(db, product(db, `E2E-CAROUSEL-${index}`, `Пример работы ${index}`, true));
+	}
+}
+
 type Db = ReturnType<typeof e2eDb>;
 
 function product(db: Db, sku: string, title: string, isPublished: boolean): number {

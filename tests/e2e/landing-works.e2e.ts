@@ -23,7 +23,7 @@ test('a guest cannot reach the photo of a hidden model or the private files rout
 	expect((await request.get(`/api/public/works/${works.hiddenCoverMediaId}`)).status()).toBe(404);
 	expect((await request.get('/api/public/works/999999')).status()).toBe(404);
 	expect((await request.get('/api/public/works/not-a-number')).status()).toBe(404);
-	// The route of the portal stays closed: P13 opened one file, not the catalog.
+	// Private files stay rights-checked even when the public catalog is open.
 	expect((await request.get(`/api/files/${works.coverMediaId}`)).status()).toBe(403);
 });
 
