@@ -26,7 +26,8 @@ export abstract class BaseService {
 	 */
 	protected audited<T>(
 		meta: { readonly action: string; readonly entity: string },
-		run: (tx: Tx) => AuditedOutcome<T>
+		run: (tx: Tx) => AuditedOutcome<T>,
+		tx?: Tx
 	): T {
 		return withTransaction((tx) => {
 			const outcome = run(tx);
@@ -42,6 +43,6 @@ export abstract class BaseService {
 				tx
 			);
 			return outcome.result;
-		});
+		}, tx);
 	}
 }

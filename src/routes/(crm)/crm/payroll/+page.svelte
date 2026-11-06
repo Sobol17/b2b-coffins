@@ -15,12 +15,14 @@
 	import { addDays } from '$lib/domain/payroll/calc';
 	import { Button, Card, TONE_CLASS, buttonVariants } from '$lib/ui';
 	import type { PayrollLineDto } from '$lib/types/crm-payroll';
-	import { formatDateTime } from '$lib/utils/format';
+	import { formatDateTime, pluralRu } from '$lib/utils/format';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
 
 	const week = $derived(data.week);
+	const pendingDays = $derived(week.days.filter((day) => day.pendingCount > 0));
+	const pendingCount = $derived(pendingDays.reduce((sum, day) => sum + day.pendingCount, 0));
 	const weekHref = (date: string) => `${resolve('/crm/payroll')}?week=${date}`;
 	const sheetHref = $derived(`${resolve('/crm/payroll/sheet.xlsx')}?week=${week.startsOn}`);
 
@@ -37,8 +39,9 @@
 		<div>
 			<h1 class="mb-2 text-3xl">Выплаты</h1>
 			<p class="max-w-2xl text-fg-muted">
-				Отметьте в дне, кто работал, что сделали и кто именно: стоимость работы система делит
-				поровну между её исполнителями. В конце недели закройте её и отметьте выплаты.
+				Подтвердите выполненные работы по дням. Столярная сумма делится между бригадой дня; на
+				остальных станциях оплата идёт исполнителю изделия. В конце недели закройте ведомость и
+				отметьте выданные деньги.
 			</p>
 		</div>
 		<div class="flex flex-wrap gap-2 sm:ml-auto">
@@ -51,6 +54,31 @@
 			</a>
 		</div>
 	</div>
+	{#if pendingCount > 0}
+		<Card.Root>
+			<Card.Header><Card.Title>Ждут подтверждения: {pendingCount}</Card.Title></Card.Header>
+			<Card.Content class="flex flex-col gap-3" data-testid="week-pending">
+				<p class="text-fg-muted">
+					Перед закрытием недели сохраните состав и подтвердите работы в этих днях. Суммы ниже —
+					стоимость работ до распределения.
+				</p>
+				<ul class="flex flex-wrap gap-2">
+					{#each pendingDays as day (day.date)}
+						<li>
+							<a
+								class={buttonVariants({ variant: 'secondary' })}
+								href={resolve(`/crm/payroll/day/${day.date}`)}
+								>{dayTitle(day.date)} · {day.pendingCount}
+								{pluralRu(day.pendingCount, ['работа', 'работы', 'работ'])} · {roubles(
+									day.pendingTotalMinor
+								)}</a
+							>
+						</li>
+					{/each}
+				</ul>
+			</Card.Content>
+		</Card.Root>
+	{/if}
 
 	<Card.Root>
 		<Card.Content class="flex flex-col gap-4">
@@ -120,7 +148,9 @@
 					</a>
 					<!-- eslint-enable svelte/no-navigation-without-resolve -->
 					{#if week.canManage && week.status === 'open'}
-						<Button onclick={() => (confirming = 'close')}>Закрыть неделю</Button>
+						<Button disabled={pendingCount > 0} onclick={() => (confirming = 'close')}
+							>Закрыть неделю</Button
+						>
 					{:else if week.canManage && week.status === 'calculated'}
 						<Button variant="secondary" onclick={() => (confirming = 'reopen')}>
 							Открыть неделю

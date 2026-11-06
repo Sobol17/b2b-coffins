@@ -74,10 +74,12 @@ export class WorkDayService extends PayrollBaseService {
 	 * works without anybody to split them; ConflictError when the week is closed. The input
 	 * schema already holds every crew to the people who came.
 	 */
-	save(input: WorkDaySaveInput): WorkDayDto {
+	save(input: WorkDaySaveInput, tx?: Tx): WorkDayDto {
 		this.assertManage();
-		this.audited({ action: 'payroll.day.save', entity: 'work_days' }, (tx) =>
-			this.write(input, tx)
+		this.audited(
+			{ action: 'payroll.day.save', entity: 'work_days' },
+			(tx) => this.write(input, tx),
+			tx
 		);
 		return this.get(input.date);
 	}

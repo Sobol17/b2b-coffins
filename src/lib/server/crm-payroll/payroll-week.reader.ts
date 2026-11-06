@@ -3,6 +3,7 @@ import { PayrollDtoMapper } from './dto';
 import { PayrollCalendar } from './payroll-calendar';
 import { PayrollPeriodRepository, type PeriodRow } from './payroll-period.repository';
 import { PayrollStaffRepository } from './payroll-staff.repository';
+import { ShopUnitWorkRepository } from '../crm-shop/shop-unit-work.repository';
 import { WorkDayRepository, type WorkDayWithStaff } from './work-day.repository';
 import { dayShares, payoutMinor, weekAccruals } from '$lib/domain/payroll/calc';
 import type { PayrollDayCellDto, PayrollLineDto } from '$lib/types/crm-payroll';
@@ -42,17 +43,30 @@ export class PayrollWeekReader {
 			period && period.status !== 'open'
 				? this.periods.lines(period.id, tx, ownStaffId).map((row) => PayrollDtoMapper.toLine(row))
 				: this.liveLines(marked, period, tx, ownStaffId);
-		return { startsOn, endsOn, period, days: this.cells(startsOn, marked), lines };
+		const pending = new ShopUnitWorkRepository().pending(
+			this.calendar.instantOf(startsOn),
+			this.calendar.instantOf(endsOn),
+			tx,
+			ownStaffId
+		);
+		return { startsOn, endsOn, period, days: this.cells(startsOn, marked, pending), lines };
 	}
 
-	private cells(startsOn: string, marked: readonly WorkDayWithStaff[]): PayrollDayCellDto[] {
+	private cells(
+		startsOn: string,
+		marked: readonly WorkDayWithStaff[],
+		pending: ReturnType<ShopUnitWorkRepository['pending']>
+	): PayrollDayCellDto[] {
 		const byDate = new Map(marked.map((day) => [this.calendar.dateOf(day.workDate), day]));
 		return this.calendar.weekDatesOf(startsOn).map((date) => {
 			const day = byDate.get(date);
+			const awaiting = pending.filter((row) => this.calendar.dateOf(row.work.workDate!) === date);
 			return {
 				date,
 				presentCount: day?.staffIds.length ?? 0,
-				totalMinor: day?.totalMinor ?? 0
+				totalMinor: day?.totalMinor ?? 0,
+				pendingCount: awaiting.length,
+				pendingTotalMinor: awaiting.reduce((sum, row) => sum + row.work.rateMinor, 0)
 			};
 		});
 	}

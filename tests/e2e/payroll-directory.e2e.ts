@@ -129,7 +129,11 @@ test('the manager links staff, sees the result of each toggle, rejects duplicate
 	await expect(modal.getByTestId('staff-error')).toContainText('уже связана с другим сотрудником');
 	await expect(modal.getByLabel('ФИО')).toHaveValue(otherName);
 	await page.keyboard.press('Escape');
-	await page.getByRole('button', { name: 'Закрыть уведомление' }).click();
+	await page
+		.getByTestId('toast')
+		.filter({ hasText: 'Эта учётная запись уже связана с другим сотрудником' })
+		.getByRole('button', { name: 'Закрыть уведомление' })
+		.click();
 	await worker.getByRole('button', { name: 'Включить', exact: true }).click();
 	await expect(worker.getByTestId('directory-status')).toHaveText('Работает');
 	const enabled = page.getByTestId('toast').filter({ hasText: `Включено: ${workerName}` });

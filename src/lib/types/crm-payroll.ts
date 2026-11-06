@@ -74,10 +74,22 @@ export interface WorkDayDto {
 	pendingTotalMinor?: number;
 }
 
+export interface OwnPayrollWorkDto {
+	unitId: number;
+	productTitle: string;
+	station: WorkRole;
+	workDate: string;
+	completedAt: string;
+	/** Null until a positive carpenter rate can be shared with the marked crew. */
+	shareMinor: number | null;
+	status: 'awaiting_crew' | 'awaiting_confirmation' | 'confirmed' | 'paid';
+}
+
 export interface OwnPayrollDto {
 	week: { startsOn: string; endsOn: string; status: PayrollPeriodStatus };
 	line: PayrollLineDto | null;
 	pendingMinor: number;
+	works: OwnPayrollWorkDto[];
 	pending: {
 		unitId: number;
 		productTitle: string;
@@ -91,6 +103,8 @@ export interface PayrollDayCellDto {
 	date: string;
 	presentCount: number;
 	totalMinor: number;
+	pendingCount: number;
+	pendingTotalMinor: number;
 }
 
 export interface PayrollLineDto {

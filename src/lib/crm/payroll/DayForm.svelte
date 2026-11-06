@@ -50,13 +50,15 @@
 </script>
 
 <form
+	id="payroll-day-form"
 	method="POST"
 	action="?/save"
 	class="flex flex-col gap-6"
 	use:enhance={withToast({
 		reset: false,
 		pending: (value) => (pending = value),
-		success: 'День сохранён'
+		success: (result) =>
+			result?.action === 'confirm' ? 'День сохранён, работы подтверждены' : 'День сохранён'
 	})}
 >
 	<input type="hidden" name="carpenterCrewPresent" value="1" />
@@ -177,5 +179,16 @@
 	</section>
 
 	<DaySummary presentCount={present.length} totalMinor={preview.totalMinor} shares={named} />
-	<Button type="submit" loading={pending} class="self-start">Сохранить день</Button>
+	<div class="flex flex-wrap gap-3">
+		{#if (day.pendingCount ?? 0) > 0}
+			<Button type="submit" formaction="?/confirm" loading={pending}
+				>Сохранить день и подтвердить работы</Button
+			>
+		{/if}
+		<Button
+			type="submit"
+			variant={(day.pendingCount ?? 0) > 0 ? 'secondary' : 'primary'}
+			loading={pending}>Сохранить день</Button
+		>
+	</div>
 </form>
