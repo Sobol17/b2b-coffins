@@ -1,4 +1,5 @@
-import { ValidationError } from '../core/errors';
+import { ConflictError, ValidationError } from '../core/errors';
+import { ShopUnitWorkRepository } from '../crm-shop/shop-unit-work.repository';
 import type { Tx } from '../db/client';
 import { PayrollBaseService } from './payroll-base.service';
 import { PayrollCalendar } from './payroll-calendar';
@@ -32,7 +33,9 @@ export class WorkDayService extends PayrollBaseService {
 		const instant = this.calendar.instantOf(date);
 		const day = this.days.findByDate(instant);
 		const staffIds = day ? this.days.staffIdsOf(day.id) : [];
-		const entries = day ? this.days.entriesOf(day.id) : [];
+		const allEntries = day ? this.days.entriesOf(day.id) : [];
+		const entries = allEntries.filter((row) => !row.shopUnitWorkId);
+		const pending = new ShopUnitWorkRepository().pending(instant, instant);
 		const used = new Set(entries.map((entry) => entry.workTypeId));
 		const periodStatus = this.gate.find(date)?.status ?? 'open';
 		const canEdit = this.canManage && periodStatus === 'open' && date <= this.calendar.today();
@@ -56,7 +59,12 @@ export class WorkDayService extends PayrollBaseService {
 			entries,
 			presentCount: staffIds.length,
 			totalMinor: day?.totalMinor ?? 0,
-			shares: dayShares(staffIds, entries)
+			shares: dayShares(staffIds, allEntries),
+			autoEntries: allEntries.filter((row) => row.shopUnitWorkId),
+			carpenterStaffIds: day ? this.days.carpenterIdsOf(day.id) : [],
+			carpenterLocked: day ? this.days.carpenterLocked(day.id) : false,
+			pendingCount: pending.length,
+			pendingTotalMinor: pending.reduce((sum, row) => sum + row.work.rateMinor, 0)
 		};
 	}
 
@@ -104,6 +112,10 @@ export class WorkDayService extends PayrollBaseService {
 		const instant = this.calendar.instantOf(input.date);
 		this.gate.requireOpen(input.date, tx);
 		const day = this.days.findByDate(instant, tx);
+		const automatic = day
+			? this.days.entriesOf(day.id, tx).filter((row) => row.shopUnitWorkId)
+			: [];
+		input = this.withAutomaticCrew(input, day?.id, automatic, tx);
 		const after = { date: input.date, staffIds: input.staffIds, entries: input.entries };
 		if (input.staffIds.length === 0 && input.entries.length === 0) {
 			if (day) this.days.delete(day.id, tx);
@@ -114,15 +126,40 @@ export class WorkDayService extends PayrollBaseService {
 		}
 		this.assertStaff(input.staffIds, day ? this.days.staffIdsOf(day.id, tx) : [], tx);
 		const entries = this.priced(input.entries, day ? this.days.entriesOf(day.id, tx) : [], tx);
-		const totalMinor = dayTotalMinor(entries);
-		const shares = dayShares(input.staffIds, entries);
+		const totalMinor = dayTotalMinor(entries) + dayTotalMinor(automatic);
+		const shares = dayShares(input.staffIds, [...entries, ...automatic]);
 		const dayId = this.days.save(
 			{ workDate: instant, totalMinor, createdById: this.ctx.userId },
 			tx
 		);
-		this.days.replaceStaff(dayId, input.staffIds, tx);
+		this.days.replaceStaff(dayId, input.staffIds, tx, input.carpenterStaffIds);
 		this.days.replaceEntries(dayId, entries, tx);
 		return { result: undefined, entityId: dayId, after: { ...after, totalMinor, shares } };
+	}
+
+	private withAutomaticCrew(
+		input: WorkDaySaveInput,
+		dayId: number | undefined,
+		automatic: readonly { staffIds: number[] }[],
+		tx: Tx
+	): WorkDaySaveInput {
+		const old = dayId ? this.days.carpenterIdsOf(dayId, tx) : [];
+		const carpenterStaffIds =
+			input.carpenterStaffIds ?? old.filter((id) => input.staffIds.includes(id));
+		if (
+			dayId &&
+			this.days.carpenterLocked(dayId, tx) &&
+			(old.length !== carpenterStaffIds.length || old.some((id) => !carpenterStaffIds.includes(id)))
+		) {
+			throw new ConflictError('Столярная бригада уже подтверждена. Состав дня изменить нельзя');
+		}
+		if (carpenterStaffIds.some((id) => !input.staffIds.includes(id)))
+			throw new ValidationError('Столяр должен быть отмечен среди работавших');
+		return {
+			...input,
+			carpenterStaffIds,
+			staffIds: [...new Set([...input.staffIds, ...automatic.flatMap((row) => row.staffIds)])]
+		};
 	}
 
 	/** A switched-off worker stays on a day they are already on, but cannot be added to one. */

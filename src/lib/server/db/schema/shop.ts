@@ -1,6 +1,6 @@
 import { index, integer, sqliteTable, text } from 'drizzle-orm/sqlite-core';
 import { WORK_ROLES } from '$lib/types/roles';
-import { createdAt, pk, ts, updatedAt } from './_shared';
+import { bool, createdAt, pk, ts, updatedAt } from './_shared';
 import { requestItems, requests } from './requests';
 import { stockMoves } from './stock';
 import { users } from './users';
@@ -51,4 +51,20 @@ export const shopJobs = sqliteTable(
 		index('shop_jobs_item_idx').on(t.requestItemId, t.finishedAt),
 		index('shop_jobs_task_idx').on(t.taskId)
 	]
+);
+
+/** Stable physical pieces; jobs may merge while a piece keeps its station history. */
+export const shopUnits = sqliteTable(
+	'shop_units',
+	{
+		id: pk(),
+		requestItemId: integer('request_item_id').references(() => requestItems.id, {
+			onDelete: 'set null'
+		}),
+		jobId: integer('job_id').references(() => shopJobs.id, { onDelete: 'set null' }),
+		productTitle: text('product_title').notNull(),
+		requestNumber: text('request_number').notNull(),
+		legacyDone: bool('legacy_done').notNull().default(false)
+	},
+	(t) => [index('shop_units_job_idx').on(t.jobId)]
 );

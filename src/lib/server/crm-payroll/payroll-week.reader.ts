@@ -28,19 +28,20 @@ export class PayrollWeekReader {
 	) {}
 
 	/** The week that holds the date. */
-	read(date: string, tx?: Tx): WeekSnapshot {
+	read(date: string, tx?: Tx, ownStaffId?: number): WeekSnapshot {
 		const startsOn = this.calendar.weekStartOf(date);
 		const endsOn = this.calendar.weekEndOf(startsOn);
 		const period = this.periods.findByStart(this.calendar.instantOf(startsOn), tx);
 		const marked = this.workDays.between(
 			this.calendar.instantOf(startsOn),
 			this.calendar.instantOf(endsOn),
-			tx
+			tx,
+			ownStaffId
 		);
 		const lines =
 			period && period.status !== 'open'
-				? this.periods.lines(period.id, tx).map((row) => PayrollDtoMapper.toLine(row))
-				: this.liveLines(marked, period, tx);
+				? this.periods.lines(period.id, tx, ownStaffId).map((row) => PayrollDtoMapper.toLine(row))
+				: this.liveLines(marked, period, tx, ownStaffId);
 		return { startsOn, endsOn, period, days: this.cells(startsOn, marked), lines };
 	}
 
@@ -60,16 +61,19 @@ export class PayrollWeekReader {
 	private liveLines(
 		marked: readonly WorkDayWithStaff[],
 		period: PeriodRow | undefined,
-		tx?: Tx
+		tx?: Tx,
+		ownStaffId?: number
 	): PayrollLineDto[] {
 		const accruals = new Map(
 			weekAccruals(marked.map(withShares)).map((line) => [line.staffId, line])
 		);
 		const stored = new Map(
-			(period ? this.periods.lines(period.id, tx) : []).map((line) => [line.staffId, line])
+			(period ? this.periods.lines(period.id, tx, ownStaffId) : []).map((line) => [
+				line.staffId,
+				line
+			])
 		);
-		return this.staff
-			.all(tx)
+		return (ownStaffId === undefined ? this.staff.all(tx) : this.staff.byIds([ownStaffId], tx))
 			.filter(
 				(row) =>
 					row.isActive || accruals.has(row.id) || (stored.get(row.id)?.adjustmentMinor ?? 0) !== 0

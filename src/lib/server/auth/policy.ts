@@ -28,6 +28,7 @@ export const ACTIONS = [
 	'delivery.work',
 	'payroll.read',
 	'payroll.manage',
+	'payroll.self.read',
 	'reports.read',
 	'charity.manage',
 	'settings.manage',
@@ -52,7 +53,8 @@ const SHOP_GRANTS: readonly Action[] = [
 	'catalog.read',
 	'request.read.own',
 	'stock.read',
-	'shop.work'
+	'shop.work',
+	'payroll.self.read'
 ];
 
 const GRANTS: Readonly<Record<RoleCode, readonly Action[]>> = {
@@ -78,6 +80,7 @@ const GRANTS: Readonly<Record<RoleCode, readonly Action[]>> = {
 		'delivery.work',
 		'payroll.read',
 		'payroll.manage',
+		'payroll.self.read',
 		'support.any',
 		'shop.work'
 	],
@@ -86,7 +89,7 @@ const GRANTS: Readonly<Record<RoleCode, readonly Action[]>> = {
 	painter: SHOP_GRANTS,
 	upholsterer: SHOP_GRANTS,
 	// The delivery screen of C6: loading and «Доставлено» (tech.md v1.43).
-	driver: ['crm.access', 'request.read.own', 'delivery.work'],
+	driver: ['crm.access', 'request.read.own', 'delivery.work', 'payroll.self.read'],
 	cp_admin: [
 		'portal.access',
 		'catalog.read',

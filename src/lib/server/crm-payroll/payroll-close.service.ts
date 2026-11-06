@@ -1,4 +1,5 @@
 import { ConflictError, NotFoundError, ValidationError } from '../core/errors';
+import { ShopUnitWorkRepository } from '../crm-shop/shop-unit-work.repository';
 import type { Tx } from '../db/client';
 import { bus } from '../events/bus';
 import { PayrollBaseService } from './payroll-base.service';
@@ -32,6 +33,15 @@ export class PayrollCloseService extends PayrollBaseService {
 	close(date: string): void {
 		this.audited({ action: 'payroll.close', entity: 'payroll_periods' }, (tx) => {
 			const week = this.reader.read(date, tx);
+			if (
+				new ShopUnitWorkRepository().pending(
+					this.calendar.instantOf(week.startsOn),
+					this.calendar.instantOf(week.endsOn),
+					tx
+				).length
+			) {
+				throw new ConflictError('Сначала подтвердите все выполненные работы недели');
+			}
 			if (week.period && week.period.status !== 'open') {
 				throw new ConflictError('Неделя уже закрыта');
 			}
