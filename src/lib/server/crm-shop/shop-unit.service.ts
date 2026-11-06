@@ -23,6 +23,13 @@ export class ShopUnitService extends ShopBaseService {
 	}
 
 	take(unitId: number): void {
+		const unit = this.require(unitId);
+		const previous = this.works.find(unitId, unit.station);
+		if (previous) {
+			if (previous.userId !== this.ctx.userId)
+				throw new ConflictError('Изделие уже взял другой работник');
+			return;
+		}
 		this.audited({ action: 'shop.unit.take', entity: 'shop_units' }, (tx) => {
 			const unit = this.require(unitId, tx);
 			const previous = this.works.find(unitId, unit.station, tx);
@@ -49,12 +56,12 @@ export class ShopUnitService extends ShopBaseService {
 	}
 
 	complete(unitId: number): void {
+		const unit = this.require(unitId);
+		const held = this.requireHeld(unitId, unit.station);
+		if (held.work.completedAt !== null) return;
 		this.audited({ action: 'shop.unit.complete', entity: 'shop_units' }, (tx) => {
 			const unit = this.require(unitId, tx);
-			const held = this.works.find(unitId, unit.station, tx);
-			if (!held) throw new ConflictError('Сначала возьмите изделие в работу');
-			const head = this.ctx.roles.includes('owner') || this.ctx.roles.includes('manager');
-			if (!head && held.userId !== this.ctx.userId) throw new ForbiddenError('shop.work');
+			const held = this.requireHeld(unitId, unit.station, tx);
 			if (held.work.completedAt !== null) return { result: undefined, entityId: unitId };
 			const rate = this.works.rate(unit.variantId, unit.station, tx);
 			if (!rate)
@@ -79,7 +86,19 @@ export class ShopUnitService extends ShopBaseService {
 		});
 	}
 
-	private require(id: number, tx: Tx) {
+	private requireHeld(
+		unitId: number,
+		station: Parameters<ShopUnitWorkRepository['find']>[1],
+		tx?: Tx
+	) {
+		const held = this.works.find(unitId, station, tx);
+		if (!held) throw new ConflictError('Сначала возьмите изделие в работу');
+		const head = this.ctx.roles.includes('owner') || this.ctx.roles.includes('manager');
+		if (!head && held.userId !== this.ctx.userId) throw new ForbiddenError('shop.work');
+		return held;
+	}
+
+	private require(id: number, tx?: Tx) {
 		const unit = this.units.find(id, tx);
 		if (!unit) throw new NotFoundError('shop unit');
 		this.requireTask(unit.taskId, tx);

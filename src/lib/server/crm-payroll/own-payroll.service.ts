@@ -5,9 +5,16 @@ import { PayrollCalendar } from './payroll-calendar';
 import { PayrollStaffRepository } from './payroll-staff.repository';
 import { PayrollWeekReader } from './payroll-week.reader';
 import { WorkDayRepository } from './work-day.repository';
-import { dayShares } from '$lib/domain/payroll/calc';
+import { dayShares, type CrewEntry } from '$lib/domain/payroll/calc';
+import { PAYROLL_SHARE_STEP_MINOR } from '$lib/types/crm-payroll';
 import type { ActorContext } from '$lib/types/actor';
 import type { OwnPayrollDto } from '$lib/types/crm-payroll';
+
+type PendingRow = ReturnType<ShopUnitWorkRepository['pending']>[number];
+interface PreviewEntry extends CrewEntry {
+	row: PendingRow;
+	date: number;
+}
 
 /** Own payroll has a separate server projection; the actor never chooses a staff id. */
 export class OwnPayrollService extends BaseService {
@@ -42,48 +49,57 @@ export class OwnPayrollService extends BaseService {
 				pending: []
 			};
 		const week = new PayrollWeekReader(this.calendar).read(date, undefined, person.id);
-		const pending = this.works.pending(
-			this.calendar.instantOf(startsOn),
-			this.calendar.instantOf(endsOn),
-			undefined,
-			person.id
-		);
-		const entries = pending.map((row) => {
-			const day = this.days.findByDate(row.work.workDate!);
-			const crew =
-				row.work.station === 'carpenter'
-					? day
-						? this.days.carpenterIdsOf(day.id)
-						: []
-					: [person.id];
-			return {
-				row,
-				date: row.work.workDate!.getTime(),
-				amountMinor: row.work.rateMinor,
-				staffIds: crew
-			};
-		});
-		const dates = [...new Set(entries.map((row) => row.date))];
-		const pendingMinor = dates.reduce(
-			(sum, at) =>
-				sum +
-				(dayShares(
-					[person.id],
-					entries.filter((row) => row.date === at)
-				)[0]?.shareMinor ?? 0),
-			0
-		);
+		const entries = this.previews(person.id, startsOn, endsOn);
 		return {
 			week: { startsOn, endsOn, status: week.period?.status ?? 'open' },
 			line: week.lines[0] ?? null,
-			pendingMinor,
+			pendingMinor: this.pendingTotal(person.id, entries),
 			pending: entries.map(({ row, staffIds }) => ({
 				unitId: row.work.unitId,
 				productTitle: row.productTitle,
 				station: row.work.station,
 				completedAt: row.work.completedAt!.toISOString(),
-				shareMinor: Math.floor(row.work.rateMinor / staffIds.length / 100) * 100
+				shareMinor: staffIds.includes(person.id)
+					? Math.floor(row.work.rateMinor / staffIds.length / PAYROLL_SHARE_STEP_MINOR) *
+						PAYROLL_SHARE_STEP_MINOR
+					: 0
 			}))
 		};
+	}
+
+	private previews(staffId: number, startsOn: string, endsOn: string): PreviewEntry[] {
+		return this.works
+			.pending(
+				this.calendar.instantOf(startsOn),
+				this.calendar.instantOf(endsOn),
+				undefined,
+				staffId
+			)
+			.map((row) => {
+				const day = this.days.findByDate(row.work.workDate!);
+				const crew =
+					row.work.station === 'carpenter'
+						? day
+							? this.days.carpenterIdsOf(day.id)
+							: []
+						: [staffId];
+				return {
+					row,
+					date: row.work.workDate!.getTime(),
+					amountMinor: row.work.rateMinor,
+					staffIds: crew
+				};
+			});
+	}
+
+	/** Pending pay is the day's rounded total after confirmation minus its current rounded pay. */
+	private pendingTotal(staffId: number, entries: readonly PreviewEntry[]): number {
+		return [...new Set(entries.map((row) => row.date))].reduce((sum, date) => {
+			const at = new Date(date);
+			const confirmed = this.days.between(at, at, undefined, staffId)[0]?.entries ?? [];
+			const after = [...confirmed, ...entries.filter((row) => row.date === date)];
+			const share = (rows: readonly CrewEntry[]) => dayShares([staffId], rows)[0]?.shareMinor ?? 0;
+			return sum + share(after) - share(confirmed);
+		}, 0);
 	}
 }
