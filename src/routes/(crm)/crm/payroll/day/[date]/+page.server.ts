@@ -1,6 +1,7 @@
 import { formAction, orHttpStatus } from '$lib/server/core/http';
 import { payrollActor, routeDate } from '$lib/server/crm-payroll/route';
 import { WorkDayService } from '$lib/server/crm-payroll/work-day.service';
+import { WorkDayConfirmService } from '$lib/server/crm-payroll/work-day-confirm.service';
 import { workDayDateSchema, workDayFormSchema } from '$lib/validation/crm-payroll';
 import type { Actions, PageServerLoad } from './$types';
 
@@ -12,6 +13,17 @@ export const load: PageServerLoad = (event) => {
 
 // The date comes from the address, never from the form: a day is saved where it is shown.
 export const actions = {
+	confirm: (event) => {
+		const date = routeDate(event.params.date);
+		const service = new WorkDayConfirmService(payrollActor(event));
+		return formAction(
+			event.request,
+			'confirm',
+			workDayDateSchema,
+			(input) => service.confirm(input.date),
+			{ date }
+		);
+	},
 	save: (event) => {
 		const date = routeDate(event.params.date);
 		const service = new WorkDayService(payrollActor(event));

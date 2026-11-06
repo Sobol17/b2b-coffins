@@ -4,8 +4,13 @@
 	import { colourTitle, positionTitle } from '$lib/crm/shop/labels';
 	import { Checkbox, NumberInput, TouchButton, withToast } from '$lib/ui';
 	import type { ShopJobDto } from '$lib/types/crm-shop';
+	import UnitRow from './UnitRow.svelte';
 
-	let { job, open }: { job: ShopJobDto; open: boolean } = $props();
+	let {
+		job,
+		open,
+		canManual = false
+	}: { job: ShopJobDto; open: boolean; canManual?: boolean } = $props();
 
 	let form: HTMLFormElement | undefined = $state();
 	// One piece is a tick: a change of the box saves it at once, the server keeps the count.
@@ -30,7 +35,11 @@
 	<p class="text-sm" data-testid="shop-job-count">
 		Нужно {job.qty} шт · Сделано {job.doneQty} из {job.qty}
 	</p>
-	{#if open}
+	<ul class="flex flex-col gap-2" aria-label="Изделия позиции">
+		{#each job.units as unit (unit.id)}<UnitRow {unit} {open} />{/each}
+	</ul>
+	{#if open && canManual && !job.units.some((unit) => unit.takenByName !== null)}
+		<p class="text-xs text-fg-muted">Ручная отметка без начисления зарплаты</p>
 		<form
 			bind:this={form}
 			method="POST"

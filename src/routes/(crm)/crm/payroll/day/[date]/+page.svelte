@@ -47,6 +47,32 @@
 			</a>
 		</div>
 	</div>
+	<Card.Root>
+		<Card.Header><Card.Title>Работы из цеха</Card.Title></Card.Header>
+		<Card.Content class="flex flex-col gap-4">
+			<p class="text-fg-muted">
+				Ожидают подтверждения: {day.pendingCount ?? 0}. Сумма работ: {roubles(
+					day.pendingTotalMinor ?? 0
+				)}.
+			</p>
+			{#if day.canEdit && (day.pendingCount ?? 0) > 0}
+				<form
+					method="POST"
+					action="?/confirm"
+					use:enhance={withToast({ success: 'Работы дня подтверждены' })}
+				>
+					<Button type="submit">Подтвердить работы дня</Button>
+				</form>
+			{/if}
+			{#if day.autoEntries?.length}
+				<ul class="flex flex-col gap-2" data-testid="day-auto-entries">
+					{#each day.autoEntries as entry (entry.shopUnitWorkId)}<li class="text-sm">
+							{entry.title} · {roubles(entry.amountMinor)} · {entry.staffIds.map(nameOf).join(', ')}
+						</li>{/each}
+				</ul>
+			{:else}<p class="text-sm text-fg-muted">Подтверждённых работ из цеха пока нет.</p>{/if}
+		</Card.Content>
+	</Card.Root>
 
 	{#if day.canCopyPrevious}
 		<form method="POST" action="?/copy" use:enhance={withToast({ success: 'Состав скопирован' })}>

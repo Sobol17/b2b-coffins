@@ -20,6 +20,8 @@
 	// svelte-ignore state_referenced_locally
 	let nextKey = day.entries.length;
 	let pending = $state(false);
+	// svelte-ignore state_referenced_locally
+	let carpenters = $state([...(day.carpenterStaffIds ?? [])]);
 
 	const works = $derived(
 		day.workTypes.map((work) => ({
@@ -57,6 +59,7 @@
 		success: 'День сохранён'
 	})}
 >
+	<input type="hidden" name="carpenterCrewPresent" value="1" />
 	<section class="flex flex-col gap-3">
 		<h2 class="text-2xl">Кто работал</h2>
 		{#if day.staff.length === 0}
@@ -71,6 +74,37 @@
 					bind:checked={worker.present}
 				/>
 			{/each}
+		</div>
+	</section>
+	<section class="flex flex-col gap-3" data-testid="day-carpenters">
+		<h2 class="text-2xl">Столярная бригада</h2>
+		<p class="text-sm text-fg-muted">
+			Столярную сумму дня система делит поровну между отмеченными здесь сотрудниками.
+		</p>
+		{#if day.carpenterLocked}<p class="text-sm text-fg-muted">
+				Состав зафиксирован при подтверждении работ.
+			</p>{/if}
+		<div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+			{#each present as worker (worker.id)}
+				<Checkbox
+					name={`carpenter.${worker.id}`}
+					value="on"
+					label={worker.fullName}
+					disabled={day.carpenterLocked ?? false}
+					bind:checked={
+						() => carpenters.includes(worker.id),
+						(checked) =>
+							(carpenters = checked
+								? [...carpenters, worker.id]
+								: carpenters.filter((id) => id !== worker.id))
+					}
+				/>
+				{#if day.carpenterLocked && carpenters.includes(worker.id)}<input
+						type="hidden"
+						name={`carpenter.${worker.id}`}
+						value="on"
+					/>{/if}
+			{:else}<p class="text-sm text-fg-muted">Сначала отметьте, кто работал.</p>{/each}
 		</div>
 	</section>
 

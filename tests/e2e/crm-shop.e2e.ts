@@ -1,7 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import { enterRequest } from './crm-flow';
 import { crmNavLink, login, purchaseMoneyKeys } from './fixtures';
-import { passStation } from './shop-flow';
+import { configureShopRates, passStation } from './shop-flow';
 import { addToShelf, e2eDb, emptyShelf, shopSync, statusOf } from './transitions';
 
 const ORIGIN = 'http://localhost:4173';
@@ -16,6 +16,7 @@ async function acceptedRequest(page: Page, qty: number): Promise<{ number: strin
 	emptyShelf(db, number);
 	await page.getByRole('button', { name: 'Принять в работу' }).click();
 	await expect(page.locator('[data-slot="badge"]').filter({ hasText: 'В работе' })).toBeVisible();
+	configureShopRates(number);
 	return { number, card };
 }
 
@@ -49,15 +50,15 @@ test.describe('the stations on a phone', () => {
 		const fresh = page.getByTestId('shop-station').getByTestId('shop-task');
 		await expect(fresh.filter({ hasText: number })).toContainText('Сделано 0 из 2');
 		await fresh.filter({ hasText: number }).click();
-		await page.getByRole('button', { name: 'Взять в работу' }).click();
-		await expect(page.getByRole('button', { name: 'Взять в работу' })).toHaveCount(0);
+		const unit = page.getByTestId('shop-unit').first();
+		await unit.getByRole('button', { name: 'Взять в работу', exact: true }).click();
+		await expect(unit.getByRole('button', { name: 'Взять в работу' })).toHaveCount(0);
 		// The visit closes only when every piece is done: one of two keeps «Выполнено» off.
-		await page.getByTestId('shop-job').getByLabel('Сделано').fill('1');
-		await page.getByRole('button', { name: 'Сохранить' }).click();
+		await unit.getByRole('button', { name: 'Выполнено', exact: true }).click();
 		await expect(page.getByTestId('shop-job-count')).toHaveText('Нужно 2 шт · Сделано 1 из 2');
-		await expect(page.getByRole('button', { name: 'Выполнено' })).toBeDisabled();
+		await expect(page.getByRole('button', { name: 'Передать дальше' })).toBeDisabled();
 		// The shop floor is a phone screen: the main actions keep the 44 px touch target.
-		for (const name of ['Выполнено', 'Сделано всё']) {
+		for (const name of ['Передать дальше', 'Взять в работу']) {
 			const box = await page.getByRole('button', { name }).boundingBox();
 			expect(box?.height ?? 0, name).toBeGreaterThanOrEqual(44);
 		}

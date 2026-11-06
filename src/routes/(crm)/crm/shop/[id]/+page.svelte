@@ -55,7 +55,7 @@
 		<Card.Content>
 			<ul class="flex flex-col gap-3">
 				{#each task.jobs as job (job.id)}
-					<JobRow {job} {open} />
+					<JobRow {job} {open} canManual={data.canManual} />
 				{:else}
 					<p class="text-sm text-fg-muted">Позиции переданы дальше.</p>
 				{/each}
@@ -65,18 +65,13 @@
 
 	{#if open}
 		<div class="flex flex-wrap gap-3">
-			{#if task.canTake}
-				<form method="POST" action="?/take" use:enhance={withToast({ success: 'Заявка в работе' })}>
-					<TouchButton type="submit" variant="secondary">Взять в работу</TouchButton>
-				</form>
-			{/if}
 			<form
 				method="POST"
 				action="?/complete"
 				use:enhance={withToast({ success: 'Передано на следующую станцию' })}
 			>
 				<TouchButton type="submit" variant="primary" disabled={!task.canComplete}>
-					Выполнено
+					Передать дальше
 				</TouchButton>
 			</form>
 		</div>
