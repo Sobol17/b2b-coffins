@@ -3,40 +3,53 @@
 	import { BrandMark, Button, buttonVariants } from '$lib/ui';
 	import TelLink from './TelLink.svelte';
 
-	let { phone, telHref }: { phone: string | null; telHref: `tel:${string}` | null } = $props();
+	let {
+		phone,
+		telHref,
+		catalogActive = false
+	}: { phone: string | null; telHref: `tel:${string}` | null; catalogActive?: boolean } = $props();
 </script>
 
 <!-- Blur only, no fill: any tint here cuts a visible seam across the sky behind the header. -->
 <header class="sticky top-0 z-10 px-4 pt-4 pb-2 backdrop-blur-md sm:px-6">
 	<div
 		data-testid="landing-header"
-		class="mx-auto flex h-16 max-w-shell items-center gap-4 rounded-card bg-surface-raised pr-3 pl-5 sm:h-20 sm:pr-5 sm:pl-7"
+		class="mx-auto flex h-16 max-w-shell items-center gap-2 rounded-card bg-surface-raised px-3 sm:h-20 sm:gap-4 sm:pr-5 sm:pl-7"
 	>
 		<a
 			href={resolve('/')}
 			data-testid="home-logo"
-			class="flex items-center gap-2.5 rounded-sm hover:text-link"
+			class="flex items-center gap-2 rounded-sm hover:text-link sm:gap-2.5"
 		>
-			<BrandMark class="size-9 sm:size-11" />
-			<span class="font-heading text-2xl font-semibold tracking-[0.14em]">АНГЕЛ</span>
+			<BrandMark class="size-8 sm:size-11" />
+			<span
+				class="font-heading text-xl font-semibold tracking-[0.1em] sm:text-2xl sm:tracking-[0.14em]"
+				>АНГЕЛ</span
+			>
 			<span class="hidden text-[0.6875rem] tracking-[0.1em] text-fg-faint uppercase sm:inline">
 				фабрика
 			</span>
 		</a>
 
 		<div class="ml-auto flex items-center gap-2">
+			<Button
+				href={resolve('/catalog')}
+				variant="ghost"
+				class="px-2 sm:px-5"
+				aria-current={catalogActive ? 'page' : undefined}>Каталог</Button
+			>
 			{#if phone && telHref}
 				<TelLink
 					href={telHref}
-					class={buttonVariants({ variant: 'secondary', class: 'hidden sm:inline-flex' })}
+					class={buttonVariants({ variant: 'secondary', class: 'hidden lg:inline-flex' })}
 				>
 					{phone}
 				</TelLink>
 			{/if}
-			<Button href={resolve('/login')}>
+			<Button href={resolve('/login')} class="px-3 sm:px-5">
 				<!-- The full caption does not fit next to the brand on a 390 px phone. -->
-				<span class="sm:hidden">Вход</span>
-				<span class="hidden sm:inline">Вход для контрагентов</span>
+				<span class="lg:hidden">Вход</span>
+				<span class="hidden lg:inline">Вход для контрагентов</span>
 			</Button>
 		</div>
 	</div>

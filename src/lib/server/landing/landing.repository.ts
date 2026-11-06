@@ -17,7 +17,7 @@ const coverOf = sql<number | null>`(
 )`;
 
 /**
- * The only catalog read a guest reaches (P13). It selects a title and a photo id and nothing else:
+ * The landing preview selects a title and a photo id and nothing else:
  * no article, no price, no stock, so a leak would have to be added here on purpose.
  */
 export class LandingRepository extends BaseRepository<typeof products> {
