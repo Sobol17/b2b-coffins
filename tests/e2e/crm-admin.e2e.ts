@@ -23,8 +23,11 @@ test.describe('the owner runs the workshop without a developer (C1)', () => {
 
 		await page.getByRole('button', { name: 'Добавить пользователя' }).click();
 		const modal = page.getByTestId('modal');
+		// The dialog's initial autofocus must settle before a later field receives typing.
+		await expect(modal.locator('input[name="fullName"]')).toBeFocused();
 		await modal.locator('input[name="fullName"]').fill('Павел Орлов');
 		await modal.locator('input[name="email"]').fill(email);
+		await expect(modal.locator('input[name="email"]')).toHaveValue(email);
 		await modal.getByLabel('Столяр').click();
 		await modal.getByLabel('Маляр').click();
 		await modal.getByRole('button', { name: 'Создать пользователя' }).click();
