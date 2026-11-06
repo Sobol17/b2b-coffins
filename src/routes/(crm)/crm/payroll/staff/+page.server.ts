@@ -6,7 +6,9 @@ import type { Actions, PageServerLoad } from './$types';
 
 export const load: PageServerLoad = (event) => {
 	const actor = payrollActor(event);
-	return { staff: new PayrollStaffService(actor).list(), canManage: canManagePayroll(actor) };
+	const service = new PayrollStaffService(actor);
+	const canManage = canManagePayroll(actor);
+	return { staff: service.list(), users: canManage ? service.userChoices() : [], canManage };
 };
 
 export const actions = {
