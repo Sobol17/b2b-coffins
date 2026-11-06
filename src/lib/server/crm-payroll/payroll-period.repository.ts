@@ -1,4 +1,4 @@
-import { asc, eq } from 'drizzle-orm';
+import { and, asc, eq } from 'drizzle-orm';
 import { BaseRepository } from '../core/repository';
 import type { Tx } from '../db/client';
 import { payrollLines, payrollPeriods, staff, users } from '../db/schema';
@@ -104,12 +104,17 @@ export class PayrollPeriodRepository extends BaseRepository<typeof payrollPeriod
 		this.db(tx).update(payrollPeriods).set(patch).where(eq(payrollPeriods.id, id)).run();
 	}
 
-	lines(periodId: number, tx?: Tx): LineRow[] {
+	lines(periodId: number, tx?: Tx, ownStaffId?: number): LineRow[] {
 		return this.db(tx)
 			.select(LINE)
 			.from(payrollLines)
 			.innerJoin(staff, eq(staff.id, payrollLines.staffId))
-			.where(eq(payrollLines.periodId, periodId))
+			.where(
+				and(
+					eq(payrollLines.periodId, periodId),
+					ownStaffId === undefined ? undefined : eq(payrollLines.staffId, ownStaffId)
+				)
+			)
 			.orderBy(asc(staff.fullName), asc(staff.id))
 			.all();
 	}

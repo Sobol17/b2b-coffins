@@ -1,5 +1,6 @@
 import { ConflictError, NotFoundError, ValidationError } from '../core/errors';
 import { ShopFlow } from '../crm-shop/shop-flow';
+import { ShopUnitRepository } from '../crm-shop/shop-unit.repository';
 import type { Tx } from '../db/client';
 import { DraftItemRepository, type DraftLineRow } from '../request/draft-item.repository';
 import { DraftWriter } from '../request/draft-writer';
@@ -75,6 +76,7 @@ export class CrmRequestItemsService extends CrmRequestBaseService {
 				if (this.lines.lines(request.id, tx).length <= 1) {
 					throw new ConflictError('В заявке должна остаться хотя бы одна позиция');
 				}
+				new ShopUnitRepository().assertRemovableItem(line.id, tx);
 				this.lines.deleteLine(line.id, tx);
 				return `Удалено: ${line.sku} × ${line.qty}`;
 			}

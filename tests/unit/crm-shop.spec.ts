@@ -42,7 +42,7 @@ function finish(requestId: number, station: WorkRole): void {
 	const taskId = openVisit(requestId, station);
 	acts(ctx).take(taskId);
 	for (const job of reads(ctx).task(taskId).jobs)
-		acts(ctx).progress({ jobId: job.id, doneQty: job.qty });
+		acts(actors.manager).progress({ jobId: job.id, doneQty: job.qty });
 	acts(ctx).complete(taskId);
 }
 
@@ -134,7 +134,7 @@ describe('a visit at a station (tech.md §20.4)', () => {
 		const id = inWork(3);
 		const [job] = reads().task(openVisit(id, 'carpenter')).jobs;
 
-		acts().progress({ jobId: job?.id ?? 0, doneQty: 2 });
+		acts(actors.manager).progress({ jobId: job?.id ?? 0, doneQty: 2 });
 
 		expect(jobsOf(id).map((row) => [row.qty, row.doneQty])).toEqual([[3, 2]]);
 		expect(() => acts().progress({ jobId: job?.id ?? 0, doneQty: 4 })).toThrow(ValidationError);

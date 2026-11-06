@@ -77,6 +77,7 @@ export const workDaySaveSchema = z
 	.object({
 		date: payrollDateSchema,
 		staffIds: z.array(id).max(200).refine(unique, { error: 'Сотрудник отмечен дважды' }),
+		carpenterStaffIds: z.array(id).max(200).refine(unique).optional(),
 		entries: z
 			.array(
 				z.object({
@@ -98,6 +99,10 @@ export const workDaySaveSchema = z
 				error: 'Работа с тем же составом указана дважды'
 			})
 	})
+	.refine(
+		(day) => (day.carpenterStaffIds ?? []).every((staffId) => day.staffIds.includes(staffId)),
+		{ path: ['carpenterStaffIds'], error: 'Столяр должен быть отмечен среди работавших' }
+	)
 	.refine(
 		(day) =>
 			day.entries.every((entry) =>
@@ -138,6 +143,13 @@ function dayOfForm(value: unknown): unknown {
 		staffIds: fields
 			.filter(([key]) => key.startsWith(STAFF_PREFIX))
 			.map(([key]) => key.slice(STAFF_PREFIX.length)),
+		...(fields.some(([key]) => key === 'carpenterCrewPresent')
+			? {
+					carpenterStaffIds: fields
+						.filter(([key]) => key.startsWith('carpenter.'))
+						.map(([key]) => key.slice('carpenter.'.length))
+				}
+			: {}),
 		entries: [...rows.values()].filter(
 			(row) => row.qty !== undefined && row.qty !== '' && Number(row.qty) !== 0
 		)

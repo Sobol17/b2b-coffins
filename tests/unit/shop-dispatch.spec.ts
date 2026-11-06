@@ -161,7 +161,7 @@ describe('edits of the request (tech.md §20.4)', () => {
 		const carpenter = new ShopTaskService(actors.carpenter);
 		const [first] = visitsOf(id, 'carpenter');
 		const [job] = jobsOf(id);
-		carpenter.progress({ jobId: job?.id ?? 0, doneQty: 1 });
+		new ShopTaskService(actors.manager).progress({ jobId: job?.id ?? 0, doneQty: 1 });
 		carpenter.complete(first?.id ?? 0);
 		new CrmRequestItemsService(actors.manager).addLine(id, {
 			variantId: volga,

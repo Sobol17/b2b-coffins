@@ -57,6 +57,17 @@ export interface ShopJobDto extends ShopPositionDto {
 	readonly comment: string | null;
 	readonly qty: number;
 	readonly doneQty: number;
+	readonly units: readonly ShopUnitDto[];
+}
+
+export interface ShopUnitDto {
+	readonly id: number;
+	readonly takenByName: string | null;
+	readonly takenById: number | null;
+	readonly completedAt: string | null;
+	readonly isLegacyDone: boolean;
+	readonly canTake: boolean;
+	readonly canComplete: boolean;
 }
 
 export interface ShopTaskDto {

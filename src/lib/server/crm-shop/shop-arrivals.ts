@@ -1,6 +1,7 @@
 import type { Tx } from '../db/client';
 import { EventBus } from '../events/bus';
 import { ShopJobRepository } from './shop-job.repository';
+import { ShopUnitRepository } from './shop-unit.repository';
 import type { WorkRole } from '$lib/types/roles';
 
 export interface Arrival {
@@ -37,6 +38,7 @@ export class ShopArrivals {
 		const target = this.visit(job.requestId, station, tx);
 		const open = this.jobs.openJobIn(target.taskId, job.itemId, tx);
 		if (open) {
+			new ShopUnitRepository().move(job.id, open.id, tx);
 			this.jobs.setJobQty(open.id, open.qty + job.qty, tx);
 			this.jobs.deleteJobs([job.id], tx);
 		} else {

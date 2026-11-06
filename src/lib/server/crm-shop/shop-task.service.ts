@@ -7,6 +7,7 @@ import { ShopArrivals } from './shop-arrivals';
 import { ShopBaseService } from './shop-base.service';
 import { ShopFlow } from './shop-flow';
 import { ShopJobRepository } from './shop-job.repository';
+import { ShopUnitRepository } from './shop-unit.repository';
 import { ShopRepository, type ShopJobRow, type ShopTaskRow } from './shop.repository';
 import { nextStation } from '$lib/domain/shop/stations';
 import type { ActorContext } from '$lib/types/actor';
@@ -50,6 +51,10 @@ export class ShopTaskService extends ShopBaseService {
 			if (input.doneQty > job.qty) {
 				throw new ValidationError(`Не больше ${job.qty} шт`, { field: 'doneQty' });
 			}
+			if (!this.ctx.roles.includes('owner') && !this.ctx.roles.includes('manager')) {
+				throw new ConflictError('Возьмите конкретное изделие в работу и отметьте его выполнение');
+			}
+			new ShopUnitRepository().manual(job.id, input.doneQty, tx);
 			this.jobs.setDone(job.id, input.doneQty, tx);
 			return {
 				result: undefined,

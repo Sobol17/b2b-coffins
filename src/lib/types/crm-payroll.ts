@@ -17,6 +17,7 @@ export interface StaffDto {
 	position: string | null;
 	isActive: boolean;
 	hasAccount: boolean;
+	userId?: number | null;
 }
 
 export interface WorkTypeDto {
@@ -25,6 +26,7 @@ export interface WorkTypeDto {
 	rateMinor: number;
 	/** Shop role the work belongs to, null for a general one (v1.61). */
 	roleCode: WorkRole | null;
+	variantId?: number | null;
 	isActive: boolean;
 }
 
@@ -36,6 +38,7 @@ export interface WorkEntryDto {
 	amountMinor: number;
 	/** Who did it: the amount is split among them only. */
 	staffIds: number[];
+	shopUnitWorkId?: number | null;
 }
 
 export interface WorkDayStaffDto {
@@ -63,6 +66,24 @@ export interface WorkDayDto {
 	totalMinor: number;
 	/** One per present worker, 0 for one who is in no crew. */
 	shares: { staffId: number; shareMinor: number }[];
+	carpenterStaffIds?: number[];
+	carpenterLocked?: boolean;
+	autoEntries?: WorkEntryDto[];
+	pendingCount?: number;
+	pendingTotalMinor?: number;
+}
+
+export interface OwnPayrollDto {
+	week: { startsOn: string; endsOn: string; status: PayrollPeriodStatus };
+	line: PayrollLineDto | null;
+	pendingMinor: number;
+	pending: {
+		unitId: number;
+		productTitle: string;
+		station: WorkRole;
+		completedAt: string;
+		shareMinor: number;
+	}[];
 }
 
 export interface PayrollDayCellDto {

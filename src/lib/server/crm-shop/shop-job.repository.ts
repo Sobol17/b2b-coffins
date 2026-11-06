@@ -4,6 +4,7 @@ import type { Tx } from '../db/client';
 import { requestItems, requests, shopJobs, shopTasks } from '../db/schema';
 import type { OpenJob } from '$lib/domain/shop/dispatch';
 import { WORK_ROLES, type WorkRole } from '$lib/types/roles';
+import { ShopUnitRepository } from './shop-unit.repository';
 
 /** A line of a stock request in work and the pieces the stations already finished for it. */
 export interface StockLineRow {
@@ -71,7 +72,7 @@ export class ShopJobRepository extends BaseRepository<typeof shopJobs> {
 				itemId: shopJobs.requestItemId,
 				station: shopTasks.station,
 				qty: shopJobs.qty,
-				doneQty: shopJobs.doneQty
+				doneQty: sql<number>`max(${shopJobs.doneQty}, (select count(*) from shop_units u left join shop_unit_works w on w.unit_id = u.id and w.station = ${shopTasks.station} where u.job_id = ${shopJobs.id} and (u.legacy_done = 1 or w.id is not null)))`
 			})
 			.from(shopJobs)
 			.innerJoin(shopTasks, eq(shopTasks.id, shopJobs.taskId))
@@ -139,15 +140,18 @@ export class ShopJobRepository extends BaseRepository<typeof shopJobs> {
 			.returning()
 			.all();
 		if (!row) throw new Error('shop job insert returned nothing');
+		new ShopUnitRepository().resize(row.id, values.qty, tx);
 		return row.id;
 	}
 
 	setJobQty(jobId: number, qty: number, tx: Tx): void {
+		new ShopUnitRepository().resize(jobId, qty, tx);
 		tx.update(shopJobs).set({ qty }).where(eq(shopJobs.id, jobId)).run();
 	}
 
 	deleteJobs(jobIds: readonly number[], tx: Tx): void {
 		if (jobIds.length === 0) return;
+		for (const id of jobIds) new ShopUnitRepository().resize(id, 0, tx);
 		tx.delete(shopJobs)
 			.where(inArray(shopJobs.id, [...jobIds]))
 			.run();
@@ -181,6 +185,7 @@ export class ShopJobRepository extends BaseRepository<typeof shopJobs> {
 
 	/** The job rides on to the next visit and starts its counter there from zero. */
 	moveJob(jobId: number, taskId: number, tx: Tx): void {
+		new ShopUnitRepository().reset(jobId, tx);
 		tx.update(shopJobs).set({ taskId, doneQty: 0 }).where(eq(shopJobs.id, jobId)).run();
 	}
 

@@ -4,6 +4,7 @@ import { StockFillRepository } from '../stock/stock-fill.repository';
 import { PositionTitles, ShopDtoMapper } from './dto';
 import { ShopBaseService } from './shop-base.service';
 import { ShopRepository } from './shop.repository';
+import { ShopUnitRepository } from './shop-unit.repository';
 import { stationOrder } from '$lib/domain/shop/stations';
 import type { ActorContext } from '$lib/types/actor';
 import {
@@ -48,7 +49,13 @@ export class ShopService extends ShopBaseService {
 			this.shop,
 			jobs.map((job) => ({ variantId: job.variantId, optionId: colours.get(job.itemId) ?? null }))
 		);
-		return ShopDtoMapper.toTask(task, jobs, colours, titles);
+		const dto = ShopDtoMapper.toTask(task, jobs, colours, titles);
+		const units = new ShopUnitRepository().dtos(
+			jobs.map((job) => job.id),
+			task.station,
+			this.ctx
+		);
+		return { ...dto, jobs: dto.jobs.map((job) => ({ ...job, units: units.get(job.id) ?? [] })) };
 	}
 
 	private station(station: WorkRole, search: string | undefined): ShopStationDto {

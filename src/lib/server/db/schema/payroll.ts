@@ -3,6 +3,8 @@ import { PAYROLL_PERIOD_STATUSES } from '$lib/types/crm-payroll';
 import { WORK_ROLES } from '$lib/types/roles';
 import { bool, createdAt, money, pk, ts, updatedAt } from './_shared';
 import { users } from './users';
+import { productVariants } from './catalog';
+import { shopTasks, shopUnits } from './shop';
 
 export const staff = sqliteTable('staff', {
 	id: pk(),
@@ -22,10 +24,14 @@ export const workTypes = sqliteTable(
 		title: text('title').notNull(),
 		rateMinor: money('rate_minor'), // price of one unit of the work
 		roleCode: text('role_code', { enum: WORK_ROLES }), // shop role of the work, null for a general one (v1.61)
+		variantId: integer('variant_id').references(() => productVariants.id),
 		isActive: bool('is_active').notNull().default(true),
 		createdAt: createdAt()
 	},
-	(t) => [uniqueIndex('work_types_title_uq').on(t.title)]
+	(t) => [
+		uniqueIndex('work_types_title_uq').on(t.title),
+		uniqueIndex('work_types_variant_role_uq').on(t.variantId, t.roleCode)
+	]
 );
 
 export const workDays = sqliteTable(
@@ -52,9 +58,34 @@ export const workDayStaff = sqliteTable(
 			.references(() => workDays.id, { onDelete: 'cascade' }),
 		staffId: integer('staff_id')
 			.notNull()
-			.references(() => staff.id)
+			.references(() => staff.id),
+		isCarpenter: bool('is_carpenter').notNull().default(false)
 	},
 	(t) => [uniqueIndex('work_day_staff_uq').on(t.workDayId, t.staffId)]
+);
+
+/** Claim, frozen earnings and confirmation of one piece at one station. */
+export const shopUnitWorks = sqliteTable(
+	'shop_unit_works',
+	{
+		id: pk(),
+		unitId: integer('unit_id')
+			.notNull()
+			.references(() => shopUnits.id),
+		taskId: integer('task_id').references(() => shopTasks.id, { onDelete: 'set null' }),
+		station: text('station', { enum: WORK_ROLES }).notNull(),
+		staffId: integer('staff_id')
+			.notNull()
+			.references(() => staff.id),
+		takenAt: ts('taken_at').notNull(),
+		completedAt: ts('completed_at'),
+		workDate: ts('work_date'),
+		workTypeId: integer('work_type_id').references(() => workTypes.id),
+		rateMinor: money('rate_minor'),
+		confirmedAt: ts('confirmed_at'),
+		confirmedById: integer('confirmed_by_id').references(() => users.id)
+	},
+	(t) => [uniqueIndex('shop_unit_works_unit_station_uq').on(t.unitId, t.station)]
 );
 
 export const workEntries = sqliteTable(
@@ -69,8 +100,10 @@ export const workEntries = sqliteTable(
 			.references(() => workTypes.id),
 		qty: integer('qty').notNull(),
 		rateMinor: money('rate_minor'), // frozen price at entry time
-		amountMinor: money('amount_minor')
-	}
+		amountMinor: money('amount_minor'),
+		shopUnitWorkId: integer('shop_unit_work_id').references(() => shopUnitWorks.id)
+	},
+	(t) => [uniqueIndex('work_entries_shop_unit_work_uq').on(t.shopUnitWorkId)]
 	// One work may come in several entries, one per crew (v1.55): no unique index on the work.
 );
 

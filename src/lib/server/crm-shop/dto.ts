@@ -100,7 +100,8 @@ export class ShopDtoMapper {
 			engraving: job.engraving,
 			comment: job.comment,
 			qty: job.qty,
-			doneQty: job.doneQty
+			doneQty: job.doneQty,
+			units: []
 		};
 	}
 }
