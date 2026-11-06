@@ -42,7 +42,7 @@ test.describe('the stations on a phone', () => {
 
 	test('C19 DoD: the request walks the four stations and reaches the driver', async ({ page }) => {
 		await login(page, 'manager');
-		const { number } = await acceptedRequest(page, 2);
+		const { number, card } = await acceptedRequest(page, 2);
 		await page.context().clearCookies();
 
 		await login(page, 'carpenter');
@@ -51,6 +51,7 @@ test.describe('the stations on a phone', () => {
 		await expect(fresh.filter({ hasText: number })).toContainText('Сделано 0 из 2');
 		await fresh.filter({ hasText: number }).click();
 		const unit = page.getByTestId('shop-unit').first();
+		const unitId = await unit.getAttribute('data-unit-id');
 		await unit.getByRole('button', { name: 'Взять в работу', exact: true }).click();
 		await expect(unit.getByRole('button', { name: 'Взять в работу' })).toHaveCount(0);
 		// The visit closes only when every piece is done: one of two keeps «Выполнено» off.
@@ -72,6 +73,22 @@ test.describe('the stations on a phone', () => {
 			await page.context().clearCookies();
 		}
 		expect(statusOf(db, number)).toBe('ready');
+		await login(page, 'manager');
+		await page.goto(card);
+		await page
+			.getByTestId('line-shop-history')
+			.getByText('Кто работал над изделиями', { exact: true })
+			.click();
+		const history = page.locator(`[data-testid="shop-unit-history"][data-unit-id="${unitId}"]`);
+		await expect(history.getByTestId('shop-unit-history-work')).toHaveCount(4);
+		await expect(history.getByTestId('shop-unit-history-work')).toContainText([
+			'Столяр · Николай Ершов',
+			'Шлифовщик · Олег Шмелёв',
+			'Маляр · Виктор Панин',
+			'Обивщик · Денис Обухов'
+		]);
+		await expect(history.getByText('Выполнено', { exact: true })).toHaveCount(4);
+		await page.context().clearCookies();
 
 		await login(page, 'driver');
 		await page.goto('/crm/delivery');
