@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { crmNavLink, login, logout } from './fixtures';
+import { ACCOUNTS, crmNavLink, login, logout } from './fixtures';
 
 /**
  * The newest journal entry of one action. Filters live in the url (FilterBar), so the spec opens
@@ -46,6 +46,59 @@ test.describe('the owner runs the workshop without a developer (C1)', () => {
 		await page.fill('input[name="password"]', password);
 		await page.click('button[type="submit"]');
 		await expect(page).toHaveURL('/password/change');
+	});
+
+	test('edits contacts and roles, keeps a refused edit open, then confirms deletion', async ({
+		page
+	}) => {
+		const email = `e2e.edit.${Date.now()}@workshop.example`;
+		const nextEmail = email.replace('e2e.edit.', 'e2e.updated.');
+		await login(page, 'owner');
+		await page.goto('/crm/settings/users');
+		await page.getByRole('button', { name: 'Добавить пользователя' }).click();
+		const modal = page.getByTestId('modal');
+		await modal.getByLabel('Имя и фамилия').fill('Павел Орлов');
+		await modal.getByLabel('Электронная почта').fill(email);
+		await modal.getByLabel('Столяр', { exact: true }).click();
+		await modal.getByRole('button', { name: 'Создать пользователя' }).click();
+		await expect(modal).toBeHidden();
+		await page.getByRole('textbox', { name: 'Поиск' }).fill(email);
+		const row = page.getByTestId('data-table-row').filter({ hasText: email });
+		await row.getByRole('button', { name: 'Изменить', exact: true }).click();
+		await expect(modal).toBeInViewport({ ratio: 1 });
+		await expect(modal.getByLabel('Имя и фамилия')).toHaveValue('Павел Орлов');
+		await modal.getByLabel('Имя и фамилия').fill('Алексей Петров');
+		await modal.getByLabel('Телефон').fill('+7 (900) 111-22-33');
+		await modal.getByLabel('Электронная почта').fill(ACCOUNTS.cp_admin.email);
+		await modal.getByLabel('Столяр', { exact: true }).click();
+		await modal.getByLabel('Водитель', { exact: true }).click();
+		await modal.getByRole('button', { name: 'Сохранить изменения' }).click();
+		await expect(modal.getByTestId('edit-user-error')).toContainText('Этот адрес уже используется');
+		await expect(modal).toBeInViewport({ ratio: 1 });
+		await expect(modal.getByLabel('Имя и фамилия')).toHaveValue('Алексей Петров');
+		await expect(row).toContainText('Павел Орлов');
+		await expect(row.getByTestId('user-roles')).toHaveText('Столяр');
+		await modal.getByLabel('Электронная почта').fill(nextEmail.toUpperCase());
+		await modal.getByRole('button', { name: 'Сохранить изменения' }).click();
+		await expect(modal).toBeHidden();
+		await page.getByRole('textbox', { name: 'Поиск' }).fill(nextEmail);
+		const editedRow = page.getByTestId('data-table-row').filter({ hasText: nextEmail });
+		await expect(editedRow).toContainText('Алексей Петров');
+		await expect(editedRow).toContainText('+7 (900) 111-22-33');
+		await expect(editedRow.getByTestId('user-roles')).toHaveText('Водитель');
+
+		await editedRow.getByRole('button', { name: 'Удалить', exact: true }).click();
+		await expect(modal).toContainText('Работы, выплаты и журнал сохранятся');
+		await modal.getByRole('button', { name: 'Отмена' }).click();
+		await expect(editedRow).toContainText('Алексей Петров');
+		await editedRow.getByRole('button', { name: 'Удалить', exact: true }).click();
+		await modal.getByRole('button', { name: 'Удалить пользователя', exact: true }).click();
+		await expect(modal).toBeHidden();
+		await expect(editedRow).toHaveCount(0);
+		await journalEntry(page, 'crm_user.delete', 'Пользователь удалён');
+		const edited = await journalEntry(page, 'crm_user.update', 'Пользователь изменён');
+		await expect(edited.getByTestId('audit-changes')).toContainText('driver');
+		await expect(edited.getByTestId('audit-changes')).not.toContainText(nextEmail);
 	});
 
 	test('adds a dictionary item and finds it in the journal', async ({ page }) => {
@@ -126,12 +179,14 @@ test.describe('owner sections stay closed to everyone else', () => {
 		}
 	});
 
-	test('a manager cannot create an account by posting the form directly', async ({ page }) => {
+	test('a manager cannot manage accounts by posting forms directly', async ({ page }) => {
 		await login(page, 'manager');
-		const response = await page.request.post('/crm/settings/users?/create', {
-			headers: { origin: 'http://localhost:4173' },
-			form: { fullName: 'Взлом', email: 'e2e.forged@workshop.example', roles: 'owner' }
-		});
-		expect(response.status()).toBe(403);
+		for (const action of ['create', 'update', 'delete']) {
+			const response = await page.request.post(`/crm/settings/users?/${action}`, {
+				headers: { origin: 'http://localhost:4173' },
+				form: { id: '1', fullName: 'Взлом', email: 'e2e.forged@workshop.example', roles: 'owner' }
+			});
+			expect(response.status(), action).toBe(403);
+		}
 	});
 });

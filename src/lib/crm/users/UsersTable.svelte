@@ -12,14 +12,16 @@
 		total,
 		query,
 		onQueryChange,
-		onEditRoles,
+		onEdit,
+		onDelete,
 		timeZone
 	}: {
 		rows: readonly CrmUserDto[];
 		total: number;
 		query: ListQuery;
 		onQueryChange: (next: ListQuery) => void;
-		onEditRoles: (user: CrmUserDto) => void;
+		onEdit: (user: CrmUserDto) => void;
+		onDelete: (user: CrmUserDto) => void;
 		timeZone: string;
 	} = $props();
 
@@ -54,8 +56,8 @@
 		</div>
 	{/snippet}
 	{#snippet actions(row: CrmUserDto)}
-		<Button variant="secondary" size="sm" onclick={() => onEditRoles(row)}>Роли</Button>
-		<!-- The own account keeps only the roles button: the server refuses the rest too. -->
+		<Button variant="secondary" size="sm" onclick={() => onEdit(row)}>Изменить</Button>
+		<!-- The own account may change contacts and keep its owner role, but cannot lose access. -->
 		{#if !row.isSelf}
 			<form
 				method="POST"
@@ -85,6 +87,9 @@
 					{row.status === 'disabled' ? 'Включить' : 'Отключить'}
 				</Button>
 			</form>
+			<Button variant="ghost" size="sm" class="text-danger" onclick={() => onDelete(row)}>
+				Удалить
+			</Button>
 		{/if}
 	{/snippet}
 </EntityList>

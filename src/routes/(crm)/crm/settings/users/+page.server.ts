@@ -9,11 +9,12 @@ import {
 	crmUserFiltersSchema,
 	crmUserFormFields,
 	crmUserIdSchema,
-	crmUserRolesSchema
+	crmUserRolesSchema,
+	updateCrmUserSchema
 } from '$lib/validation/crm-user';
 import type { Actions, PageServerLoad, RequestEvent } from './$types';
 
-type UserAction = 'create' | 'roles' | 'disable' | 'enable' | 'reset';
+type UserAction = 'create' | 'update' | 'delete' | 'roles' | 'disable' | 'enable' | 'reset';
 
 // Layout guards do not run for actions, so every entry point checks the contour and the right.
 function userService(locals: App.Locals, url: URL): CrmUserService {
@@ -58,6 +59,32 @@ export const actions = {
 			return { action: 'create' as const, access: await service.create(parsed.data) };
 		} catch (err) {
 			return refused('create', err);
+		}
+	},
+
+	update: async ({ request, locals, url }) => {
+		const service = userService(locals, url);
+		const parsed = updateCrmUserSchema.safeParse(crmUserFormFields(await request.formData()));
+		if (!parsed.success) {
+			return fail(422, { action: 'update' as const, errors: parsed.error.flatten().fieldErrors });
+		}
+		try {
+			return { action: 'update' as const, user: service.update(parsed.data) };
+		} catch (err) {
+			return refused('update', err);
+		}
+	},
+
+	delete: async ({ request, locals, url }) => {
+		const service = userService(locals, url);
+		const parsed = crmUserIdSchema.safeParse(Object.fromEntries(await request.formData()));
+		if (!parsed.success)
+			return fail(422, { action: 'delete' as const, formError: 'Нет пользователя' });
+		try {
+			service.delete(parsed.data.id);
+			return { action: 'delete' as const, done: true };
+		} catch (err) {
+			return refused('delete', err);
 		}
 	},
 
