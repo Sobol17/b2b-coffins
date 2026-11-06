@@ -22,7 +22,10 @@
 	<PushBanner publicKey={data.push.publicKey} />
 	<div>
 		<h1 class="mb-2 text-3xl">Цех</h1>
-		<p class="text-fg-muted">Возьмите заявку в работу, отметьте сделанное и нажмите «Выполнено».</p>
+		<p class="text-fg-muted">
+			Откройте заявку и возьмите свободный ящик в работу. Отметьте его выполненным; когда готовы все
+			ящики, передайте заявку дальше.
+		</p>
 	</div>
 
 	{#if data.switches}

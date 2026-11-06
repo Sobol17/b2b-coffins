@@ -26,9 +26,10 @@
 			action={unit.canTake ? '?/takeUnit' : '?/completeUnit'}
 			use:enhance={withToast({
 				pending: (value) => (pending = value),
-				success: unit.canTake
-					? 'Изделие в работе'
-					: 'Работа выполнена, начисление ожидает подтверждения'
+				success: (result) =>
+					result?.action === 'takeUnit'
+						? 'Изделие в работе'
+						: 'Работа выполнена, начисление ожидает подтверждения'
 			})}
 		>
 			<input type="hidden" name="unitId" value={unit.id} />

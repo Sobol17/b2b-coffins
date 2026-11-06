@@ -7,7 +7,8 @@
 	import LandingHeader from '$lib/portal/landing/LandingHeader.svelte';
 	import LandingSky from '$lib/portal/landing/LandingSky.svelte';
 	import { telHrefOf } from '$lib/portal/landing/tel';
-	import { Button, EmptyState, FilterBar, Pagination, type FilterField } from '$lib/ui';
+	import TelLink from '$lib/portal/landing/TelLink.svelte';
+	import { Button, buttonVariants, EmptyState, Input, Pagination, Select } from '$lib/ui';
 	import type { ListQuery } from '$lib/types/list';
 	import { filtersOf, listQueryOf, withListQuery } from '$lib/utils/list-url';
 	import ProductCard from './ProductCard.svelte';
@@ -16,20 +17,28 @@
 	let { data }: PageProps = $props();
 	const telHref = $derived(telHrefOf(data.contacts.phone));
 	const query = $derived(listQueryOf(page.url, data.products));
-	const filters = $derived(filtersOf(page.url, ['search', 'categoryId']));
-	const fields = $derived<FilterField[]>([
-		{ key: 'search', type: 'text', label: 'Поиск', placeholder: 'Название или артикул' },
-		{
-			key: 'categoryId',
-			type: 'select',
-			label: 'Категория',
-			placeholder: 'Все категории',
-			options: data.categories.map((category) => ({
-				value: String(category.id),
-				label: category.title
-			}))
+	// Local edits are immediate; a completed navigation or browser history restores the URL values.
+	let filters = $derived(filtersOf(page.url, ['search', 'categoryId']));
+	const categories = $derived(
+		data.categories.map((category) => ({
+			value: String(category.id),
+			label: category.title
+		}))
+	);
+
+	function changeFilters(next: Record<string, string>): void {
+		filters = next;
+		const url = new URL(page.url);
+		for (const key of ['search', 'categoryId']) {
+			const value = next[key] ?? '';
+			if (value === '') url.searchParams.delete(key);
+			else url.searchParams.set(key, value);
 		}
-	]);
+		url.searchParams.delete('page');
+		// The filters belong to this public route; keep the same history and focus as FilterBar.
+		// eslint-disable-next-line svelte/no-navigation-without-resolve
+		void goto(url, { replaceState: true, keepFocus: true, noScroll: true });
+	}
 
 	function changeQuery(next: ListQuery): void {
 		// The shared helper preserves filters in the current route's URL.
@@ -57,9 +66,41 @@
 				Модели собственного производства. Выберите категорию или найдите изделие по названию и
 				артикулу.
 			</p>
+			{#if telHref}
+				<div class="mt-4 lg:hidden">
+					<TelLink href={telHref} class={buttonVariants({ variant: 'secondary' })}>
+						Связаться с фабрикой
+					</TelLink>
+				</div>
+			{/if}
 		</div>
 		<div class="mb-6 rounded-card bg-surface-raised p-5">
-			<FilterBar {fields} {filters} />
+			<div class="grid grid-cols-1 gap-3 sm:flex sm:flex-wrap sm:items-end">
+				<div class="min-w-0 sm:min-w-48">
+					<Input
+						label="Поиск"
+						type="search"
+						placeholder="Название или артикул"
+						bind:value={
+							() => filters.search ?? '', (search) => changeFilters({ ...filters, search })
+						}
+					/>
+				</div>
+				<div class="min-w-0 sm:min-w-48">
+					<Select
+						label="Категория"
+						placeholder="Все категории"
+						options={categories}
+						bind:value={
+							() => filters.categoryId ?? '',
+							(categoryId) => changeFilters({ ...filters, categoryId })
+						}
+					/>
+				</div>
+				<Button variant="secondary" class="justify-self-start" onclick={() => changeFilters({})}>
+					Сбросить
+				</Button>
+			</div>
 		</div>
 		<p class="mb-4 px-2 text-sm text-fg-muted" role="status">
 			Найдено моделей: {data.products.total}

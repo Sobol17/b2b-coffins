@@ -65,3 +65,84 @@ test('the landing carousel accepts keyboard navigation on a phone with reduced m
 		page.getByTestId('landing-header').getByRole('link', { name: 'Каталог', exact: true })
 	).toBeInViewport();
 });
+
+test('the phone catalog offers search and a call on the first screen and preserves filter paging rules', async ({
+	page
+}) => {
+	await page.setViewportSize({ width: 390, height: 844 });
+	await page.goto('/catalog?page=2&perPage=1');
+	const search = page.getByLabel('Поиск', { exact: true });
+	await expect(search).toBeVisible();
+	await expect(search).toBeInViewport();
+	const contact = page.getByRole('main').getByRole('link', { name: 'Связаться с фабрикой' });
+	await expect(contact).toBeInViewport();
+	await expect(contact).toHaveAttribute('href', /^tel:\+?\d+$/);
+	expect(await contact.getAttribute('href')).toBe(
+		await page.locator('footer a[href^="tel:"]').getAttribute('href')
+	);
+
+	await search.fill(works.title);
+	await expect(page).toHaveURL(
+		(url) =>
+			url.searchParams.get('search') === works.title &&
+			!url.searchParams.has('page') &&
+			url.searchParams.get('perPage') === '1'
+	);
+	await expect(page.getByTestId('public-catalog-product')).toHaveCount(1);
+	await expect(page.getByTestId('public-catalog-product')).toContainText(works.title);
+
+	await page.getByRole('button', { name: 'Категория', exact: true }).click();
+	await page.getByRole('option').first().click();
+	await expect(page).toHaveURL(
+		(url) => url.searchParams.has('categoryId') && url.searchParams.get('search') === works.title
+	);
+	await page.getByRole('button', { name: 'Сбросить', exact: true }).click();
+	await expect(page).toHaveURL(
+		(url) =>
+			!url.searchParams.has('search') &&
+			!url.searchParams.has('categoryId') &&
+			url.searchParams.get('perPage') === '1'
+	);
+	await expect(search).toHaveValue('');
+	expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(
+		true
+	);
+});
+
+test('catalog search keeps every typed character while responses arrive late and follows browser history', async ({
+	page
+}) => {
+	await page.goto('/catalog');
+	const search = page.getByRole('searchbox', { name: 'Поиск', exact: true });
+	await expect(search).toBeVisible();
+	const responses: Promise<void>[] = [];
+	await page.route('**/catalog/__data.json?**', (route) => {
+		const response = (async () => {
+			const result = await route.fetch();
+			const term = new URL(route.request().url()).searchParams.get('search');
+			// Earlier queries finish after the final query, as on a slow connection.
+			await new Promise((resolve) => setTimeout(resolve, term === works.title ? 150 : 600));
+			await route.fulfill({ response: result });
+		})();
+		responses.push(response);
+		return response;
+	});
+
+	await search.pressSequentially(works.title, { delay: 15 });
+	await expect(search).toHaveValue(works.title);
+	await expect(page).toHaveURL((url) => url.searchParams.get('search') === works.title);
+	await Promise.all(responses);
+	await expect(search).toHaveValue(works.title);
+	await expect(page.getByTestId('public-catalog-product')).toHaveCount(1);
+	await expect(page.getByTestId('public-catalog-product')).toContainText(works.title);
+
+	await page
+		.getByTestId('landing-header')
+		.getByRole('link', { name: 'Каталог', exact: true })
+		.click();
+	await expect(search).toHaveValue('');
+	await page.goBack();
+	await expect(search).toHaveValue(works.title);
+	await page.goForward();
+	await expect(search).toHaveValue('');
+});
