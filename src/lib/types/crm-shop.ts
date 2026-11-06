@@ -89,6 +89,16 @@ export interface ShopTaskDto {
 	readonly canComplete: boolean;
 }
 
+export interface ShopUnitHistoryDto {
+	readonly id: number;
+	readonly works: readonly {
+		station: WorkRole;
+		fullName: string;
+		takenAt: string;
+		completedAt: string | null;
+	}[];
+}
+
 /** The shop side of a request line on the CRM card and of a card on the board. */
 export interface CrmLineShopDto {
 	readonly itemId: number;
@@ -100,4 +110,6 @@ export interface CrmLineShopDto {
 	readonly madeQty: number;
 	/** Numbers of requests ahead in fillOrder that hold this position. */
 	readonly heldBy: readonly string[];
+	/** Real station claims, retained after production ends. Legacy counts have no executor history. */
+	readonly units?: readonly ShopUnitHistoryDto[];
 }

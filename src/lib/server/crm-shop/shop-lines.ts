@@ -1,19 +1,21 @@
 import type { Tx } from '../db/client';
 import { StockFill } from '../stock/stock-fill';
 import { ShopJobRepository } from './shop-job.repository';
+import { ShopUnitHistoryRepository } from './shop-unit-history.repository';
 import { heldAhead } from '$lib/domain/stock/allocation';
 import type { CrmLineShopDto } from '$lib/types/crm-shop';
 import type { RequestStatus } from '$lib/types/request';
 import { WORK_ROLES } from '$lib/types/roles';
+import { definedProps } from '$lib/utils/props';
 
 /**
- * The shop side of each line of a request in work (tech.md §8): what the shelf gives it, what the
- * stations make, and which requests ahead in the queue hold the rest of its position.
+ * The shop side of each request line: live aggregates in work and executor history after it.
  */
 export class ShopLineReader {
 	constructor(
 		private readonly fill: StockFill = new StockFill(),
-		private readonly jobs: ShopJobRepository = new ShopJobRepository()
+		private readonly jobs: ShopJobRepository = new ShopJobRepository(),
+		private readonly history: ShopUnitHistoryRepository = new ShopUnitHistoryRepository()
 	) {}
 
 	forRequest(
@@ -21,10 +23,28 @@ export class ShopLineReader {
 		itemIds: readonly number[],
 		tx?: Tx
 	): CrmLineShopDto[] {
-		if (request.status !== 'in_work') return [];
+		const history = this.history.byItems(itemIds, tx);
+		if (request.status !== 'in_work' && history.size === 0) return [];
+		const made = this.jobs.madeByItem(request.id, tx);
+		if (request.status !== 'in_work') {
+			return itemIds.flatMap((itemId) => {
+				const units = history.get(itemId);
+				return units === undefined
+					? []
+					: [
+							{
+								itemId,
+								fromStockQty: 0,
+								stations: [],
+								madeQty: made.get(itemId) ?? 0,
+								heldBy: [],
+								units
+							}
+						];
+			});
+		}
 		const snapshot = this.fill.read(tx);
 		const open = this.jobs.openJobs(tx);
-		const made = this.jobs.madeByItem(request.id, tx);
 		const ahead = new Map(
 			snapshot.lines
 				.filter((line) => line.requestId === request.id)
@@ -39,7 +59,8 @@ export class ShopLineReader {
 				.sort((a, b) => WORK_ROLES.indexOf(a.station) - WORK_ROLES.indexOf(b.station))
 				.map((job) => ({ station: job.station, qty: job.qty, doneQty: job.doneQty })),
 			madeQty: made.get(itemId) ?? 0,
-			heldBy: (ahead.get(itemId) ?? []).flatMap((id) => numbers.get(id) ?? [])
+			heldBy: (ahead.get(itemId) ?? []).flatMap((id) => numbers.get(id) ?? []),
+			...definedProps({ units: history.get(itemId) })
 		}));
 	}
 }
