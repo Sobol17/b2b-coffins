@@ -1,10 +1,11 @@
-import { and, eq, inArray, isNull, like, or, sql } from 'drizzle-orm';
+import { and, eq, inArray, isNull, like, or } from 'drizzle-orm';
 import { migrate } from 'drizzle-orm/better-sqlite3/migrator';
 import { hashPassword } from '../../src/lib/server/auth/password';
 import { createDb, type Db } from '../../src/lib/server/db/client';
 import {
 	dictItems,
 	discountRules,
+	payrollPeriods,
 	rateLimits,
 	requests,
 	roles,
@@ -14,6 +15,7 @@ import {
 	shopUnits,
 	shopUnitWorks,
 	workEntries,
+	workDays,
 	stockMoves,
 	userNotificationPrefs,
 	userRoles,
@@ -96,9 +98,11 @@ export default async function globalSetup(): Promise<void> {
 		.set({ status: 'cancelled' })
 		.where(inArray(requests.status, ['in_work', 'ready']))
 		.run();
-	db.delete(workEntries)
-		.where(sql`${workEntries.shopUnitWorkId} is not null`)
-		.run();
+	// A prior payroll spec closes the current week. Clear its isolated sheets as well as shop
+	// work, otherwise the next acceptance run cannot complete a piece in that frozen week.
+	db.delete(workEntries).run();
+	db.delete(workDays).run();
+	db.delete(payrollPeriods).run();
 	db.delete(shopUnitWorks).run();
 	db.delete(shopUnits).run();
 	db.delete(shopJobs).run();
