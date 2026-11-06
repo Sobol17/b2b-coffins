@@ -13,7 +13,7 @@ import { CrmUserDtoMapper } from './dto';
 import type { ActorContext } from '$lib/types/actor';
 import type { CreatedCrmUserDto, CrmRole, CrmUserDto, CrmUserFilters } from '$lib/types/crm';
 import type { ListQuery, Page } from '$lib/types/list';
-import type { CreateCrmUserInput } from '$lib/validation/crm-user';
+import type { CreateCrmUserInput, UpdateCrmUserInput } from '$lib/validation/crm-user';
 
 /**
  * Workshop accounts managed by the owner (C1). Only the owner holds `settings.manage`, and the owner
@@ -62,6 +62,50 @@ export class CrmUserService extends BaseService {
 		});
 		const mailSent = await this.sendAccess(row.email, temporaryPassword, false);
 		return { user: CrmUserDtoMapper.toUser(row, this.ctx), temporaryPassword, mailSent };
+	}
+
+	/** Contacts and roles are one edit: no partial account survives a refused role or address. */
+	update(input: UpdateCrmUserInput): CrmUserDto {
+		const row = this.audited({ action: 'crm_user.update', entity: 'users' }, (tx) => {
+			const user = this.require(input.id, tx);
+			if (user.id === this.ctx.userId && !input.roles.includes('owner')) {
+				throw new ConflictError('Нельзя снять с себя роль руководителя');
+			}
+			if (this.repo.emailTaken(input.email, tx, input.id)) {
+				throw new ValidationError('Этот адрес уже используется', { field: 'email' });
+			}
+			const { id, roles, ...contact } = input;
+			this.repo.updateContact(id, contact, tx);
+			// Existing sessions read current roles and contacts on every request.
+			this.repo.setRoles(id, roles, tx);
+			return {
+				result: this.require(id, tx),
+				entityId: id,
+				before: { roles: user.roles },
+				after: {
+					changed: (['fullName', 'email', 'phone'] as const).filter(
+						(field) => user[field] !== contact[field]
+					),
+					roles
+				}
+			};
+		});
+		return CrmUserDtoMapper.toUser(row, this.ctx);
+	}
+
+	/** Retains the account and its historical references, but removes every way to sign in. */
+	delete(id: number): void {
+		this.audited({ action: 'crm_user.delete', entity: 'users' }, (tx) => {
+			const user = this.requireOther(id, tx, 'Нельзя удалить собственную учётную запись');
+			this.repo.softDelete(id, tx);
+			SessionService.destroyAllFor(id, tx);
+			return {
+				result: undefined,
+				entityId: id,
+				before: { isActive: user.isActive, deleted: false },
+				after: { isActive: false, deleted: true }
+			};
+		});
 	}
 
 	/** @throws ConflictError when the owner would drop the own owner role. */
