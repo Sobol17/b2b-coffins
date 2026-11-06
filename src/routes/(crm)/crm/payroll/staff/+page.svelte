@@ -7,10 +7,11 @@
 	import type { StaffDto } from '$lib/types/crm-payroll';
 	import type { PageProps } from './$types';
 
-	let { data }: PageProps = $props();
+	let { data, form }: PageProps = $props();
 
 	// null: closed; 'new': a new worker; a worker: the edit of that one.
 	let editing = $state<StaffDto | 'new' | null>(null);
+	const accountNames = $derived(new Map(data.users.map((user) => [user.id, user.fullName])));
 </script>
 
 <svelte:head><title>Сотрудники</title></svelte:head>
@@ -26,7 +27,13 @@
 			</p>
 		</div>
 		{#if data.canManage}
-			<Button class="sm:ml-auto" onclick={() => (editing = 'new')}>Добавить сотрудника</Button>
+			<Button
+				class="sm:ml-auto"
+				onclick={() => {
+					form = null;
+					editing = 'new';
+				}}>Добавить сотрудника</Button
+			>
 		{/if}
 	</div>
 
@@ -38,10 +45,18 @@
 				statusTitle={{ on: 'Работает', off: 'Выключен' }}
 				emptyTitle="Сотрудников нет"
 				nameOf={(row) => row.fullName}
-				onEdit={(row) => (editing = row)}
+				onEdit={(row) => {
+					form = null;
+					editing = row;
+				}}
 			>
 				{#snippet own(row: StaffDto)}
-					{row.position ?? 'Должность не указана'}{row.hasAccount ? ' · есть вход в систему' : ''}
+					{row.position ?? 'Должность не указана'}
+					<div data-testid="staff-account" class="text-xs text-fg-faint">
+						{row.userId
+							? `Учётная запись: ${accountNames.get(row.userId) ?? 'недоступна'}`
+							: 'Без учётной записи'}
+					</div>
 				{/snippet}
 			</DirectoryTable>
 		</Card.Content>
@@ -51,5 +66,9 @@
 <StaffModal
 	open={editing !== null}
 	worker={editing === 'new' ? null : editing}
+	users={data.users}
+	formError={form && 'formError' in form && (form.action === 'create' || form.action === 'update')
+		? form.formError
+		: undefined}
 	onClose={() => (editing = null)}
 />

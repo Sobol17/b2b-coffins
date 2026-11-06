@@ -8,7 +8,7 @@
 	import type { WorkTypeDto } from '$lib/types/crm-payroll';
 	import type { PageProps } from './$types';
 
-	let { data }: PageProps = $props();
+	let { data, form }: PageProps = $props();
 
 	// null: closed; 'new': a new work; a work: the edit of that one.
 	let editing = $state<WorkTypeDto | 'new' | null>(null);
@@ -22,12 +22,18 @@
 		<div>
 			<h1 class="mb-2 text-3xl">Работы и стоимость</h1>
 			<p class="max-w-2xl text-fg-muted">
-				Сколько мастерская платит за единицу работы. У столяра, шлифовщика, маляра и обивщика свои
-				работы. Стоимость работы система делит поровну между теми, кто её сделал.
+				Расценка позиции применяется к изделиям выбранной роли. Без привязки работу можно добавить
+				вручную в рабочий день.
 			</p>
 		</div>
 		{#if data.canManage}
-			<Button class="sm:ml-auto" onclick={() => (editing = 'new')}>Добавить работу</Button>
+			<Button
+				class="sm:ml-auto"
+				onclick={() => {
+					form = null;
+					editing = 'new';
+				}}>Добавить работу</Button
+			>
 		{/if}
 	</div>
 
@@ -39,11 +45,18 @@
 				statusTitle={{ on: 'Используется', off: 'Выключена' }}
 				emptyTitle="Работ нет"
 				nameOf={(row) => row.title}
-				onEdit={(row) => (editing = row)}
+				onEdit={(row) => {
+					form = null;
+					editing = row;
+				}}
 			>
 				{#snippet own(row: WorkTypeDto)}
 					<span data-testid="work-role">{workRoleTitle(row)}</span> ·
-					<span class="tabular-nums" data-testid="work-rate">{roubles(row.rateMinor)}</span> за единицу
+					<span class="tabular-nums" data-testid="work-rate">{roubles(row.rateMinor)}</span> за
+					единицу
+					<div data-testid="work-variant" class="text-xs text-fg-faint">
+						{row.variantLabel ?? (row.variantId ? 'Недоступная позиция' : 'Без привязки к позиции')}
+					</div>
 				{/snippet}
 			</DirectoryTable>
 		</Card.Content>
@@ -53,5 +66,9 @@
 <WorkTypeModal
 	open={editing !== null}
 	work={editing === 'new' ? null : editing}
+	variants={data.variants}
+	formError={form && 'formError' in form && (form.action === 'create' || form.action === 'update')
+		? form.formError
+		: undefined}
 	onClose={() => (editing = null)}
 />

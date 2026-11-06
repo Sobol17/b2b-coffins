@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
-	import { Button, Input, Modal, MoneyInput, Select, withToast } from '$lib/ui';
+	import { Button, Combobox, Input, Modal, MoneyInput, Select, withToast } from '$lib/ui';
 	import { WORK_ROLE_OPTIONS } from './labels';
 	import type { WorkTypeDto } from '$lib/types/crm-payroll';
 
@@ -8,21 +8,32 @@
 	let {
 		open,
 		work,
+		variants,
+		formError,
 		onClose
 	}: {
 		open: boolean;
 		/** Null for a new work. */
 		work: WorkTypeDto | null;
+		variants: readonly { id: number; label: string }[];
+		formError?: string | undefined;
 		onClose: () => void;
 	} = $props();
 
 	let pending = $state(false);
+	const variantOptions = $derived([
+		{ value: '', label: 'Без привязки к позиции' },
+		...variants.map((variant) => ({ value: String(variant.id), label: variant.label })),
+		...(work?.variantId && !variants.some((variant) => variant.id === work.variantId)
+			? [{ value: String(work.variantId), label: work.variantLabel ?? 'Недоступная позиция' }]
+			: [])
+	]);
 </script>
 
 <Modal
 	{open}
 	title={work ? 'Изменить работу' : 'Новая работа'}
-	description="Новая стоимость действует на дни, которые отметят после правки."
+	description="Новая стоимость действует на следующие работы. Уже выполненные сохраняют прежнюю расценку."
 	{onClose}
 >
 	{#snippet body()}
@@ -37,6 +48,9 @@
 			})}
 		>
 			{#if work}<input type="hidden" name="id" value={work.id} />{/if}
+			{#if formError}
+				<p role="alert" data-testid="work-type-error" class="text-sm text-danger">{formError}</p>
+			{/if}
 			<Input
 				name="title"
 				label="Название работы"
@@ -52,6 +66,18 @@
 				options={WORK_ROLE_OPTIONS}
 				value={work?.roleCode ?? ''}
 			/>
+			<div
+				class="min-w-0 [&_button]:h-auto [&_button]:min-h-11 [&_button]:py-2 [&_button]:text-left [&_button]:whitespace-normal"
+			>
+				<Combobox
+					name="variantId"
+					label="Позиция каталога"
+					placeholder="Выберите позицию"
+					options={variantOptions}
+					value={String(work?.variantId ?? '')}
+					hint="Без привязки работа остаётся для ручного ввода."
+				/>
+			</div>
 			<MoneyInput
 				name="rateMinor"
 				label="Стоимость за единицу, ₽"
