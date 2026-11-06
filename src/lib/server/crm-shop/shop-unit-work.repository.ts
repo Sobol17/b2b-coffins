@@ -59,7 +59,7 @@ export class ShopUnitWorkRepository extends BaseRepository<typeof shopUnitWorks>
 		const own =
 			ownStaffId === undefined
 				? undefined
-				: sql`((${shopUnitWorks.staffId} = ${ownStaffId} and ${shopUnitWorks.station} != 'carpenter') or (${shopUnitWorks.station} = 'carpenter' and exists (select 1 from ${workDayStaff} inner join ${workDays} on ${workDays.id} = ${workDayStaff.workDayId} where ${workDays.workDate} = ${shopUnitWorks.workDate} and ${workDayStaff.staffId} = ${ownStaffId} and ${workDayStaff.isCarpenter} = 1)))`;
+				: sql`(${shopUnitWorks.staffId} = ${ownStaffId} or (${shopUnitWorks.station} = 'carpenter' and exists (select 1 from ${workDayStaff} inner join ${workDays} on ${workDays.id} = ${workDayStaff.workDayId} where ${workDays.workDate} = ${shopUnitWorks.workDate} and ${workDayStaff.staffId} = ${ownStaffId} and ${workDayStaff.isCarpenter} = 1)))`;
 		return this.db(tx)
 			.select({ work: shopUnitWorks, productTitle: shopUnits.productTitle })
 			.from(shopUnitWorks)
