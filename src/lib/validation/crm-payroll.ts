@@ -36,7 +36,17 @@ const fullName = z
 	.min(1, { error: 'Введите ФИО' })
 	.max(120, { error: 'Не длиннее 120 символов' });
 
-export const staffCreateSchema = z.object({ fullName, position: optionalText(120) });
+// Omitted by old callers; an empty form field explicitly removes an existing link.
+const optionalLinkId = z.preprocess(
+	(value) => (value === '' ? null : value),
+	id.nullable().optional()
+);
+
+export const staffCreateSchema = z.object({
+	fullName,
+	position: optionalText(120),
+	userId: optionalLinkId
+});
 export const staffUpdateSchema = staffCreateSchema.extend({ id });
 
 const workTitle = z
@@ -59,7 +69,12 @@ const roleCode = z.preprocess(
 	z.enum(WORK_ROLES, { error: 'Выберите роль' }).nullable()
 );
 
-export const workTypeCreateSchema = z.object({ title: workTitle, rateMinor, roleCode });
+export const workTypeCreateSchema = z.object({
+	title: workTitle,
+	rateMinor,
+	roleCode,
+	variantId: optionalLinkId
+});
 export const workTypeUpdateSchema = workTypeCreateSchema.extend({ id });
 
 export const payrollIdSchema = z.object({ id });

@@ -1,4 +1,4 @@
-import { NotFoundError } from '../core/errors';
+import { NotFoundError, ValidationError } from '../core/errors';
 import type { Tx } from '../db/client';
 import { PayrollDtoMapper } from './dto';
 import { PayrollBaseService } from './payroll-base.service';
@@ -23,14 +23,21 @@ export class PayrollStaffService extends PayrollBaseService {
 		return this.repo.all().map((row) => PayrollDtoMapper.toStaff(row));
 	}
 
+	userChoices(): { id: number; fullName: string }[] {
+		this.assertManage();
+		return this.repo.userChoices();
+	}
+
 	create(input: StaffCreateInput): StaffDto {
 		this.assertManage();
 		return this.audited({ action: 'staff.create', entity: 'staff' }, (tx) => {
-			const id = this.repo.insert(input, tx);
+			const userId = input.userId ?? null;
+			this.assertUser(userId, null, tx);
+			const id = this.repo.insert({ ...input, userId }, tx);
 			return {
 				result: PayrollDtoMapper.toStaff(this.require(id, tx)),
 				entityId: id,
-				after: { position: input.position }
+				after: { position: input.position, userId }
 			};
 		});
 	}
@@ -40,13 +47,19 @@ export class PayrollStaffService extends PayrollBaseService {
 		this.assertManage();
 		return this.audited({ action: 'staff.update', entity: 'staff' }, (tx) => {
 			const before = this.require(input.id, tx);
-			this.repo.update(input.id, { fullName: input.fullName, position: input.position }, tx);
+			const userId = input.userId === undefined ? before.userId : input.userId;
+			if (input.userId !== undefined) this.assertUser(userId, input.id, tx);
+			this.repo.update(
+				input.id,
+				{ fullName: input.fullName, position: input.position, userId },
+				tx
+			);
 			return {
 				result: PayrollDtoMapper.toStaff(this.require(input.id, tx)),
 				entityId: input.id,
 				// Names are personal data: the journal keeps which fields moved, not the name itself.
-				before: { position: before.position },
-				after: { position: input.position, renamed: before.fullName !== input.fullName }
+				before: { position: before.position, userId: before.userId },
+				after: { position: input.position, userId, renamed: before.fullName !== input.fullName }
 			};
 		});
 	}
@@ -71,5 +84,17 @@ export class PayrollStaffService extends PayrollBaseService {
 		const row = this.repo.find(id, tx);
 		if (!row) throw new NotFoundError('staff');
 		return row;
+	}
+
+	private assertUser(userId: number | null, exceptId: number | null, tx: Tx): void {
+		if (userId === null) return;
+		if (!this.repo.userExists(userId, tx))
+			throw new ValidationError('Учётная запись мастерской не найдена или удалена', {
+				field: 'userId'
+			});
+		if (this.repo.userTaken(userId, exceptId, tx))
+			throw new ValidationError('Эта учётная запись уже связана с другим сотрудником', {
+				field: 'userId'
+			});
 	}
 }

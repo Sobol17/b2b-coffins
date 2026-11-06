@@ -1,9 +1,23 @@
 import { beforeEach, describe, expect, it } from 'vitest';
+import { eq } from 'drizzle-orm';
 import { ForbiddenError, NotFoundError, ValidationError } from '../../src/lib/server/core/errors';
 import { PayrollStaffService } from '../../src/lib/server/crm-payroll/payroll-staff.service';
 import { WorkTypeService } from '../../src/lib/server/crm-payroll/work-type.service';
-import { auditLog } from '../../src/lib/server/db/schema';
-import { staffCreateSchema, workTypeCreateSchema } from '../../src/lib/validation/crm-payroll';
+import {
+	auditLog,
+	dictItems,
+	products,
+	productVariants,
+	staff as staffTable,
+	users,
+	workTypes
+} from '../../src/lib/server/db/schema';
+import {
+	staffCreateSchema,
+	staffUpdateSchema,
+	workTypeCreateSchema,
+	workTypeUpdateSchema
+} from '../../src/lib/validation/crm-payroll';
 import { clearPayroll, payrollActor } from './helpers/crm-payroll';
 import { insertUser, migratedDatabase } from './helpers/db';
 
@@ -19,6 +33,51 @@ const staff = (role: Parameters<typeof payrollActor>[1] = 'manager') =>
 const works = (role: Parameters<typeof payrollActor>[1] = 'manager') =>
 	new WorkTypeService(payrollActor(managerId, role));
 const actions = () => db.select({ action: auditLog.action }).from(auditLog).all();
+
+const materialId = db
+	.insert(dictItems)
+	.values({ dict: 'material', code: 'pine', title: 'Сосна' })
+	.returning()
+	.get()!.id;
+let sequence = 0;
+function variant(deleted = false): number {
+	sequence += 1;
+	const product = db
+		.insert(products)
+		.values({ sku: `MODEL-${sequence}`, title: 'Прямой' })
+		.returning()
+		.get()!;
+	return db
+		.insert(productVariants)
+		.values({
+			productId: product.id,
+			sku: `SKU-${sequence}`,
+			sizeCode: '180',
+			materialId,
+			deletedAt: deleted ? new Date() : null
+		})
+		.returning()
+		.get()!.id;
+}
+
+function account(options: { portal?: boolean; deleted?: boolean } = {}): number {
+	sequence += 1;
+	const id = insertUser({
+		email: `worker${sequence}@ws.example`,
+		role: 'carpenter',
+		counterpartyId: null,
+		fullName: `Сотрудник ${sequence}`
+	});
+	if (options.portal || options.deleted)
+		db.update(users)
+			.set({
+				scope: options.portal ? 'portal' : 'crm',
+				deletedAt: options.deleted ? new Date() : null
+			})
+			.where(eq(users.id, id))
+			.run();
+	return id;
+}
 
 beforeEach(clearPayroll);
 
@@ -136,7 +195,15 @@ describe('works and their prices', () => {
 	it('keeps a work as a title and a price of one unit', () => {
 		const work = works().create({ title: 'Сборка ящика', rateMinor: 20_000, roleCode: null });
 		expect(works().list()).toEqual([
-			{ id: work.id, title: 'Сборка ящика', rateMinor: 20_000, roleCode: null, isActive: true }
+			{
+				id: work.id,
+				title: 'Сборка ящика',
+				rateMinor: 20_000,
+				roleCode: null,
+				variantId: null,
+				variantLabel: null,
+				isActive: true
+			}
 		]);
 		expect(actions()).toEqual([{ action: 'work_type.create' }]);
 	});
@@ -184,5 +251,188 @@ describe('works and their prices', () => {
 		expect(workTypeCreateSchema.safeParse({ title: 'Раскрой', rateMinor: '-100' }).success).toBe(
 			false
 		);
+	});
+});
+
+describe('prices for a catalog position', () => {
+	it('returns the linked variant and a descriptive label, including an explicit zero rate', () => {
+		const variantId = variant();
+		const work = works().create({
+			title: 'Расценка за позицию',
+			rateMinor: 0,
+			roleCode: 'carpenter',
+			variantId
+		});
+		expect(work).toMatchObject({
+			variantId,
+			rateMinor: 0,
+			roleCode: 'carpenter',
+			variantLabel: expect.stringContaining('Прямой')
+		});
+		expect(work.variantLabel).toContain('180');
+		expect(works().list()[0]?.variantId).toBe(variantId);
+	});
+
+	it('refuses duplicate position and role even when the first price is disabled, without a partial edit', () => {
+		const variantId = variant();
+		const first = works().create({
+			title: 'Первая расценка',
+			rateMinor: 0,
+			roleCode: 'carpenter',
+			variantId
+		});
+		works().setActive(first.id, false);
+		expect(() =>
+			works().create({ title: 'Другая расценка', rateMinor: 100, roleCode: 'carpenter', variantId })
+		).toThrow(ValidationError);
+		const other = works().create({
+			title: 'Малярная расценка',
+			rateMinor: 200,
+			roleCode: 'painter',
+			variantId
+		});
+		expect(() =>
+			works().update({
+				...other,
+				title: 'Не сохранится',
+				rateMinor: 300,
+				roleCode: 'carpenter',
+				variantId
+			})
+		).toThrow(ValidationError);
+		expect(
+			works()
+				.list()
+				.find((work) => work.id === other.id)
+		).toMatchObject({ title: 'Малярная расценка', rateMinor: 200, roleCode: 'painter', variantId });
+	});
+
+	it('rejects a missing station, unknown or deleted variant and deleted model', () => {
+		const live = variant();
+		const deleted = variant(true);
+		const deletedModel = variant();
+		const row = db
+			.select()
+			.from(productVariants)
+			.where(eq(productVariants.id, deletedModel))
+			.get()!;
+		db.update(products).set({ deletedAt: new Date() }).where(eq(products.id, row.productId)).run();
+		for (const input of [
+			{ variantId: live, roleCode: null },
+			{ variantId: 999_999, roleCode: 'carpenter' as const },
+			{ variantId: deleted, roleCode: 'carpenter' as const },
+			{ variantId: deletedModel, roleCode: 'carpenter' as const }
+		]) {
+			expect(() =>
+				works().create({ title: 'Неверная расценка', rateMinor: 100, ...input })
+			).toThrow(ValidationError);
+		}
+		expect(db.select().from(workTypes).all()).toHaveLength(0);
+		expect(actions()).toHaveLength(0);
+	});
+
+	it('preserves a link omitted by an old caller, but explicitly clears an empty form field', () => {
+		const variantId = variant();
+		const work = works().create({
+			title: 'Старая форма',
+			rateMinor: 100,
+			roleCode: 'carpenter',
+			variantId
+		});
+		const preserved = works().update({
+			id: work.id,
+			title: work.title,
+			rateMinor: 200,
+			roleCode: 'carpenter'
+		});
+		expect(preserved.variantId).toBe(variantId);
+		const cleared = works().update(workTypeUpdateSchema.parse({ ...preserved, variantId: '' }));
+		expect(cleared.variantId).toBeNull();
+	});
+
+	it('audits the old and new position, role and price', () => {
+		const previous = variant();
+		const next = variant();
+		const work = works().create({
+			title: 'Смена позиции',
+			rateMinor: 100,
+			roleCode: 'carpenter',
+			variantId: previous
+		});
+		works().update({
+			id: work.id,
+			title: work.title,
+			rateMinor: 200,
+			roleCode: 'painter',
+			variantId: next
+		});
+		expect(db.select().from(auditLog).all().at(-1)).toMatchObject({
+			before: { variantId: previous, roleCode: 'carpenter', rateMinor: 100 },
+			after: { variantId: next, roleCode: 'painter', rateMinor: 200 }
+		});
+	});
+
+	it('offers undeleted variants with SKU, model and size and no price fields', () => {
+		const id = variant();
+		const removedId = variant(true);
+		const choices = works().variantChoices();
+		const choice = choices.find((row) => row.id === id)!;
+		expect(Object.keys(choice).sort()).toEqual(['id', 'label']);
+		expect(choice.label).toMatch(/SKU-\d+.*Прямой.*180/);
+		expect(choices.some((row) => row.id === removedId)).toBe(false);
+	});
+});
+
+describe('staff account links', () => {
+	it('returns a linked account id, preserves it for old calls, and clears it explicitly', () => {
+		const userId = account();
+		const worker = staff().create({ fullName: 'Связанный сотрудник', position: null, userId });
+		expect(worker).toMatchObject({ userId, hasAccount: true });
+		expect(
+			staff().update({ id: worker.id, fullName: worker.fullName, position: 'Столяр' }).userId
+		).toBe(userId);
+		expect(
+			staff().update(staffUpdateSchema.parse({ ...worker, position: 'Столяр', userId: '' }))
+		).toMatchObject({ userId: null, hasAccount: false });
+	});
+
+	it('reserves a link held by inactive staff and rejects the whole conflicting edit', () => {
+		const userId = account();
+		const first = staff().create({ fullName: 'Первый', position: null, userId });
+		staff().setActive(first.id, false);
+		expect(() => staff().create({ fullName: 'Дубль', position: null, userId })).toThrow(
+			ValidationError
+		);
+		const other = staff().create({ fullName: 'Другой', position: null });
+		expect(() => staff().update({ ...other, fullName: 'Не сохранится', userId })).toThrow(
+			ValidationError
+		);
+		expect(
+			staff()
+				.list()
+				.find((row) => row.id === other.id)
+		).toMatchObject({ fullName: 'Другой', userId: null });
+		expect(db.select().from(staffTable).all()).toHaveLength(2);
+	});
+
+	it('refuses missing, portal and deleted accounts without inserting staff or audit', () => {
+		for (const userId of [999_999, account({ portal: true }), account({ deleted: true })]) {
+			expect(() => staff().create({ fullName: 'Не создан', position: null, userId })).toThrow(
+				ValidationError
+			);
+		}
+		expect(staff().list()).toHaveLength(0);
+		expect(actions()).toHaveLength(0);
+	});
+
+	it('offers only CRM account ids and names, excluding deleted accounts', () => {
+		const id = account();
+		const portalId = account({ portal: true });
+		const deletedId = account({ deleted: true });
+		const choices = staff().userChoices();
+		const choice = choices.find((row) => row.id === id)!;
+		expect(Object.keys(choice).sort()).toEqual(['fullName', 'id']);
+		expect(choice.fullName).toMatch(/^Сотрудник /);
+		expect(choices.some((row) => [portalId, deletedId].includes(row.id))).toBe(false);
 	});
 });
