@@ -2,9 +2,11 @@
 	import SectionTabs from '$lib/crm/SectionTabs.svelte';
 	import { PAYROLL_TABS } from '$lib/crm/sections';
 	import DirectoryTable from '$lib/crm/payroll/DirectoryTable.svelte';
+	import WorkRateMatrix from '$lib/crm/payroll/WorkRateMatrix.svelte';
+	import { buildWorkMatrix } from '$lib/crm/payroll/work-matrix';
 	import WorkTypeModal from '$lib/crm/payroll/WorkTypeModal.svelte';
 	import { roubles, workRoleTitle } from '$lib/crm/payroll/labels';
-	import { Button, Card } from '$lib/ui';
+	import { Button, Card, Input } from '$lib/ui';
 	import type { WorkTypeDto } from '$lib/types/crm-payroll';
 	import type { PageProps } from './$types';
 
@@ -12,6 +14,13 @@
 
 	// null: closed; 'new': a new work; a work: the edit of that one.
 	let editing = $state<WorkTypeDto | 'new' | null>(null);
+	let search = $state('');
+	const matrix = $derived(buildWorkMatrix(data.works, data.variants, search));
+
+	function edit(work: WorkTypeDto): void {
+		form = null;
+		editing = work;
+	}
 </script>
 
 <svelte:head><title>Работы и стоимость</title></svelte:head>
@@ -37,26 +46,41 @@
 		{/if}
 	</div>
 
+	<Input
+		label="Поиск по работам и позициям"
+		type="search"
+		placeholder="Введите артикул, название или размер"
+		bind:value={search}
+	/>
+
 	<Card.Root>
 		<Card.Content>
+			<h2 class="mb-2 text-2xl">Расценки позиций</h2>
+			<p class="mb-4 text-sm text-fg-muted">
+				Цена за единицу по каждой роли. «Не задана» — расценки нет, «Выключена» — не применяется.
+				Нулевая расценка показывается как 0 ₽.
+			</p>
+			<WorkRateMatrix positions={matrix.positions} canManage={data.canManage} onEdit={edit} />
+		</Card.Content>
+	</Card.Root>
+
+	<Card.Root>
+		<Card.Content>
+			<h2 class="mb-2 text-2xl">Дополнительные работы</h2>
+			<p class="mb-4 text-sm text-fg-muted">
+				Без привязки к позиции, для ручного ввода в рабочий день.
+			</p>
 			<DirectoryTable
-				rows={data.works}
+				rows={matrix.manual}
 				canManage={data.canManage}
 				statusTitle={{ on: 'Используется', off: 'Выключена' }}
-				emptyTitle="Работ нет"
+				emptyTitle={search.trim() ? 'Дополнительные работы не найдены' : 'Дополнительных работ нет'}
 				nameOf={(row) => row.title}
-				onEdit={(row) => {
-					form = null;
-					editing = row;
-				}}
+				onEdit={edit}
 			>
 				{#snippet own(row: WorkTypeDto)}
 					<span data-testid="work-role">{workRoleTitle(row)}</span> ·
-					<span class="tabular-nums" data-testid="work-rate">{roubles(row.rateMinor)}</span> за
-					единицу
-					<div data-testid="work-variant" class="text-xs text-fg-faint">
-						{row.variantLabel ?? (row.variantId ? 'Недоступная позиция' : 'Без привязки к позиции')}
-					</div>
+					<span class="tabular-nums" data-testid="work-rate">{roubles(row.rateMinor)}</span> за единицу
 				{/snippet}
 			</DirectoryTable>
 		</Card.Content>
