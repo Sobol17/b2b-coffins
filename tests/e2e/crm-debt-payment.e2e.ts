@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 import { eq } from 'drizzle-orm';
 import { counterparties, paymentMarks, requests, users } from '../../src/lib/server/db/schema';
 import { ACCOUNTS, login, logout } from './fixtures';
@@ -47,6 +47,41 @@ function marksOf(number: string): number[] {
 		.map((row) => row.amount);
 }
 
+async function checkRejectedPayment(page: Page): Promise<void> {
+	const form = page.getByTestId('debt-payment');
+	const modal = page.getByTestId('modal');
+	await form.getByLabel('Сумма, ₽').fill('30 001');
+	await form.getByLabel('Комментарий').fill('Частичная оплата');
+	await form.getByRole('button', { name: 'Внести оплату' }).click();
+	await expect(
+		form.getByRole('alert').filter({ hasText: 'Сумма больше долга контрагента' })
+	).toBeVisible();
+	await expect(modal).toBeVisible();
+	await expect(form.getByLabel('Сумма, ₽')).toHaveValue('30\u00a0001');
+	await expect(form.getByLabel('Комментарий')).toHaveValue('Частичная оплата');
+}
+
+async function cancelAndReopen(page: Page): Promise<void> {
+	const open = page.getByRole('button', { name: 'Записать оплату', exact: true });
+	const modal = page.getByTestId('modal');
+	const form = page.getByTestId('debt-payment');
+	await open.click();
+	await expect(modal).toBeVisible();
+	await expect(form.getByLabel('Комментарий')).toHaveValue('');
+	await page.keyboard.press('Escape');
+	await expect(modal).toBeHidden();
+	await open.click();
+	await expect(modal).toBeVisible();
+}
+
+function deferred() {
+	let resolve!: () => void;
+	const promise = new Promise<void>((done) => {
+		resolve = done;
+	});
+	return { promise, resolve };
+}
+
 test('a payment against the whole debt closes the requests only when the debt is gone', async ({
 	page
 }) => {
@@ -55,8 +90,14 @@ test('a payment against the whole debt closes the requests only when the debt is
 	await login(page, 'manager');
 	await page.goto(`/crm/counterparties/${id}`);
 	await expect(page.getByTestId('debt-indicator')).toContainText(/30\u00a0000 ₽ · 2 заявки/);
-	await page.getByRole('tab', { name: 'Заявки и оплаты' }).click();
 	const form = page.getByTestId('debt-payment');
+	const modal = page.getByTestId('modal');
+	const open = page.getByRole('button', { name: 'Записать оплату', exact: true });
+	await expect(form).toHaveCount(0);
+	await open.click();
+	await expect(modal).toBeVisible();
+	await checkRejectedPayment(page);
+	expect([marksOf(older), marksOf(newer)]).toEqual([[], []]);
 
 	await form.getByLabel('Сумма, ₽').fill('15 000');
 	await form.getByRole('button', { name: 'Внести оплату' }).click();
@@ -69,6 +110,14 @@ test('a payment against the whole debt closes the requests only when the debt is
 		'awaiting_payment'
 	]);
 	await expect(page.getByTestId('debt-indicator')).toContainText(/15\u00a0000 ₽ · 1 заявка/);
+	await expect(modal).toBeHidden();
+	await expect(form).toHaveCount(0);
+	await expect(open).toBeFocused();
+	await expect(page.getByRole('tab', { name: 'Заявки и оплаты' })).toHaveAttribute(
+		'aria-selected',
+		'true'
+	);
+	await cancelAndReopen(page);
 
 	// The untouched field carries the rest of the debt.
 	await form.getByRole('button', { name: 'Внести оплату' }).click();
@@ -76,6 +125,7 @@ test('a payment against the whole debt closes the requests only when the debt is
 	expect([statusOf(db, older), statusOf(db, newer)]).toEqual(['paid', 'paid']);
 	await expect(page.getByTestId('debt-indicator')).toHaveText('Долга нет');
 	await expect(page.getByTestId('debt-payment')).toHaveCount(0);
+	await expect(open).toHaveCount(0);
 	await logout(page);
 });
 
@@ -87,4 +137,40 @@ test('a driver gets 403 on the payment of a counterparty', async ({ page }) => {
 		form: { amountMinor: '1000000', paidAt: '2026-10-01', method: 'bank', comment: '' }
 	});
 	expect(response.status()).toBe(403);
+});
+
+test('closing a pending payment cannot open another payment before the response', async ({
+	page
+}) => {
+	const { id, older } = debtor(Date.now());
+	await login(page, 'manager');
+	await page.goto(`/crm/counterparties/${id}`);
+	const open = page.getByRole('button', { name: /Записать оплату/ });
+	await open.click();
+	const form = page.getByTestId('debt-payment');
+	await form.getByLabel('Сумма, ₽').fill('1000');
+	const responseGate = deferred();
+	const held = deferred();
+	await page.route(
+		(url) => url.pathname === `/crm/counterparties/${id}`,
+		async (route) => {
+			if (route.request().method() !== 'POST') return route.continue();
+			const response = await route.fetch();
+			held.resolve();
+			await responseGate.promise;
+			await route.fulfill({ response });
+		}
+	);
+	await form.getByRole('button', { name: 'Внести оплату', exact: true }).click();
+	await held.promise;
+	try {
+		await page.keyboard.press('Escape');
+		await expect(page.getByTestId('modal')).toBeHidden();
+		await expect(open).toBeDisabled();
+	} finally {
+		responseGate.resolve();
+	}
+	await expect(page.getByTestId('toast').filter({ hasText: 'Оплата внесена' })).toBeVisible();
+	await expect(open).toBeEnabled();
+	expect(marksOf(older)).toEqual([100000]);
 });

@@ -12,7 +12,7 @@
 	import PricesPanel from '$lib/crm/counterparties/PricesPanel.svelte';
 	import RequestHistory from '$lib/crm/counterparties/RequestHistory.svelte';
 	import UsersPanel from '$lib/crm/counterparties/UsersPanel.svelte';
-	import { Breadcrumbs, Card, Tabs } from '$lib/ui';
+	import { Breadcrumbs, Button, Card, Tabs } from '$lib/ui';
 	import type { ListQuery } from '$lib/types/list';
 	import { withListQuery } from '$lib/utils/list-url';
 	import type { PageProps } from './$types';
@@ -20,6 +20,8 @@
 	let { data, form }: PageProps = $props();
 
 	const card = $derived(data.card);
+	let paymentOpen = $state(false);
+	let paymentPending = $state(false);
 	const params = page.url.searchParams;
 	// A reload keeps the tab whose table owns the query string.
 	let tab = $state(
@@ -34,6 +36,12 @@
 			'action' in form &&
 			(form.action === 'prices' || form.action === 'refill') &&
 			'formError' in form
+			? form.formError
+			: undefined
+	);
+
+	const paymentError = $derived(
+		form && 'action' in form && form.action === 'pay' && 'formError' in form
 			? form.formError
 			: undefined
 	);
@@ -63,6 +71,16 @@
 	<div class="flex flex-wrap items-center gap-4">
 		<h1 class="text-3xl" data-testid="counterparty-name">{card.name}</h1>
 		<DebtIndicator debt={card.debt} />
+		{#if card.debt && card.debt.debtMinor > 0}
+			<Button
+				loading={paymentPending}
+				onclick={() => {
+					form = null;
+					tab = 'ledger';
+					paymentOpen = true;
+				}}>Записать оплату</Button
+			>
+		{/if}
 	</div>
 
 	{#if access && 'temporaryPassword' in access.dto}
@@ -102,9 +120,6 @@
 			</Tabs.Content>
 		{/if}
 		<Tabs.Content value="ledger" class="flex flex-col gap-6 pt-4">
-			{#if card.debt && card.debt.debtMinor > 0}
-				<DebtPaymentForm debtMinor={card.debt.debtMinor} timeZone={data.timezone} />
-			{/if}
 			<Card.Root>
 				<Card.Header><Card.Title>История заявок</Card.Title></Card.Header>
 				<Card.Content>
@@ -137,3 +152,13 @@
 		</Tabs.Content>
 	</Tabs.Root>
 </div>
+
+{#if paymentOpen && card.debt && card.debt.debtMinor > 0}
+	<DebtPaymentForm
+		debtMinor={card.debt.debtMinor}
+		timeZone={data.timezone}
+		formError={paymentError}
+		onPendingChange={(pending) => (paymentPending = pending)}
+		onClose={() => (paymentOpen = false)}
+	/>
+{/if}
