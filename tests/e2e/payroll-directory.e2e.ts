@@ -103,7 +103,7 @@ test('the manager assigns a role rate to a catalog position and sees conflicts i
 	await expect(modal.getByLabel('Название работы')).toHaveValue(`E2E Дубль ${suffix}`);
 });
 
-test('the manager links staff accounts, cannot duplicate an inactive link, and can detach it', async ({
+test('the manager links staff, sees the result of each toggle, rejects duplicates, and detaches it', async ({
 	page
 }) => {
 	await login(page, 'manager');
@@ -116,8 +116,12 @@ test('the manager links staff accounts, cannot duplicate an inactive link, and c
 	await expect(modal).toBeHidden();
 	const worker = page.getByTestId('data-table-row').filter({ hasText: workerName });
 	await expect(worker.getByTestId('staff-account')).toContainText(accountName);
+	await page.getByRole('button', { name: 'Закрыть уведомление' }).click();
 	await worker.getByRole('button', { name: 'Выключить', exact: true }).click();
 	await expect(worker.getByTestId('directory-status')).toHaveText('Выключен');
+	const disabled = page.getByTestId('toast').filter({ hasText: `Выключено: ${workerName}` });
+	await expect(disabled).toBeVisible();
+	await disabled.getByRole('button', { name: 'Закрыть уведомление' }).click();
 	await openModal(page, 'Добавить сотрудника');
 	await modal.getByLabel('ФИО').fill(otherName);
 	await choose(page, 'Учётная запись', accountName);
@@ -125,6 +129,12 @@ test('the manager links staff accounts, cannot duplicate an inactive link, and c
 	await expect(modal.getByTestId('staff-error')).toContainText('уже связана с другим сотрудником');
 	await expect(modal.getByLabel('ФИО')).toHaveValue(otherName);
 	await page.keyboard.press('Escape');
+	await page.getByRole('button', { name: 'Закрыть уведомление' }).click();
+	await worker.getByRole('button', { name: 'Включить', exact: true }).click();
+	await expect(worker.getByTestId('directory-status')).toHaveText('Работает');
+	const enabled = page.getByTestId('toast').filter({ hasText: `Включено: ${workerName}` });
+	await expect(enabled).toBeVisible();
+	await enabled.getByRole('button', { name: 'Закрыть уведомление' }).click();
 	await worker.getByRole('button', { name: 'Изменить', exact: true }).click();
 	await expect(modal.getByLabel('Учётная запись', { exact: true })).toHaveText(accountName);
 	await choose(page, 'Учётная запись', 'Без учётной записи');

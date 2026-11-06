@@ -53,7 +53,8 @@
 		method="POST"
 		action={row.isActive ? '?/disable' : '?/enable'}
 		use:enhance={withToast({
-			success: row.isActive ? `Выключено: ${nameOf(row)}` : `Включено: ${nameOf(row)}`
+			success: (result) =>
+				result?.action === 'disable' ? `Выключено: ${nameOf(row)}` : `Включено: ${nameOf(row)}`
 		})}
 	>
 		<input type="hidden" name="id" value={row.id} />
