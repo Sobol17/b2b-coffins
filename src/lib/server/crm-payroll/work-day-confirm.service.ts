@@ -4,7 +4,9 @@ import { PayrollBaseService } from './payroll-base.service';
 import { PayrollCalendar } from './payroll-calendar';
 import { PayrollPeriodGate } from './payroll-period-gate';
 import { WorkDayRepository } from './work-day.repository';
+import { WorkDayService } from './work-day.service';
 import type { ActorContext } from '$lib/types/actor';
+import type { WorkDaySaveInput } from '$lib/validation/crm-payroll';
 
 /** Confirms each completed station work once, in the same transaction as its payroll entry. */
 export class WorkDayConfirmService extends PayrollBaseService {
@@ -18,8 +20,12 @@ export class WorkDayConfirmService extends PayrollBaseService {
 		this.assertManage();
 	}
 
-	confirm(date: string): void {
+	confirm(date: string, input?: WorkDaySaveInput): void {
 		this.audited({ action: 'payroll.day.confirm', entity: 'work_days' }, (tx) => {
+			if (input) {
+				if (input.date !== date) throw new ValidationError('Дата формы не совпадает с днём');
+				new WorkDayService(this.ctx, this.calendar).save(input, tx);
+			}
 			const at = this.calendar.instantOf(date);
 			if (date > this.calendar.today())
 				throw new ValidationError('Будущий день подтвердить нельзя');

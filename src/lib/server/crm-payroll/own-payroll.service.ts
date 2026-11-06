@@ -2,13 +2,14 @@ import { PolicyService } from '../auth/policy';
 import { BaseService } from '../core/service';
 import { ShopUnitWorkRepository } from '../crm-shop/shop-unit-work.repository';
 import { PayrollCalendar } from './payroll-calendar';
+import { OwnPayrollWorkRepository } from './own-payroll-work.repository';
 import { PayrollStaffRepository, type StaffRow } from './payroll-staff.repository';
 import { PayrollWeekReader } from './payroll-week.reader';
 import { WorkDayRepository } from './work-day.repository';
 import { dayShares, type CrewEntry } from '$lib/domain/payroll/calc';
 import { PAYROLL_SHARE_STEP_MINOR } from '$lib/types/crm-payroll';
 import type { ActorContext } from '$lib/types/actor';
-import type { OwnPayrollDto, PayrollLineDto } from '$lib/types/crm-payroll';
+import type { OwnPayrollDto, OwnPayrollWorkDto, PayrollLineDto } from '$lib/types/crm-payroll';
 
 type PendingRow = ReturnType<ShopUnitWorkRepository['pending']>[number];
 interface PreviewEntry extends CrewEntry {
@@ -23,7 +24,8 @@ export class OwnPayrollService extends BaseService {
 		private readonly calendar = new PayrollCalendar(),
 		private readonly people = new PayrollStaffRepository(),
 		private readonly days = new WorkDayRepository(),
-		private readonly works = new ShopUnitWorkRepository()
+		private readonly works = new ShopUnitWorkRepository(),
+		private readonly journal = new OwnPayrollWorkRepository()
 	) {
 		super(ctx);
 		this.assert(
@@ -46,13 +48,16 @@ export class OwnPayrollService extends BaseService {
 				week: { startsOn, endsOn, status: 'open' },
 				line: null,
 				pendingMinor: 0,
-				pending: []
+				pending: [],
+				works: []
 			};
 		const week = new PayrollWeekReader(this.calendar).read(date, undefined, person.id);
 		const entries = this.previews(person.id, startsOn, endsOn);
+		const line = week.lines[0] ?? this.emptyLine(person);
 		return {
 			week: { startsOn, endsOn, status: week.period?.status ?? 'open' },
-			line: week.lines[0] ?? this.emptyLine(person),
+			line,
+			works: this.workJournal(person.id, startsOn, endsOn, line.paidAt !== null),
 			pendingMinor: this.pendingTotal(person.id, entries),
 			pending: entries.map(({ row, staffIds }) => ({
 				unitId: row.work.unitId,
@@ -65,6 +70,44 @@ export class OwnPayrollService extends BaseService {
 					: 0
 			}))
 		};
+	}
+
+	private workJournal(
+		staffId: number,
+		startsOn: string,
+		endsOn: string,
+		paid: boolean
+	): OwnPayrollWorkDto[] {
+		return this.journal
+			.between(this.calendar.instantOf(startsOn), this.calendar.instantOf(endsOn), staffId)
+			.map((row) => {
+				const awaitingCrew =
+					row.confirmedAt === null &&
+					row.station === 'carpenter' &&
+					row.crewCount === 0 &&
+					row.amountMinor > 0;
+				return {
+					unitId: row.unitId,
+					productTitle: row.productTitle,
+					station: row.station,
+					workDate: this.calendar.dateOf(row.workDate!),
+					completedAt: row.completedAt!.toISOString(),
+					shareMinor: awaitingCrew
+						? null
+						: row.ownShare && row.crewCount > 0
+							? Math.floor(row.amountMinor / row.crewCount / PAYROLL_SHARE_STEP_MINOR) *
+								PAYROLL_SHARE_STEP_MINOR
+							: 0,
+					status:
+						row.confirmedAt !== null
+							? paid
+								? 'paid'
+								: 'confirmed'
+							: awaitingCrew
+								? 'awaiting_crew'
+								: 'awaiting_confirmation'
+				};
+			});
 	}
 
 	private emptyLine(person: StaffRow): PayrollLineDto {

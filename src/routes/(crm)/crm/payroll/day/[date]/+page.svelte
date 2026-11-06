@@ -56,13 +56,13 @@
 				)}.
 			</p>
 			{#if day.canEdit && (day.pendingCount ?? 0) > 0}
-				<form
-					method="POST"
-					action="?/confirm"
-					use:enhance={withToast({ success: 'Работы дня подтверждены' })}
+				<p class="text-sm text-fg-muted">
+					Отметьте состав дня ниже. Кнопка сохранит его вместе с ручными работами и подтвердит
+					выполненное в цехе.
+				</p>
+				<Button type="submit" form="payroll-day-form" formaction="?/confirm" class="self-start"
+					>Сохранить день и подтвердить работы</Button
 				>
-					<Button type="submit">Подтвердить работы дня</Button>
-				</form>
 			{/if}
 			{#if day.autoEntries?.length}
 				<ul class="flex flex-col gap-2" data-testid="day-auto-entries">

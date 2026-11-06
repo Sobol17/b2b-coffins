@@ -19,9 +19,13 @@
 				data-testid="week-day"
 			>
 				<span class="text-sm text-fg-muted">{weekdayTitle(day.date)}, {dayTitle(day.date)}</span>
-				{#if day.presentCount === 0}
+				{#if day.pendingCount > 0}
+					<span class="font-medium text-link">Ждут подтверждения: {day.pendingCount}</span>
+					<span class="text-sm tabular-nums">Работы: {roubles(day.pendingTotalMinor)}</span>
+				{/if}
+				{#if day.presentCount === 0 && !day.pendingCount}
 					<span class="text-fg-muted">{day.date > today ? 'Впереди' : 'Не отмечен'}</span>
-				{:else}
+				{:else if day.presentCount > 0}
 					<span class="tabular-nums">Работало: {day.presentCount}</span>
 					<span class="tabular-nums">Сумма: {roubles(day.totalMinor)}</span>
 				{/if}

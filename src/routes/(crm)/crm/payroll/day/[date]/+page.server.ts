@@ -19,8 +19,8 @@ export const actions = {
 		return formAction(
 			event.request,
 			'confirm',
-			workDayDateSchema,
-			(input) => service.confirm(input.date),
+			workDayFormSchema,
+			(input) => service.confirm(input.date, input),
 			{ date }
 		);
 	},

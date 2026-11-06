@@ -3,11 +3,21 @@
 	import { addDays } from '$lib/domain/payroll/calc';
 	import { dayTitle, roubles } from '$lib/crm/payroll/labels';
 	import { stationTitle } from '$lib/crm/shop/labels';
-	import { buttonVariants, Card, EmptyState } from '$lib/ui';
+	import { buttonVariants, Card, EmptyState, TONE_CLASS, type StatusTone } from '$lib/ui';
+	import type { OwnPayrollWorkDto } from '$lib/types/crm-payroll';
 	import { formatDateTime } from '$lib/utils/format';
 	import type { PageProps } from './$types';
 	let { data }: PageProps = $props();
 	const salary = $derived(data.salary);
+	const awaitingCrewCount = $derived(
+		salary.works.filter((work) => work.status === 'awaiting_crew').length
+	);
+	const workStatus: Record<OwnPayrollWorkDto['status'], { title: string; tone: StatusTone }> = {
+		awaiting_crew: { title: 'Ждёт состава бригады', tone: 'warning' },
+		awaiting_confirmation: { title: 'Ждёт подтверждения', tone: 'progress' },
+		confirmed: { title: 'Начислено', tone: 'info' },
+		paid: { title: 'Выплачено', tone: 'success' }
+	};
 	const weekHref = (date: string) => `${resolve('/crm/salary')}?week=${date}`;
 </script>
 
@@ -38,9 +48,16 @@
 				><Card.Content
 					><p class="text-sm text-fg-muted">Ожидает подтверждения</p>
 					<p class="mt-2 text-3xl tabular-nums" data-testid="salary-pending">
-						{roubles(salary.pendingMinor)}
-					</p></Card.Content
-				></Card.Root
+						{awaitingCrewCount > 0 && salary.pendingMinor === 0
+							? 'Ждёт расчёта'
+							: roubles(salary.pendingMinor)}
+					</p>
+					{#if awaitingCrewCount > 0}
+						<p class="mt-2 text-sm text-fg-muted">
+							Работ без состава бригады: {awaitingCrewCount}. Их доля пока не рассчитана.
+						</p>
+					{/if}
+				</Card.Content></Card.Root
 			>
 			<Card.Root
 				><Card.Content
@@ -52,9 +69,9 @@
 			>
 			<Card.Root
 				><Card.Content
-					><p class="text-sm text-fg-muted">К выплате</p>
+					><p class="text-sm text-fg-muted">Осталось выплатить</p>
 					<p class="mt-2 text-3xl tabular-nums" data-testid="salary-payout">
-						{roubles(salary.line.payoutMinor)}
+						{roubles(salary.line.paidAt ? 0 : salary.line.payoutMinor)}
 					</p></Card.Content
 				></Card.Root
 			>
@@ -67,7 +84,10 @@
 				Корректировка: {roubles(salary.line.adjustmentMinor)} · {salary.line.adjustmentComment}
 			</p>{/if}
 		{#if salary.line.paidAt}<p data-testid="salary-paid">
-				Выплачено {formatDateTime(salary.line.paidAt, data.timezone)}
+				Выплачено {roubles(salary.line.payoutMinor)} · {formatDateTime(
+					salary.line.paidAt,
+					data.timezone
+				)}
 			</p>{/if}
 	{:else}
 		<EmptyState
@@ -75,22 +95,48 @@
 			description="Администратор должен связать вашу учётную запись с сотрудником в разделе выплат."
 		/>
 	{/if}
-	{#if salary.pending.length}
+	{#if salary.line}
 		<Card.Root
-			><Card.Header><Card.Title>Ожидают подтверждения</Card.Title></Card.Header><Card.Content>
-				<ul class="flex flex-col divide-y divide-border">
-					{#each salary.pending as work (`${work.unitId}:${work.station}`)}
-						<li class="flex flex-wrap justify-between gap-2 py-3">
-							<div>
-								<p class="font-medium">Ящик №{work.unitId} · {work.productTitle}</p>
-								<p class="text-sm text-fg-muted">
-									{stationTitle(work.station)} · {formatDateTime(work.completedAt, data.timezone)}
-								</p>
-							</div>
-							<p class="tabular-nums">{roubles(work.shareMinor)}</p>
-						</li>
-					{/each}
-				</ul>
+			><Card.Header><Card.Title>Журнал работ</Card.Title></Card.Header><Card.Content>
+				<p class="mb-3 text-sm text-fg-muted">
+					В строке показана ваша доля, округлённая вниз до рубля. Итог начисления округляется один
+					раз за день и может отличаться от суммы строк. До подтверждения доля предварительная.
+				</p>
+				{#if salary.works.length}
+					<ul class="flex flex-col divide-y divide-border" data-testid="salary-works">
+						{#each salary.works as work (`${work.unitId}:${work.station}`)}
+							<li class="flex flex-wrap justify-between gap-3 py-3" data-testid="salary-work">
+								<div>
+									<p class="font-medium">Ящик №{work.unitId} · {work.productTitle}</p>
+									<p class="text-sm text-fg-muted">
+										{stationTitle(work.station)} · Рабочий день {dayTitle(work.workDate)}
+									</p>
+									<p class="text-sm text-fg-muted">
+										Завершено {formatDateTime(work.completedAt, data.timezone)}
+									</p>
+								</div>
+								<div class="flex flex-col items-start gap-2 sm:items-end">
+									<p class="tabular-nums">
+										{work.shareMinor === null
+											? 'Доля пока не рассчитана'
+											: roubles(work.shareMinor)}
+									</p>
+									<span
+										class={[
+											'rounded-pill px-2 py-0.5 text-xs',
+											TONE_CLASS[workStatus[work.status].tone]
+										]}>{workStatus[work.status].title}</span
+									>
+								</div>
+							</li>
+						{/each}
+					</ul>
+				{:else}
+					<EmptyState
+						title="За эту неделю завершённых работ пока нет"
+						description="Здесь появятся ваши работы и доли в столярной бригаде."
+					/>
+				{/if}
 			</Card.Content></Card.Root
 		>
 	{/if}
