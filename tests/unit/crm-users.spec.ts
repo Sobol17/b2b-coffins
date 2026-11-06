@@ -4,17 +4,35 @@ import { verifyPassword } from '../../src/lib/server/auth/password';
 import { PolicyService } from '../../src/lib/server/auth/policy';
 import { SessionService } from '../../src/lib/server/auth/session.service';
 import { CrmUserService } from '../../src/lib/server/crm-user/crm-user.service';
+import { CrmUserRepository } from '../../src/lib/server/crm-user/crm-user.repository';
 import {
 	ConflictError,
 	ForbiddenError,
 	NotFoundError,
 	ValidationError
 } from '../../src/lib/server/core/errors';
-import { auditLog, rateLimits, roles, sessions, users } from '../../src/lib/server/db/schema';
+import {
+	auditLog,
+	payrollLines,
+	payrollPeriods,
+	rateLimits,
+	roles,
+	sessions,
+	staff,
+	users,
+	workDays,
+	workEntries,
+	workEntryStaff,
+	workTypes
+} from '../../src/lib/server/db/schema';
 import { FakeMailDriver } from '../../src/lib/server/notifications/drivers/mail';
 import type { ActorContext } from '../../src/lib/types/actor';
 import { CRM_ROLES, type RoleCode } from '../../src/lib/types/roles';
-import { createCrmUserSchema, crmUserFormFields } from '../../src/lib/validation/crm-user';
+import {
+	createCrmUserSchema,
+	crmUserFormFields,
+	updateCrmUserSchema
+} from '../../src/lib/validation/crm-user';
 import { insertCounterparty, insertUser, migratedDatabase } from './helpers/db';
 
 const db = migratedDatabase();
@@ -199,5 +217,230 @@ describe('roles, access and passwords', () => {
 				.list({ page: 1, perPage: 50 })
 				.rows.every((row) => row.email !== portal?.email)
 		).toBe(true);
+	});
+});
+
+describe('editing workshop accounts atomically', () => {
+	it('normalizes contacts and saves them with all roles without journalling personal data', () => {
+		const id = insertUser({ email: 'edit@ws.example', role: 'carpenter', counterpartyId: null });
+		const changed = service().update(
+			updateCrmUserSchema.parse({
+				id,
+				fullName: '  Алексей Петров  ',
+				email: '  Updated@WS.example ',
+				phone: ' +7 (900) 111-22-33 ',
+				roles: ['painter', 'driver']
+			})
+		);
+
+		expect(changed).toMatchObject({
+			id,
+			fullName: 'Алексей Петров',
+			email: 'updated@ws.example',
+			phone: '+7 (900) 111-22-33',
+			roles: ['painter', 'driver']
+		});
+		const [entry] = db.select().from(auditLog).where(eq(auditLog.action, 'crm_user.update')).all();
+		expect(entry).toMatchObject({
+			actorId: ownerId,
+			entity: 'users',
+			entityId: id,
+			before: { roles: ['carpenter'] },
+			after: { changed: ['fullName', 'email', 'phone'], roles: ['painter', 'driver'] }
+		});
+		for (const value of [changed.fullName, changed.email, changed.phone]) {
+			expect(JSON.stringify(entry)).not.toContain(value);
+		}
+	});
+
+	it('reserves addresses across portal and deleted accounts without a partial edit', () => {
+		const id = insertUser({
+			email: 'unchanged@ws.example',
+			role: 'carpenter',
+			counterpartyId: null
+		});
+		const reservedId = insertUser({
+			email: 'Reserved@ws.example',
+			role: 'driver',
+			counterpartyId: null
+		});
+		db.update(users)
+			.set({ deletedAt: new Date(), isActive: false })
+			.where(eq(users.id, reservedId))
+			.run();
+		for (const email of [' ADMIN@RS.example ', ' reserved@ws.example ']) {
+			expect(() =>
+				service().update(
+					updateCrmUserSchema.parse({
+						id,
+						fullName: 'Изменённое имя',
+						email,
+						phone: '',
+						roles: ['driver']
+					})
+				)
+			).toThrow(ValidationError);
+		}
+		expect(new CrmUserRepository().find(id)).toMatchObject({
+			fullName: 'Тестовый пользователь',
+			email: 'unchanged@ws.example',
+			phone: null,
+			roles: ['carpenter']
+		});
+		expect(db.select().from(auditLog).all()).toHaveLength(0);
+	});
+
+	it('allows the unchanged own email but refuses to demote oneself without changing contacts', () => {
+		const original = new CrmUserRepository().find(ownerId)!;
+		const input = {
+			id: ownerId,
+			fullName: original.fullName,
+			email: original.email,
+			phone: '',
+			roles: ['owner']
+		};
+		expect(service().update(updateCrmUserSchema.parse(input)).email).toBe(original.email);
+		expect(() =>
+			service().update(
+				updateCrmUserSchema.parse({
+					...input,
+					fullName: 'Другое имя',
+					roles: ['manager']
+				})
+			)
+		).toThrow(ConflictError);
+		expect(new CrmUserRepository().find(ownerId)?.fullName).toBe(original.fullName);
+	});
+
+	it('rolls contacts back when replacing roles fails', () => {
+		const id = insertUser({ email: 'atomic@ws.example', role: 'carpenter', counterpartyId: null });
+		// An incomplete seed is a real repository failure after contact data has been written.
+		db.delete(roles).where(eq(roles.code, 'upholsterer')).run();
+		try {
+			expect(() =>
+				service().update(
+					updateCrmUserSchema.parse({
+						id,
+						fullName: 'Другое имя',
+						email: 'different@ws.example',
+						phone: '12345',
+						roles: ['upholsterer']
+					})
+				)
+			).toThrow('a CRM role is missing');
+			expect(new CrmUserRepository().find(id)).toMatchObject({
+				fullName: 'Тестовый пользователь',
+				email: 'atomic@ws.example',
+				phone: null,
+				roles: ['carpenter']
+			});
+			expect(db.select().from(auditLog).all()).toHaveLength(0);
+		} finally {
+			db.insert(roles).values({ code: 'upholsterer', title: 'upholsterer' }).run();
+		}
+	});
+
+	it('refuses to update a portal or missing account', () => {
+		const [portal] = db.select().from(users).where(eq(users.scope, 'portal')).all();
+		for (const id of [portal!.id, 999_999]) {
+			expect(() =>
+				service().update(updateCrmUserSchema.parse({ ...input(), phone: '', id }))
+			).toThrow(NotFoundError);
+		}
+	});
+});
+
+describe('soft deletion', () => {
+	it('revokes every device and hides the account while preserving work, payroll and audit history', () => {
+		const id = insertUser({ email: 'remove@ws.example', role: 'carpenter', counterpartyId: null });
+		const tokens = [1, 2].map(() => SessionService.create(id, { ip: null, userAgent: null }));
+		const worker = db
+			.insert(staff)
+			.values({ fullName: 'Сотрудник', userId: id })
+			.returning()
+			.get()!;
+		const day = db
+			.insert(workDays)
+			.values({ workDate: new Date('2025-01-01'), createdById: id })
+			.returning()
+			.get()!;
+		const work = db
+			.insert(workTypes)
+			.values({ title: 'Сборка', rateMinor: 100 })
+			.returning()
+			.get()!;
+		const entry = db
+			.insert(workEntries)
+			.values({ workDayId: day.id, workTypeId: work.id, qty: 1, rateMinor: 100, amountMinor: 100 })
+			.returning()
+			.get()!;
+		db.insert(workEntryStaff).values({ workEntryId: entry.id, staffId: worker.id }).run();
+		const period = db
+			.insert(payrollPeriods)
+			.values({ startsOn: new Date('2025-01-01'), endsOn: new Date('2025-01-07'), closedById: id })
+			.returning()
+			.get()!;
+		const line = db
+			.insert(payrollLines)
+			.values({ periodId: period.id, staffId: worker.id, accruedMinor: 100, payoutMinor: 100 })
+			.returning()
+			.get()!;
+		db.insert(auditLog)
+			.values({
+				actorId: id,
+				action: 'auth.login',
+				entity: 'users',
+				entityId: id,
+				requestId: 'old-login'
+			})
+			.run();
+		try {
+			service().delete(id);
+			expect(db.select().from(users).where(eq(users.id, id)).get()).toMatchObject({
+				isActive: false,
+				deletedAt: expect.any(Date)
+			});
+			expect(tokens.map((token) => SessionService.resolve(token))).toEqual([null, null]);
+			expect(db.select().from(sessions).where(eq(sessions.userId, id)).all()).toHaveLength(0);
+			expect(new CrmUserRepository().find(id)).toBeUndefined();
+			expect(
+				service()
+					.list({ page: 1, perPage: 50 })
+					.rows.map((row) => row.id)
+			).not.toContain(id);
+			expect(db.select().from(staff).where(eq(staff.id, worker.id)).get()?.userId).toBe(id);
+			expect(
+				db.select().from(workEntries).where(eq(workEntries.id, entry.id)).get()?.amountMinor
+			).toBe(100);
+			expect(
+				db.select().from(payrollLines).where(eq(payrollLines.id, line.id)).get()?.payoutMinor
+			).toBe(100);
+			expect(db.select().from(auditLog).where(eq(auditLog.actorId, id)).all()).toHaveLength(1);
+			const deletion = db
+				.select()
+				.from(auditLog)
+				.where(eq(auditLog.action, 'crm_user.delete'))
+				.get();
+			expect(deletion).toMatchObject({
+				entityId: id,
+				before: { isActive: true, deleted: false },
+				after: { isActive: false, deleted: true }
+			});
+			expect(JSON.stringify(deletion)).not.toContain('remove@ws.example');
+			expect(() => service().setActive(id, true)).toThrow(NotFoundError);
+		} finally {
+			db.delete(payrollPeriods).where(eq(payrollPeriods.id, period.id)).run();
+			db.delete(workDays).where(eq(workDays.id, day.id)).run();
+			db.delete(workTypes).where(eq(workTypes.id, work.id)).run();
+			db.delete(staff).where(eq(staff.id, worker.id)).run();
+		}
+	});
+
+	it('refuses to delete the own, portal or unknown account', () => {
+		const [portal] = db.select().from(users).where(eq(users.scope, 'portal')).all();
+		expect(() => service().delete(ownerId)).toThrow(ConflictError);
+		expect(() => service().delete(portal!.id)).toThrow(NotFoundError);
+		expect(() => service().delete(999_999)).toThrow(NotFoundError);
+		expect(db.select().from(auditLog).all()).toHaveLength(0);
 	});
 });

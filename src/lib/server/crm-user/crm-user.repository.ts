@@ -1,4 +1,4 @@
-import { and, asc, eq, inArray, isNull, or, type SQL } from 'drizzle-orm';
+import { and, asc, eq, inArray, isNull, ne, or, sql, type SQL } from 'drizzle-orm';
 import { countExpression, offsetFor, orderByFor } from '../core/list';
 import { BaseRepository } from '../core/repository';
 import { containsText } from '../core/search';
@@ -8,6 +8,7 @@ import { statusWhere } from '../staff/staff.repository';
 import type { CrmRole, CrmUserFilters } from '$lib/types/crm';
 import type { ListQuery } from '$lib/types/list';
 import { CRM_ROLES, type RoleCode } from '$lib/types/roles';
+import type { UpdateCrmUserInput } from '$lib/validation/crm-user';
 
 export interface CrmUserRow {
 	readonly id: number;
@@ -91,11 +92,16 @@ export class CrmUserRepository extends BaseRepository<typeof users> {
 	}
 
 	/** Across all counterparties and the workshop: the address is the login of one account. */
-	emailTaken(email: string, tx?: Tx): boolean {
+	emailTaken(email: string, tx?: Tx, exceptId?: number): boolean {
 		const [row] = this.db(tx)
 			.select({ id: users.id })
 			.from(users)
-			.where(eq(users.email, email))
+			.where(
+				and(
+					eq(sql`lower(${users.email})`, email),
+					exceptId === undefined ? undefined : ne(users.id, exceptId)
+				)
+			)
 			.all();
 		return row !== undefined;
 	}
@@ -108,6 +114,18 @@ export class CrmUserRepository extends BaseRepository<typeof users> {
 			.all();
 		if (!created) throw new Error('failed to insert a workshop account');
 		return created.id;
+	}
+
+	updateContact(id: number, contact: Omit<UpdateCrmUserInput, 'id' | 'roles'>, tx?: Tx): void {
+		this.db(tx).update(users).set(contact).where(eq(users.id, id)).run();
+	}
+
+	softDelete(id: number, tx?: Tx): void {
+		this.db(tx)
+			.update(users)
+			.set({ isActive: false, deletedAt: new Date() })
+			.where(eq(users.id, id))
+			.run();
 	}
 
 	setRoles(id: number, codes: readonly CrmRole[], tx?: Tx): void {

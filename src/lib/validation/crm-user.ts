@@ -26,6 +26,8 @@ export const createCrmUserSchema = z.object({
 
 export const crmUserIdSchema = z.object({ id: userId });
 
+export const updateCrmUserSchema = createCrmUserSchema.extend({ id: userId });
+
 export const crmUserRolesSchema = z.object({ id: userId, roles: crmRoles });
 
 /** Filters from the query string. A tampered value is dropped, not turned into a 422 page. */
@@ -40,3 +42,4 @@ export function crmUserFormFields(form: FormData): Record<string, unknown> {
 }
 
 export type CreateCrmUserInput = z.infer<typeof createCrmUserSchema>;
+export type UpdateCrmUserInput = z.infer<typeof updateCrmUserSchema>;
