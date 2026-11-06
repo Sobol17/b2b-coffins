@@ -3,7 +3,7 @@ import { StockFill } from '../stock/stock-fill';
 import { ShopJobRepository } from './shop-job.repository';
 import { ShopUnitHistoryRepository } from './shop-unit-history.repository';
 import { heldAhead } from '$lib/domain/stock/allocation';
-import type { CrmLineShopDto } from '$lib/types/crm-shop';
+import type { CrmLineShopDto, ShopUnitHistoryDto } from '$lib/types/crm-shop';
 import type { RequestStatus } from '$lib/types/request';
 import { WORK_ROLES } from '$lib/types/roles';
 import { definedProps } from '$lib/utils/props';
@@ -26,23 +26,7 @@ export class ShopLineReader {
 		const history = this.history.byItems(itemIds, tx);
 		if (request.status !== 'in_work' && history.size === 0) return [];
 		const made = this.jobs.madeByItem(request.id, tx);
-		if (request.status !== 'in_work') {
-			return itemIds.flatMap((itemId) => {
-				const units = history.get(itemId);
-				return units === undefined
-					? []
-					: [
-							{
-								itemId,
-								fromStockQty: 0,
-								stations: [],
-								madeQty: made.get(itemId) ?? 0,
-								heldBy: [],
-								units
-							}
-						];
-			});
-		}
+		if (request.status !== 'in_work') return this.finishedLines(itemIds, history, made);
 		const snapshot = this.fill.read(tx);
 		const open = this.jobs.openJobs(tx);
 		const ahead = new Map(
@@ -62,5 +46,27 @@ export class ShopLineReader {
 			heldBy: (ahead.get(itemId) ?? []).flatMap((id) => numbers.get(id) ?? []),
 			...definedProps({ units: history.get(itemId) })
 		}));
+	}
+
+	private finishedLines(
+		itemIds: readonly number[],
+		history: ReadonlyMap<number, readonly ShopUnitHistoryDto[]>,
+		made: ReadonlyMap<number, number>
+	): CrmLineShopDto[] {
+		return itemIds.flatMap((itemId) => {
+			const units = history.get(itemId);
+			return units === undefined
+				? []
+				: [
+						{
+							itemId,
+							fromStockQty: 0,
+							stations: [],
+							madeQty: made.get(itemId) ?? 0,
+							heldBy: [],
+							units
+						}
+					];
+		});
 	}
 }

@@ -15,7 +15,33 @@ export class WorkDayReportRepository extends BaseRepository<typeof workDays> {
 
 	/** Days of the range, both ends included, oldest first. */
 	between(from: Date, to: Date, tx?: Tx, ownStaffId?: number): WorkDayWithStaff[] {
-		const days = this.db(tx)
+		const days = this.dayRows(from, to, tx, ownStaffId);
+		if (days.length === 0) return [];
+		const people = this.peopleOf(
+			days.map((day) => day.id),
+			tx,
+			ownStaffId
+		);
+		const entries = this.entriesOf(
+			days.map((day) => day.id),
+			tx,
+			ownStaffId
+		);
+		const crews = this.crews.crewsOf(
+			entries.map((entry) => entry.id),
+			tx
+		);
+		return days.map((day) => ({
+			...day,
+			staffIds: people.filter((row) => row.dayId === day.id).map((row) => row.staffId),
+			entries: entries
+				.filter((entry) => entry.dayId === day.id)
+				.map((entry) => ({ amountMinor: entry.amountMinor, staffIds: crews.get(entry.id) ?? [] }))
+		}));
+	}
+
+	private dayRows(from: Date, to: Date, tx?: Tx, ownStaffId?: number) {
+		return this.db(tx)
 			.select({
 				...DAY,
 				totalMinor: ownStaffId === undefined ? workDays.totalMinor : sql<number>`0`
@@ -32,21 +58,23 @@ export class WorkDayReportRepository extends BaseRepository<typeof workDays> {
 			)
 			.orderBy(asc(workDays.workDate))
 			.all();
-		if (days.length === 0) return [];
-		const people = this.db(tx)
+	}
+
+	private peopleOf(dayIds: readonly number[], tx?: Tx, ownStaffId?: number) {
+		return this.db(tx)
 			.select({ dayId: workDayStaff.workDayId, staffId: workDayStaff.staffId })
 			.from(workDayStaff)
 			.where(
 				and(
 					ownStaffId === undefined ? undefined : eq(workDayStaff.staffId, ownStaffId),
-					inArray(
-						workDayStaff.workDayId,
-						days.map((day) => day.id)
-					)
+					inArray(workDayStaff.workDayId, [...dayIds])
 				)
 			)
 			.all();
-		const entries = this.db(tx)
+	}
+
+	private entriesOf(dayIds: readonly number[], tx?: Tx, ownStaffId?: number) {
+		return this.db(tx)
 			.select({
 				id: workEntries.id,
 				dayId: workEntries.workDayId,
@@ -58,24 +86,10 @@ export class WorkDayReportRepository extends BaseRepository<typeof workDays> {
 					ownStaffId === undefined
 						? undefined
 						: sql`exists (select 1 from work_entry_staff own where own.work_entry_id = ${workEntries.id} and own.staff_id = ${ownStaffId})`,
-					inArray(
-						workEntries.workDayId,
-						days.map((day) => day.id)
-					)
+					inArray(workEntries.workDayId, [...dayIds])
 				)
 			)
 			.all();
-		const crews = this.crews.crewsOf(
-			entries.map((entry) => entry.id),
-			tx
-		);
-		return days.map((day) => ({
-			...day,
-			staffIds: people.filter((row) => row.dayId === day.id).map((row) => row.staffId),
-			entries: entries
-				.filter((entry) => entry.dayId === day.id)
-				.map((entry) => ({ amountMinor: entry.amountMinor, staffIds: crews.get(entry.id) ?? [] }))
-		}));
 	}
 
 	/** Quantity and sum per work over the range, both ends included. */

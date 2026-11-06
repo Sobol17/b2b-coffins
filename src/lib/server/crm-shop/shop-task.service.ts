@@ -54,7 +54,7 @@ export class ShopTaskService extends ShopBaseService {
 			if (!this.ctx.roles.includes('owner') && !this.ctx.roles.includes('manager')) {
 				throw new ConflictError('Возьмите конкретное изделие в работу и отметьте его выполнение');
 			}
-			new ShopUnitRepository().manual(job.id, input.doneQty, tx);
+			new ShopUnitRepository().manual(job.id, input.doneQty, tx, task.station);
 			this.jobs.setDone(job.id, input.doneQty, tx);
 			return {
 				result: undefined,

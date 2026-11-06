@@ -112,9 +112,8 @@ export class WorkDayService extends PayrollBaseService {
 		const instant = this.calendar.instantOf(input.date);
 		this.gate.requireOpen(input.date, tx);
 		const day = this.days.findByDate(instant, tx);
-		const automatic = day
-			? this.days.entriesOf(day.id, tx).filter((row) => row.shopUnitWorkId)
-			: [];
+		const kept = day ? this.days.entriesOf(day.id, tx) : [];
+		const automatic = kept.filter((row) => row.shopUnitWorkId);
 		input = this.withAutomaticCrew(input, day?.id, automatic, tx);
 		const after = { date: input.date, staffIds: input.staffIds, entries: input.entries };
 		if (input.staffIds.length === 0 && input.entries.length === 0) {
@@ -125,7 +124,11 @@ export class WorkDayService extends PayrollBaseService {
 			throw new ValidationError('Отметьте, кто работал: сумму дня не на кого делить');
 		}
 		this.assertStaff(input.staffIds, day ? this.days.staffIdsOf(day.id, tx) : [], tx);
-		const entries = this.priced(input.entries, day ? this.days.entriesOf(day.id, tx) : [], tx);
+		const entries = this.priced(
+			input.entries,
+			kept.filter((row) => !row.shopUnitWorkId),
+			tx
+		);
 		const totalMinor = dayTotalMinor(entries) + dayTotalMinor(automatic);
 		const shares = dayShares(input.staffIds, [...entries, ...automatic]);
 		const dayId = this.days.save(

@@ -24,7 +24,7 @@ export class ShopDispatch {
 	) {}
 
 	run(tx: Tx): DispatchOutcome {
-		const steps = planDispatch(this.lines(tx), this.jobs.openJobs(tx));
+		const steps = planDispatch(this.lines(tx), this.jobs.dispatchJobs(tx));
 		const openedTaskIds: number[] = [];
 		let added = 0;
 		let shrunk = 0;

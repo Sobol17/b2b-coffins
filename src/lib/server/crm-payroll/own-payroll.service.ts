@@ -2,13 +2,13 @@ import { PolicyService } from '../auth/policy';
 import { BaseService } from '../core/service';
 import { ShopUnitWorkRepository } from '../crm-shop/shop-unit-work.repository';
 import { PayrollCalendar } from './payroll-calendar';
-import { PayrollStaffRepository } from './payroll-staff.repository';
+import { PayrollStaffRepository, type StaffRow } from './payroll-staff.repository';
 import { PayrollWeekReader } from './payroll-week.reader';
 import { WorkDayRepository } from './work-day.repository';
 import { dayShares, type CrewEntry } from '$lib/domain/payroll/calc';
 import { PAYROLL_SHARE_STEP_MINOR } from '$lib/types/crm-payroll';
 import type { ActorContext } from '$lib/types/actor';
-import type { OwnPayrollDto } from '$lib/types/crm-payroll';
+import type { OwnPayrollDto, PayrollLineDto } from '$lib/types/crm-payroll';
 
 type PendingRow = ReturnType<ShopUnitWorkRepository['pending']>[number];
 interface PreviewEntry extends CrewEntry {
@@ -52,7 +52,7 @@ export class OwnPayrollService extends BaseService {
 		const entries = this.previews(person.id, startsOn, endsOn);
 		return {
 			week: { startsOn, endsOn, status: week.period?.status ?? 'open' },
-			line: week.lines[0] ?? null,
+			line: week.lines[0] ?? this.emptyLine(person),
 			pendingMinor: this.pendingTotal(person.id, entries),
 			pending: entries.map(({ row, staffIds }) => ({
 				unitId: row.work.unitId,
@@ -64,6 +64,22 @@ export class OwnPayrollService extends BaseService {
 						PAYROLL_SHARE_STEP_MINOR
 					: 0
 			}))
+		};
+	}
+
+	private emptyLine(person: StaffRow): PayrollLineDto {
+		return {
+			id: null,
+			staffId: person.id,
+			fullName: person.fullName,
+			position: person.position,
+			daysWorked: 0,
+			accruedMinor: 0,
+			adjustmentMinor: 0,
+			adjustmentComment: null,
+			payoutMinor: 0,
+			paidAt: null,
+			paidComment: null
 		};
 	}
 

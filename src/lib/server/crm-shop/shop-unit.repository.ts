@@ -101,14 +101,14 @@ export class ShopUnitRepository extends BaseRepository<typeof shopUnits> {
 	}
 
 	/** Administrative counting never invents an executor or earnings. */
-	manual(jobId: number, qty: number, tx: Tx): void {
+	manual(jobId: number, qty: number, tx: Tx, station: WorkRole): void {
 		const pieces = tx
 			.select()
 			.from(shopUnits)
 			.where(eq(shopUnits.jobId, jobId))
 			.orderBy(asc(shopUnits.id))
 			.all();
-		if (pieces.some((p) => this.hasWork(p.id, tx)))
+		if (pieces.some((p) => this.hasWork(p.id, tx, station)))
 			throw new ConflictError('Изменяйте выполнение по конкретным изделиям');
 		for (let i = 0; i < pieces.length; i++)
 			tx.update(shopUnits)
@@ -157,25 +157,7 @@ export class ShopUnitRepository extends BaseRepository<typeof shopUnits> {
 	): Map<number, ShopUnitDto[]> {
 		const result = new Map<number, ShopUnitDto[]>();
 		if (!jobIds.length) return result;
-		const rows = this.db()
-			.select({
-				id: shopUnits.id,
-				jobId: shopUnits.jobId,
-				legacy: shopUnits.legacyDone,
-				completedAt: shopUnitWorks.completedAt,
-				workId: shopUnitWorks.id,
-				userId: staff.userId,
-				fullName: staff.fullName
-			})
-			.from(shopUnits)
-			.leftJoin(
-				shopUnitWorks,
-				and(eq(shopUnitWorks.unitId, shopUnits.id), eq(shopUnitWorks.station, station))
-			)
-			.leftJoin(staff, eq(staff.id, shopUnitWorks.staffId))
-			.where(inArray(shopUnits.jobId, [...jobIds]))
-			.orderBy(asc(shopUnits.id))
-			.all();
+		const rows = this.unitRows(jobIds, station);
 		const head = actor.roles.includes('owner') || actor.roles.includes('manager');
 		for (const row of rows) {
 			if (row.jobId === null) continue;
@@ -194,12 +176,39 @@ export class ShopUnitRepository extends BaseRepository<typeof shopUnits> {
 		return result;
 	}
 
-	private hasWork(unitId: number, tx: Tx): boolean {
+	private unitRows(jobIds: readonly number[], station: WorkRole) {
+		return this.db()
+			.select({
+				id: shopUnits.id,
+				jobId: shopUnits.jobId,
+				legacy: shopUnits.legacyDone,
+				completedAt: shopUnitWorks.completedAt,
+				workId: shopUnitWorks.id,
+				userId: staff.userId,
+				fullName: staff.fullName
+			})
+			.from(shopUnits)
+			.leftJoin(
+				shopUnitWorks,
+				and(eq(shopUnitWorks.unitId, shopUnits.id), eq(shopUnitWorks.station, station))
+			)
+			.leftJoin(staff, eq(staff.id, shopUnitWorks.staffId))
+			.where(inArray(shopUnits.jobId, [...jobIds]))
+			.orderBy(asc(shopUnits.id))
+			.all();
+	}
+
+	private hasWork(unitId: number, tx: Tx, station?: WorkRole): boolean {
 		return (
 			tx
 				.select({ id: shopUnitWorks.id })
 				.from(shopUnitWorks)
-				.where(eq(shopUnitWorks.unitId, unitId))
+				.where(
+					and(
+						eq(shopUnitWorks.unitId, unitId),
+						station === undefined ? undefined : eq(shopUnitWorks.station, station)
+					)
+				)
 				.get() !== undefined
 		);
 	}

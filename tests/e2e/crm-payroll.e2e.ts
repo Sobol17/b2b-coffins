@@ -52,6 +52,9 @@ async function addWork(page: Page, title: string, roubles: number, role?: string
 	await modal.getByRole('button', { name: 'Добавить', exact: true }).click();
 	await expect(page.getByTestId('modal')).toHaveCount(0);
 	await expect(page.getByTestId('data-table-row').filter({ hasText: title })).toBeVisible();
+	await expect(
+		page.getByTestId('data-table-row').filter({ hasText: title }).getByTestId('work-rate')
+	).toHaveText(`${roubles} ₽`);
 }
 
 async function addWorker(page: Page, fullName: string): Promise<void> {
@@ -123,7 +126,7 @@ test('C10: the administrator marks a day, closes the week and pays it out', asyn
 		await box.click();
 		await expect(box).toHaveAttribute('aria-checked', 'true');
 	}
-	await expect(page.getByTestId('day-total')).toHaveText('850 ₽');
+	await expect(page.getByTestId('day-total'), await entry.innerText()).toHaveText('850 ₽');
 	await expect(shareOf(page, anna)).toContainText('425 ₽');
 	await expect(shareOf(page, viktor)).toContainText('0 ₽');
 	await page.getByRole('button', { name: 'Сохранить день' }).click();
