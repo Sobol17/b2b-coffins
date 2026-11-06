@@ -4,7 +4,8 @@
 	import { CRM_ROLE_OPTIONS, USER_STATUS_OPTIONS } from '$lib/crm/labels';
 	import AccessCard from '$lib/crm/users/AccessCard.svelte';
 	import CreateUserModal from '$lib/crm/users/CreateUserModal.svelte';
-	import RolesModal from '$lib/crm/users/RolesModal.svelte';
+	import EditUserModal from '$lib/crm/users/EditUserModal.svelte';
+	import DeleteUserModal from '$lib/crm/users/DeleteUserModal.svelte';
 	import UsersTable from '$lib/crm/users/UsersTable.svelte';
 	import { Button, Card, ErrorState, FilterBar, type FilterField } from '$lib/ui';
 	import type { CrmUserDto } from '$lib/types/crm';
@@ -34,6 +35,7 @@
 
 	let createOpen = $state(false);
 	let editing = $state<CrmUserDto | null>(null);
+	let deleting = $state<CrmUserDto | null>(null);
 	let filters = $state(filtersOf(page.url, ['search', 'role', 'status']));
 
 	const query = $derived(listQueryOf(page.url, data.users));
@@ -45,8 +47,9 @@
 	}
 
 	const access = $derived(form && 'access' in form ? form : undefined);
-	const createErrors = $derived(form && 'errors' in form ? form.errors : undefined);
+	const errors = $derived(form && 'errors' in form ? form.errors : undefined);
 	const failure = $derived(form && 'formError' in form ? form : undefined);
+	const inModal = $derived(['create', 'update', 'delete'].includes(failure?.action ?? ''));
 </script>
 
 <svelte:head><title>Пользователи</title></svelte:head>
@@ -60,14 +63,20 @@
 				контрагента.
 			</p>
 		</div>
-		<Button class="sm:ml-auto" onclick={() => (createOpen = true)}>Добавить пользователя</Button>
+		<Button
+			class="sm:ml-auto"
+			onclick={() => {
+				form = null;
+				createOpen = true;
+			}}>Добавить пользователя</Button
+		>
 	</div>
 
 	{#if access?.access}
 		<AccessCard access={access.access} isReset={access.action === 'reset'} />
 	{/if}
 
-	{#if failure && failure.action !== 'create'}
+	{#if failure && !inModal}
 		<div data-testid="users-error">
 			<ErrorState title={failure.formError ?? 'Действие не выполнено'} />
 		</div>
@@ -81,7 +90,14 @@
 				total={data.users.total}
 				{query}
 				onQueryChange={changeQuery}
-				onEditRoles={(user) => (editing = user)}
+				onEdit={(user) => {
+					form = null;
+					editing = user;
+				}}
+				onDelete={(user) => {
+					form = null;
+					deleting = user;
+				}}
 				timeZone={data.timezone}
 			/>
 		</Card.Content>
@@ -90,7 +106,17 @@
 
 <CreateUserModal
 	bind:open={createOpen}
-	errors={createErrors}
+	errors={form?.action === 'create' ? errors : undefined}
 	formError={failure?.action === 'create' ? failure.formError : undefined}
 />
-<RolesModal user={editing} onClose={() => (editing = null)} />
+<EditUserModal
+	user={editing}
+	errors={form?.action === 'update' ? errors : undefined}
+	formError={failure?.action === 'update' ? failure.formError : undefined}
+	onClose={() => (editing = null)}
+/>
+<DeleteUserModal
+	user={deleting}
+	formError={failure?.action === 'delete' ? failure.formError : undefined}
+	onClose={() => (deleting = null)}
+/>

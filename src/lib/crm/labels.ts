@@ -60,6 +60,8 @@ export const AUDIT_ACTION_TITLE: Readonly<Record<string, string>> = {
 	'auth.password_changed': 'Смена пароля',
 	'auth.password_reset': 'Восстановление пароля',
 	'crm_user.create': 'Пользователь создан',
+	'crm_user.update': 'Пользователь изменён',
+	'crm_user.delete': 'Пользователь удалён',
 	'crm_user.roles_change': 'Роли изменены',
 	'crm_user.enable': 'Доступ включён',
 	'crm_user.disable': 'Доступ отключён',
