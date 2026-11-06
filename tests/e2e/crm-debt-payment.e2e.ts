@@ -47,6 +47,12 @@ function marksOf(number: string): number[] {
 		.map((row) => row.amount);
 }
 
+async function openPayment(page: Page): Promise<void> {
+	await page.getByRole('button', { name: /Записать оплату/ }).click();
+	await expect(page.getByTestId('modal')).toBeVisible();
+	await expect(page.getByTestId('debt-payment').getByLabel('Сумма, ₽')).toBeFocused();
+}
+
 async function checkRejectedPayment(page: Page): Promise<void> {
 	const form = page.getByTestId('debt-payment');
 	const modal = page.getByTestId('modal');
@@ -62,16 +68,13 @@ async function checkRejectedPayment(page: Page): Promise<void> {
 }
 
 async function cancelAndReopen(page: Page): Promise<void> {
-	const open = page.getByRole('button', { name: 'Записать оплату', exact: true });
 	const modal = page.getByTestId('modal');
 	const form = page.getByTestId('debt-payment');
-	await open.click();
-	await expect(modal).toBeVisible();
+	await openPayment(page);
 	await expect(form.getByLabel('Комментарий')).toHaveValue('');
 	await page.keyboard.press('Escape');
 	await expect(modal).toBeHidden();
-	await open.click();
-	await expect(modal).toBeVisible();
+	await openPayment(page);
 }
 
 function deferred() {
@@ -94,8 +97,7 @@ test('a payment against the whole debt closes the requests only when the debt is
 	const modal = page.getByTestId('modal');
 	const open = page.getByRole('button', { name: 'Записать оплату', exact: true });
 	await expect(form).toHaveCount(0);
-	await open.click();
-	await expect(modal).toBeVisible();
+	await openPayment(page);
 	await checkRejectedPayment(page);
 	expect([marksOf(older), marksOf(newer)]).toEqual([[], []]);
 
@@ -146,7 +148,7 @@ test('closing a pending payment cannot open another payment before the response'
 	await login(page, 'manager');
 	await page.goto(`/crm/counterparties/${id}`);
 	const open = page.getByRole('button', { name: /Записать оплату/ });
-	await open.click();
+	await openPayment(page);
 	const form = page.getByTestId('debt-payment');
 	await form.getByLabel('Сумма, ₽').fill('1000');
 	const responseGate = deferred();
