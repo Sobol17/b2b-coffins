@@ -1,4 +1,3 @@
-// User password reset is covered from both the list and edit dialog in crm-admin.e2e.ts.
 import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { desc, eq, isNull, ne, type SQL } from 'drizzle-orm';

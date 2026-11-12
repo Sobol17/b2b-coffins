@@ -49,10 +49,7 @@
 	const access = $derived(form && 'access' in form ? form : undefined);
 	const errors = $derived(form && 'errors' in form ? form.errors : undefined);
 	const failure = $derived(form && 'formError' in form ? form : undefined);
-	const inModal = $derived(
-		['create', 'update', 'delete'].includes(failure?.action ?? '') ||
-			(failure?.action === 'reset' && editing !== null)
-	);
+	const inModal = $derived(['create', 'update', 'delete'].includes(failure?.action ?? ''));
 </script>
 
 <svelte:head><title>Пользователи</title></svelte:head>
@@ -123,7 +120,6 @@
 />
 <EditUserModal
 	user={editing}
-	resetError={failure?.action === 'reset' ? failure.formError : undefined}
 	errors={form?.action === 'update' ? errors : undefined}
 	formError={failure?.action === 'update' ? failure.formError : undefined}
 	onClose={() => (editing = null)}

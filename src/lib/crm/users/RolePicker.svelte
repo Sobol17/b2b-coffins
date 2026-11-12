@@ -1,11 +1,21 @@
 <script lang="ts">
 	import { ChevronDown } from '@lucide/svelte';
+	import { untrack } from 'svelte';
 	import { CRM_ROLE_OPTIONS } from '$lib/crm/labels';
+	import type { CrmRole } from '$lib/types/crm';
 	import Field from '$lib/ui/Field.svelte';
 	import { Button, Checkbox, Popover } from '$lib/ui';
 
-	let { error }: { error?: string | undefined } = $props();
-	let selected = $state(CRM_ROLE_OPTIONS.map(() => false));
+	let {
+		error,
+		initialRoles = []
+	}: {
+		error?: string | undefined;
+		initialRoles?: readonly CrmRole[];
+	} = $props();
+	let selected = $state(
+		untrack(() => CRM_ROLE_OPTIONS.map((role) => initialRoles.includes(role.value)))
+	);
 	const chosen = $derived(CRM_ROLE_OPTIONS.filter((_, index) => selected[index]));
 	const id = $props.id();
 </script>

@@ -82,8 +82,10 @@ test.describe('the owner runs the workshop without a developer (C1)', () => {
 		await modal.getByLabel('Имя и фамилия').fill('Алексей Петров');
 		await modal.getByLabel('Телефон').fill('+7 (900) 111-22-33');
 		await modal.getByLabel('Электронная почта').fill(ACCOUNTS.cp_admin.email);
-		await modal.getByLabel('Столяр', { exact: true }).click();
-		await modal.getByLabel('Водитель', { exact: true }).click();
+		await modal.getByRole('button', { name: 'Роли' }).click();
+		await page.getByLabel('Столяр', { exact: true }).click();
+		await page.getByLabel('Водитель', { exact: true }).click();
+		await page.keyboard.press('Escape');
 		await modal.getByRole('button', { name: 'Сохранить изменения' }).click();
 		await expect(modal.getByTestId('edit-user-error')).toContainText('Этот адрес уже используется');
 		await expect(modal).toBeInViewport({ ratio: 1 });
@@ -116,10 +118,9 @@ test.describe('the owner runs the workshop without a developer (C1)', () => {
 		await editedRow.getByRole('button', { name: 'Изменить', exact: true }).click();
 		await page.setViewportSize({ width: 390, height: 540 });
 		await expect(modal).toBeInViewport({ ratio: 1 });
-		await modal.getByRole('button', { name: 'Сбросить пароль', exact: true }).click();
-		await expect(modal.getByTestId('temporary-password')).toBeVisible();
-		await expect(modal.getByTestId('temporary-password')).not.toHaveText(resetPassword);
-		await modal.getByRole('button', { name: 'Готово', exact: true }).click();
+		await expect(modal.getByRole('button', { name: 'Роли' })).toHaveText('Водитель');
+		await expect(modal.getByRole('button', { name: 'Сбросить пароль', exact: true })).toHaveCount(0);
+		await modal.getByRole('button', { name: 'Отмена', exact: true }).click();
 
 		await page.setViewportSize({ width: 1280, height: 900 });
 		await editedRow.getByRole('button', { name: 'Удалить', exact: true }).click();
