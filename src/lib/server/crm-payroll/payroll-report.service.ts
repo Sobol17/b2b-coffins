@@ -1,3 +1,4 @@
+import { CompensationRepository } from './compensation.repository';
 import { ValidationError } from '../core/errors';
 import { PayrollBaseService } from './payroll-base.service';
 import { PayrollCalendar } from './payroll-calendar';
@@ -40,6 +41,13 @@ export class PayrollReportService extends PayrollBaseService {
 		const from = this.calendar.instantOf(input.from);
 		const to = this.calendar.instantOf(input.to);
 		const accruals = weekAccruals(this.days.between(from, to).map(withShares));
+		const extra = new CompensationRepository(this.calendar).between(input.from, input.to);
+		for (const [staffId, amount] of extra) {
+			const index = accruals.findIndex((row) => row.staffId === staffId);
+			const line = accruals[index];
+			if (line) accruals[index] = { ...line, accruedMinor: line.accruedMinor + amount };
+			else accruals.push({ staffId, daysWorked: 0, accruedMinor: amount });
+		}
 		const names = new Map(
 			this.staff.byIds(accruals.map((line) => line.staffId)).map((row) => [row.id, row.fullName])
 		);

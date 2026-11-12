@@ -30,7 +30,12 @@
 			</Card.Header>
 			<Card.Content class="flex flex-col gap-3">
 				{#each data.delivery.ready as stop (stop.id)}
-					<ReadyStop {stop} timeZone={data.timezone} />
+					<ReadyStop
+						{stop}
+						timeZone={data.timezone}
+						drivers={data.drivers}
+						defaultDriverId={data.defaultDriverId}
+					/>
 				{:else}
 					<EmptyState title="Собранных заявок нет" />
 				{/each}

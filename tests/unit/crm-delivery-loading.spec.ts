@@ -174,7 +174,9 @@ describe('«Доставлено» with the cash checkbox (C6 DoD)', () => {
 		toStock(id);
 
 		expect(refused(() => deliver(id, true, actors.manager)).status).toBe(422);
-		expect(deliver(id, false, actors.manager).status).toBe('awaiting_payment');
+		expect(new RequestTransitionService(actors.manager).deliver(id, false, ids.driver).status).toBe(
+			'awaiting_payment'
+		);
 	});
 
 	it('writes the cash into the audit row of the move', () => {

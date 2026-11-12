@@ -40,7 +40,7 @@ export class PayrollExportService extends PayrollBaseService {
 		sheet.getRow(1).font = { bold: true };
 		// Only people the week owes something to or corrected: the screen also lists the idle ones.
 		for (const line of week.lines.filter(
-			(row) => row.daysWorked > 0 || row.adjustmentMinor !== 0
+			(row) => row.daysWorked > 0 || row.accruedMinor > 0 || row.adjustmentMinor !== 0
 		)) {
 			sheet.addRow({
 				fullName: line.fullName,

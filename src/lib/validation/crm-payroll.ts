@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { WORK_ROLES } from '$lib/types/roles';
 import {
+	STAFF_PAY_ROLES,
 	PAYROLL_ADJUSTMENT_MAX_MINOR,
 	PAYROLL_QTY_MAX,
 	PAYROLL_RATE_MAX_MINOR
@@ -44,6 +45,8 @@ const optionalLinkId = z.preprocess(
 
 export const staffCreateSchema = z.object({
 	fullName,
+	payRole: z.enum(STAFF_PAY_ROLES).optional(),
+	monthlySalaryMinor: z.coerce.number().int().min(0).max(100000000).multipleOf(100).optional(),
 	position: optionalText(120),
 	userId: optionalLinkId
 });

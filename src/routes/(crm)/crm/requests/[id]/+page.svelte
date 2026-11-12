@@ -34,7 +34,12 @@
 		{/each}
 	</div>
 
-	<MovesPanel targets={card.targets} refusalReasons={data.choices.refusalReasons} />
+	<MovesPanel
+		drivers={data.drivers}
+		defaultDriverId={data.defaultDriverId}
+		targets={card.targets}
+		refusalReasons={data.choices.refusalReasons}
+	/>
 
 	<div class="grid gap-6 lg:grid-cols-[2fr_1fr]">
 		<div class="flex min-w-0 flex-col gap-6">

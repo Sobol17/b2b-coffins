@@ -2,6 +2,7 @@ import { like } from 'drizzle-orm';
 import { expect, test, type Page } from '@playwright/test';
 import {
 	payrollLines,
+	payrollAccruals,
 	payrollPeriods,
 	staff,
 	workDayStaff,
@@ -19,6 +20,7 @@ const ORIGIN = 'http://localhost:4173';
 // The file outlives a run: a week closed by an earlier run would refuse every day of this one.
 test.beforeAll(() => {
 	const db = e2eDb();
+	db.delete(payrollAccruals).run();
 	db.delete(payrollLines).run();
 	db.delete(payrollPeriods).run();
 	db.delete(workEntryStaff).run();
@@ -42,6 +44,7 @@ async function addWork(page: Page, title: string, roubles: number, role?: string
 	await page.goto('/crm/payroll/works');
 	await openModal(page, 'Добавить работу');
 	const modal = page.getByTestId('modal');
+	await expect(modal.getByLabel('Название работы')).toBeFocused();
 	await modal.getByLabel('Название работы').fill(title);
 	if (role) {
 		await modal.getByLabel('Роль').click();
@@ -49,6 +52,7 @@ async function addWork(page: Page, title: string, roubles: number, role?: string
 		await expect(page.getByRole('listbox')).toHaveCount(0);
 	}
 	await modal.getByLabel('Стоимость за единицу, ₽').fill(String(roubles));
+	await expect(modal.locator('input[name=rateMinor]')).toHaveValue(String(roubles * 100));
 	await modal.getByRole('button', { name: 'Добавить', exact: true }).click();
 	await expect(page.getByTestId('modal')).toHaveCount(0);
 	await expect(page.getByTestId('data-table-row').filter({ hasText: title })).toBeVisible();

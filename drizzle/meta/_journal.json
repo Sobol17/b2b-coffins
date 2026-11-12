@@ -183,6 +183,13 @@
       "when": 1794469525766,
       "tag": "0025_chilly_namor",
       "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "6",
+      "when": 1794475980419,
+      "tag": "0026_tricky_onslaught",
+      "breakpoints": true
     }
   ]
 }

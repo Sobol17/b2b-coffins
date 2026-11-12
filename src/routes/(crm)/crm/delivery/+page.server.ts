@@ -17,7 +17,12 @@ function actorOf(event: Pick<RequestEvent, 'locals' | 'url'>) {
 
 export const load: PageServerLoad = (event) => {
 	const actor = actorOf(event);
-	return { delivery: orHttpStatus(() => new DeliveryService(actor).overview()) };
+	const service = new DeliveryService(actor);
+	return {
+		delivery: orHttpStatus(() => service.overview()),
+		drivers: service.driverChoices(),
+		defaultDriverId: actor.roles.includes('driver') ? actor.userId : null
+	};
 };
 
 export const actions = {
@@ -37,7 +42,11 @@ export const actions = {
 	deliver: (event) => {
 		const actor = actorOf(event);
 		return formAction(event.request, 'deliver', deliveryDoneSchema, (input) =>
-			new RequestTransitionService(actor).deliver(input.requestId, input.cashCollected)
+			new RequestTransitionService(actor).deliver(
+				input.requestId,
+				input.cashCollected,
+				input.driverUserId
+			)
 		);
 	}
 } satisfies Actions;

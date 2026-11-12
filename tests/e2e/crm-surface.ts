@@ -39,9 +39,11 @@ const SECTIONS: readonly SectionRights[] = [
 	{ prefix: '/crm/settings', readers: OWNER },
 	{ prefix: '/crm/reports', readers: OWNER },
 	{ prefix: '/crm/finance', readers: OWNER },
+	// Salary roles/rates remain under payroll.manage; laborers receive no user account.
 	{ prefix: '/crm/payroll', readers: ADMINS },
 	{ prefix: '/crm/salary', readers: CRM_ROLES },
 	{ prefix: '/crm/stock', readers: [...ADMINS, ...SHOP], writers: ADMINS },
+	// Delivery writes and request-card delivery confirmations require the actual driver.
 	{ prefix: '/crm/delivery', readers: [...ADMINS, 'driver'] },
 	{ prefix: '/crm/shop', readers: [...ADMINS, ...SHOP] },
 	{ prefix: '/crm/board', readers: ADMINS },

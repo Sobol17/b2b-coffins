@@ -1,3 +1,12 @@
+export const STAFF_PAY_ROLES = [
+	'piecework',
+	'director',
+	'administrator',
+	'driver',
+	'laborer'
+] as const;
+export type StaffPayRole = (typeof STAFF_PAY_ROLES)[number];
+
 import type { WorkRole } from './roles';
 // Staff, work prices, day sheets and the weekly payroll (C10, tech.md v1.48, crews v1.55). Read by payroll.read only.
 export const PAYROLL_PERIOD_STATUSES = ['open', 'calculated', 'paid'] as const;
@@ -12,6 +21,8 @@ export const PAYROLL_SHARE_STEP_MINOR = 100;
 export const PAYROLL_REPORT_MAX_DAYS = 366;
 
 export interface StaffDto {
+	payRole: StaffPayRole;
+	monthlySalaryMinor: number;
 	id: number;
 	fullName: string;
 	position: string | null;

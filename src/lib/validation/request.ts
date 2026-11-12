@@ -88,6 +88,7 @@ export function draftItemForm(form: FormData): Record<string, unknown> {
 
 /** A status move of a sent request. The state machine decides whether the pair is allowed. */
 export const requestTransitionSchema = z.object({
+	driverUserId: z.coerce.number().int().positive().optional(),
 	to: z.enum(REQUEST_STATUSES, { error: 'Неизвестный статус' }),
 	reasonId: optionalId,
 	comment: optionalText(500, 'Комментарий не длиннее 500 символов')

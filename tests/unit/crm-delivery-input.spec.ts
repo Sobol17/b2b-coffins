@@ -37,14 +37,20 @@ describe('input of the delivery screen (C6)', () => {
 	});
 
 	it('reads the cash checkbox as the form sends it', () => {
-		expect(deliveryDoneSchema.parse({ requestId: '7', cashCollected: 'on' })).toEqual({
+		expect(
+			deliveryDoneSchema.parse({ requestId: '7', driverUserId: '3', cashCollected: 'on' })
+		).toEqual({
 			requestId: 7,
+			driverUserId: 3,
 			cashCollected: true
 		});
-		expect(deliveryDoneSchema.parse({ requestId: '7' }).cashCollected).toBe(false);
+		expect(deliveryDoneSchema.parse({ requestId: '7', driverUserId: '3' }).cashCollected).toBe(
+			false
+		);
 	});
 
-	it('refuses a tampered line or request id', () => {
+	it('refuses a missing driver or a tampered line or request id', () => {
+		expect(deliveryDoneSchema.safeParse({ requestId: '7' }).success).toBe(false);
 		expect(deliveryUnloadSchema.safeParse({ itemId: '-1' }).success).toBe(false);
 		expect(deliveryDoneSchema.safeParse({ requestId: 'x' }).success).toBe(false);
 	});

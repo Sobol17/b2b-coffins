@@ -1,3 +1,4 @@
+import type { StaffPayRole } from '$lib/types/crm-payroll';
 import { asc, desc, eq, inArray, isNull, and, ne } from 'drizzle-orm';
 import { BaseRepository } from '../core/repository';
 import type { Tx } from '../db/client';
@@ -6,6 +7,8 @@ import { ConflictError, NotFoundError } from '../core/errors';
 
 export interface StaffRow {
 	readonly id: number;
+	readonly payRole: StaffPayRole;
+	readonly monthlySalaryMinor: number;
 	readonly fullName: string;
 	readonly position: string | null;
 	readonly isActive: boolean;
@@ -14,6 +17,8 @@ export interface StaffRow {
 
 const COLUMNS = {
 	id: staff.id,
+	payRole: staff.payRole,
+	monthlySalaryMinor: staff.monthlySalaryMinor,
 	fullName: staff.fullName,
 	position: staff.position,
 	isActive: staff.isActive,
@@ -117,7 +122,13 @@ export class PayrollStaffRepository extends BaseRepository<typeof staff> {
 	}
 
 	insert(
-		input: { fullName: string; position: string | null; userId?: number | null },
+		input: {
+			fullName: string;
+			position: string | null;
+			userId?: number | null;
+			payRole?: StaffPayRole;
+			monthlySalaryMinor?: number;
+		},
 		tx?: Tx
 	): number {
 		const [created] = this.db(tx).insert(staff).values(input).returning({ id: staff.id }).all();
@@ -129,6 +140,8 @@ export class PayrollStaffRepository extends BaseRepository<typeof staff> {
 		id: number,
 		patch: {
 			fullName?: string;
+			payRole?: StaffPayRole;
+			monthlySalaryMinor?: number;
 			position?: string | null;
 			userId?: number | null;
 			isActive?: boolean;

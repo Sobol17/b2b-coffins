@@ -1,3 +1,4 @@
+import { CompensationRepository } from './compensation.repository';
 import type { Tx } from '../db/client';
 import { PayrollDtoMapper } from './dto';
 import { PayrollCalendar } from './payroll-calendar';
@@ -42,7 +43,13 @@ export class PayrollWeekReader {
 		const lines =
 			period && period.status !== 'open'
 				? this.periods.lines(period.id, tx, ownStaffId).map((row) => PayrollDtoMapper.toLine(row))
-				: this.liveLines(marked, period, tx, ownStaffId);
+				: this.liveLines(
+						marked,
+						period,
+						new CompensationRepository(this.calendar).between(startsOn, endsOn, tx, ownStaffId),
+						tx,
+						ownStaffId
+					);
 		const pending = new ShopUnitWorkRepository().pending(
 			this.calendar.instantOf(startsOn),
 			this.calendar.instantOf(endsOn),
@@ -75,6 +82,7 @@ export class PayrollWeekReader {
 	private liveLines(
 		marked: readonly WorkDayWithStaff[],
 		period: PeriodRow | undefined,
+		extra: Map<number, number>,
 		tx?: Tx,
 		ownStaffId?: number
 	): PayrollLineDto[] {
@@ -90,12 +98,15 @@ export class PayrollWeekReader {
 		return (ownStaffId === undefined ? this.staff.all(tx) : this.staff.byIds([ownStaffId], tx))
 			.filter(
 				(row) =>
-					row.isActive || accruals.has(row.id) || (stored.get(row.id)?.adjustmentMinor ?? 0) !== 0
+					row.isActive ||
+					extra.has(row.id) ||
+					accruals.has(row.id) ||
+					(stored.get(row.id)?.adjustmentMinor ?? 0) !== 0
 			)
 			.map((row) => {
 				const accrual = accruals.get(row.id);
 				const line = stored.get(row.id);
-				const accruedMinor = accrual?.accruedMinor ?? 0;
+				const accruedMinor = (accrual?.accruedMinor ?? 0) + (extra.get(row.id) ?? 0);
 				const adjustmentMinor = line?.adjustmentMinor ?? 0;
 				return {
 					id: line?.id ?? null,

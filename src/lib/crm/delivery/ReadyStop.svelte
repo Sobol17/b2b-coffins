@@ -2,11 +2,21 @@
 	import { enhance } from '$app/forms';
 	import LoadLine from './LoadLine.svelte';
 	import StopHeader from './StopHeader.svelte';
-	import { Checkbox, TouchButton, withToast } from '$lib/ui';
+	import { Checkbox, Select, TouchButton, withToast } from '$lib/ui';
 	import type { DeliveryStopDto } from '$lib/types/crm-delivery';
 	import { formatMinor } from '$lib/utils/format';
 
-	let { stop, timeZone }: { stop: DeliveryStopDto; timeZone: string } = $props();
+	let {
+		stop,
+		timeZone,
+		drivers,
+		defaultDriverId
+	}: {
+		stop: DeliveryStopDto;
+		timeZone: string;
+		drivers: { id: number; fullName: string }[];
+		defaultDriverId: number | null;
+	} = $props();
 </script>
 
 <article class="flex flex-col gap-3 rounded-inset bg-surface-muted p-4" data-testid="delivery-stop">
@@ -29,6 +39,17 @@
 			use:enhance={withToast({ success: 'Заявка доставлена' })}
 		>
 			<input type="hidden" name="requestId" value={stop.id} />
+			<Select
+				name="driverUserId"
+				required
+				label="Водитель"
+				placeholder="Кто отвёз изделия"
+				options={drivers.map((driver) => ({ value: String(driver.id), label: driver.fullName }))}
+				value={String(defaultDriverId ?? '')}
+			/>
+			{#if drivers.length === 0}<p class="text-sm text-danger">
+					Добавьте активного водителя в настройках пользователей.
+				</p>{/if}
 			{#if (stop.totalMinor ?? 0) > 0}
 				<Checkbox name="cashCollected" value="on" label="Принял оплату наличными" />
 			{/if}

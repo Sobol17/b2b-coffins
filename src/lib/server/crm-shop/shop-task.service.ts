@@ -1,3 +1,5 @@
+import { PayrollAccrualService } from '../crm-payroll/payroll-accrual.service';
+import { PayrollCalendar } from '../crm-payroll/payroll-calendar';
 import { ConflictError, NotFoundError, ValidationError } from '../core/errors';
 import type { Tx } from '../db/client';
 import { StockFillRepository } from '../stock/stock-fill.repository';
@@ -117,6 +119,10 @@ export class ShopTaskService extends ShopBaseService {
 				tx
 			);
 			this.jobs.finishJob(job.id, moveId, at, tx);
+			new PayrollAccrualService(
+				this.ctx,
+				new PayrollCalendar(undefined, undefined, this.now)
+			).production(job.id, job.qty, tx);
 			this.threshold.watch(job.stockItemId, tx, at);
 			return moveId;
 		});

@@ -24,7 +24,7 @@ async function awaitingPayment(page: Page): Promise<{ number: string; id: string
 	const id = new URL(page.url()).pathname.split('/').at(-1) ?? '';
 	acceptReady(db, number);
 	loadUp(db, number);
-	expect(transition(number, 'delivered', 'manager').ok).toBe(true);
+	expect(transition(number, 'delivered', 'driver').ok).toBe(true);
 	expect(statusOf(db, number)).toBe('awaiting_payment');
 	await page.reload();
 	return { number, id };

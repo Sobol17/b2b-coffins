@@ -1,7 +1,9 @@
+import { eq } from 'drizzle-orm';
+import { users, requests } from '../../src/lib/server/db/schema';
 import { expect, test, type Page } from '@playwright/test';
 import { enterRequest } from './crm-flow';
 import { crmNavLink, login, openCrmMenu } from './fixtures';
-import { acceptReady, clearOtherDebts, e2eDb, statusChain, statusOf } from './transitions';
+import { acceptReady, clearOtherDebts, e2eDb, loadUp, statusChain, statusOf } from './transitions';
 
 const ORIGIN = 'http://localhost:4173';
 // White is left to this spec: the portal orders walnut, C4 takes black, C5 wenge.
@@ -106,7 +108,13 @@ test('C6: the server refuses to deliver a request not loaded in full', async ({ 
 	// A forged post skips the hidden button: guard fullyLoaded of tech.md 6.2 still says no.
 	const forged = await page.request.post('/crm/delivery?/deliver', {
 		headers: { origin: ORIGIN, accept: 'application/json' },
-		form: { requestId: id, cashCollected: 'on' }
+		form: {
+			requestId: id,
+			cashCollected: 'on',
+			driverUserId: String(
+				db.select().from(users).where(eq(users.email, 'driver@workshop.example')).get()!.id
+			)
+		}
 	});
 
 	expect(await forged.json()).toMatchObject({ type: 'failure', status: 409 });
@@ -133,4 +141,37 @@ test('C6: the shop crew and the portal get 403, the driver still has no board', 
 
 	await login(page, 'driver');
 	expect((await page.goto('/crm/board'))?.status()).toBe(403);
+});
+
+for (const role of ['manager', 'owner'] as const) {
+	test(`delivery from the request card requires ${role} to select the actual driver`, async ({
+		page
+	}) => {
+		const { number, id } = await assembledRequest(page, 1);
+		await login(page, role);
+		loadUp(db, number);
+		await page.goto(`/crm/requests/${id}`);
+		const moves = page.getByTestId('request-moves');
+		await moves.getByRole('button', { name: 'Водитель', exact: true }).click();
+		await page.getByRole('option').first().click();
+		await moves.getByRole('button', { name: 'Доставлено', exact: true }).click();
+		await expect(moves.getByRole('button', { name: 'Доставлено', exact: true })).toHaveCount(0);
+		expect(statusOf(db, number)).toBe('awaiting_payment');
+	});
+}
+
+test('a stock request retains delivery confirmation in its card', async ({ page }) => {
+	const { number, id } = await assembledRequest(page, 1);
+	db.update(requests)
+		.set({ isStockRequest: true, counterpartyId: null, deliveryAddressId: null })
+		.where(eq(requests.id, Number(id)))
+		.run();
+	await login(page, 'manager');
+	await page.goto(`/crm/requests/${id}`);
+	const moves = page.getByTestId('request-moves');
+	await moves.getByRole('button', { name: 'Водитель', exact: true }).click();
+	await page.getByRole('option').first().click();
+	await moves.getByRole('button', { name: 'Доставлено', exact: true }).click();
+	await expect(moves.getByRole('button', { name: 'Доставлено', exact: true })).toHaveCount(0);
+	expect(statusOf(db, number)).toBe('awaiting_payment');
 });

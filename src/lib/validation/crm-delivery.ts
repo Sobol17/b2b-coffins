@@ -20,5 +20,9 @@ export const deliveryUnloadSchema = z.object({ itemId: id });
 export type DeliveryUnloadInput = z.infer<typeof deliveryUnloadSchema>;
 
 /** «Доставлено», with the cash checkbox beside it. */
-export const deliveryDoneSchema = z.object({ requestId: id, cashCollected: checkbox });
+export const deliveryDoneSchema = z.object({
+	requestId: id,
+	cashCollected: checkbox,
+	driverUserId: id
+});
 export type DeliveryDoneInput = z.infer<typeof deliveryDoneSchema>;

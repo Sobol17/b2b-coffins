@@ -7,6 +7,8 @@ export class PayrollDtoMapper {
 	static toStaff(row: StaffRow): StaffDto {
 		return {
 			id: row.id,
+			payRole: row.payRole,
+			monthlySalaryMinor: row.monthlySalaryMinor,
 			fullName: row.fullName,
 			position: row.position,
 			isActive: row.isActive,

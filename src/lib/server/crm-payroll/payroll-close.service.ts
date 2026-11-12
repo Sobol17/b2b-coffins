@@ -1,3 +1,6 @@
+import { addDays } from '$lib/domain/payroll/calc';
+import { CompensationRepository } from './compensation.repository';
+import { PayrollPeriodGate } from './payroll-period-gate';
 import { ConflictError, NotFoundError, ValidationError } from '../core/errors';
 import { ShopUnitWorkRepository } from '../crm-shop/shop-unit-work.repository';
 import type { Tx } from '../db/client';
@@ -37,13 +40,24 @@ export class PayrollCloseService extends PayrollBaseService {
 			if (week.period && week.period.status !== 'open') {
 				throw new ConflictError('Неделя уже закрыта');
 			}
-			const lines = week.lines.filter((line) => line.daysWorked > 0 || line.adjustmentMinor !== 0);
-			if (!week.period || lines.length === 0) {
+			const lines = week.lines.filter(
+				(line) => line.daysWorked > 0 || line.accruedMinor > 0 || line.adjustmentMinor !== 0
+			);
+			if (lines.length === 0) {
 				throw new ValidationError('В неделе нет отмеченных дней и корректировок');
 			}
 			const short = lines.find((line) => line.payoutMinor < 0);
 			if (short) throw new ValidationError(`Удержание больше начисленного: ${short.fullName}`);
-			const periodId = week.period.id;
+			const upcoming = new CompensationRepository(this.calendar).salaries(
+				this.calendar.today() < week.startsOn ? week.startsOn : addDays(this.calendar.today(), 1),
+				week.endsOn,
+				tx,
+				undefined,
+				true
+			);
+			if (upcoming.size)
+				throw new ConflictError('В этой неделе ещё предстоит начисление оклада 27-го числа');
+			const periodId = new PayrollPeriodGate(this.calendar, this.periods).requireOpen(date, tx);
 			this.freeze(periodId, week.lines, lines, tx);
 			const closedAt = this.calendar.moment();
 			this.periods.setStatus(

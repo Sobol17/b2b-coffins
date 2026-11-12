@@ -1,3 +1,4 @@
+import { DeliveryDriverRepository } from './delivery-driver.repository';
 import { PolicyService } from '../auth/policy';
 import { ConflictError, NotFoundError, ValidationError } from '../core/errors';
 import { BaseService } from '../core/service';
@@ -41,6 +42,9 @@ export class DeliveryService extends BaseService {
 		this.assert(ctx.scope === 'crm' && PolicyService.can(ctx, 'delivery.work'), 'delivery.work');
 	}
 
+	driverChoices(): { id: number; fullName: string }[] {
+		return new DeliveryDriverRepository().choices();
+	}
 	overview(): DeliveryDto {
 		const snapshot = this.fill.read();
 		const ready = this.repo.stops('ready', DELIVERY_LIST_LIMIT);
