@@ -48,3 +48,24 @@ export function buildWorkMatrix(
 		manual: manual.filter((work) => matches(work.title))
 	};
 }
+
+/** Position grouping precedes paging: a row always retains every station's rate. */
+export function pageWorkMatrix(
+	works: readonly WorkTypeDto[],
+	variants: readonly { id: number; label: string }[],
+	query: { page: number; perPage: number; search?: string }
+) {
+	const matrix = buildWorkMatrix(works, variants, query.search);
+	const perPage = [20, 50, 100].includes(query.perPage) ? query.perPage : 20;
+	const page = Math.min(
+		Math.max(1, Number.isFinite(query.page) ? Math.trunc(query.page) : 1),
+		Math.max(1, Math.ceil(matrix.positions.length / perPage))
+	);
+	return {
+		...matrix,
+		positions: matrix.positions.slice((page - 1) * perPage, page * perPage),
+		total: matrix.positions.length,
+		page,
+		perPage
+	};
+}

@@ -1,3 +1,5 @@
+import { pageWorkMatrix } from '$lib/crm/payroll/work-matrix';
+import type { ListQuery } from '$lib/types/list';
 import { NotFoundError, ValidationError } from '../core/errors';
 import type { Tx } from '../db/client';
 import { PayrollBaseService } from './payroll-base.service';
@@ -19,6 +21,9 @@ export class WorkTypeService extends PayrollBaseService {
 		super(ctx);
 	}
 
+	matrix(query: ListQuery) {
+		return pageWorkMatrix(this.repo.all(), this.repo.variantChoices(), query);
+	}
 	list(): WorkTypeDto[] {
 		return this.repo.all();
 	}

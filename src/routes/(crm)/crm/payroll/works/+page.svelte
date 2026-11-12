@@ -3,10 +3,14 @@
 	import { PAYROLL_TABS } from '$lib/crm/sections';
 	import DirectoryTable from '$lib/crm/payroll/DirectoryTable.svelte';
 	import WorkRateMatrix from '$lib/crm/payroll/WorkRateMatrix.svelte';
-	import { buildWorkMatrix } from '$lib/crm/payroll/work-matrix';
+	import { goto } from '$app/navigation';
+	import { resolve } from '$app/paths';
+	import { page } from '$app/state';
+	import { withListQuery } from '$lib/utils/list-url';
+	import type { ListQuery } from '$lib/types/list';
 	import WorkTypeModal from '$lib/crm/payroll/WorkTypeModal.svelte';
 	import { roubles, workRoleTitle } from '$lib/crm/payroll/labels';
-	import { Button, Card, Input } from '$lib/ui';
+	import { Button, Card, Input, Select } from '$lib/ui';
 	import type { WorkTypeDto } from '$lib/types/crm-payroll';
 	import type { PageProps } from './$types';
 
@@ -14,8 +18,15 @@
 
 	// null: closed; 'new': a new work; a work: the edit of that one.
 	let editing = $state<WorkTypeDto | 'new' | null>(null);
-	let search = $state('');
-	const matrix = $derived(buildWorkMatrix(data.works, data.variants, search));
+	let search = $derived(page.url.searchParams.get('search') ?? '');
+	const matrix = $derived(data.matrix);
+	const query = $derived({ page: matrix.page, perPage: matrix.perPage });
+	function changeQuery(next: ListQuery): void {
+		void goto(resolve(`/crm/payroll/works?${withListQuery(page.url, next).searchParams}`), {
+			keepFocus: true,
+			noScroll: true
+		});
+	}
 
 	function edit(work: WorkTypeDto): void {
 		form = null;
@@ -46,21 +57,55 @@
 		{/if}
 	</div>
 
-	<Input
-		label="Поиск по работам и позициям"
-		type="search"
-		placeholder="Введите артикул, название или размер"
-		bind:value={search}
-	/>
+	<form method="GET" class="flex flex-wrap items-end gap-3">
+		<div class="min-w-56 flex-1">
+			<Input
+				name="search"
+				label="Поиск по работам и позициям"
+				type="search"
+				placeholder="Артикул, название или размер"
+				bind:value={search}
+			/>
+		</div>
+		<input type="hidden" name="perPage" value={query.perPage} />
+		<Button type="submit" variant="secondary">Найти</Button>
+	</form>
+	<div class="grid gap-2 text-sm sm:grid-cols-2 lg:grid-cols-4" aria-label="Единые расценки">
+		{#each [['Руководитель Олег', '350 ₽ за готовое изделие'], ['Руководитель Виталий', '350 ₽ за готовое изделие'], ['Администратор', '300 ₽ за готовое изделие'], ['Водитель', '200 ₽ за доставленное изделие']] as rate (rate[0])}
+			<div class="rounded-inset bg-surface-muted p-3">
+				<div class="font-medium">{rate[0]}</div>
+				<div class="text-fg-muted">{rate[1]}</div>
+			</div>
+		{/each}
+	</div>
 
 	<Card.Root>
 		<Card.Content>
 			<h2 class="mb-2 text-2xl">Расценки позиций</h2>
 			<p class="mb-4 text-sm text-fg-muted">
-				Цена за единицу по каждой роли. «Не задана» — расценки нет, «Выключена» — не применяется.
-				Нулевая расценка показывается как 0 ₽.
+				Нажмите на сумму, чтобы изменить расценку. Цена за единицу по каждой роли. «Не задана» —
+				расценки нет, «Выключена» — не применяется. Нулевая расценка показывается как 0 ₽.
 			</p>
-			<WorkRateMatrix positions={matrix.positions} canManage={data.canManage} onEdit={edit} />
+			<div class="mb-3 flex flex-wrap items-end justify-between gap-3">
+				<span class="text-sm text-fg-muted">Найдено позиций: {matrix.total}</span>
+				<Select
+					label="Строк на странице"
+					placeholder="Размер страницы"
+					bind:value={
+						() => String(query.perPage),
+						(value: string) => changeQuery({ page: 1, perPage: Number(value) })
+					}
+					options={[20, 50, 100].map((n) => ({ value: String(n), label: String(n) }))}
+				/>
+			</div>
+			<WorkRateMatrix
+				positions={matrix.positions}
+				total={matrix.total}
+				{query}
+				onQueryChange={changeQuery}
+				canManage={data.canManage}
+				onEdit={edit}
+			/>
 		</Card.Content>
 	</Card.Root>
 

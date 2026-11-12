@@ -82,3 +82,18 @@ describe('payroll position rate matrix', () => {
 		expect(result.positions).toEqual([]);
 	});
 });
+
+import { pageWorkMatrix } from '../../src/lib/crm/payroll/work-matrix';
+
+it('paginates positions after filtering and clamps pages after the result shrinks', () => {
+	const variants = Array.from({ length: 45 }, (_, i) => ({
+		id: i + 1,
+		label: 'Позиция ' + (i + 1)
+	}));
+	expect(pageWorkMatrix([], variants, { page: 2, perPage: 20 }).positions.map((x) => x.id)).toEqual(
+		Array.from({ length: 20 }, (_, i) => i + 21)
+	);
+	expect(
+		pageWorkMatrix([], variants, { page: 9, perPage: 20, search: 'Позиция 45' })
+	).toMatchObject({ total: 1, page: 1, positions: [{ id: 45 }] });
+});

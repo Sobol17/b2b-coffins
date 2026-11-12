@@ -1,7 +1,7 @@
 <script lang="ts">
-	import { enhance } from '$app/forms';
+	import type { ListQuery } from '$lib/types/list';
 	import { ROLE_TITLE } from '$lib/crm/labels';
-	import { Button, DataTable, TONE_CLASS, withToast, type DataTableColumn } from '$lib/ui';
+	import { Button, DataTable, type DataTableColumn } from '$lib/ui';
 	import type { WorkTypeDto } from '$lib/types/crm-payroll';
 	import { WORK_ROLES, type WorkRole } from '$lib/types/roles';
 	import { roubles } from './labels';
@@ -10,9 +10,15 @@
 	let {
 		positions,
 		canManage,
-		onEdit
+		onEdit,
+		total,
+		query,
+		onQueryChange
 	}: {
 		positions: readonly WorkMatrixPosition[];
+		total: number;
+		query: ListQuery;
+		onQueryChange: (next: ListQuery) => void;
 		canManage: boolean;
 		onEdit: (work: WorkTypeDto) => void;
 	} = $props();
@@ -29,9 +35,9 @@
 <DataTable
 	{columns}
 	rows={positions}
-	total={positions.length}
-	query={{ page: 1, perPage: Math.max(1, positions.length) }}
-	onQueryChange={() => undefined}
+	{total}
+	{query}
+	{onQueryChange}
 	emptyTitle="Позиции не найдены"
 >
 	{#snippet cell(row: WorkMatrixPosition, column: DataTableColumn)}
@@ -42,49 +48,26 @@
 			{/if}
 		{:else if isWorkRole(column.key)}
 			{@const work = row.rates[column.key]}
-			<div
-				class="flex min-w-32 flex-col items-start gap-1.5 max-sm:items-end"
-				data-testid="work-rate-cell"
-			>
+			<div class="flex min-w-20 items-center gap-1 max-sm:justify-end" data-testid="work-rate-cell">
 				{#if work}
-					<span class="font-medium tabular-nums" data-testid="work-rate"
-						>{roubles(work.rateMinor)}</span
-					>
-					{#if !work.isActive}
-						<span
-							data-testid="directory-status"
-							class={['rounded-pill px-2.5 py-0.5 text-xs', TONE_CLASS.neutral]}>Выключена</span
-						>
-					{/if}
-					<span class="max-w-44 text-xs whitespace-normal text-fg-muted">{work.title}</span>
 					{#if canManage}
-						<div class="flex flex-wrap gap-1 max-sm:justify-end">
-							<Button variant="secondary" size="sm" onclick={() => onEdit(work)}>Изменить</Button>
-							<form
-								method="POST"
-								action={work.isActive ? '?/disable' : '?/enable'}
-								use:enhance={withToast({
-									success: (result) =>
-										result?.action === 'disable'
-											? `Выключено: ${work.title}`
-											: `Включено: ${work.title}`
-								})}
-							>
-								<input type="hidden" name="id" value={work.id} />
-								<Button
-									type="submit"
-									variant="ghost"
-									size="sm"
-									class={work.isActive ? 'text-danger' : undefined}
-								>
-									{work.isActive ? 'Выключить' : 'Включить'}
-								</Button>
-							</form>
-						</div>
-					{/if}
-				{:else}
-					<span class="text-sm text-fg-faint" data-testid="work-rate-missing">Не задана</span>
-				{/if}
+						<Button
+							variant="ghost"
+							size="sm"
+							class="min-h-11 font-medium tabular-nums"
+							aria-label={`Изменить: ${ROLE_TITLE[column.key]} · ${row.label}`}
+							title={work.title}
+							onclick={() => onEdit(work)}
+						>
+							<span data-testid="work-rate">{roubles(work.rateMinor)}</span>
+							{#if !work.isActive}<span class="text-xs text-fg-faint" data-testid="directory-status"
+									>Выключена</span
+								>{/if}
+						</Button>
+					{:else}<span class="tabular-nums" data-testid="work-rate">{roubles(work.rateMinor)}</span
+						>{/if}
+				{:else}<span class="text-sm text-fg-faint" data-testid="work-rate-missing">Не задана</span
+					>{/if}
 			</div>
 		{/if}
 	{/snippet}
