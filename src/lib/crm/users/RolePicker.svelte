@@ -20,42 +20,46 @@
 	const id = $props.id();
 </script>
 
-<Field {id} label="Роли" {error} required>
-	{#snippet control()}
-		{#each chosen as role (role.value)}
-			<input type="hidden" name="roles" value={role.value} />
-		{/each}
-		<Popover.Root>
-			<Popover.Trigger {id}>
-				{#snippet child({ props })}
-					<Button
-						{...props}
-						variant="secondary"
-						class="w-full justify-between font-normal"
-						aria-label="Роли"
-						aria-invalid={error ? 'true' : undefined}
-						aria-describedby={error ? `${id}-error` : undefined}
-					>
-						<span class="truncate"
-							>{chosen.length ? chosen.map((role) => role.label).join(', ') : 'Выберите роли'}</span
+<div class="w-full min-w-0">
+	<Field {id} label="Роли" {error} required>
+		{#snippet control()}
+			{#each chosen as role (role.value)}
+				<input type="hidden" name="roles" value={role.value} />
+			{/each}
+			<Popover.Root>
+				<Popover.Trigger {id}>
+					{#snippet child({ props })}
+						<Button
+							{...props}
+							variant="secondary"
+							class="w-full max-w-full min-w-0 justify-between overflow-hidden font-normal"
+							aria-label="Роли"
+							aria-invalid={error ? 'true' : undefined}
+							aria-describedby={error ? `${id}-error` : undefined}
 						>
-						<ChevronDown class="size-4 shrink-0" aria-hidden="true" />
-					</Button>
-				{/snippet}
-			</Popover.Trigger>
-			<Popover.Content
-				align="start"
-				class="max-h-80 w-(--bits-popover-anchor-width) overflow-y-auto p-3"
-			>
-				{#each CRM_ROLE_OPTIONS as role, index (role.value)}
-					<div class="py-2">
-						<Checkbox
-							label={role.label}
-							bind:checked={() => selected[index] ?? false, (value) => (selected[index] = value)}
-						/>
-					</div>
-				{/each}
-			</Popover.Content>
-		</Popover.Root>
-	{/snippet}
-</Field>
+							<span class="min-w-0 flex-1 truncate text-left"
+								>{chosen.length
+									? chosen.map((role) => role.label).join(', ')
+									: 'Выберите роли'}</span
+							>
+							<ChevronDown class="size-4 shrink-0" aria-hidden="true" />
+						</Button>
+					{/snippet}
+				</Popover.Trigger>
+				<Popover.Content
+					align="start"
+					class="max-h-80 w-(--bits-popover-anchor-width) max-w-[calc(100vw-2rem)] overflow-y-auto p-3"
+				>
+					{#each CRM_ROLE_OPTIONS as role, index (role.value)}
+						<div class="py-2">
+							<Checkbox
+								label={role.label}
+								bind:checked={() => selected[index] ?? false, (value) => (selected[index] = value)}
+							/>
+						</div>
+					{/each}
+				</Popover.Content>
+			</Popover.Root>
+		{/snippet}
+	</Field>
+</div>
