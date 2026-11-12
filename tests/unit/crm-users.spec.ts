@@ -204,7 +204,8 @@ describe('roles, access and passwords', () => {
 		expect(await verifyPassword(row?.passwordHash ?? '', reset.temporaryPassword)).toBe(true);
 		expect(row).toMatchObject({ mustChangePassword: true, failedAttempts: 0, lockedUntil: null });
 		expect(db.select().from(sessions).where(eq(sessions.userId, user.id)).all()).toHaveLength(0);
-		expect(mail.sent[0]?.subject).toContain('Новый пароль');
+		expect(mail.sent).toHaveLength(0);
+		expect(reset.mailSent).toBe(false);
 		await expect(service().resetPassword(ownerId)).rejects.toThrow(ConflictError);
 	});
 
@@ -253,22 +254,13 @@ describe('editing workshop accounts atomically', () => {
 		}
 	});
 
-	it('reserves addresses across portal and deleted accounts without a partial edit', () => {
+	it('reserves addresses of existing accounts without a partial edit', () => {
 		const id = insertUser({
 			email: 'unchanged@ws.example',
 			role: 'carpenter',
 			counterpartyId: null
 		});
-		const reservedId = insertUser({
-			email: 'Reserved@ws.example',
-			role: 'driver',
-			counterpartyId: null
-		});
-		db.update(users)
-			.set({ deletedAt: new Date(), isActive: false })
-			.where(eq(users.id, reservedId))
-			.run();
-		for (const email of [' ADMIN@RS.example ', ' reserved@ws.example ']) {
+		for (const email of [' ADMIN@RS.example ']) {
 			expect(() =>
 				service().update(
 					updateCrmUserSchema.parse({
@@ -288,6 +280,30 @@ describe('editing workshop accounts atomically', () => {
 			roles: ['carpenter']
 		});
 		expect(db.select().from(auditLog).all()).toHaveLength(0);
+	});
+
+	it('reuses a deleted email for a new account without reviving its identity', async () => {
+		const old = await service().create(input());
+		service().delete(old.user.id);
+		const next = await service().create({ ...input(), email: old.user.email });
+		expect(next.user.id).not.toBe(old.user.id);
+		expect(next.user.email).toBe(old.user.email);
+		expect(
+			db.select().from(users).where(eq(users.id, old.user.id)).get()?.deletedAt
+		).not.toBeNull();
+	});
+
+	it('changes to a previously deleted email and generates a password for the current login without mail', async () => {
+		const old = await service().create(input());
+		service().delete(old.user.id);
+		const current = await service().create(input());
+		service().update({ ...input(), id: current.user.id, email: old.user.email });
+		mail.reset();
+		const reset = await service().resetPassword(current.user.id);
+		expect(reset.user.email).toBe(old.user.email);
+		expect(mail.sent).toHaveLength(0);
+		const row = db.select().from(users).where(eq(users.id, current.user.id)).get();
+		expect(await verifyPassword(row?.passwordHash ?? '', reset.temporaryPassword)).toBe(true);
 	});
 
 	it('allows the unchanged own email but refuses to demote oneself without changing contacts', () => {

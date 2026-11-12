@@ -7,7 +7,7 @@ const COUNTERPARTY_INN = '500100200300';
 // The seed puts «Память» on the base list: MDL-201-180-PIN costs it the variant price, 8 900 ₽.
 const BASE_SHOWN = /8\u00a0900(?![,\d])/;
 const OWN_RUBLES = '7 777';
-const OWN_SHOWN = /7\u00a0777(?![,\d])/;
+const OWN_SHOWN = /7\s777(?![,\d])/;
 
 async function openPrices(page: Page): Promise<void> {
 	await page.goto(`/crm/counterparties?search=${COUNTERPARTY_INN}`);

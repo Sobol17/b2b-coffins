@@ -1,4 +1,4 @@
-import { and, eq } from 'drizzle-orm';
+import { and, eq, isNull } from 'drizzle-orm';
 import { z } from 'zod';
 import { hashPassword } from '../../src/lib/server/auth/password';
 import type { Db } from '../../src/lib/server/db/client';
@@ -46,7 +46,7 @@ async function upsertUser(
 	const [existing] = db
 		.select({ id: users.id })
 		.from(users)
-		.where(eq(users.email, input.email))
+		.where(and(eq(users.email, input.email), isNull(users.deletedAt)))
 		.all();
 	const userId =
 		existing?.id ??
@@ -114,7 +114,11 @@ export function seedPriceLists(db: Db): Map<string, number> {
 }
 
 function userIdByEmail(db: Db, email: string): number {
-	const [row] = db.select({ id: users.id }).from(users).where(eq(users.email, email)).all();
+	const [row] = db
+		.select({ id: users.id })
+		.from(users)
+		.where(and(eq(users.email, email), isNull(users.deletedAt)))
+		.all();
 	if (!row) throw new Error(`manager ${email} is missing, seed CRM users first`);
 	return row.id;
 }

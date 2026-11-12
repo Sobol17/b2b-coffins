@@ -156,8 +156,7 @@ export class CrmUserService extends BaseService {
 			SessionService.destroyAllFor(id, tx);
 			return { result: { ...user, mustChangePassword: true }, entityId: id };
 		});
-		const mailSent = await this.sendAccess(row.email, temporaryPassword, true);
-		return { user: CrmUserDtoMapper.toUser(row, this.ctx), temporaryPassword, mailSent };
+		return { user: CrmUserDtoMapper.toUser(row, this.ctx), temporaryPassword, mailSent: false };
 	}
 
 	private require(id: number, tx: Tx): CrmUserRow {

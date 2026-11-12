@@ -99,6 +99,7 @@ export class CrmUserRepository extends BaseRepository<typeof users> {
 			.where(
 				and(
 					eq(sql`lower(${users.email})`, email),
+					isNull(users.deletedAt),
 					exceptId === undefined ? undefined : ne(users.id, exceptId)
 				)
 			)

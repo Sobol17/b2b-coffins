@@ -65,7 +65,7 @@
 				use:enhance={withToast({ success: `Пароль сброшен: ${row.fullName}` })}
 			>
 				<input type="hidden" name="id" value={row.id} />
-				<Button type="submit" variant="ghost" size="sm">Сбросить пароль</Button>
+				<Button type="submit" variant="ghost" size="sm">Сгенерировать пароль</Button>
 			</form>
 			<form
 				method="POST"
