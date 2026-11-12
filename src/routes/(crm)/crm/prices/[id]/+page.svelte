@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { Plus, Pencil, Trash2 } from '@lucide/svelte';
+	import * as Tooltip from '$lib/ui/base/tooltip/index.js';
 	import { enhance } from '$app/forms';
 	import { resolve } from '$app/paths';
 	import {
@@ -25,6 +27,12 @@
 		}))
 	);
 	let importing = $state(false);
+	let createOpen = $state(false);
+	let creating = $state(false);
+	const pricedVariantIds = $derived(new Set(data.list.items.map((item) => String(item.variantId))));
+	const availableVariants = $derived(
+		variants.filter((variant) => !pricedVariantIds.has(variant.value))
+	);
 	const variantById = $derived(new Map(data.variants.map((row) => [row.id, row])));
 	const rows = $derived(
 		data.list.items.map((item) => ({
@@ -54,29 +62,77 @@
 	/>
 	<h1 class="text-3xl">{data.list.title}</h1>
 	<Card.Root
-		><Card.Content class="flex flex-col gap-4">
-			<h2 class="text-2xl">Цена варианта</h2>
-			{#if variants.length === 0}<p class="text-fg-muted">Сначала добавьте вариант модели.</p>{/if}
-			<form
-				method="POST"
-				action="?/upsert"
-				class="grid gap-4 sm:grid-cols-2"
-				use:enhance={withToast({ success: 'Цена сохранена' })}
-			>
-				<Select
-					name="variantId"
-					label="Вариант"
-					placeholder="Выберите вариант"
-					options={variants}
-					required
-				/>
-				<MoneyInput name="priceMinor" label="Цена" placeholder="Введите цену" valueMinor={0} />
-				<Button type="submit" class="self-start" disabled={variants.length === 0}
-					>Сохранить цену</Button
+		><Card.Content>
+			<div class="mb-4 flex flex-wrap items-center justify-between gap-3">
+				<h2 class="text-2xl">Позиции прайс-листа</h2>
+				<Button
+					class="ml-auto"
+					disabled={availableVariants.length === 0}
+					onclick={() => (createOpen = true)}><Plus aria-hidden="true" />Добавить</Button
 				>
-			</form>
+			</div>
+			<Tooltip.Provider>
+				<DataTable
+					columns={[
+						{ key: 'title', label: 'Изделие' },
+						{ key: 'sku', label: 'Артикул' },
+						{ key: 'price', label: 'Цена, ₽', align: 'end' },
+						{ key: 'actions', label: 'Действия', align: 'end' }
+					]}
+					{rows}
+					total={rows.length}
+					query={{ page: 1, perPage: rows.length || 1 }}
+					onQueryChange={() => {}}
+					emptyTitle="Цен пока нет"
+				>
+					{#snippet cell(row, column)}
+						{#if column.key === 'title'}
+							{row.title}
+						{:else if column.key === 'sku'}
+							{row.sku}
+						{:else if column.key === 'price'}
+							{formatMinor(row.priceMinor)}
+						{:else}
+							<div class="flex justify-end gap-1">
+								<Tooltip.Root>
+									<Tooltip.Trigger>
+										{#snippet child({ props })}
+											<Button
+												{...props}
+												variant="ghost"
+												class="size-11 p-0"
+												aria-label="Изменить"
+												onclick={() => (editing = row)}><Pencil aria-hidden="true" /></Button
+											>
+										{/snippet}
+									</Tooltip.Trigger>
+									<Tooltip.Content role="tooltip">Изменить цену</Tooltip.Content>
+								</Tooltip.Root>
+								<Tooltip.Root>
+									<Tooltip.Trigger>
+										{#snippet child({ props })}
+											<Button
+												{...props}
+												variant="ghost"
+												class="size-11 p-0 text-danger hover:text-danger"
+												aria-label="Удалить"
+												onclick={() => {
+													deleting = row;
+													deleteOpen = true;
+												}}><Trash2 aria-hidden="true" /></Button
+											>
+										{/snippet}
+									</Tooltip.Trigger>
+									<Tooltip.Content role="tooltip">Удалить позицию</Tooltip.Content>
+								</Tooltip.Root>
+							</div>
+						{/if}
+					{/snippet}
+				</DataTable>
+			</Tooltip.Provider>
 		</Card.Content></Card.Root
 	>
+
 	<Card.Root>
 		<Card.Content class="flex flex-col gap-4">
 			<h2 class="text-2xl">Загрузить прайс из файла</h2>
@@ -98,47 +154,6 @@
 			</form>
 		</Card.Content>
 	</Card.Root>
-	<Card.Root
-		><Card.Content>
-			<h2 class="mb-4 text-2xl">Позиции прайс-листа</h2>
-			<DataTable
-				columns={[
-					{ key: 'title', label: 'Изделие' },
-					{ key: 'sku', label: 'Артикул' },
-					{ key: 'price', label: 'Цена, ₽', align: 'end' },
-					{ key: 'actions', label: 'Действия' }
-				]}
-				{rows}
-				total={rows.length}
-				query={{ page: 1, perPage: rows.length || 1 }}
-				onQueryChange={() => {}}
-				emptyTitle="Цен пока нет"
-			>
-				{#snippet cell(row, column)}
-					{#if column.key === 'title'}
-						{row.title}
-					{:else if column.key === 'sku'}
-						{row.sku}
-					{:else if column.key === 'price'}
-						{formatMinor(row.priceMinor)}
-					{:else}
-						<div class="flex flex-wrap gap-2">
-							<Button size="sm" variant="secondary" onclick={() => (editing = row)}>Изменить</Button
-							>
-							<Button
-								size="sm"
-								variant="danger"
-								onclick={() => {
-									deleting = row;
-									deleteOpen = true;
-								}}>Удалить</Button
-							>
-						</div>
-					{/if}
-				{/snippet}
-			</DataTable>
-		</Card.Content></Card.Root
-	>
 </div>
 
 <Modal
@@ -195,3 +210,43 @@
 	danger
 	onConfirm={() => deleteForm.requestSubmit()}
 />
+
+<Modal
+	bind:open={createOpen}
+	title="Добавить позицию"
+	description="Выберите изделие и укажите цену для этого прайс-листа."
+>
+	{#snippet body()}
+		<form
+			method="POST"
+			action="?/upsert"
+			class="flex flex-col gap-4"
+			use:enhance={withToast({
+				pending: (value) => (creating = value),
+				success: 'Цена сохранена',
+				onSuccess: () => (createOpen = false)
+			})}
+		>
+			<Select
+				name="variantId"
+				label="Изделие"
+				placeholder="Выберите изделие"
+				options={availableVariants}
+				required
+			/>
+			<MoneyInput
+				name="priceMinor"
+				label="Цена"
+				placeholder="Введите цену"
+				valueMinor={0}
+				required
+			/>
+			<div class="flex justify-end gap-2">
+				<Button variant="secondary" disabled={creating} onclick={() => (createOpen = false)}
+					>Отмена</Button
+				>
+				<Button type="submit" loading={creating}>Добавить</Button>
+			</div>
+		</form>
+	{/snippet}
+</Modal>
