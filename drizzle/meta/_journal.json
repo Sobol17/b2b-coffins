@@ -176,6 +176,13 @@
       "when": 1793978022641,
       "tag": "0024_reflective_molten_man",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "6",
+      "when": 1794469525766,
+      "tag": "0025_chilly_namor",
+      "breakpoints": true
     }
   ]
 }

@@ -5,6 +5,9 @@
 		Breadcrumbs,
 		Button,
 		Card,
+		DataTable,
+		Modal,
+		ConfirmDialog,
 		FileInput,
 		MoneyInput,
 		Select,
@@ -22,6 +25,20 @@
 		}))
 	);
 	let importing = $state(false);
+	const variantById = $derived(new Map(data.variants.map((row) => [row.id, row])));
+	const rows = $derived(
+		data.list.items.map((item) => ({
+			...item,
+			id: item.variantId,
+			title: variantById.get(item.variantId)?.productTitle ?? 'Изделие удалено из каталога',
+			sku: variantById.get(item.variantId)?.sku ?? `#${item.variantId}`
+		}))
+	);
+	let editing = $state<(typeof rows)[number] | null>(null);
+	let deleting = $state<(typeof rows)[number] | null>(null);
+	let deleteOpen = $state(false);
+	let deleteForm: HTMLFormElement;
+	let saving = $state(false);
 
 	function importedToast(data: Record<string, unknown> | undefined): ToastSpec {
 		const count = typeof data?.['imported'] === 'number' ? data['imported'] : 0;
@@ -84,28 +101,97 @@
 	<Card.Root
 		><Card.Content>
 			<h2 class="mb-4 text-2xl">Позиции прайс-листа</h2>
-			{#if data.list.items.length === 0}<p class="text-fg-muted">Цен пока нет.</p>{/if}
-			<ul class="divide-y divide-border">
-				{#each data.list.items as item (item.variantId)}
-					<li class="flex flex-wrap items-center gap-3 py-3">
-						<span class="flex-1"
-							>{data.variants.find((row) => row.id === item.variantId)?.sku ?? `#${item.variantId}`} ·
-							{formatMinor(item.priceMinor)} ₽</span
-						>
-						<form
-							method="POST"
-							action="?/delete"
-							use:enhance={withToast({ success: 'Цена удалена' })}
-						>
-							<input type="hidden" name="id" value={item.variantId} /><Button
-								type="submit"
-								variant="danger"
-								size="sm">Удалить</Button
+			<DataTable
+				columns={[
+					{ key: 'title', label: 'Изделие' },
+					{ key: 'sku', label: 'Артикул' },
+					{ key: 'price', label: 'Цена, ₽', align: 'end' },
+					{ key: 'actions', label: 'Действия' }
+				]}
+				{rows}
+				total={rows.length}
+				query={{ page: 1, perPage: rows.length || 1 }}
+				onQueryChange={() => {}}
+				emptyTitle="Цен пока нет"
+			>
+				{#snippet cell(row, column)}
+					{#if column.key === 'title'}
+						{row.title}
+					{:else if column.key === 'sku'}
+						{row.sku}
+					{:else if column.key === 'price'}
+						{formatMinor(row.priceMinor)}
+					{:else}
+						<div class="flex flex-wrap gap-2">
+							<Button size="sm" variant="secondary" onclick={() => (editing = row)}>Изменить</Button
 							>
-						</form>
-					</li>
-				{/each}
-			</ul>
+							<Button
+								size="sm"
+								variant="danger"
+								onclick={() => {
+									deleting = row;
+									deleteOpen = true;
+								}}>Удалить</Button
+							>
+						</div>
+					{/if}
+				{/snippet}
+			</DataTable>
 		</Card.Content></Card.Root
 	>
 </div>
+
+<Modal
+	open={editing !== null}
+	title="Изменить цену"
+	description={editing ? `${editing.title} · ${editing.sku}` : undefined}
+	onClose={() => (editing = null)}
+>
+	{#snippet body()}
+		{#if editing}
+			<form
+				method="POST"
+				action="?/upsert"
+				class="flex flex-col gap-4"
+				use:enhance={withToast({
+					pending: (value) => (saving = value),
+					success: 'Цена сохранена',
+					onSuccess: () => (editing = null)
+				})}
+			>
+				<input type="hidden" name="variantId" value={editing.variantId} />
+				<MoneyInput
+					name="priceMinor"
+					label="Цена"
+					placeholder="Введите цену"
+					valueMinor={editing.priceMinor}
+					required
+				/>
+				<div class="flex gap-2">
+					<Button type="submit" loading={saving}>Сохранить цену</Button>
+					<Button variant="secondary" disabled={saving} onclick={() => (editing = null)}
+						>Отмена</Button
+					>
+				</div>
+			</form>
+		{/if}
+	{/snippet}
+</Modal>
+<form
+	bind:this={deleteForm}
+	method="POST"
+	action="?/delete"
+	use:enhance={withToast({ success: 'Цена удалена' })}
+>
+	<input type="hidden" name="id" value={deleting?.variantId ?? ''} />
+</form>
+<ConfirmDialog
+	bind:open={deleteOpen}
+	title="Удалить позицию прайс-листа?"
+	description={deleting
+		? `${deleting.title} · ${deleting.sku}. Для контрагентов будет действовать следующая доступная цена.`
+		: undefined}
+	confirmLabel="Удалить"
+	danger
+	onConfirm={() => deleteForm.requestSubmit()}
+/>

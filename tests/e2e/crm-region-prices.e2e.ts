@@ -49,7 +49,7 @@ async function uploadRegion(page: Page, title: string): Promise<void> {
 	});
 	await page.getByRole('button', { name: 'Загрузить', exact: true }).click();
 	await expect(page.getByTestId('toast').filter({ hasText: 'Прайс загружен' })).toBeVisible();
-	await expect(page.getByText(`${SKU} · 9 500`)).toBeVisible();
+	await expect(priceRow(page)).toContainText(/9\s500/);
 }
 
 test('a regional list uploaded from XLSX prefills the prices of a new counterparty', async ({

@@ -166,7 +166,7 @@ export class StaffRepository extends BaseRepository<typeof users> {
 		const [row] = this.db(tx)
 			.select({ id: users.id })
 			.from(users)
-			.where(eq(users.email, email))
+			.where(and(eq(users.email, email), isNull(users.deletedAt)))
 			.all();
 		return row !== undefined;
 	}

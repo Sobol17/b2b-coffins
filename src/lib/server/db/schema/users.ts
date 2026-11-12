@@ -1,3 +1,4 @@
+import { sql } from 'drizzle-orm';
 import {
 	index,
 	integer,
@@ -32,7 +33,9 @@ export const users = sqliteTable(
 		deletedAt: ts('deleted_at')
 	},
 	(t) => [
-		uniqueIndex('users_email_uq').on(t.email),
+		uniqueIndex('users_email_uq')
+			.on(t.email)
+			.where(sql`${t.deletedAt} is null`),
 		index('users_counterparty_idx').on(t.counterpartyId)
 	]
 );

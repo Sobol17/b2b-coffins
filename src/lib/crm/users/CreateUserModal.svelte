@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
-	import { CRM_ROLE_OPTIONS } from '$lib/crm/labels';
-	import { Button, Checkbox, Input, Modal, withToast } from '$lib/ui';
+	import RolePicker from './RolePicker.svelte';
+	import { Button, Input, Modal, withToast } from '$lib/ui';
 	import { PLACEHOLDER } from '$lib/utils/placeholders';
 
 	type Field = 'fullName' | 'email' | 'phone' | 'roles';
@@ -59,15 +59,7 @@
 				placeholder={PLACEHOLDER.phone}
 				error={errors?.phone?.join(', ')}
 			/>
-			<fieldset class="flex flex-col gap-2">
-				<legend class="mb-2 text-sm font-medium">Роли</legend>
-				{#each CRM_ROLE_OPTIONS as role (role.value)}
-					<Checkbox name="roles" value={role.value} label={role.label} />
-				{/each}
-				{#if errors?.roles}
-					<p class="text-sm text-danger">{errors.roles.join(', ')}</p>
-				{/if}
-			</fieldset>
+			<RolePicker error={errors?.roles?.join(', ')} />
 
 			{#if formError}
 				<p data-testid="create-error" class="text-sm text-danger">{formError}</p>

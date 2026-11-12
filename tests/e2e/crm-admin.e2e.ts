@@ -28,8 +28,11 @@ test.describe('the owner runs the workshop without a developer (C1)', () => {
 		await modal.locator('input[name="fullName"]').fill('Павел Орлов');
 		await modal.locator('input[name="email"]').fill(email);
 		await expect(modal.locator('input[name="email"]')).toHaveValue(email);
-		await modal.getByLabel('Столяр').click();
-		await modal.getByLabel('Маляр').click();
+		await modal.getByRole('button', { name: 'Роли' }).click();
+		await page.getByLabel('Столяр', { exact: true }).click();
+		await page.getByLabel('Маляр', { exact: true }).click();
+		await page.keyboard.press('Escape');
+		await expect(modal.getByRole('button', { name: 'Роли' })).toContainText('Столяр, Маляр');
 		await modal.getByRole('button', { name: 'Создать пользователя' }).click();
 
 		const password = (await page.getByTestId('temporary-password').textContent())?.trim() ?? '';
@@ -56,15 +59,19 @@ test.describe('the owner runs the workshop without a developer (C1)', () => {
 	}) => {
 		const email = `e2e.edit.${Date.now()}@workshop.example`;
 		const nextEmail = email.replace('e2e.edit.', 'e2e.updated.');
+		await page.setViewportSize({ width: 390, height: 844 });
 		await login(page, 'owner');
 		await page.goto('/crm/settings/users');
 		await page.getByRole('button', { name: 'Добавить пользователя' }).click();
 		const modal = page.getByTestId('modal');
 		await modal.getByLabel('Имя и фамилия').fill('Павел Орлов');
 		await modal.getByLabel('Электронная почта').fill(email);
-		await modal.getByLabel('Столяр', { exact: true }).click();
+		await modal.getByRole('button', { name: 'Роли' }).click();
+		await page.getByLabel('Столяр', { exact: true }).click();
+		await page.keyboard.press('Escape');
 		await modal.getByRole('button', { name: 'Создать пользователя' }).click();
 		await expect(modal).toBeHidden();
+		await page.setViewportSize({ width: 1280, height: 900 });
 		await page.getByRole('textbox', { name: 'Поиск' }).fill(email);
 		const row = page.getByTestId('data-table-row').filter({ hasText: email });
 		await row.getByRole('button', { name: 'Изменить', exact: true }).click();
@@ -90,6 +97,11 @@ test.describe('the owner runs the workshop without a developer (C1)', () => {
 		await expect(editedRow).toContainText('+7 (900) 111-22-33');
 		await expect(editedRow.getByTestId('user-roles')).toHaveText('Водитель');
 
+		await editedRow.getByRole('button', { name: 'Сгенерировать пароль' }).click();
+		await expect(page.getByTestId('created-access')).toContainText(`Логин: ${nextEmail}`);
+		await expect(page.getByTestId('created-access')).toContainText('Письмо не отправляется');
+		await expect(page.getByTestId('temporary-password')).not.toBeEmpty();
+
 		await editedRow.getByRole('button', { name: 'Удалить', exact: true }).click();
 		await expect(modal).toContainText('Работы, выплаты и журнал сохранятся');
 		await modal.getByRole('button', { name: 'Отмена' }).click();
@@ -98,6 +110,16 @@ test.describe('the owner runs the workshop without a developer (C1)', () => {
 		await modal.getByRole('button', { name: 'Удалить пользователя', exact: true }).click();
 		await expect(modal).toBeHidden();
 		await expect(editedRow).toHaveCount(0);
+		await page.getByRole('button', { name: 'Добавить пользователя' }).click();
+		await expect(modal.getByLabel('Имя и фамилия')).toBeFocused();
+		await modal.getByLabel('Имя и фамилия').fill('Новый сотрудник');
+		await modal.getByLabel('Электронная почта').fill(nextEmail);
+		await modal.getByRole('button', { name: 'Роли' }).click();
+		await page.getByLabel('Водитель', { exact: true }).click();
+		await page.keyboard.press('Escape');
+		await modal.getByRole('button', { name: 'Создать пользователя' }).click();
+		await expect(modal).toBeHidden();
+		await expect(editedRow).toContainText('Новый сотрудник');
 		await journalEntry(page, 'crm_user.delete', 'Пользователь удалён');
 		const edited = await journalEntry(page, 'crm_user.update', 'Пользователь изменён');
 		await expect(edited.getByTestId('audit-changes')).toContainText('driver');

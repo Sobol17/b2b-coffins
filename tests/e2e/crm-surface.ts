@@ -47,6 +47,7 @@ const SECTIONS: readonly SectionRights[] = [
 	{ prefix: '/crm/board', readers: ADMINS },
 	{ prefix: '/crm/requests', readers: ADMINS },
 	{ prefix: '/crm/catalog', readers: ADMINS },
+	// Item table creation, editing and deletion share the existing guarded actions.
 	{ prefix: '/crm/prices', readers: ADMINS },
 	{ prefix: '/crm/counterparties', readers: ADMINS },
 	{ prefix: '/crm/support', readers: ADMINS },
