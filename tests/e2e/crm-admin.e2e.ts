@@ -64,6 +64,7 @@ test.describe('the owner runs the workshop without a developer (C1)', () => {
 		await page.goto('/crm/settings/users');
 		await page.getByRole('button', { name: 'Добавить пользователя' }).click();
 		const modal = page.getByTestId('modal');
+		await expect(modal.getByLabel('Имя и фамилия')).toBeFocused();
 		await modal.getByLabel('Имя и фамилия').fill('Павел Орлов');
 		await modal.getByLabel('Электронная почта').fill(email);
 		await modal.getByRole('button', { name: 'Роли' }).click();
@@ -75,6 +76,7 @@ test.describe('the owner runs the workshop without a developer (C1)', () => {
 		await page.getByRole('textbox', { name: 'Поиск' }).fill(email);
 		const row = page.getByTestId('data-table-row').filter({ hasText: email });
 		await row.getByRole('button', { name: 'Изменить', exact: true }).click();
+		await page.setViewportSize({ width: 390, height: 540 });
 		await expect(modal).toBeInViewport({ ratio: 1 });
 		await expect(modal.getByLabel('Имя и фамилия')).toHaveValue('Павел Орлов');
 		await modal.getByLabel('Имя и фамилия').fill('Алексей Петров');
@@ -91,6 +93,7 @@ test.describe('the owner runs the workshop without a developer (C1)', () => {
 		await modal.getByLabel('Электронная почта').fill(nextEmail.toUpperCase());
 		await modal.getByRole('button', { name: 'Сохранить изменения' }).click();
 		await expect(modal).toBeHidden();
+		await page.setViewportSize({ width: 1280, height: 900 });
 		await page.getByRole('textbox', { name: 'Поиск' }).fill(nextEmail);
 		const editedRow = page.getByTestId('data-table-row').filter({ hasText: nextEmail });
 		await expect(editedRow).toContainText('Алексей Петров');
@@ -101,7 +104,24 @@ test.describe('the owner runs the workshop without a developer (C1)', () => {
 		await expect(page.getByTestId('created-access')).toContainText(`Логин: ${nextEmail}`);
 		await expect(page.getByTestId('created-access')).toContainText('Письмо не отправляется');
 		await expect(page.getByTestId('temporary-password')).not.toBeEmpty();
+		await expect(modal).toBeVisible();
+		await expect(modal.getByTestId('temporary-password')).toBeInViewport();
+		const resetPassword = (await modal.getByTestId('temporary-password').textContent())!.trim();
+		await page.context().grantPermissions(['clipboard-read', 'clipboard-write']);
+		await modal.getByRole('button', { name: 'Скопировать пароль' }).click();
+		await expect
+			.poll(() => page.evaluate(() => navigator.clipboard.readText()))
+			.toBe(resetPassword);
+		await modal.getByRole('button', { name: 'Готово', exact: true }).click();
+		await editedRow.getByRole('button', { name: 'Изменить', exact: true }).click();
+		await page.setViewportSize({ width: 390, height: 540 });
+		await expect(modal).toBeInViewport({ ratio: 1 });
+		await modal.getByRole('button', { name: 'Сбросить пароль', exact: true }).click();
+		await expect(modal.getByTestId('temporary-password')).toBeVisible();
+		await expect(modal.getByTestId('temporary-password')).not.toHaveText(resetPassword);
+		await modal.getByRole('button', { name: 'Готово', exact: true }).click();
 
+		await page.setViewportSize({ width: 1280, height: 900 });
 		await editedRow.getByRole('button', { name: 'Удалить', exact: true }).click();
 		await expect(modal).toContainText('Работы, выплаты и журнал сохранятся');
 		await modal.getByRole('button', { name: 'Отмена' }).click();
