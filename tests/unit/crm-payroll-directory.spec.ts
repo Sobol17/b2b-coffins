@@ -1,3 +1,4 @@
+import { ShopUnitWorkRepository } from '../../src/lib/server/crm-shop/shop-unit-work.repository';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { eq } from 'drizzle-orm';
 import { ForbiddenError, NotFoundError, ValidationError } from '../../src/lib/server/core/errors';
@@ -269,7 +270,7 @@ describe('prices for a catalog position', () => {
 			roleCode: 'carpenter',
 			variantLabel: expect.stringContaining('Прямой')
 		});
-		expect(work.variantLabel).toContain('180');
+		expect(work.variantLabel).toContain('Сосна');
 		expect(works().list()[0]?.variantId).toBe(variantId);
 	});
 
@@ -372,13 +373,13 @@ describe('prices for a catalog position', () => {
 		});
 	});
 
-	it('offers undeleted variants with SKU, model and size and no price fields', () => {
+	it('offers undeleted model/material positions without size or price fields', () => {
 		const id = variant();
 		const removedId = variant(true);
 		const choices = works().variantChoices();
 		const choice = choices.find((row) => row.id === id)!;
 		expect(Object.keys(choice).sort()).toEqual(['id', 'label']);
-		expect(choice.label).toMatch(/SKU-\d+.*Прямой.*180/);
+		expect(choice.label).toMatch(/MODEL-\d+.*Прямой.*Сосна/);
 		expect(choices.some((row) => row.id === removedId)).toBe(false);
 	});
 });
@@ -435,4 +436,57 @@ describe('staff account links', () => {
 		expect(choice.fullName).toMatch(/^Сотрудник /);
 		expect(choices.some((row) => [portalId, deletedId].includes(row.id))).toBe(false);
 	});
+});
+
+it('shares a model/material rate across sizes, including sizes added later', () => {
+	const first = variant();
+	const source = db.select().from(productVariants).where(eq(productVariants.id, first)).get()!;
+	const second = db
+		.insert(productVariants)
+		.values({ productId: source.productId, materialId, sku: `SECOND-${sequence}`, sizeCode: '190' })
+		.returning()
+		.get()!.id;
+	const rate = works().create({
+		title: 'Общая расценка',
+		rateMinor: 35000,
+		roleCode: 'carpenter',
+		variantId: second
+	});
+	const later = db
+		.insert(productVariants)
+		.values({ productId: source.productId, materialId, sku: `LATER-${sequence}`, sizeCode: '200' })
+		.returning()
+		.get()!.id;
+	db.transaction((tx) =>
+		expect(new ShopUnitWorkRepository().rate(later, 'carpenter', tx)).toEqual({
+			id: rate.id,
+			rateMinor: 35000
+		})
+	);
+	db.update(productVariants)
+		.set({ deletedAt: new Date() })
+		.where(eq(productVariants.id, first))
+		.run();
+	expect(works().update({ ...rate, rateMinor: 42000 }).rateMinor).toBe(42000);
+
+	expect(rate.variantId).toBe(first);
+	db.transaction((tx) =>
+		expect(new ShopUnitWorkRepository().rate(second, 'carpenter', tx)).toEqual({
+			id: rate.id,
+			rateMinor: 42000
+		})
+	);
+	expect(
+		works()
+			.variantChoices()
+			.filter((v) => [first, second].includes(v.id))
+	).toHaveLength(1);
+	expect(() =>
+		works().create({
+			title: 'Дубль размера',
+			rateMinor: 40000,
+			roleCode: 'carpenter',
+			variantId: first
+		})
+	).toThrow(ValidationError);
 });

@@ -1,7 +1,14 @@
 import { and, asc, eq, inArray, isNull, ne } from 'drizzle-orm';
 import { BaseRepository } from '../core/repository';
 import type { Tx } from '../db/client';
-import { dictItems, productOptions, productVariants, products, stockItems } from '../db/schema';
+import {
+	dictItems,
+	productOptions,
+	productVariants,
+	products,
+	stockItems,
+	workTypes
+} from '../db/schema';
 import type { CrmCatalogChoicesDto, CrmVariantDto } from '$lib/types/crm-catalog';
 import type { CompatibilityInput, VariantInput } from '$lib/validation/crm-catalog';
 
@@ -25,6 +32,22 @@ const VARIANT = {
 export class ManagedVariantRepository extends BaseRepository<typeof productVariants> {
 	constructor() {
 		super(productVariants);
+	}
+
+	hasPayrollRates(productId: number, materialIds: number[], tx: Tx): boolean {
+		return (
+			this.db(tx)
+				.select({ id: workTypes.id })
+				.from(workTypes)
+				.innerJoin(productVariants, eq(productVariants.id, workTypes.variantId))
+				.where(
+					and(
+						eq(productVariants.productId, productId),
+						inArray(productVariants.materialId, materialIds)
+					)
+				)
+				.get() !== undefined
+		);
 	}
 
 	choices(): CrmCatalogChoicesDto {

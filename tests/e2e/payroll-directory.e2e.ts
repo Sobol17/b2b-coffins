@@ -16,7 +16,7 @@ import { e2eDb } from './transitions';
 const suffix = Date.now();
 const sku = `E2E-DIRECTORY-${suffix}`;
 const model = `E2E Модель ${suffix}`;
-const variantLabel = `${sku}-180 · ${model} · 180`;
+let variantLabel: string;
 const accountName = `E2E Учётная запись ${suffix}`;
 const workerName = `E2E Сотрудник ${suffix}`;
 const otherName = `E2E Другой ${suffix}`;
@@ -27,6 +27,7 @@ let userId: number;
 test.beforeAll(() => {
 	const db = e2eDb();
 	const material = db.select().from(dictItems).where(eq(dictItems.dict, 'material')).get()!;
+	variantLabel = `${sku} · ${model} · ${material.title}`;
 	productId = db.insert(products).values({ sku, title: model }).returning().get()!.id;
 	variantId = db
 		.insert(productVariants)

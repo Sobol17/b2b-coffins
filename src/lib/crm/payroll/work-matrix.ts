@@ -56,7 +56,7 @@ export function pageWorkMatrix(
 	query: { page: number; perPage: number; search?: string }
 ) {
 	const matrix = buildWorkMatrix(works, variants, query.search);
-	const perPage = [20, 50, 100].includes(query.perPage) ? query.perPage : 20;
+	const perPage = [7, 20, 50].includes(query.perPage) ? query.perPage : 7;
 	const page = Math.min(
 		Math.max(1, Number.isFinite(query.page) ? Math.trunc(query.page) : 1),
 		Math.max(1, Math.ceil(matrix.positions.length / perPage))

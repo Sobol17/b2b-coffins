@@ -47,6 +47,13 @@ export class CrmVariantService extends BaseService {
 			const old = this.requireVariant(id, tx);
 			if (old.isDeleted || old.productId !== input.productId)
 				throw new ConflictError('Вариант нельзя перенести в другую модель');
+			if (
+				old.materialId !== input.materialId &&
+				this.variants.hasPayrollRates(old.productId, [old.materialId, input.materialId], tx)
+			)
+				throw new ConflictError(
+					'Материал связан с общей расценкой работ. Создайте отдельный вариант нужного материала.'
+				);
 			if (!input.isPublished) this.guardLastVariant(old, tx);
 			this.validateVariant(input, id, tx);
 			this.variants.update(id, input, tx);

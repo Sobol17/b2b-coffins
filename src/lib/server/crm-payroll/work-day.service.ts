@@ -55,7 +55,7 @@ export class WorkDayService extends PayrollBaseService {
 					position: row.position,
 					present: staffIds.includes(row.id)
 				})),
-			workTypes: this.works.all().filter((row) => row.isActive || used.has(row.id)),
+			workTypes: this.works.all(undefined, true).filter((row) => row.isActive || used.has(row.id)),
 			entries,
 			presentCount: staffIds.length,
 			totalMinor: day?.totalMinor ?? 0,

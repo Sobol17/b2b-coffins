@@ -40,6 +40,7 @@ const SECTIONS: readonly SectionRights[] = [
 	{ prefix: '/crm/reports', readers: OWNER },
 	{ prefix: '/crm/finance', readers: OWNER },
 	// Salary roles/rates remain under payroll.manage; laborers receive no user account.
+	// Works tabs share these rights: one model/material rate across sizes, or manual extras.
 	{ prefix: '/crm/payroll', readers: ADMINS },
 	{ prefix: '/crm/salary', readers: CRM_ROLES },
 	{ prefix: '/crm/stock', readers: [...ADMINS, ...SHOP], writers: ADMINS },

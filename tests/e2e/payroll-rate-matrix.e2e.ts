@@ -7,6 +7,7 @@ import { e2eDb } from './transitions';
 const mark = `E2E-RATE-MATRIX-${Date.now()}`;
 const model = `${mark} Ёлка`;
 let productId: number;
+let extraProductIds: number[] = [];
 let variantIds: number[] = [];
 let workIds: number[] = [];
 
@@ -14,13 +15,24 @@ test.beforeAll(() => {
 	const db = e2eDb();
 	const material = db.select().from(dictItems).where(eq(dictItems.dict, 'material')).get()!;
 	productId = db.insert(products).values({ sku: mark, title: model }).returning().get()!.id;
+	extraProductIds = db
+		.insert(products)
+		.values(
+			Array.from({ length: 23 }, (_, index) => ({
+				sku: `${mark}-model-${index}`,
+				title: `${mark} Позиция ${index}`
+			}))
+		)
+		.returning({ id: products.id })
+		.all()
+		.map((row) => row.id);
 	variantIds = db
 		.insert(productVariants)
 		.values([
-			{ productId, sku: `${mark}-180`, sizeCode: '180', materialId: material.id },
+			{ productId, sku: `${mark} елка`, sizeCode: '180', materialId: material.id },
 			{ productId, sku: `${mark}-200`, sizeCode: '200', materialId: material.id },
 			...Array.from({ length: 23 }, (_, index) => ({
-				productId,
+				productId: extraProductIds[index]!,
 				sku: `${mark}-extra-${index}`,
 				sizeCode: String(210 + index),
 				materialId: material.id
@@ -57,7 +69,9 @@ test.afterAll(() => {
 	const db = e2eDb();
 	db.delete(workTypes).where(inArray(workTypes.id, workIds)).run();
 	db.delete(productVariants).where(inArray(productVariants.id, variantIds)).run();
-	db.delete(products).where(eq(products.id, productId)).run();
+	db.delete(products)
+		.where(inArray(products.id, [productId, ...extraProductIds]))
+		.run();
 });
 
 test('rates are searchable by position and keep zero, missing and disabled states separate', async ({
@@ -66,9 +80,9 @@ test('rates are searchable by position and keep zero, missing and disabled state
 	await login(page, 'manager');
 	await page.goto('/crm/payroll/works');
 	const search = page.getByRole('searchbox', { name: 'Поиск по работам и позициям' });
-	await search.fill(`${mark}-180`);
+	await search.fill(`${mark} елка`);
 	await page.getByRole('button', { name: 'Найти', exact: true }).click();
-	const row = page.getByTestId('data-table-row').filter({ hasText: `${mark}-180 ·` });
+	const row = page.getByTestId('data-table-row').filter({ hasText: `${mark} ·` });
 	await expect(row).toHaveCount(1);
 	const carpenter = row
 		.getByTestId('work-rate-cell')
@@ -99,17 +113,19 @@ test('rates are searchable by position and keep zero, missing and disabled state
 	await modal.getByRole('button', { name: 'Сохранить', exact: true }).click();
 	await expect(modal).toBeHidden();
 	await expect(carpenter.getByTestId('work-rate')).toHaveText('10 ₽');
-	await search.fill(`${mark} елка 200`);
+	await search.fill(`${mark} елка`);
 	await page.getByRole('button', { name: 'Найти', exact: true }).click();
-	const withoutRates = page.getByTestId('data-table-row').filter({ hasText: `${mark}-200 ·` });
+	const withoutRates = page.getByTestId('data-table-row').filter({ hasText: `${mark} ·` });
 	await expect(withoutRates).toHaveCount(1);
-	await expect(withoutRates.getByTestId('work-rate-missing')).toHaveCount(4);
+	await expect(withoutRates.getByTestId('work-rate-missing')).toHaveCount(2);
+	await page.getByRole('tab', { name: 'Дополнительные работы', exact: true }).click();
 	await search.fill(`${mark} Дополнительная работа`);
 	await page.getByRole('button', { name: 'Найти', exact: true }).click();
 	await expect(page.getByTestId('data-table-row')).toHaveCount(1);
 	await expect(page.getByTestId('directory-name')).toHaveText(`${mark} Дополнительная работа`);
 	await page.setViewportSize({ width: 390, height: 844 });
-	await search.fill(`${mark}-180`);
+	await page.getByRole('tab', { name: 'Расценки позиций', exact: true }).click();
+	await search.fill(`${mark} елка`);
 	await page.getByRole('button', { name: 'Найти', exact: true }).click();
 	await expect(carpenter.getByTestId('work-rate')).toBeVisible();
 	await expect(painter.getByTestId('directory-status')).toBeVisible();
@@ -118,23 +134,23 @@ test('rates are searchable by position and keep zero, missing and disabled state
 	);
 });
 
-test('position pagination keeps search and supports 20, 50 and 100 rows', async ({ page }) => {
+test('position pagination keeps search and supports 7, 20 and 50 rows', async ({ page }) => {
 	await login(page, 'manager');
 	await page.goto(`/crm/payroll/works?search=${mark}`);
 	const matrix = page
 		.getByTestId('data-table-row')
 		.filter({ has: page.getByTestId('work-variant') });
-	await expect(matrix).toHaveCount(20);
+	await expect(matrix).toHaveCount(7);
 	await page.getByRole('button', { name: 'Следующая страница' }).click();
-	await expect(matrix).toHaveCount(5);
+	await expect(matrix).toHaveCount(7);
 	await expect(page).toHaveURL(/page=2/);
-	for (const size of ['50', '100']) {
+	for (const size of ['20', '50']) {
 		await page.getByLabel('Строк на странице', { exact: true }).click();
 		await page.getByRole('option', { name: size, exact: true }).click();
 		await expect(page).toHaveURL(new RegExp(`perPage=${size}`));
-		await expect(matrix).toHaveCount(25);
+		await expect(matrix).toHaveCount(Number(size) === 20 ? 20 : 24);
 	}
-	await page.getByRole('searchbox').fill(`${mark}-180`);
+	await page.getByRole('searchbox').fill(`${mark} елка`);
 	await page.getByRole('button', { name: 'Найти', exact: true }).click();
 	await expect(matrix).toHaveCount(1);
 	await expect(page).not.toHaveURL(/page=2/);

@@ -1,3 +1,4 @@
+import { WorkTypeRepository } from '../crm-payroll/work-type.repository';
 import { and, eq, gte, isNotNull, isNull, lte, sql } from 'drizzle-orm';
 import { BaseRepository } from '../core/repository';
 import type { Tx } from '../db/client';
@@ -34,7 +35,7 @@ export class ShopUnitWorkRepository extends BaseRepository<typeof shopUnitWorks>
 			.from(workTypes)
 			.where(
 				and(
-					eq(workTypes.variantId, variantId),
+					eq(workTypes.variantId, new WorkTypeRepository().canonicalVariantId(variantId, tx)),
 					eq(workTypes.roleCode, station),
 					eq(workTypes.isActive, true)
 				)

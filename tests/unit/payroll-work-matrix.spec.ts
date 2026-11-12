@@ -97,3 +97,10 @@ it('paginates positions after filtering and clamps pages after the result shrink
 		pageWorkMatrix([], variants, { page: 9, perPage: 20, search: 'Позиция 45' })
 	).toMatchObject({ total: 1, page: 1, positions: [{ id: 45 }] });
 });
+
+it('defaults to seven positions and supports only 7, 20 and 50', () => {
+	const rows = Array.from({ length: 60 }, (_, id) => ({ id, label: String(id) }));
+	for (const perPage of [7, 20, 50])
+		expect(pageWorkMatrix([], rows, { page: 1, perPage }).positions).toHaveLength(perPage);
+	expect(pageWorkMatrix([], rows, { page: 1, perPage: 100 }).perPage).toBe(7);
+});

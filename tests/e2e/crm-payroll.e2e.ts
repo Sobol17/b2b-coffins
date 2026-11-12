@@ -41,7 +41,7 @@ async function openModal(page: Page, button: string): Promise<void> {
 }
 
 async function addWork(page: Page, title: string, roubles: number, role?: string): Promise<void> {
-	await page.goto('/crm/payroll/works');
+	await page.goto('/crm/payroll/works?tab=manual');
 	await openModal(page, 'Добавить работу');
 	const modal = page.getByTestId('modal');
 	await expect(modal.getByLabel('Название работы')).toBeFocused();

@@ -3,20 +3,21 @@
 	import { PAYROLL_TABS } from '$lib/crm/sections';
 	import DirectoryTable from '$lib/crm/payroll/DirectoryTable.svelte';
 	import WorkRateMatrix from '$lib/crm/payroll/WorkRateMatrix.svelte';
-	import { goto } from '$app/navigation';
+	import { goto, replaceState } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
 	import { withListQuery } from '$lib/utils/list-url';
 	import type { ListQuery } from '$lib/types/list';
 	import WorkTypeModal from '$lib/crm/payroll/WorkTypeModal.svelte';
 	import { roubles, workRoleTitle } from '$lib/crm/payroll/labels';
-	import { Button, Card, Input, Select } from '$lib/ui';
+	import { Button, Card, Input, Select, Tabs } from '$lib/ui';
 	import type { WorkTypeDto } from '$lib/types/crm-payroll';
 	import type { PageProps } from './$types';
 
 	let { data, form }: PageProps = $props();
 
 	// null: closed; 'new': a new work; a work: the edit of that one.
+	let activeTab = $derived(page.url.searchParams.get('tab') === 'manual' ? 'manual' : 'positions');
 	let editing = $state<WorkTypeDto | 'new' | null>(null);
 	let search = $derived(page.url.searchParams.get('search') ?? '');
 	const matrix = $derived(data.matrix);
@@ -63,10 +64,11 @@
 				name="search"
 				label="Поиск по работам и позициям"
 				type="search"
-				placeholder="Артикул, название или размер"
+				placeholder="Артикул или название"
 				bind:value={search}
 			/>
 		</div>
+		<input type="hidden" name="tab" value={activeTab} />
 		<input type="hidden" name="perPage" value={query.perPage} />
 		<Button type="submit" variant="secondary">Найти</Button>
 	</form>
@@ -81,53 +83,70 @@
 
 	<Card.Root>
 		<Card.Content>
-			<h2 class="mb-2 text-2xl">Расценки позиций</h2>
-			<p class="mb-4 text-sm text-fg-muted">
-				Нажмите на сумму, чтобы изменить расценку. Цена за единицу по каждой роли. «Не задана» —
-				расценки нет, «Выключена» — не применяется. Нулевая расценка показывается как 0 ₽.
-			</p>
-			<div class="mb-3 flex flex-wrap items-end justify-between gap-3">
-				<span class="text-sm text-fg-muted">Найдено позиций: {matrix.total}</span>
-				<Select
-					label="Строк на странице"
-					placeholder="Размер страницы"
-					bind:value={
-						() => String(query.perPage),
-						(value: string) => changeQuery({ page: 1, perPage: Number(value) })
-					}
-					options={[20, 50, 100].map((n) => ({ value: String(n), label: String(n) }))}
-				/>
-			</div>
-			<WorkRateMatrix
-				positions={matrix.positions}
-				total={matrix.total}
-				{query}
-				onQueryChange={changeQuery}
-				canManage={data.canManage}
-				onEdit={edit}
-			/>
-		</Card.Content>
-	</Card.Root>
-
-	<Card.Root>
-		<Card.Content>
-			<h2 class="mb-2 text-2xl">Дополнительные работы</h2>
-			<p class="mb-4 text-sm text-fg-muted">
-				Без привязки к позиции, для ручного ввода в рабочий день.
-			</p>
-			<DirectoryTable
-				rows={matrix.manual}
-				canManage={data.canManage}
-				statusTitle={{ on: 'Используется', off: 'Выключена' }}
-				emptyTitle={search.trim() ? 'Дополнительные работы не найдены' : 'Дополнительных работ нет'}
-				nameOf={(row) => row.title}
-				onEdit={edit}
+			<Tabs.Root
+				value={activeTab}
+				onValueChange={(value) => {
+					const url = new URL(page.url);
+					url.searchParams.set('tab', value);
+					replaceState(resolve(`/crm/payroll/works?${url.searchParams}`), page.state);
+				}}
 			>
-				{#snippet own(row: WorkTypeDto)}
-					<span data-testid="work-role">{workRoleTitle(row)}</span> ·
-					<span class="tabular-nums" data-testid="work-rate">{roubles(row.rateMinor)}</span> за единицу
-				{/snippet}
-			</DirectoryTable>
+				<Tabs.List
+					aria-label="Виды расценок"
+					variant="line"
+					class="mb-4 max-w-full overflow-x-auto"
+				>
+					<Tabs.Trigger value="positions">Расценки позиций</Tabs.Trigger>
+					<Tabs.Trigger value="manual">Дополнительные работы</Tabs.Trigger>
+				</Tabs.List>
+				<Tabs.Content value="positions">
+					<p class="mb-4 text-sm text-fg-muted">
+						Нажмите на сумму, чтобы изменить расценку. Цена едина для всех размеров модели и
+						материала. «Не задана» — расценки нет, «Выключена» — не применяется. Нулевая расценка
+						показывается как 0 ₽.
+					</p>
+					<div class="mb-3 flex flex-wrap items-end justify-between gap-3">
+						<span class="text-sm text-fg-muted">Найдено позиций: {matrix.total}</span>
+						<Select
+							label="Строк на странице"
+							placeholder="Размер страницы"
+							bind:value={
+								() => String(query.perPage),
+								(value: string) => changeQuery({ page: 1, perPage: Number(value) })
+							}
+							options={[7, 20, 50].map((n) => ({ value: String(n), label: String(n) }))}
+						/>
+					</div>
+					<WorkRateMatrix
+						positions={matrix.positions}
+						total={matrix.total}
+						{query}
+						onQueryChange={changeQuery}
+						canManage={data.canManage}
+						onEdit={edit}
+					/>
+				</Tabs.Content>
+				<Tabs.Content value="manual">
+					<p class="mb-4 text-sm text-fg-muted">
+						Без привязки к позиции, для ручного ввода в рабочий день.
+					</p>
+					<DirectoryTable
+						rows={matrix.manual}
+						canManage={data.canManage}
+						statusTitle={{ on: 'Используется', off: 'Выключена' }}
+						emptyTitle={search.trim()
+							? 'Дополнительные работы не найдены'
+							: 'Дополнительных работ нет'}
+						nameOf={(row) => row.title}
+						onEdit={edit}
+					>
+						{#snippet own(row: WorkTypeDto)}
+							<span data-testid="work-role">{workRoleTitle(row)}</span> ·
+							<span class="tabular-nums" data-testid="work-rate">{roubles(row.rateMinor)}</span> за единицу
+						{/snippet}
+					</DirectoryTable>
+				</Tabs.Content>
+			</Tabs.Root>
 		</Card.Content>
 	</Card.Root>
 </div>
