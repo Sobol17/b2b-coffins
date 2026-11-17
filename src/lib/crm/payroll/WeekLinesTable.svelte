@@ -32,6 +32,9 @@
 	const rows = $derived(week.lines.map((line) => ({ id: line.staffId, line })));
 	type Row = (typeof rows)[number];
 	const query = $derived({ page: 1, perPage: Math.max(1, rows.length) });
+	const totalDays = $derived(week.lines.reduce((sum, line) => sum + line.daysWorked, 0));
+	const totalAccrued = $derived(week.lines.reduce((sum, line) => sum + line.accruedMinor, 0));
+	const totalAdjustment = $derived(week.lines.reduce((sum, line) => sum + line.adjustmentMinor, 0));
 </script>
 
 <DataTable
@@ -91,6 +94,21 @@
 					<Button variant="secondary" size="sm" onclick={() => onPay(row.line)}>Выплачено</Button>
 				{/if}
 			</div>
+		{/if}
+	{/snippet}
+	{#snippet footer(column: DataTableColumn)}
+		{#if column.key === 'fullName'}
+			Итого
+		{:else if column.key === 'daysWorked'}
+			<span class="tabular-nums">{totalDays}</span>
+		{:else if column.key === 'accrued'}
+			<span class="tabular-nums" data-testid="week-accrued">{roubles(totalAccrued)}</span>
+		{:else if column.key === 'adjustment'}
+			<span class="tabular-nums" data-testid="week-adjustment"
+				>{signedRoubles(totalAdjustment)}</span
+			>
+		{:else if column.key === 'payout'}
+			<span class="tabular-nums" data-testid="week-total">{roubles(week.totalPayoutMinor)}</span>
 		{/if}
 	{/snippet}
 </DataTable>

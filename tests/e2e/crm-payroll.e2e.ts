@@ -145,6 +145,9 @@ test('C10: the administrator marks a day, closes the week and pays it out', asyn
 	await expect(lineOf(page, anna).getByTestId('line-payout')).toHaveText('425 ₽');
 	await expect(lineOf(page, viktor).getByTestId('line-payout')).toHaveText('0 ₽');
 	await expect(page.getByTestId('week-total')).toHaveText('850 ₽');
+	await expect(page.getByTestId('week-accrued')).toHaveText('850 ₽');
+	await expect(page.getByTestId('week-adjustment')).toHaveText('0 ₽');
+	await expect(page.locator('tfoot').filter({ hasText: 'Итого' })).toContainText('850 ₽');
 
 	await expect(async () => {
 		await lineOf(page, crew[0] ?? '')
@@ -157,6 +160,9 @@ test('C10: the administrator marks a day, closes the week and pays it out', asyn
 	await page.getByTestId('modal').getByRole('button', { name: 'Сохранить' }).click();
 	await expect(page.getByTestId('modal')).toHaveCount(0);
 	await expect(lineOf(page, crew[0] ?? '').getByTestId('line-payout')).toHaveText('525 ₽');
+	await expect(page.getByTestId('week-accrued')).toHaveText('850 ₽');
+	await expect(page.getByTestId('week-adjustment')).toHaveText('+100 ₽');
+	await expect(page.getByTestId('week-total')).toHaveText('950 ₽');
 
 	await openModal(page, 'Закрыть неделю');
 	await page.getByTestId('modal').getByRole('button', { name: 'Закрыть неделю' }).click();
@@ -200,6 +206,14 @@ test('C10: the administrator marks a day, closes the week and pays it out', asyn
 	await page.goto('/crm/payroll/reports');
 	await expect(page.getByRole('row', { name: new RegExp(work) })).toContainText('850 ₽');
 	await expect(page.getByTestId('report-accrued')).toHaveText('850 ₽');
+	await expect(page.getByTestId('report-works')).toHaveText('850 ₽');
+	await expect(page.getByTestId('report-qty')).toHaveText('1');
+	await expect(page.locator('tfoot')).toHaveCount(2);
+	await page.setViewportSize({ width: 390, height: 844 });
+	await expect(page.getByTestId('report-qty')).toBeVisible();
+	expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(
+		true
+	);
 });
 
 test('C10: the driver and the portal get 403 on the payroll', async ({ page }) => {

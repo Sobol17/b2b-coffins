@@ -42,7 +42,9 @@ const SECTIONS: readonly SectionRights[] = [
 	// Salary roles/rates remain under payroll.manage; laborers receive no user account.
 	// Works tabs share these rights: one model/material rate across sizes, or manual extras.
 	{ prefix: '/crm/payroll', readers: ADMINS },
+	// Legacy bookmarks redirect home; the personal salary screen has been removed.
 	{ prefix: '/crm/salary', readers: CRM_ROLES },
+	// Registry edit/delete controls and card archive share stock.manage; archives keep readable history.
 	{ prefix: '/crm/stock', readers: [...ADMINS, ...SHOP], writers: ADMINS },
 	// Delivery writes and request-card delivery confirmations require the actual driver.
 	{ prefix: '/crm/delivery', readers: [...ADMINS, 'driver'] },
@@ -73,6 +75,7 @@ export const writersOf = (path: string): readonly RoleKey[] =>
 
 export interface Screen {
 	readonly path: string;
+	readonly redirectTo?: string;
 	/** False when the database holds no object for the route parameter: its owner then gets 404. */
 	readonly exists: boolean;
 	/** Who may open this very object, when it is narrower than its section. */
@@ -121,6 +124,8 @@ function parameters(db: Db): Readonly<Record<string, number | null>> {
 		'/crm/counterparties/[id]': lastId(db, counterparties, counterparties.id),
 		'/crm/catalog/[id]': lastId(db, products, products.id, isNull(products.deletedAt)),
 		'/crm/prices/[id]': lastId(db, priceLists, priceLists.id),
+		'/crm/prices/[id]/export.xlsx': lastId(db, priceLists, priceLists.id),
+		'/crm/counterparties/[id]/prices.xlsx': lastId(db, counterparties, counterparties.id),
 		'/crm/support/[id]': lastId(db, supportThreads, supportThreads.id),
 		'/crm/shop/[id]': lastId(
 			db,
@@ -150,6 +155,7 @@ const QUERIES: Readonly<Record<string, string>> = {
 };
 
 function concrete(template: string, ids: Readonly<Record<string, number | null>>): Screen {
+	if (template === '/crm/salary') return { path: template, exists: true, redirectTo: '/crm' };
 	if (template.includes('[date]')) {
 		return { path: template.replace('[date]', PAST_DAY), exists: true };
 	}

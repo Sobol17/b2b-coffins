@@ -27,7 +27,8 @@
 		onQueryChange,
 		exportUrl,
 		emptyTitle = 'Ничего не найдено',
-		cell
+		cell,
+		footer
 	}: {
 		columns: readonly DataTableColumn[];
 		rows: readonly TRow[];
@@ -37,6 +38,7 @@
 		exportUrl?: string | undefined;
 		emptyTitle?: string;
 		cell: Snippet<[TRow, DataTableColumn]>;
+		footer?: Snippet<[DataTableColumn]> | undefined;
 	} = $props();
 
 	function toggleSort(column: DataTableColumn): void {
@@ -137,6 +139,29 @@
 					</Table.Row>
 				{/each}
 			</Table.Body>
+			{#if footer}
+				<Table.Footer class="bg-surface-muted max-sm:block">
+					<Table.Row
+						class="border-0 hover:bg-transparent max-sm:flex max-sm:flex-col max-sm:gap-1 max-sm:py-3"
+					>
+						{#each columns as column (column.key)}
+							<Table.Cell
+								data-label={column.label}
+								class={[
+									'border-t border-border px-2.5 py-4 first:pl-2 last:pr-2',
+									column.align === 'end' && 'text-right',
+									'max-sm:flex max-sm:items-center max-sm:justify-between max-sm:gap-4 max-sm:border-0 max-sm:px-1 max-sm:py-0.5 max-sm:text-right max-sm:whitespace-normal max-sm:before:shrink-0 max-sm:before:text-left max-sm:before:text-xs max-sm:before:font-normal max-sm:before:text-fg-faint max-sm:before:content-[attr(data-label)] max-sm:has-[>div:empty]:hidden',
+									'max-sm:first:block max-sm:first:pb-1 max-sm:first:text-left max-sm:first:text-base max-sm:first:before:hidden'
+								]}
+							>
+								<div class="contents max-sm:block max-sm:min-w-0 max-sm:break-words">
+									{@render footer(column)}
+								</div>
+							</Table.Cell>
+						{/each}
+					</Table.Row>
+				</Table.Footer>
+			{/if}
 		</Table.Root>
 	</div>
 

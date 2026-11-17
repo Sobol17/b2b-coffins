@@ -7,12 +7,14 @@
 		rows,
 		columns,
 		emptyTitle,
-		cell
+		cell,
+		footer
 	}: {
 		rows: readonly TRow[];
 		columns: readonly DataTableColumn[];
 		emptyTitle: string;
 		cell: Snippet<[TRow, DataTableColumn]>;
+		footer?: Snippet<[DataTableColumn]> | undefined;
 	} = $props();
 
 	const query = $derived({ page: 1, perPage: Math.max(1, rows.length) });
@@ -26,4 +28,5 @@
 	onQueryChange={() => undefined}
 	{emptyTitle}
 	{cell}
+	{footer}
 />

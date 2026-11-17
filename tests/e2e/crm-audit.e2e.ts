@@ -33,14 +33,6 @@ const PRICE_BLIND: readonly RoleKey[] = [
 const DRIVER_MONEY: Readonly<Record<string, readonly string[]>> = {
 	'/crm/delivery': ['totalMinor']
 };
-/** Own earnings are allowed only on the personal payroll screen, never product prices. */
-const OWN_PAYROLL_MONEY = [
-	'pendingMinor',
-	'accruedMinor',
-	'adjustmentMinor',
-	'payoutMinor',
-	'shareMinor'
-];
 
 let screens: Screen[] = [];
 
@@ -74,8 +66,15 @@ for (const role of ROLES) {
 
 		for (const screen of screens) {
 			const allowed = screenReaders(screen).includes(role);
-			const expected = !allowed ? 403 : screen.exists ? 200 : 404;
+			const expected = !allowed ? 403 : screen.redirectTo ? 303 : screen.exists ? 200 : 404;
 			expect(await statusOf(page, screen.path), screen.path).toBe(expected);
+			if (allowed && screen.redirectTo) {
+				const response = await page.request.get(screen.path, { maxRedirects: 0 });
+				expect(
+					new URL(response.headers()['location']!, new URL(screen.path, page.url())).pathname,
+					screen.path
+				).toBe(screen.redirectTo);
+			}
 		}
 	});
 }
@@ -99,12 +98,7 @@ for (const role of PRICE_BLIND) {
 		for (const { path } of readable) {
 			const response = await page.request.get(`${path}/__data.json`);
 			expect(response.status(), path).toBe(200);
-			const allowed =
-				path === '/crm/salary'
-					? OWN_PAYROLL_MONEY
-					: role === 'driver'
-						? (DRIVER_MONEY[path] ?? [])
-						: [];
+			const allowed = role === 'driver' ? (DRIVER_MONEY[path] ?? []) : [];
 			const leaked = purchaseMoneyKeys(await response.text()).filter(
 				(key) => !allowed.includes(key)
 			);
