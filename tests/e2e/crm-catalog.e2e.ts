@@ -1,4 +1,4 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Locator, type Page } from '@playwright/test';
 import { login, logout } from './fixtures';
 
 // The server render shows the button before hydration wires it, so the click is retried.
@@ -7,6 +7,13 @@ async function openModal(page: Page, button: string): Promise<void> {
 		await page.getByRole('button', { name: button }).click();
 		await expect(page.getByTestId('modal')).toBeVisible({ timeout: 1000 });
 	}).toPass();
+}
+
+/** Bits closes tooltips on scroll, so finish scrolling before moving the pointer. */
+async function hoverTooltip(page: Page, trigger: Locator, text: string): Promise<void> {
+	await trigger.scrollIntoViewIfNeeded();
+	await trigger.hover();
+	await expect(page.getByRole('tooltip')).toHaveText(text);
 }
 
 test('C2 fills and publishes a model through CRM; the portal never receives cost', async ({
@@ -80,12 +87,56 @@ test('C2 fills and publishes a model through CRM; the portal never receives cost
 	await listForm.getByRole('button', { name: 'Добавить', exact: true }).click();
 	const listRow = page.getByRole('listitem').filter({ hasText: listTitle });
 	await expect(listRow).toBeVisible();
-	await listRow.getByRole('link', { name: 'Позиции' }).click();
+	const listLink = listRow.getByRole('link', {
+		name: `Позиции прайс-листа ${listTitle}`,
+		exact: true
+	});
+	await expect(listLink).toHaveAttribute('href', /\/crm\/prices\/\d+$/);
+	await expect(listRow.getByRole('button', { name: 'Изменить', exact: true })).toHaveText('');
+	await hoverTooltip(
+		page,
+		listRow.getByRole('button', { name: 'Изменить', exact: true }),
+		'Изменить прайс-лист'
+	);
+	await listRow.getByRole('button', { name: 'Изменить', exact: true }).click();
+	await expect(page).toHaveURL(/\/crm\/prices$/);
+	await expect(page.getByTestId('modal')).toContainText('Изменить прайс-лист');
+	await page.getByTestId('modal').getByRole('button', { name: 'Отмена', exact: true }).click();
+	await expect(listRow.getByRole('button', { name: 'Удалить', exact: true })).toHaveText('');
+	await listRow.getByRole('button', { name: 'Удалить', exact: true }).click();
+	await expect(page.getByTestId('confirm-dialog')).toContainText(listTitle);
+	await expect(page).toHaveURL(/\/crm\/prices$/);
+	await page.getByTestId('confirm-dialog').getByRole('button', { name: 'Отмена' }).click();
+	// The title remains a native keyboard link; its stretched area also covers the row's gutter.
+	await listLink.focus();
+	await expect(listLink).toBeFocused();
+	await listRow.click({ position: { x: 4, y: 4 } });
 	await expect(page).toHaveURL(/\/crm\/prices\/\d+$/);
 	await page.getByRole('button', { name: 'Добавить', exact: true }).click();
 	const itemForm = page.getByTestId('modal').locator('form[action="?/upsert"]');
-	await itemForm.locator('[data-slot="select-trigger"]').click();
+	await expect(itemForm.getByRole('button', { name: 'Добавить', exact: true })).toBeDisabled();
+	await itemForm.getByRole('combobox', { name: 'Изделие', exact: true }).click();
+	await expect(page.getByPlaceholder('Поиск по списку')).toBeFocused();
+	const modelOptions = page.locator('[data-slot="command-list"]');
+	await expect(modelOptions).toBeVisible();
+	expect(
+		await modelOptions.evaluate((list) => ({
+			overflow: getComputedStyle(list).overflowY,
+			bounded: list.scrollHeight > list.clientHeight
+		}))
+	).toEqual({ overflow: 'auto', bounded: true });
+	await modelOptions.evaluate((list) => {
+		list.scrollTop = list.scrollHeight;
+	});
+	expect(await modelOptions.evaluate((list) => list.scrollTop)).toBeGreaterThan(0);
+	await page.getByPlaceholder('Поиск по списку', { exact: true }).fill(sku);
 	await page.getByRole('option', { name: `${title} · ${sku}`, exact: true }).click();
+	await expect(itemForm.locator('input[name="productId"]')).not.toHaveValue('');
+	await expect(itemForm.getByRole('button', { name: 'Добавить', exact: true })).toBeEnabled();
+	await expect(itemForm.getByRole('button', { name: 'Добавить', exact: true })).toHaveCSS(
+		'cursor',
+		'pointer'
+	);
 	await itemForm.getByLabel('Цена').fill('1100');
 	await itemForm.getByRole('button', { name: 'Добавить', exact: true }).click();
 	await expect(page.getByTestId('modal')).toBeHidden();
@@ -93,8 +144,7 @@ test('C2 fills and publishes a model through CRM; the portal never receives cost
 	await expect(priceRow).toContainText(title);
 	await expect(priceRow).toContainText(/1\s100/);
 	await expect(priceRow.getByRole('button', { name: 'Изменить' })).toHaveText('');
-	await priceRow.getByRole('button', { name: 'Изменить' }).hover();
-	await expect(page.getByRole('tooltip')).toContainText('Изменить цену');
+	await hoverTooltip(page, priceRow.getByRole('button', { name: 'Изменить' }), 'Изменить цену');
 	await priceRow.getByRole('button', { name: 'Изменить' }).click();
 	const editPrice = page.getByTestId('modal');
 	await expect(editPrice.getByLabel('Цена')).toHaveValue(/1\s100/);

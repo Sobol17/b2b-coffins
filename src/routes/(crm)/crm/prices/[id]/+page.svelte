@@ -11,7 +11,7 @@
 		Modal,
 		ConfirmDialog,
 		MoneyInput,
-		Select,
+		Combobox,
 		buttonVariants,
 		withToast
 	} from '$lib/ui';
@@ -28,6 +28,7 @@
 	);
 	let createOpen = $state(false);
 	let creating = $state(false);
+	let selectedProductId = $state('');
 	const pricedProductIds = $derived(new Set(data.list.items.map((item) => String(item.productId))));
 	const availableModels = $derived(models.filter((model) => !pricedProductIds.has(model.value)));
 	const modelById = $derived(new Map(data.models.map((row) => [row.id, row])));
@@ -68,7 +69,10 @@
 				<Button
 					class="ml-auto"
 					disabled={availableModels.length === 0}
-					onclick={() => (createOpen = true)}><Plus aria-hidden="true" />Добавить</Button
+					onclick={() => {
+						selectedProductId = '';
+						createOpen = true;
+					}}><Plus aria-hidden="true" />Добавить</Button
 				>
 			</div>
 			<Tooltip.Provider>
@@ -200,18 +204,19 @@
 		<form
 			method="POST"
 			action="?/upsert"
-			class="flex flex-col gap-4"
+			class="flex flex-col gap-6"
 			use:enhance={withToast({
 				pending: (value) => (creating = value),
 				success: 'Цена сохранена',
 				onSuccess: () => (createOpen = false)
 			})}
 		>
-			<Select
+			<Combobox
 				name="productId"
 				label="Изделие"
 				placeholder="Выберите изделие"
 				options={availableModels}
+				bind:value={selectedProductId}
 				required
 			/>
 			<MoneyInput
@@ -225,7 +230,7 @@
 				<Button variant="secondary" disabled={creating} onclick={() => (createOpen = false)}
 					>Отмена</Button
 				>
-				<Button type="submit" loading={creating}>Добавить</Button>
+				<Button type="submit" loading={creating} disabled={!selectedProductId}>Добавить</Button>
 			</div>
 		</form>
 	{/snippet}

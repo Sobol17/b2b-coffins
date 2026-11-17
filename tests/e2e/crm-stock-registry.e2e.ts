@@ -24,13 +24,57 @@ test('stock registry groups model sizes and opens the actual accounting card', a
 	await page.goto(`/crm/stock?search=${encodeURIComponent(variant.sku)}`);
 	const row = page.getByTestId('data-table-row');
 	await expect(row).toHaveCount(1);
-	await row.locator('summary').click();
+	const toggle = row.getByRole('button', { name: product.title });
+	await expect(toggle).toHaveAttribute('aria-expanded', 'false');
+	await toggle.focus();
+	await toggle.press('Enter');
+	await expect(toggle).toHaveAttribute('aria-expanded', 'true');
 	for (const member of variants) {
 		await expect(row.locator(`a[href="/crm/stock/${member.stockItemId}"]`)).toBeVisible();
 	}
+	await expect(row.getByRole('button', { name: 'Изменить', exact: true })).toHaveCount(
+		variants.length
+	);
+	await toggle.press('Space');
+	await expect(toggle).toHaveAttribute('aria-expanded', 'false');
+	for (const member of variants) {
+		await expect(row.locator(`a[href="/crm/stock/${member.stockItemId}"]`)).not.toBeVisible();
+	}
+	await toggle.click();
+	await expect(toggle).toHaveAttribute('aria-expanded', 'true');
 	await row.locator(`a[href="/crm/stock/${variant.stockItemId}"]`).click();
 	await expect(page).toHaveURL(`/crm/stock/${variant.stockItemId}`);
 	await expect(page.getByRole('button', { name: 'Сохранить позицию' })).toBeVisible();
+});
+
+test('stock model disclosure respects reduced motion while keeping pointer controls usable', async ({
+	page
+}) => {
+	await page.emulateMedia({ reducedMotion: 'reduce' });
+	await login(page, 'manager');
+	await page.goto('/crm/stock?search=MDL-201-180-PIN');
+	const row = page.getByTestId('data-table-row');
+	const toggle = row.getByRole('button', { name: 'Модель «Волга»' });
+	await expect(toggle).toHaveAttribute('aria-expanded', 'false');
+	await toggle.click();
+	await expect(toggle).toHaveAttribute('aria-expanded', 'true');
+	const panelId = await toggle.getAttribute('aria-controls');
+	expect(panelId).toBeTruthy();
+	const panel = page.locator(`[id="${panelId}"]`);
+	await expect(panel.getByRole('link').first()).toBeVisible();
+	for (const locator of [toggle, panel]) {
+		expect(
+			await locator.evaluate(
+				(node) =>
+					node
+						.getAnimations({ subtree: true })
+						.filter((animation) => animation.playState === 'running').length
+			)
+		).toBe(0);
+	}
+	await toggle.click();
+	await expect(toggle).toHaveAttribute('aria-expanded', 'false');
+	await expect(panel.getByRole('link')).toHaveCount(0);
 });
 
 test('registry edits and archives a position while preserving its history card', async ({

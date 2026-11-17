@@ -22,8 +22,8 @@ export async function enterRequest(
 	await page.getByLabel('Время доставки').fill('10:00');
 	await page.getByLabel('ФИО умершего').fill(deceased);
 
-	await page.getByRole('button', { name: 'Позиция', exact: true }).click();
-	await page.getByPlaceholder('Введите название').fill('Волга');
+	await page.getByRole('combobox', { name: 'Позиция', exact: true }).click();
+	await page.getByPlaceholder('Поиск по списку').fill('Волга');
 	await page.getByRole('option').first().click();
 	// A colourless line would draw on the colourless opening stock of the seed (tech.md v1.41).
 	await page.getByTestId('request-lines').locator('[data-slot="select-trigger"]').first().click();

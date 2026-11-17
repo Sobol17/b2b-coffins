@@ -69,7 +69,7 @@ test('the command palette arrives only when the combobox is opened, and still pi
 	const beforeOpen = await Promise.all(bodies.values());
 	expect(beforeOpen.some((body) => body.includes(COMMAND_MARKER))).toBe(false);
 
-	const trigger = page.locator('[data-primitive="Combobox"]').getByRole('button');
+	const trigger = page.locator('[data-primitive="Combobox"]').getByRole('combobox');
 	await trigger.click();
 	await page.getByRole('option', { name: 'Дуб' }).click();
 
