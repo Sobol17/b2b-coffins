@@ -47,7 +47,7 @@
 			<span data-testid="user-roles">{row.roles.map((role) => ROLE_TITLE[role]).join(', ')}</span>
 		</div>
 		<div class="text-xs text-fg-faint">
-			{row.email}{row.phone ? `, ${row.phone}` : ''}
+			{row.email ?? '—'}{row.phone ? `, ${row.phone}` : ''}
 		</div>
 		<div class="text-xs text-fg-faint">
 			{row.lastLoginAt

@@ -1,3 +1,5 @@
+import { createCrmUserSchema } from '../../src/lib/validation/crm-user';
+import { phoneSchema } from '../../src/lib/validation/contact';
 import { describe, expect, it } from 'vitest';
 import { changePasswordSchema, loginSchema, passwordSchema } from '../../src/lib/validation/auth';
 
@@ -33,12 +35,43 @@ describe('auth validation contract', () => {
 	});
 
 	it('accepts a login form without an optional redirect', () => {
-		const result = loginSchema.safeParse({ email: 'a@b.example', password: 'x' });
+		const result = loginSchema.safeParse({ identifier: ' A@B.example ', password: 'x' });
 
 		expect(result.success).toBe(true);
 	});
 
 	it('rejects a login form with a malformed address', () => {
-		expect(loginSchema.safeParse({ email: 'not-an-email', password: 'x' }).success).toBe(false);
+		expect(loginSchema.safeParse({ identifier: 'not-an-email', password: 'x' }).success).toBe(
+			false
+		);
+	});
+});
+
+describe('phone account contract', () => {
+	it('accepts a formatted phone as login and canonicalizes it', () => {
+		expect(loginSchema.parse({ identifier: '8 (900) 123-45-67', password: 'x' }).identifier).toBe(
+			'+79001234567'
+		);
+	});
+	it('accepts an email-free account with a required normalized phone', () => {
+		expect(
+			createCrmUserSchema.parse({
+				fullName: 'Иван Иванов',
+				phone: '8 (900) 123-45-67',
+				email: '',
+				roles: ['driver']
+			})
+		).toMatchObject({ phone: '+79001234567', email: null });
+	});
+	it('rejects a missing account phone while retaining optional contact phones', () => {
+		expect(
+			createCrmUserSchema.safeParse({
+				fullName: 'Иван Иванов',
+				phone: '',
+				email: 'a@b.example',
+				roles: ['driver']
+			}).success
+		).toBe(false);
+		expect(phoneSchema.parse('')).toBeNull();
 	});
 });

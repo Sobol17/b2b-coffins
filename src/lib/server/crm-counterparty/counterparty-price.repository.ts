@@ -3,33 +3,24 @@ import { countExpression, offsetFor } from '../core/list';
 import { BaseRepository } from '../core/repository';
 import { containsText } from '../core/search';
 import type { Tx } from '../db/client';
-import {
-	categories,
-	counterparties,
-	priceListItems,
-	priceLists,
-	productVariants,
-	products
-} from '../db/schema';
+import { categories, counterparties, priceListItems, priceLists, products } from '../db/schema';
 import type { CounterpartyPriceFilters } from '$lib/types/crm-counterparty';
 import type { ListQuery } from '$lib/types/list';
 
 export interface PriceVariantRow {
-	readonly variantId: number;
+	readonly productId: number;
 	readonly productTitle: string;
 	readonly categoryTitle: string | null;
 	readonly sku: string;
-	readonly sizeCode: string;
 	readonly basePriceMinor: number;
 }
 
 const VARIANT_COLUMNS = {
-	variantId: productVariants.id,
+	productId: products.id,
 	productTitle: products.title,
 	categoryTitle: categories.title,
-	sku: productVariants.sku,
-	sizeCode: productVariants.sizeCode,
-	basePriceMinor: productVariants.basePriceMinor
+	sku: products.sku,
+	basePriceMinor: products.basePriceMinor
 };
 
 /**
@@ -46,21 +37,19 @@ export class CounterpartyPriceRepository extends BaseRepository<typeof priceList
 		const where = this.variantWhere(query.filters);
 		const [counted] = this.db()
 			.select({ total: countExpression })
-			.from(productVariants)
-			.innerJoin(products, eq(products.id, productVariants.productId))
+			.from(products)
 			.where(where)
 			.all();
 		const rows = this.db()
 			.select(VARIANT_COLUMNS)
-			.from(productVariants)
-			.innerJoin(products, eq(products.id, productVariants.productId))
+			.from(products)
 			.leftJoin(categories, eq(categories.id, products.categoryId))
 			.where(where)
 			.orderBy(
 				asc(categories.sortOrder),
 				asc(products.sortOrder),
 				asc(products.title),
-				asc(productVariants.sku)
+				asc(products.sku)
 			)
 			.limit(query.perPage)
 			.offset(offsetFor(query))
@@ -78,55 +67,53 @@ export class CounterpartyPriceRepository extends BaseRepository<typeof priceList
 			})
 			.from(categories)
 			.innerJoin(products, eq(products.categoryId, categories.id))
-			.innerJoin(productVariants, eq(productVariants.productId, products.id))
-			.where(and(isNull(products.deletedAt), isNull(productVariants.deletedAt)))
+			.where(isNull(products.deletedAt))
 			.orderBy(asc(categories.sortOrder), asc(categories.title))
 			.all()
 			.map(({ id, title }) => ({ id, title }));
 	}
 
 	/** The subset of `ids` that are live variants: a crafted form must not price a removed one. */
-	liveVariantIds(ids: readonly number[], tx?: Tx): Set<number> {
+	liveProductIds(ids: readonly number[], tx?: Tx): Set<number> {
 		if (ids.length === 0) return new Set();
 		const rows = this.db(tx)
-			.select({ id: productVariants.id })
-			.from(productVariants)
-			.innerJoin(products, eq(products.id, productVariants.productId))
-			.where(
-				and(
-					inArray(productVariants.id, [...ids]),
-					isNull(productVariants.deletedAt),
-					isNull(products.deletedAt)
-				)
-			)
+			.select({ id: products.id })
+			.from(products)
+			.where(and(inArray(products.id, [...ids]), isNull(products.deletedAt)))
 			.all();
 		return new Set(rows.map((row) => row.id));
 	}
 
-	/** Counterparties assigned to the list, removed ones included: their prices must not move. */
+	/** Assignments in either tier, removed counterparties included: their prices must not move. */
 	holders(priceListId: number, tx?: Tx): number {
 		const [row] = this.db(tx)
 			.select({ total: countExpression })
 			.from(counterparties)
 			.where(eq(counterparties.priceListId, priceListId))
 			.all();
-		return row?.total ?? 0;
+		const [regional] = this.db(tx)
+			.select({ total: countExpression })
+			.from(counterparties)
+			.where(eq(counterparties.regionPriceListId, priceListId))
+			.all();
+		// A regional reference blocks reuse even when the same counterparty holds both tiers.
+		return (row?.total ?? 0) + (regional?.total ?? 0);
 	}
 
 	/** Entries of a list, or of the given variants only. */
-	items(priceListId: number, variantIds?: readonly number[], tx?: Tx): Map<number, number> {
-		if (variantIds !== undefined && variantIds.length === 0) return new Map();
+	items(priceListId: number, productIds?: readonly number[], tx?: Tx): Map<number, number> {
+		if (productIds !== undefined && productIds.length === 0) return new Map();
 		const scope = eq(priceListItems.priceListId, priceListId);
 		const rows = this.db(tx)
-			.select({ variantId: priceListItems.variantId, priceMinor: priceListItems.priceMinor })
+			.select({ productId: priceListItems.productId, priceMinor: priceListItems.priceMinor })
 			.from(priceListItems)
 			.where(
-				variantIds === undefined
+				productIds === undefined
 					? scope
-					: and(scope, inArray(priceListItems.variantId, [...variantIds]))
+					: and(scope, inArray(priceListItems.productId, [...productIds]))
 			)
 			.all();
-		return new Map(rows.map((row) => [row.variantId, row.priceMinor]));
+		return new Map(rows.map((row) => [row.productId, row.priceMinor]));
 	}
 
 	/** A new personal list with the entries of `copyFromId`, assigned to the counterparty. */
@@ -139,10 +126,10 @@ export class CounterpartyPriceRepository extends BaseRepository<typeof priceList
 		if (!list) throw new Error('failed to insert price list');
 		const copied =
 			copyFromId === null ? new Map<number, number>() : this.items(copyFromId, undefined, tx);
-		for (const [variantId, priceMinor] of copied) {
+		for (const [productId, priceMinor] of copied) {
 			this.db(tx)
 				.insert(priceListItems)
-				.values({ priceListId: list.id, variantId, priceMinor })
+				.values({ priceListId: list.id, productId, priceMinor })
 				.run();
 		}
 		this.db(tx)
@@ -157,10 +144,10 @@ export class CounterpartyPriceRepository extends BaseRepository<typeof priceList
 	replace(listId: number, fromId: number, tx: Tx): number {
 		this.db(tx).delete(priceListItems).where(eq(priceListItems.priceListId, listId)).run();
 		const copied = this.items(fromId, undefined, tx);
-		for (const [variantId, priceMinor] of copied) {
+		for (const [productId, priceMinor] of copied) {
 			this.db(tx)
 				.insert(priceListItems)
-				.values({ priceListId: listId, variantId, priceMinor })
+				.values({ priceListId: listId, productId, priceMinor })
 				.run();
 		}
 		return copied.size;
@@ -168,29 +155,29 @@ export class CounterpartyPriceRepository extends BaseRepository<typeof priceList
 
 	upsert(
 		priceListId: number,
-		rows: readonly { variantId: number; priceMinor: number }[],
+		rows: readonly { productId: number; priceMinor: number }[],
 		tx: Tx
 	): void {
 		for (const row of rows) {
 			this.db(tx)
 				.insert(priceListItems)
-				.values({ priceListId, variantId: row.variantId, priceMinor: row.priceMinor })
+				.values({ priceListId, productId: row.productId, priceMinor: row.priceMinor })
 				.onConflictDoUpdate({
-					target: [priceListItems.priceListId, priceListItems.variantId],
+					target: [priceListItems.priceListId, priceListItems.productId],
 					set: { priceMinor: row.priceMinor }
 				})
 				.run();
 		}
 	}
 
-	clear(priceListId: number, variantIds: readonly number[], tx: Tx): void {
-		if (variantIds.length === 0) return;
+	clear(priceListId: number, productIds: readonly number[], tx: Tx): void {
+		if (productIds.length === 0) return;
 		this.db(tx)
 			.delete(priceListItems)
 			.where(
 				and(
 					eq(priceListItems.priceListId, priceListId),
-					inArray(priceListItems.variantId, [...variantIds])
+					inArray(priceListItems.productId, [...productIds])
 				)
 			)
 			.run();
@@ -199,12 +186,11 @@ export class CounterpartyPriceRepository extends BaseRepository<typeof priceList
 	private variantWhere(filters: CounterpartyPriceFilters | undefined): SQL | undefined {
 		const search = filters?.search;
 		return and(
-			isNull(productVariants.deletedAt),
 			isNull(products.deletedAt),
 			filters?.categoryId === undefined ? undefined : eq(products.categoryId, filters.categoryId),
 			search === undefined
 				? undefined
-				: or(containsText(products.title, search), containsText(productVariants.sku, search))
+				: or(containsText(products.title, search), containsText(products.sku, search))
 		);
 	}
 }

@@ -43,10 +43,13 @@ beforeEach(() => {
 });
 
 describe('profile form contract', () => {
-	it('trims the name and turns an empty phone into null', () => {
-		const parsed = updateProfileSchema.parse({ fullName: '  Ольга Гущина ', phone: '' });
+	it('trims the name and canonicalizes the required phone', () => {
+		const parsed = updateProfileSchema.parse({
+			fullName: '  Ольга Гущина ',
+			phone: '8 (900) 123-45-67'
+		});
 
-		expect(parsed).toEqual({ fullName: 'Ольга Гущина', phone: null });
+		expect(parsed).toEqual({ fullName: 'Ольга Гущина', phone: '+79001234567' });
 	});
 
 	it('drops an e-mail smuggled into the form', () => {
@@ -77,11 +80,14 @@ describe('ProfileService', () => {
 	});
 
 	it('saves the contact and journals changed field names, not the values', () => {
-		const dto = new ProfileService(actor()).update({ fullName: 'Ольга Петрова', phone: null });
+		const dto = new ProfileService(actor()).update({
+			fullName: 'Ольга Петрова',
+			phone: '+79001234567'
+		});
 
-		expect(dto).toMatchObject({ fullName: 'Ольга Петрова', phone: null });
+		expect(dto).toMatchObject({ fullName: 'Ольга Петрова', phone: '+79001234567' });
 		const [row] = db.select().from(users).where(eq(users.id, employeeId)).all();
-		expect(row).toMatchObject({ fullName: 'Ольга Петрова', phone: null });
+		expect(row).toMatchObject({ fullName: 'Ольга Петрова', phone: '+79001234567' });
 
 		const entries = db
 			.select()
@@ -102,16 +108,41 @@ describe('ProfileService', () => {
 		const service = new ProfileService(actor({ counterpartyId: otherCp }));
 
 		expect(() => service.get()).toThrow(NotFoundError);
-		expect(() => service.update({ fullName: 'Чужой', phone: null })).toThrow(NotFoundError);
+		expect(() => service.update({ fullName: 'Чужой', phone: '+79001234567' })).toThrow(
+			NotFoundError
+		);
 		expect(db.select().from(auditLog).all()).toHaveLength(0);
 	});
 
 	it('refuses a CRM actor before touching the database', () => {
 		const crm = actor({ roles: ['manager'], scope: 'crm', counterpartyId: null });
 
-		expect(() => new ProfileService(crm).update({ fullName: 'Менеджер', phone: null })).toThrow(
-			ForbiddenError
-		);
+		expect(() =>
+			new ProfileService(crm).update({ fullName: 'Менеджер', phone: '+79001234567' })
+		).toThrow(ForbiddenError);
 		expect(db.select().from(auditLog).all()).toHaveLength(0);
 	});
+});
+
+it('returns a form refusal when the profile phone belongs to another account', async () => {
+	const { actions } = await import('../../src/routes/(portal)/portal/profile/+page.server');
+	insertUser({
+		email: 'taken@example.com',
+		phone: '+79501234567',
+		role: 'owner',
+		counterpartyId: null
+	});
+	const result = await actions.default({
+		request: new Request('http://localhost/portal/profile', {
+			method: 'POST',
+			body: new URLSearchParams({ fullName: 'Ольга Гущина', phone: '+79501234567' })
+		}),
+		locals: { actor: actor() },
+		url: new URL('http://localhost/portal/profile')
+	} as Parameters<typeof actions.default>[0]);
+	expect(result).toMatchObject({
+		status: 422,
+		data: { formError: 'Этот телефон уже используется' }
+	});
+	expect(new ProfileService(actor()).get().phone).toBe('+7 916 222-22-22');
 });

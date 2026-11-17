@@ -9,7 +9,7 @@ import { insertUser, migratedDatabase } from './helpers/db';
 
 const db = migratedDatabase();
 let userId = 0;
-let variantId = 0;
+let productId = 0;
 
 function actor(role: RoleCode): ActorContext {
 	const roles = [role];
@@ -37,8 +37,7 @@ beforeAll(() => {
 		.values({ sku: 'C2-PRICE', title: 'Модель', categoryId: category?.id })
 		.returning()
 		.all();
-	const [variant] = db
-		.insert(productVariants)
+	db.insert(productVariants)
 		.values({
 			productId: product?.id ?? 0,
 			sku: 'C2-PRICE-V',
@@ -47,7 +46,7 @@ beforeAll(() => {
 		})
 		.returning()
 		.all();
-	variantId = variant?.id ?? 0;
+	productId = product?.id ?? 0;
 });
 
 describe('C2 CRM pricing', () => {
@@ -59,8 +58,8 @@ describe('C2 CRM pricing', () => {
 			validFrom: '2026-09-01',
 			validTo: '2026-10-01'
 		});
-		service.upsertPriceItem({ priceListId: base.id, variantId, priceMinor: 120000 });
-		expect(service.getPriceList(base.id).items).toEqual([{ variantId, priceMinor: 120000 }]);
+		service.upsertPriceItem({ priceListId: base.id, productId, priceMinor: 120000 });
+		expect(service.getPriceList(base.id).items).toEqual([{ productId, priceMinor: 120000 }]);
 		expect(() =>
 			service.createPriceList({
 				title: 'Пересечение',

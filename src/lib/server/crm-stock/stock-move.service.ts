@@ -32,10 +32,10 @@ export class StockMoveService extends StockBaseService {
 
 	/** @throws NotFoundError for an unknown item. */
 	journal(stockItemId: number, query: ListQuery<StockJournalFilters>): Page<StockMoveDto> {
-		this.requireItem(stockItemId);
+		const item = this.requireItem(stockItemId);
 		const { rows, total } = this.moves.journal(stockItemId, query);
 		return {
-			rows: rows.map((row) => StockDtoMapper.toMove(row, this.canManage)),
+			rows: rows.map((row) => StockDtoMapper.toMove(row, this.canManage && !item.deletedAt)),
 			total,
 			page: query.page,
 			perPage: query.perPage
@@ -55,6 +55,7 @@ export class StockMoveService extends StockBaseService {
 		this.assertManage();
 		return this.audited({ action: 'stock.move.create', entity: 'stock_moves' }, (tx) => {
 			const item = this.requireItem(stockItemId, tx);
+			if (item.deletedAt) throw new ConflictError('Позиция удалена, движения закрыты');
 			if (!item.isActive) throw new ConflictError('Позиция выключена, движения по ней закрыты');
 			this.checkQty(input);
 			this.checkReason(input, tx);
@@ -87,6 +88,8 @@ export class StockMoveService extends StockBaseService {
 	reverse(stockItemId: number, moveId: number): number {
 		this.assertManage();
 		return this.audited({ action: 'stock.move.reverse', entity: 'stock_moves' }, (tx) => {
+			if (this.requireItem(stockItemId, tx).deletedAt)
+				throw new ConflictError('Позиция удалена, движения закрыты');
 			const move = this.moves.find(moveId, tx);
 			if (!move || move.stockItemId !== stockItemId) throw new NotFoundError('stock_move');
 			if (!isManualMove(move.type) || move.isReversed === 1) {

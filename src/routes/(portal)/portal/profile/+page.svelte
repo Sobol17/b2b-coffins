@@ -47,10 +47,10 @@
 					>
 						<Input
 							label="Электронная почта"
-							value={profile.email}
+							value={profile.email ?? ''}
 							placeholder={PLACEHOLDER.email}
 							readonly
-							hint="Адрес для входа меняет администратор мастерской"
+							hint="Почту меняет администратор мастерской"
 						/>
 						<Input
 							name="fullName"
@@ -69,7 +69,12 @@
 							value={profile.phone ?? ''}
 							autocomplete="tel"
 							error={form?.errors?.phone?.join(', ')}
+							required
 						/>
+
+						{#if form?.formError}
+							<p role="alert" class="text-sm text-danger">{form.formError}</p>
+						{/if}
 
 						{#if form?.saved}
 							<p data-testid="profile-saved" class="text-sm text-success">Данные сохранены</p>

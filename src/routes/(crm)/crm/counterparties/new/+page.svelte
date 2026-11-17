@@ -82,14 +82,19 @@
 						type="email"
 						label="Электронная почта"
 						placeholder={PLACEHOLDER.email}
-						required
 						autocomplete="off"
 					/>
-					<Input name="adminPhone" type="tel" label="Телефон" placeholder={PLACEHOLDER.phone} />
+					<Input
+						name="adminPhone"
+						type="tel"
+						label="Телефон"
+						placeholder={PLACEHOLDER.phone}
+						required
+					/>
 				</Card.Content>
 			</Card.Root>
 			<Button type="submit" size="lg" loading={pending} class="self-start">
-				Завести и отправить доступ
+				Завести и выдать доступ
 			</Button>
 		</form>
 	{/if}

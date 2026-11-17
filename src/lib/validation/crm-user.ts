@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { STAFF_STATUSES } from '$lib/types/counterparty';
 import { CRM_ROLES } from '$lib/types/roles';
-import { fullNameSchema, phoneSchema } from './contact';
+import { fullNameSchema, accountPhoneSchema, accountEmailSchema } from './contact';
 
 const userId = z.coerce.number().int().positive();
 
@@ -14,13 +14,8 @@ const crmRoles = z
 /** New workshop account. The contour is always the CRM: a portal account belongs to a counterparty. */
 export const createCrmUserSchema = z.object({
 	fullName: fullNameSchema,
-	// Stored lower-cased: the login form and the uniqueness check must agree on one spelling.
-	email: z
-		.string()
-		.trim()
-		.toLowerCase()
-		.pipe(z.email({ error: 'Введите адрес электронной почты' })),
-	phone: phoneSchema,
+	email: accountEmailSchema,
+	phone: accountPhoneSchema,
 	roles: crmRoles
 });
 

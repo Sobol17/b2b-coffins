@@ -12,7 +12,7 @@ import { actorContext } from './request';
  */
 export function shopSync(db: Db): { pieces: number; ready: number } {
 	const [owner] = db
-		.select({ email: users.email })
+		.select({ id: users.id })
 		.from(users)
 		.innerJoin(userRoles, eq(userRoles.userId, users.id))
 		.innerJoin(roles, eq(roles.id, userRoles.roleId))
@@ -21,7 +21,7 @@ export function shopSync(db: Db): { pieces: number; ready: number } {
 		.limit(1)
 		.all();
 	if (!owner) throw new Error('no active owner: create one with user:create');
-	const ctx = actorContext(db, owner.email);
+	const ctx = actorContext(db, owner.id);
 	return withTransaction((tx) => {
 		const { added } = new ShopDispatch().run(tx);
 		const ready = new RequestTransitionService(ctx).settleWork(tx);

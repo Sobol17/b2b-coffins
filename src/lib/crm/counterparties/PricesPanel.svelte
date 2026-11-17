@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
+	import { resolve } from '$app/paths';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
 	import {
@@ -9,6 +10,8 @@
 		DataTable,
 		ErrorState,
 		FilterBar,
+		FileInput,
+		buttonVariants,
 		MoneyInput,
 		PriceCell,
 		withToast,
@@ -26,11 +29,13 @@
 	 * region (v1.64). The page saves only what changed.
 	 */
 	let {
+		counterpartyId,
 		prices,
 		categories,
 		hasRegion,
 		formError
 	}: {
+		counterpartyId: number;
 		prices: Page<CounterpartyPriceRowDto>;
 		categories: readonly { readonly id: number; readonly title: string }[];
 		hasRegion: boolean;
@@ -63,15 +68,15 @@
 
 	let filters = $state(filtersOf(page.url, ['priceSearch', 'priceCategory']));
 	let saving = $state(false);
+	let importing = $state(false);
 
 	const columns: DataTableColumn[] = [
 		{ key: 'productTitle', label: 'Модель' },
-		{ key: 'sizeCode', label: 'Размер' },
 		{ key: 'base', label: 'Базовая, ₽', align: 'end' },
 		{ key: 'personal', label: 'Для контрагента, ₽', align: 'end' }
 	];
 
-	const rows = $derived(prices.rows.map((row) => ({ ...row, id: row.variantId })));
+	const rows = $derived(prices.rows.map((row) => ({ ...row, id: row.productId })));
 	const query = $derived<ListQuery>({ page: prices.page, perPage: prices.perPage });
 
 	function changeQuery(next: ListQuery): void {
@@ -105,6 +110,14 @@
 		{/if}
 	</Card.Header>
 	<Card.Content class="flex flex-col gap-4">
+		<div class="flex flex-wrap items-center justify-between gap-3">
+			<a
+				class={buttonVariants({ variant: 'secondary' })}
+				href={resolve(`/crm/counterparties/${counterpartyId}/prices.xlsx`)}
+				download
+				data-sveltekit-reload>Скачать Excel</a
+			>
+		</div>
 		<FilterBar {fields} bind:filters pageKey="pricePage" />
 		{#if formError}
 			<div data-testid="prices-error"><ErrorState title={formError} /></div>
@@ -132,15 +145,13 @@
 						<div class="text-xs text-fg-faint">
 							{row.sku}{row.categoryTitle ? ` · ${row.categoryTitle}` : ''}
 						</div>
-					{:else if column.key === 'sizeCode'}
-						{row.sizeCode}
 					{:else if column.key === 'base'}
 						<PriceCell valueMinor={row.basePriceMinor} class="text-fg-muted" />
 					{:else if column.key === 'personal'}
 						{#key row.personalPriceMinor}
 							<div class="ml-auto w-36" data-testid="personal-price-input">
 								<MoneyInput
-									name={`price:${row.variantId}`}
+									name={`price:${row.productId}`}
 									valueMinor={row.personalPriceMinor ?? 0}
 									label=""
 									placeholder="Введите цену"
@@ -156,6 +167,25 @@
 					<Button type="submit" loading={saving}>Сохранить цены</Button>
 				</div>
 			{/if}
+		</form>
+		<form
+			method="POST"
+			action="?/priceImport"
+			enctype="multipart/form-data"
+			class="flex flex-col gap-4 border-t border-border pt-4"
+			use:enhance={withToast({
+				pending: (value) => (importing = value),
+				success: 'Прайс контрагента загружен'
+			})}
+		>
+			<FileInput
+				name="file"
+				accept=".xlsx"
+				label="Загрузить прайс Excel"
+				hint="Артикул модели и цена. Файл заменит личные цены этого контрагента."
+				required
+			/>
+			<Button type="submit" class="self-start" loading={importing}>Загрузить Excel</Button>
 		</form>
 	</Card.Content>
 </Card.Root>

@@ -3,7 +3,12 @@ import { formAction } from '$lib/server/core/http';
 import { parseListQuery } from '$lib/server/core/list';
 import { canManageStock, stockActor } from '$lib/server/crm-stock/route';
 import { StockItemService } from '$lib/server/crm-stock/stock-item.service';
-import { stockFiltersSchema, stockItemCreateSchema } from '$lib/validation/crm-stock';
+import {
+	stockFiltersSchema,
+	stockItemCreateSchema,
+	stockItemRegistryUpdateSchema,
+	stockItemDeleteSchema
+} from '$lib/validation/crm-stock';
 import type { Actions, PageServerLoad } from './$types';
 
 export const load: PageServerLoad = (event) => {
@@ -18,6 +23,21 @@ export const load: PageServerLoad = (event) => {
 };
 
 export const actions = {
+	update: (event) => {
+		const service = new StockItemService(stockActor(event));
+		return formAction(
+			event.request,
+			'update',
+			stockItemRegistryUpdateSchema,
+			({ stockItemId, ...input }) => service.update(stockItemId, input)
+		);
+	},
+	delete: (event) => {
+		const service = new StockItemService(stockActor(event));
+		return formAction(event.request, 'delete', stockItemDeleteSchema, ({ stockItemId }) =>
+			service.archive(stockItemId)
+		);
+	},
 	create: (event) => {
 		const service = new StockItemService(stockActor(event));
 		// A new item opens on its card: the first move is usually the next click.

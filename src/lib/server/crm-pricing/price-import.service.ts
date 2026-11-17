@@ -30,7 +30,7 @@ export class PriceImportService extends BaseService {
 		consumeRateLimit('file.upload', String(this.ctx.userId));
 		const rows = await readPriceSheet(bytes);
 		return this.audited({ action: 'price_list.import', entity: 'price_lists' }, (tx) => {
-			const ids = this.lists.variantIdsBySku(
+			const ids = this.lists.productIdsBySku(
 				rows.map((row) => row.sku),
 				tx
 			);
@@ -43,7 +43,7 @@ export class PriceImportService extends BaseService {
 			}
 			this.lists.replaceItems(
 				priceListId,
-				rows.map((row) => ({ variantId: ids.get(row.sku) ?? 0, priceMinor: row.priceMinor })),
+				rows.map((row) => ({ productId: ids.get(row.sku) ?? 0, priceMinor: row.priceMinor })),
 				tx
 			);
 			return { result: rows.length, entityId: priceListId, after: { rows: rows.length } };

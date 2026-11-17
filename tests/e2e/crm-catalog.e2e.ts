@@ -38,13 +38,17 @@ test('C2 fills and publishes a model through CRM; the portal never receives cost
 	await expect(page).toHaveURL(/\/crm\/catalog\/\d+$/);
 	const productUrl = new URL(page.url()).pathname;
 
+	const modelForm = page.locator('form[action="?/update"]');
+	await modelForm.getByLabel('Цена модели, ₽').fill('1000');
+	await modelForm.getByRole('button', { name: 'Сохранить', exact: true }).click();
+	await expect(page.getByTestId('toast').filter({ hasText: 'Модель сохранена' })).toBeVisible();
+
 	await page.getByRole('button', { name: 'Добавить вариант' }).click();
 	const variant = page.locator('form[action="?/createVariant"]');
 	await variant.locator('input[name="sku"]').fill(`${sku}-190`);
 	await variant.locator('input[name="sizeCode"]').fill('190');
 	await variant.locator('[data-slot="select-trigger"]').first().click();
 	await page.getByRole('option').first().click();
-	await variant.getByLabel('Базовая цена').fill('1000');
 	await variant.getByRole('button', { name: 'Добавить вариант' }).click();
 	await expect(page.getByText(`${sku}-190`)).toBeVisible();
 	const variantId = await page
@@ -81,11 +85,11 @@ test('C2 fills and publishes a model through CRM; the portal never receives cost
 	await page.getByRole('button', { name: 'Добавить', exact: true }).click();
 	const itemForm = page.getByTestId('modal').locator('form[action="?/upsert"]');
 	await itemForm.locator('[data-slot="select-trigger"]').click();
-	await page.getByRole('option', { name: new RegExp(`${sku}-190`) }).click();
+	await page.getByRole('option', { name: `${title} · ${sku}`, exact: true }).click();
 	await itemForm.getByLabel('Цена').fill('1100');
 	await itemForm.getByRole('button', { name: 'Добавить', exact: true }).click();
 	await expect(page.getByTestId('modal')).toBeHidden();
-	const priceRow = page.getByTestId('data-table-row').filter({ hasText: `${sku}-190` });
+	const priceRow = page.getByTestId('data-table-row').filter({ hasText: sku });
 	await expect(priceRow).toContainText(title);
 	await expect(priceRow).toContainText(/1\s100/);
 	await expect(priceRow.getByRole('button', { name: 'Изменить' })).toHaveText('');
@@ -117,6 +121,7 @@ test('C2 fills and publishes a model through CRM; the portal never receives cost
 	await login(page, 'manager');
 	const response = await page.goto(productUrl);
 	const body = (await response?.text()) ?? '';
+	await expect(page.getByLabel('Цена модели, ₽')).toHaveValue(/1\s000/);
 	// The administrator reads the cost of the stock item on the variant (tech.md v1.62).
 	expect(body).toContain('costPriceMinor');
 	const saved = await page.request.post(`${productUrl}?/updateVariant`, {

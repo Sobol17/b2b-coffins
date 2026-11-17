@@ -12,7 +12,8 @@ import {
 	counterparties,
 	priceListItems,
 	priceLists,
-	productVariants
+	productVariants,
+	products
 } from '../../src/lib/server/db/schema';
 import { FakeMailDriver } from '../../src/lib/server/notifications/drivers/mail';
 import { PersonalPriceResolver } from '../../src/lib/server/pricing/personal-price';
@@ -31,21 +32,17 @@ const managerId = insertUser({
 	counterpartyId: null
 });
 const manager = actorOf('manager', managerId);
-const SKU = 'MDL-201-180-PIN';
-const OTHER_SKU = 'MDL-201-190-PIN';
+const SKU = 'MDL-201';
+const OTHER_SKU = 'MDL-202';
 
-function variantId(sku: string): number {
-	const [row] = db
-		.select({ id: productVariants.id })
-		.from(productVariants)
-		.where(eq(productVariants.sku, sku))
-		.all();
-	if (!row) throw new Error(`no variant ${sku}`);
+function productId(sku: string): number {
+	const [row] = db.select({ id: products.id }).from(products).where(eq(products.sku, sku)).all();
+	if (!row) throw new Error(`no model ${sku}`);
 	return row.id;
 }
 
 let regions = 0;
-/** A regional list as the workshop uploads it: a price per variant. */
+/** A regional list as the workshop uploads it: a price per model. */
 function region(prices: Record<string, number>): number {
 	regions += 1;
 	const [list] = db
@@ -56,7 +53,7 @@ function region(prices: Record<string, number>): number {
 	if (!list) throw new Error('no list');
 	for (const [sku, priceMinor] of Object.entries(prices)) {
 		db.insert(priceListItems)
-			.values({ priceListId: list.id, variantId: variantId(sku), priceMinor })
+			.values({ priceListId: list.id, productId: productId(sku), priceMinor })
 			.run();
 	}
 	return list.id;
@@ -85,11 +82,16 @@ function tab(counterpartyId: number, sku: string) {
 		perPage: 500,
 		filters: {}
 	}).rows;
-	return rows.find((item) => item.variantId === variantId(sku));
+	return rows.find((item) => item.productId === productId(sku));
 }
 
 function charged(counterpartyId: number, sku: string): number | undefined {
-	const id = variantId(sku);
+	const id = db
+		.select({ id: productVariants.id })
+		.from(productVariants)
+		.where(eq(productVariants.productId, productId(sku)))
+		.get()?.id;
+	if (id === undefined) throw new Error(`no variant for ${sku}`);
 	return new PersonalPriceResolver().resolve(counterpartyId, new Map([[id, 1]])).get(id);
 }
 
@@ -109,7 +111,7 @@ function terms(counterpartyId: number, regionId: number | null) {
 
 const save = (counterpartyId: number, sku: string, priceMinor: number) =>
 	new CounterpartyPriceService(manager).save(counterpartyId, [
-		{ variantId: variantId(sku), priceMinor }
+		{ productId: productId(sku), priceMinor }
 	]);
 
 describe('a regional price list prefills the personal one (v1.64)', () => {

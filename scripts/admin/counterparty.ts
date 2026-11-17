@@ -1,3 +1,4 @@
+import { accountEmailSchema, accountPhoneSchema } from '../../src/lib/validation/contact';
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { hashPassword } from '../../src/lib/server/auth/password';
@@ -24,7 +25,8 @@ const schema = z.object({
 	address: z.string().optional(),
 	phone: z.string().optional(),
 	email: z.email().optional(),
-	'admin-email': z.email(),
+	'admin-email': accountEmailSchema,
+	'admin-phone': accountPhoneSchema,
 	'admin-name': z.string().min(1),
 	'admin-password': z.string().min(12)
 });
@@ -53,6 +55,7 @@ export async function counterpartyCreate(db: Db, argv: readonly string[]): Promi
 			phone: STRING_OPTION,
 			email: STRING_OPTION,
 			'admin-email': STRING_OPTION,
+			'admin-phone': STRING_OPTION,
 			'admin-name': STRING_OPTION,
 			'admin-password': STRING_OPTION
 		},
@@ -111,6 +114,7 @@ export async function counterpartyCreate(db: Db, argv: readonly string[]): Promi
 			.insert(users)
 			.values({
 				email: input['admin-email'],
+				phone: input['admin-phone'],
 				passwordHash,
 				fullName: input['admin-name'],
 				scope: 'portal',

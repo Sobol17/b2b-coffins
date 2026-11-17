@@ -4,7 +4,7 @@ import { login, loginAs, logout, OTHER_COUNTERPARTY_ADMIN } from './fixtures';
 const ORIGIN = 'http://localhost:4173';
 // Other specs add counterparties to the e2e database, so the seeded one is found by its INN.
 const COUNTERPARTY_INN = '500100200300';
-// The seed puts «Память» on the base list: MDL-201-180-PIN costs it the variant price, 8 900 ₽.
+// The seed puts «Память» on the base list: MDL-201 costs it the model price, 8 900 ₽.
 const BASE_SHOWN = /8\u00a0900(?![,\d])/;
 const OWN_RUBLES = '7 777';
 const OWN_SHOWN = /7\s777(?![,\d])/;
@@ -18,14 +18,14 @@ async function openPrices(page: Page): Promise<void> {
 		.first()
 		.getAttribute('href');
 	// The search sits in the query string, so the tab opens with the one model in view.
-	await page.goto(`${href}?priceSearch=MDL-201-180`);
+	await page.goto(`${href}?priceSearch=MDL-201`);
 	await expect(page.getByRole('tab', { name: 'Цены' })).toHaveAttribute('aria-selected', 'true');
 }
 
 function priceField(page: Page) {
 	return page
 		.getByTestId('data-table-row')
-		.filter({ hasText: 'MDL-201-180-PIN' })
+		.filter({ hasText: 'MDL-201' })
 		.getByTestId('personal-price-input')
 		.locator('input[type="text"]');
 }

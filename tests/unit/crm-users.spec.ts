@@ -67,7 +67,7 @@ function input(crmRoles: RoleCode[] = ['carpenter']) {
 	return createCrmUserSchema.parse({
 		fullName: 'Павел Орлов',
 		email: `new${sequence}@ws.example`,
-		phone: '',
+		phone: `+7900${String(sequence).padStart(7, '0')}`,
 		roles: crmRoles
 	});
 }
@@ -140,7 +140,7 @@ describe('workshop accounts, owner only', () => {
 		const form = new FormData();
 		form.append('fullName', 'Павел Орлов');
 		form.append('email', 'Pavel@WS.example');
-		form.append('phone', '');
+		form.append('phone', '+79501234567');
 		form.append('roles', 'carpenter');
 		form.append('roles', 'painter');
 		const parsed = createCrmUserSchema.parse(crmUserFormFields(form));
@@ -238,7 +238,7 @@ describe('editing workshop accounts atomically', () => {
 			id,
 			fullName: 'Алексей Петров',
 			email: 'updated@ws.example',
-			phone: '+7 (900) 111-22-33',
+			phone: '+79001112233',
 			roles: ['painter', 'driver']
 		});
 		const [entry] = db.select().from(auditLog).where(eq(auditLog.action, 'crm_user.update')).all();
@@ -267,7 +267,7 @@ describe('editing workshop accounts atomically', () => {
 						id,
 						fullName: 'Изменённое имя',
 						email,
-						phone: '',
+						phone: '+79401234567',
 						roles: ['driver']
 					})
 				)
@@ -312,7 +312,7 @@ describe('editing workshop accounts atomically', () => {
 			id: ownerId,
 			fullName: original.fullName,
 			email: original.email,
-			phone: '',
+			phone: '+79401234567',
 			roles: ['owner']
 		};
 		expect(service().update(updateCrmUserSchema.parse(input)).email).toBe(original.email);
@@ -339,7 +339,7 @@ describe('editing workshop accounts atomically', () => {
 						id,
 						fullName: 'Другое имя',
 						email: 'different@ws.example',
-						phone: '12345',
+						phone: '+79407654321',
 						roles: ['upholsterer']
 					})
 				)
@@ -360,7 +360,7 @@ describe('editing workshop accounts atomically', () => {
 		const [portal] = db.select().from(users).where(eq(users.scope, 'portal')).all();
 		for (const id of [portal!.id, 999_999]) {
 			expect(() =>
-				service().update(updateCrmUserSchema.parse({ ...input(), phone: '', id }))
+				service().update(updateCrmUserSchema.parse({ ...input(), phone: '+79401234567', id }))
 			).toThrow(NotFoundError);
 		}
 	});
@@ -458,5 +458,28 @@ describe('soft deletion', () => {
 		expect(() => service().delete(portal!.id)).toThrow(NotFoundError);
 		expect(() => service().delete(999_999)).toThrow(NotFoundError);
 		expect(db.select().from(auditLog).all()).toHaveLength(0);
+	});
+});
+
+describe('phone-only workshop accounts', () => {
+	it('creates without email and still returns a temporary password', async () => {
+		const created = await service().create({ ...input(), email: null });
+		expect(created.user.email).toBeNull();
+		expect(created.mailSent).toBe(false);
+		expect(created.temporaryPassword.length).toBeGreaterThanOrEqual(12);
+		expect(mail.sent).toHaveLength(0);
+	});
+	it('refuses a phone shared with another account', async () => {
+		const first = await service().create(input());
+		await expect(service().create({ ...input(), phone: first.user.phone! })).rejects.toThrow(
+			ValidationError
+		);
+	});
+	it('allows multiple absent emails but refuses a reused phone on update', async () => {
+		const first = await service().create({ ...input(), email: null });
+		const next = await service().create({ ...input(), email: null });
+		expect(() =>
+			service().update({ ...input(), id: next.user.id, phone: first.user.phone! })
+		).toThrow(ValidationError);
 	});
 });

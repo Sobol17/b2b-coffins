@@ -47,6 +47,10 @@
 			</Card.Content>
 		</Card.Root>
 	{:else}
+		<p class="text-sm text-fg-muted">
+			Восстановление доступно, если в аккаунте указана почта. Иначе обратитесь к администратору за
+			временным паролем.
+		</p>
 		<form method="POST" action="?/request" use:enhance class="flex flex-col gap-4">
 			<Input
 				name="email"

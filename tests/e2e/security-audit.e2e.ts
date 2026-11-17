@@ -14,7 +14,7 @@ const JSON_CALL = { 'content-type': 'application/json', 'x-requested-with': 'fet
 const PDF = { name: 'Эскиз.pdf', mimeType: 'application/pdf', buffer: Buffer.from('%PDF-1.4 x') };
 
 async function submitLogin(page: Page, email: string, password: string): Promise<void> {
-	await page.fill('input[name="email"]', email);
+	await page.fill('input[name="identifier"]', email);
 	await page.fill('input[name="password"]', password);
 	await page.click('button[type="submit"]');
 }

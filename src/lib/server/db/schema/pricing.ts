@@ -1,6 +1,6 @@
 import { integer, sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqlite-core';
 import { bool, createdAt, money, pk, ts, updatedAt } from './_shared';
-import { categories, productVariants, products } from './catalog';
+import { categories, products } from './catalog';
 import { counterparties } from './counterparties';
 import { users } from './users';
 
@@ -23,12 +23,12 @@ export const priceListItems = sqliteTable(
 		priceListId: integer('price_list_id')
 			.notNull()
 			.references(() => priceLists.id, { onDelete: 'cascade' }),
-		variantId: integer('variant_id')
+		productId: integer('product_id')
 			.notNull()
-			.references(() => productVariants.id, { onDelete: 'cascade' }),
+			.references(() => products.id, { onDelete: 'cascade' }),
 		priceMinor: money('price_minor')
 	},
-	(t) => [uniqueIndex('pli_uq').on(t.priceListId, t.variantId)]
+	(t) => [uniqueIndex('pli_uq').on(t.priceListId, t.productId)]
 );
 
 /**

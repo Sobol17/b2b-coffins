@@ -1,3 +1,4 @@
+import { actionFailure } from '$lib/server/core/http';
 import { fail } from '@sveltejs/kit';
 import { requireAction, requireScope } from '$lib/server/auth/guard';
 import { CounterpartyService } from '$lib/server/counterparty/counterparty.service';
@@ -24,6 +25,10 @@ export const actions = {
 		const parsed = updateProfileSchema.safeParse(Object.fromEntries(await request.formData()));
 		if (!parsed.success) return fail(422, { errors: parsed.error.flatten().fieldErrors });
 
-		return { saved: true, profile: new ProfileService(actor).update(parsed.data) };
+		try {
+			return { saved: true, profile: new ProfileService(actor).update(parsed.data) };
+		} catch (err) {
+			return actionFailure(err);
+		}
 	}
 } satisfies Actions;

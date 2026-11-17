@@ -77,6 +77,13 @@
 					{row.number}
 				{/if}
 			{/snippet}
+			{#snippet footer(column: DataTableColumn)}
+				{#if column.key === 'number'}
+					Итого на странице
+				{:else if column.key === 'totalMinor'}
+					<PriceCell valueMinor={rows.reduce((sum, row) => sum + (row.totalMinor ?? 0), 0)} />
+				{/if}
+			{/snippet}
 		</DataTable>
 	</div>
 </Showcase>

@@ -3,7 +3,7 @@ import { PERSONAL_PRICE_MAX_MINOR } from '$lib/domain/pricing/personal-price';
 
 /** One row of the «Цены» tab. Zero clears the price, so an emptied field is not an error. */
 export const personalPriceEntrySchema = z.object({
-	variantId: z.coerce.number().int().positive(),
+	productId: z.coerce.number().int().positive(),
 	priceMinor: z.coerce
 		.number({ error: 'Введите сумму в рублях' })
 		.int({ error: 'Введите сумму в рублях' })
@@ -29,11 +29,11 @@ export type PersonalPriceEntryInput = z.infer<typeof personalPriceEntrySchema>;
 /** Form field names carry the variant: `price:42`. Reading them here keeps the route thin. */
 export function personalPriceEntriesFrom(
 	form: FormData
-): { variantId: number; priceMinor: number }[] {
-	const entries: { variantId: number; priceMinor: number }[] = [];
+): { productId: number; priceMinor: number }[] {
+	const entries: { productId: number; priceMinor: number }[] = [];
 	for (const [key, value] of form.entries()) {
 		const match = /^price:(\d+)$/.exec(key);
-		if (match) entries.push({ variantId: Number(match[1]), priceMinor: Number(value) });
+		if (match) entries.push({ productId: Number(match[1]), priceMinor: Number(value) });
 	}
 	return entries;
 }

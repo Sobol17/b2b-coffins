@@ -33,6 +33,11 @@ const employeeCtx = portalActor('cp_employee', world.employeeId, world.cpId);
 const outsiderCtx = portalActor('cp_admin', world.outsiderId, world.otherCpId);
 
 const VOLGA_180 = variantId(db, 'MDL-201-180-PIN');
+const VOLGA_MODEL = db
+	.select({ id: productVariants.productId })
+	.from(productVariants)
+	.where(eq(productVariants.id, VOLGA_180))
+	.get()!.id;
 const LADA_180 = variantId(db, 'MDL-101-180-CHB');
 /** Delivery of a counterparty request: address, deadline and the deceased are all required. */
 const filled = () => ({
@@ -159,7 +164,7 @@ describe('sending a request (P4)', () => {
 			optionIds: []
 		});
 		const entry = and(
-			eq(priceListItems.variantId, VOLGA_180),
+			eq(priceListItems.productId, VOLGA_MODEL),
 			eq(priceListItems.priceMinor, 830_000)
 		);
 		db.update(priceListItems).set({ priceMinor: 800_000 }).where(entry).run();
@@ -173,7 +178,9 @@ describe('sending a request (P4)', () => {
 		} finally {
 			db.update(priceListItems)
 				.set({ priceMinor: 830_000 })
-				.where(and(eq(priceListItems.variantId, VOLGA_180), eq(priceListItems.priceMinor, 800_000)))
+				.where(
+					and(eq(priceListItems.productId, VOLGA_MODEL), eq(priceListItems.priceMinor, 800_000))
+				)
 				.run();
 		}
 	});

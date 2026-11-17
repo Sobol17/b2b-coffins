@@ -10,7 +10,8 @@ import {
 	counterparties,
 	priceListItems,
 	priceLists,
-	productVariants
+	productVariants,
+	products
 } from '../../src/lib/server/db/schema';
 import { PersonalPriceResolver } from '../../src/lib/server/pricing/personal-price';
 import type { RoleCode } from '../../src/lib/types/roles';
@@ -43,10 +44,15 @@ function counterpartyOn(name: string, priceListId: number | null): number {
 	return row.id;
 }
 
-function variant(sku: string): { id: number; basePriceMinor: number } {
+function variant(sku: string): { id: number; productId: number; basePriceMinor: number } {
 	const [row] = db
-		.select({ id: productVariants.id, basePriceMinor: productVariants.basePriceMinor })
+		.select({
+			id: productVariants.id,
+			productId: products.id,
+			basePriceMinor: products.basePriceMinor
+		})
 		.from(productVariants)
+		.innerJoin(products, eq(products.id, productVariants.productId))
 		.where(eq(productVariants.sku, sku))
 		.all();
 	if (!row) throw new Error(`no variant ${sku}`);
@@ -87,7 +93,7 @@ describe('individual prices of a counterparty (v1.56)', () => {
 		const neighbour = counterpartyOn('Сосед на базовом', listId('base'));
 		const lada = variant('MDL-101-180-CHB');
 
-		const result = service().save(cp, [{ variantId: lada.id, priceMinor: 450_000 }]);
+		const result = service().save(cp, [{ productId: lada.productId, priceMinor: 450_000 }]);
 
 		expect(result).toEqual({ updated: 1, cleared: 0 });
 		expect(listOf(cp)).not.toBe(listId('base'));
@@ -106,23 +112,24 @@ describe('individual prices of a counterparty (v1.56)', () => {
 		const other = counterpartyOn('Партнёр Б', listId('partner'));
 		const volga = variant('MDL-201-190-PIN');
 
-		service().save(cp, [{ variantId: volga.id, priceMinor: 800_000 }]);
+		service().save(cp, [{ productId: volga.productId, priceMinor: 800_000 }]);
 
 		expect(listOf(other)).toBe(listId('partner'));
-		expect(charged(other, 'MDL-201-190-PIN')).toBe(875_000);
+		expect(charged(other, 'MDL-201-190-PIN')).toBe(830_000);
 		expect(charged(cp, 'MDL-201-190-PIN')).toBe(800_000);
-		// Untouched rows of the shared list came along.
-		expect(charged(cp, 'MDL-201-180-PIN')).toBe(830_000);
+		// The whole model changes, while another model keeps its copied price.
+		expect(charged(cp, 'MDL-201-180-PIN')).toBe(800_000);
+		expect(charged(cp, 'MDL-202-180-BIR')).toBe(895_000);
 	});
 
 	it('writes into the list the counterparty already holds alone', () => {
 		const cp = counterpartyOn('Свой прайс', null);
 		const lada = variant('MDL-101-180-CHB');
-		service().save(cp, [{ variantId: lada.id, priceMinor: 440_000 }]);
+		service().save(cp, [{ productId: lada.productId, priceMinor: 440_000 }]);
 		const own = listOf(cp);
 		const before = db.select().from(priceLists).all().length;
 
-		service().save(cp, [{ variantId: lada.id, priceMinor: 430_000 }]);
+		service().save(cp, [{ productId: lada.productId, priceMinor: 430_000 }]);
 
 		expect(listOf(cp)).toBe(own);
 		expect(db.select().from(priceLists).all().length).toBe(before);
@@ -132,9 +139,9 @@ describe('individual prices of a counterparty (v1.56)', () => {
 	it('clears a price with zero and lists the base one again', () => {
 		const cp = counterpartyOn('Очистка', null);
 		const lada = variant('MDL-101-190-CHB');
-		service().save(cp, [{ variantId: lada.id, priceMinor: 400_000 }]);
+		service().save(cp, [{ productId: lada.productId, priceMinor: 400_000 }]);
 
-		expect(service().save(cp, [{ variantId: lada.id, priceMinor: 0 }])).toEqual({
+		expect(service().save(cp, [{ productId: lada.productId, priceMinor: 0 }])).toEqual({
 			updated: 0,
 			cleared: 1
 		});
@@ -142,53 +149,48 @@ describe('individual prices of a counterparty (v1.56)', () => {
 		expect(charged(cp, 'MDL-101-190-CHB')).toBe(lada.basePriceMinor);
 		const row = service()
 			.list(cp, page)
-			.rows.find((entry) => entry.variantId === lada.id);
+			.rows.find((entry) => entry.productId === lada.productId);
 		expect(row).toMatchObject({ basePriceMinor: lada.basePriceMinor, personalPriceMinor: null });
 	});
 
 	it('writes nothing and makes no list on a resubmit or an empty page', () => {
 		const cp = counterpartyOn('Повтор', listId('base'));
 		const lada = variant('MDL-101-180-CHB');
-		expect(service().save(cp, [{ variantId: lada.id, priceMinor: 0 }])).toEqual({
+		expect(service().save(cp, [{ productId: lada.productId, priceMinor: 0 }])).toEqual({
 			updated: 0,
 			cleared: 0
 		});
 		expect(listOf(cp)).toBe(listId('base'));
 
-		service().save(cp, [{ variantId: lada.id, priceMinor: 420_000 }]);
-		service().save(cp, [{ variantId: lada.id, priceMinor: 420_000 }]);
+		service().save(cp, [{ productId: lada.productId, priceMinor: 420_000 }]);
+		service().save(cp, [{ productId: lada.productId, priceMinor: 420_000 }]);
 
 		expect(auditRows(cp)).toHaveLength(1);
 		expect(auditRows(cp)[0]?.actorId).toBe(managerId);
 	});
 
-	it('shows the base price and the own one of every variant on the tab', () => {
+	it('shows the base price and the own one of every model once on the tab', () => {
 		const cp = counterpartyOn('Просмотр', listId('partner'));
 		const rows = service().list(cp, page).rows;
-		const volga = rows.find((row) => row.sku === 'MDL-201-180-PIN');
-		const lada = rows.find((row) => row.sku === 'MDL-101-180-CHB');
+		const volga = rows.find((row) => row.sku === 'MDL-201');
+		const lada = rows.find((row) => row.sku === 'MDL-101');
 
 		expect(volga).toMatchObject({ personalPriceMinor: 830_000 });
 		expect(volga?.basePriceMinor).toBe(variant('MDL-201-180-PIN').basePriceMinor);
 		expect(lada?.personalPriceMinor).toBeNull();
+		expect(rows.filter((row) => row.productId === volga?.productId)).toHaveLength(1);
 	});
 
-	it('refuses a removed variant', () => {
-		const cp = counterpartyOn('Удалённый вариант', null);
+	it('refuses a removed model', () => {
+		const cp = counterpartyOn('Удалённая модель', null);
 		const lada = variant('MDL-103-180-BIR');
-		db.update(productVariants)
-			.set({ deletedAt: new Date() })
-			.where(eq(productVariants.id, lada.id))
-			.run();
+		db.update(products).set({ deletedAt: new Date() }).where(eq(products.id, lada.productId)).run();
 		try {
-			expect(() => service().save(cp, [{ variantId: lada.id, priceMinor: 1_000 * 100 }])).toThrow(
-				ValidationError
-			);
+			expect(() =>
+				service().save(cp, [{ productId: lada.productId, priceMinor: 1_000 * 100 }])
+			).toThrow(ValidationError);
 		} finally {
-			db.update(productVariants)
-				.set({ deletedAt: null })
-				.where(eq(productVariants.id, lada.id))
-				.run();
+			db.update(products).set({ deletedAt: null }).where(eq(products.id, lada.productId)).run();
 		}
 	});
 
@@ -211,7 +213,7 @@ describe('individual prices of a counterparty (v1.56)', () => {
 		const cp = counterpartyOn('От руководителя', null);
 		const lada = variant('MDL-101-180-CHB');
 		new CounterpartyPriceService(actorOf('owner', ownerId)).save(cp, [
-			{ variantId: lada.id, priceMinor: 410_000 }
+			{ productId: lada.productId, priceMinor: 410_000 }
 		]);
 		expect(
 			db

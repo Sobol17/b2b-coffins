@@ -66,7 +66,12 @@ function service(ctx: ActorContext = actor()): StaffService {
 
 function input(role: 'cp_admin' | 'cp_employee' = 'cp_employee', fullName = 'Анна Белова') {
 	sequence += 1;
-	return { fullName, email: `new${sequence}@rs.example`, phone: null, role };
+	return {
+		fullName,
+		email: `new${sequence}@rs.example`,
+		phone: `+7910${String(sequence).padStart(7, '0')}`,
+		role
+	};
 }
 
 beforeEach(() => {
@@ -247,18 +252,18 @@ describe('managing accounts', () => {
 });
 
 describe('staff form contract', () => {
-	it('lower-cases and trims the address and turns an empty phone into null', () => {
+	it('normalizes the email and the required phone', () => {
 		expect(
 			createStaffSchema.parse({
 				fullName: ' Анна ',
 				email: ' Anna@RS.example ',
-				phone: '',
+				phone: '8 (900) 123-45-67',
 				role: 'cp_employee'
 			})
 		).toEqual({
 			fullName: 'Анна',
 			email: 'anna@rs.example',
-			phone: null,
+			phone: '+79001234567',
 			role: 'cp_employee'
 		});
 	});
@@ -268,7 +273,7 @@ describe('staff form contract', () => {
 			createStaffSchema.safeParse({
 				fullName: 'Анна',
 				email: 'a@rs.example',
-				phone: '',
+				phone: '8 (900) 123-45-67',
 				role: 'owner'
 			}).success
 		).toBe(false);

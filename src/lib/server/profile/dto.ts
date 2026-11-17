@@ -3,7 +3,7 @@ import type { ProfileRow } from './profile.repository';
 export interface ProfileDto {
 	readonly fullName: string;
 	readonly phone: string | null;
-	readonly email: string;
+	readonly email: string | null;
 }
 
 export class ProfileDtoMapper {

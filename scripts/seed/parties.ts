@@ -1,4 +1,4 @@
-import { and, eq, isNull } from 'drizzle-orm';
+import { and, eq, isNull, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import { hashPassword } from '../../src/lib/server/auth/password';
 import type { Db } from '../../src/lib/server/db/client';
@@ -34,9 +34,9 @@ function roleIdByCode(db: Db, code: RoleCode): number {
 async function upsertUser(
 	db: Db,
 	input: {
-		email: string;
+		email: string | null;
 		fullName: string;
-		phone?: string | undefined;
+		phone: string;
 		password: string;
 		scope: 'portal' | 'crm';
 		role: RoleCode;
@@ -46,7 +46,12 @@ async function upsertUser(
 	const [existing] = db
 		.select({ id: users.id })
 		.from(users)
-		.where(and(eq(users.email, input.email), isNull(users.deletedAt)))
+		.where(
+			and(
+				input.email === null ? eq(users.phone, input.phone) : eq(users.email, input.email),
+				isNull(users.deletedAt)
+			)
+		)
 		.all();
 	const userId =
 		existing?.id ??
@@ -95,17 +100,17 @@ export function seedPriceLists(db: Db): Map<string, number> {
 
 		for (const item of fixture.items) {
 			const [variant] = db
-				.select({ id: productVariants.id })
+				.select({ id: productVariants.productId })
 				.from(productVariants)
 				.where(eq(productVariants.sku, item.variantSku))
 				.all();
 			if (!variant)
 				throw new Error(`price list ${fixture.code} references unknown ${item.variantSku}`);
 			db.insert(priceListItems)
-				.values({ priceListId: id, variantId: variant.id, priceMinor: item.priceMinor })
+				.values({ priceListId: id, productId: variant.id, priceMinor: item.priceMinor })
 				.onConflictDoUpdate({
-					target: [priceListItems.priceListId, priceListItems.variantId],
-					set: { priceMinor: item.priceMinor }
+					target: [priceListItems.priceListId, priceListItems.productId],
+					set: { priceMinor: sql`min(${priceListItems.priceMinor}, ${item.priceMinor})` }
 				})
 				.run();
 		}

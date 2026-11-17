@@ -18,7 +18,7 @@ export interface CounterpartyRow {
 export interface ContactRow {
 	readonly fullName: string;
 	readonly phone: string | null;
-	readonly email: string;
+	readonly email: string | null;
 }
 
 export interface ContractRow {

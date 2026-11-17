@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import type { SettlementScheme } from '$lib/types/counterparty';
-import { fullNameSchema, phoneSchema } from './contact';
+import { fullNameSchema, phoneSchema, accountPhoneSchema, accountEmailSchema } from './contact';
 import { checkbox } from './fields';
 import { orgRequisitesSchema } from './settings';
 
@@ -32,13 +32,6 @@ const day = optional(
 		.regex(/^\d{4}-\d{2}-\d{2}$/, { error: 'Выберите дату' })
 		.refine(isCalendarDay, { error: 'Выберите дату' })
 );
-
-// Stored lower-cased: the login form and the uniqueness check must agree on one spelling.
-const loginEmail = z
-	.string()
-	.trim()
-	.toLowerCase()
-	.pipe(z.email({ error: 'Введите адрес электронной почты' }));
 
 const requisitesShape = {
 	name: z
@@ -82,8 +75,8 @@ export const notesInputSchema = z.object({ notes: optional(text(5000)) });
 /** A new portal administrator issued by the workshop. The counterparty comes from the route. */
 export const issueAdminSchema = z.object({
 	fullName: fullNameSchema,
-	email: loginEmail,
-	phone: phoneSchema
+	email: accountEmailSchema,
+	phone: accountPhoneSchema
 });
 
 /**
@@ -95,8 +88,8 @@ export const createCounterpartySchema = z
 		...requisitesShape,
 		...termsShape,
 		adminFullName: fullNameSchema,
-		adminEmail: loginEmail,
-		adminPhone: phoneSchema
+		adminEmail: accountEmailSchema,
+		adminPhone: accountPhoneSchema
 	})
 	.transform(({ adminFullName, adminEmail, adminPhone, ...rest }) => ({
 		requisites: {

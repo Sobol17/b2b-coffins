@@ -22,11 +22,7 @@
 	let pending = $state(false);
 </script>
 
-<Modal
-	open={user !== null}
-	title="Изменить пользователя"
-	{onClose}
->
+<Modal open={user !== null} title="Изменить пользователя" {onClose}>
 	{#snippet body()}
 		<div class="max-h-[calc(100dvh-14rem)] overflow-y-auto">
 			{#if user}
@@ -60,8 +56,7 @@
 						type="email"
 						label="Электронная почта"
 						placeholder={PLACEHOLDER.email}
-						value={user.email}
-						required
+						value={user.email ?? ''}
 						autocomplete="off"
 						error={errors?.email?.join(', ')}
 					/>
@@ -72,6 +67,7 @@
 						placeholder={PLACEHOLDER.phone}
 						value={user.phone ?? ''}
 						error={errors?.phone?.join(', ')}
+						required
 					/>
 					{#key user.id}
 						<RolePicker initialRoles={user.roles} error={errors?.roles?.join(', ')} />
@@ -81,11 +77,8 @@
 					{/if}
 					<div class="flex flex-wrap gap-2">
 						<Button type="submit" loading={pending}>Сохранить изменения</Button>
-						<Button
-							type="button"
-							variant="secondary"
-							disabled={pending}
-							onclick={onClose}>Отмена</Button
+						<Button type="button" variant="secondary" disabled={pending} onclick={onClose}
+							>Отмена</Button
 						>
 					</div>
 				</form>

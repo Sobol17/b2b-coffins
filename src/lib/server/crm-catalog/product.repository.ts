@@ -11,6 +11,7 @@ const PRODUCT = {
 	title: products.title,
 	categoryId: products.categoryId,
 	description: products.description,
+	basePriceMinor: products.basePriceMinor,
 	isPublished: products.isPublished,
 	sortOrder: products.sortOrder,
 	deletedAt: products.deletedAt

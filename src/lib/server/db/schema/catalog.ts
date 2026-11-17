@@ -28,6 +28,7 @@ export const products = sqliteTable(
 		title: text('title').notNull(),
 		categoryId: integer('category_id').references(() => categories.id),
 		description: text('description'),
+		basePriceMinor: money('base_price_minor'),
 		isPublished: bool('is_published').notNull().default(false),
 		sortOrder: integer('sort_order').notNull().default(0),
 		createdAt: createdAt(),

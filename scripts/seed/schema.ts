@@ -1,3 +1,4 @@
+import { accountEmailSchema, accountPhoneSchema } from '../../src/lib/validation/contact';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { z } from 'zod';
@@ -93,9 +94,9 @@ export const priceListFixture = z.object({
 });
 
 const portalUserFixture = z.object({
-	email: z.email(),
+	email: accountEmailSchema,
 	fullName: z.string().min(1),
-	phone: z.string().optional(),
+	phone: accountPhoneSchema,
 	role: z.enum(['cp_admin', 'cp_employee']),
 	password: z.string().min(8)
 });
@@ -127,7 +128,8 @@ export const counterpartyFixture = z.object({
 });
 
 export const crmUserFixture = z.object({
-	email: z.email(),
+	email: accountEmailSchema,
+	phone: accountPhoneSchema,
 	fullName: z.string().min(1),
 	role: z.enum(ROLE_CODES),
 	password: z.string().min(8),

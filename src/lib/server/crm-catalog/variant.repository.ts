@@ -1,14 +1,7 @@
 import { and, asc, eq, inArray, isNull, ne } from 'drizzle-orm';
-import { BaseRepository } from '../core/repository';
+import { VariantReferenceRepository } from './variant-reference.repository';
 import type { Tx } from '../db/client';
-import {
-	dictItems,
-	productOptions,
-	productVariants,
-	products,
-	stockItems,
-	workTypes
-} from '../db/schema';
+import { dictItems, productOptions, productVariants, products, stockItems } from '../db/schema';
 import type { CrmCatalogChoicesDto, CrmVariantDto } from '$lib/types/crm-catalog';
 import type { CompatibilityInput, VariantInput } from '$lib/validation/crm-catalog';
 
@@ -22,32 +15,16 @@ const VARIANT = {
 	widthMm: productVariants.widthMm,
 	heightMm: productVariants.heightMm,
 	weightG: productVariants.weightG,
-	basePriceMinor: productVariants.basePriceMinor,
+	basePriceMinor: products.basePriceMinor,
 	stockItemId: productVariants.stockItemId,
 	isPublished: productVariants.isPublished,
 	deletedAt: productVariants.deletedAt
 };
 
 /** Separate cost select prevents a manager's query from touching that column. */
-export class ManagedVariantRepository extends BaseRepository<typeof productVariants> {
+export class ManagedVariantRepository extends VariantReferenceRepository {
 	constructor() {
-		super(productVariants);
-	}
-
-	hasPayrollRates(productId: number, materialIds: number[], tx: Tx): boolean {
-		return (
-			this.db(tx)
-				.select({ id: workTypes.id })
-				.from(workTypes)
-				.innerJoin(productVariants, eq(productVariants.id, workTypes.variantId))
-				.where(
-					and(
-						eq(productVariants.productId, productId),
-						inArray(productVariants.materialId, materialIds)
-					)
-				)
-				.get() !== undefined
-		);
+		super();
 	}
 
 	choices(): CrmCatalogChoicesDto {
@@ -65,7 +42,7 @@ export class ManagedVariantRepository extends BaseRepository<typeof productVaria
 				kind: stockItems.kind
 			})
 			.from(stockItems)
-			.where(eq(stockItems.isActive, true))
+			.where(and(eq(stockItems.isActive, true), isNull(stockItems.deletedAt)))
 			.orderBy(asc(stockItems.title))
 			.all();
 		const variants = this.db()
@@ -87,6 +64,7 @@ export class ManagedVariantRepository extends BaseRepository<typeof productVaria
 		const rows = this.db(tx)
 			.select(VARIANT)
 			.from(productVariants)
+			.innerJoin(products, eq(products.id, productVariants.productId))
 			.where(eq(productVariants.productId, productId))
 			.orderBy(asc(productVariants.id))
 			.all();
@@ -119,6 +97,7 @@ export class ManagedVariantRepository extends BaseRepository<typeof productVaria
 		return this.db(tx)
 			.select(VARIANT)
 			.from(productVariants)
+			.innerJoin(products, eq(products.id, productVariants.productId))
 			.where(eq(productVariants.id, id))
 			.get();
 	}
@@ -137,44 +116,8 @@ export class ManagedVariantRepository extends BaseRepository<typeof productVaria
 		);
 	}
 
-	materialActive(id: number, tx: Tx): boolean {
-		return (
-			this.db(tx)
-				.select({ id: dictItems.id })
-				.from(dictItems)
-				.where(
-					and(eq(dictItems.id, id), eq(dictItems.dict, 'material'), eq(dictItems.isActive, true))
-				)
-				.get() !== undefined
-		);
-	}
-
-	stockProductActive(id: number, tx: Tx): boolean {
-		return (
-			this.db(tx)
-				.select({ id: stockItems.id })
-				.from(stockItems)
-				.where(
-					and(eq(stockItems.id, id), eq(stockItems.kind, 'product'), eq(stockItems.isActive, true))
-				)
-				.get() !== undefined
-		);
-	}
-
-	stockComponentActive(id: number, tx: Tx): boolean {
-		return (
-			this.db(tx)
-				.select({ id: stockItems.id })
-				.from(stockItems)
-				.where(
-					and(
-						eq(stockItems.id, id),
-						eq(stockItems.kind, 'component'),
-						eq(stockItems.isActive, true)
-					)
-				)
-				.get() !== undefined
-		);
+	setModelPrice(id: number, price: number, tx: Tx): void {
+		this.db(tx).update(products).set({ basePriceMinor: price }).where(eq(products.id, id)).run();
 	}
 
 	insert(input: VariantInput, tx: Tx): number {

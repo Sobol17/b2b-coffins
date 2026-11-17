@@ -1,12 +1,21 @@
-import { and, asc, eq, isNull, ne, or, sql, type SQL } from 'drizzle-orm';
-import { countExpression, offsetFor, orderByFor } from '../core/list';
+import { and, asc, eq, inArray, isNull, ne, sql } from 'drizzle-orm';
 import { BaseRepository } from '../core/repository';
-import { containsText } from '../core/search';
 import type { Tx } from '../db/client';
-import { dictItems, options, productOptions, productVariants, stockItems } from '../db/schema';
-import type { StockFilters, StockKind } from '$lib/types/crm-stock';
+import {
+	dictItems,
+	inventories,
+	inventoryLines,
+	options,
+	productOptions,
+	products,
+	productVariants,
+	requestItems,
+	requests,
+	shopJobs,
+	stockItems
+} from '../db/schema';
+import type { StockKind } from '$lib/types/crm-stock';
 import type { DictCode } from '$lib/types/dicts';
-import type { ListQuery } from '$lib/types/list';
 
 export interface StockItemRow {
 	readonly id: number;
@@ -20,6 +29,7 @@ export interface StockItemRow {
 	readonly balance: number;
 	readonly isNegative: number;
 	readonly costPriceMinor: number;
+	readonly deletedAt: Date | null;
 }
 
 export interface StockItemPatch {
@@ -48,10 +58,9 @@ const COLUMNS = {
 	isActive: stockItems.isActive,
 	balance: BALANCE,
 	isNegative: IS_NEGATIVE,
-	costPriceMinor: stockItems.costPriceMinor
+	costPriceMinor: stockItems.costPriceMinor,
+	deletedAt: stockItems.deletedAt
 };
-
-const SORTABLE = { code: stockItems.code, title: stockItems.title };
 
 /** Stock items of the warehouse (C8). The balance is summed from the moves in the same query. */
 export class StockItemRepository extends BaseRepository<typeof stockItems> {
@@ -59,23 +68,98 @@ export class StockItemRepository extends BaseRepository<typeof stockItems> {
 		super(stockItems);
 	}
 
-	list(query: ListQuery<StockFilters>): { rows: StockItemRow[]; total: number } {
-		const where = this.where(query);
-		const [counted] = this.db()
-			.select({ total: countExpression })
-			.from(stockItems)
-			.where(where)
+	current(): StockItemRow[] {
+		return this.select().where(isNull(stockItems.deletedAt)).all();
+	}
+
+	modelLinks() {
+		return this.db()
+			.select({
+				stockItemId: productVariants.stockItemId,
+				modelId: products.id,
+				modelTitle: products.title,
+				modelCode: products.sku,
+				variantLabel: productVariants.sizeCode,
+				material: dictItems.title
+			})
+			.from(productVariants)
+			.innerJoin(products, eq(products.id, productVariants.productId))
+			.innerJoin(dictItems, eq(dictItems.id, productVariants.materialId))
+			.where(and(isNull(productVariants.deletedAt), isNull(products.deletedAt)))
 			.all();
-		const rows = this.select()
-			.where(where)
-			.orderBy(
-				orderByFor({ ...query, dir: query.dir ?? 'asc' }, SORTABLE, stockItems.title),
-				asc(stockItems.id)
+	}
+
+	archive(id: number, tx: Tx): void {
+		this.db(tx)
+			.update(stockItems)
+			.set({ deletedAt: new Date(), isActive: false })
+			.where(eq(stockItems.id, id))
+			.run();
+	}
+
+	hasAssignments(id: number, tx: Tx): boolean {
+		const variant = this.db(tx)
+			.select({ id: productVariants.id })
+			.from(productVariants)
+			.innerJoin(products, eq(products.id, productVariants.productId))
+			.where(
+				and(
+					eq(productVariants.stockItemId, id),
+					isNull(productVariants.deletedAt),
+					isNull(products.deletedAt)
+				)
 			)
-			.limit(query.perPage)
-			.offset(offsetFor(query))
-			.all();
-		return { rows, total: counted?.total ?? 0 };
+			.limit(1)
+			.get();
+		const option = this.db(tx)
+			.select({ id: options.id })
+			.from(options)
+			.where(and(eq(options.stockItemId, id), eq(options.isActive, true)))
+			.limit(1)
+			.get();
+		const draft = this.db(tx)
+			.select({ id: inventoryLines.id })
+			.from(inventoryLines)
+			.innerJoin(inventories, eq(inventories.id, inventoryLines.inventoryId))
+			.where(and(eq(inventoryLines.stockItemId, id), eq(inventories.status, 'draft')))
+			.limit(1)
+			.get();
+		return (
+			!!(variant || option || draft) ||
+			this.hasOpenRequests(id, tx) ||
+			this.hasOpenProduction(id, tx)
+		);
+	}
+
+	private hasOpenRequests(id: number, tx: Tx): boolean {
+		return (
+			this.db(tx)
+				.select({ id: requestItems.id })
+				.from(requestItems)
+				.innerJoin(requests, eq(requests.id, requestItems.requestId))
+				.innerJoin(productVariants, eq(productVariants.id, requestItems.variantId))
+				.where(
+					and(
+						eq(productVariants.stockItemId, id),
+						inArray(requests.status, ['draft', 'new', 'in_work', 'ready'])
+					)
+				)
+				.limit(1)
+				.get() !== undefined
+		);
+	}
+
+	private hasOpenProduction(id: number, tx: Tx): boolean {
+		return (
+			this.db(tx)
+				.select({ id: shopJobs.id })
+				.from(shopJobs)
+				.innerJoin(requestItems, eq(requestItems.id, shopJobs.requestItemId))
+				.innerJoin(productVariants, eq(productVariants.id, requestItems.variantId))
+				.where(and(eq(productVariants.stockItemId, id), isNull(shopJobs.finishedAt)))
+				.limit(1)
+				.get() !== undefined
+		);
 	}
 
 	find(id: number, tx?: Tx): StockItemRow | undefined {
@@ -145,21 +229,5 @@ export class StockItemRepository extends BaseRepository<typeof stockItems> {
 			.from(stockItems)
 			.innerJoin(dictItems, eq(dictItems.id, stockItems.unitId))
 			.$dynamic();
-	}
-
-	private where(query: ListQuery<StockFilters>): SQL | undefined {
-		const filters = query.filters ?? {};
-		return and(
-			filters.kind === undefined ? undefined : eq(stockItems.kind, filters.kind),
-			filters.activeOnly ? eq(stockItems.isActive, true) : undefined,
-			filters.belowThreshold ? BELOW_THRESHOLD : undefined,
-			filters.negative ? IS_NEGATIVE : undefined,
-			query.search === undefined
-				? undefined
-				: or(
-						containsText(stockItems.title, query.search),
-						containsText(stockItems.code, query.search)
-					)
-		);
 	}
 }

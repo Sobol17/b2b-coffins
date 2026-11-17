@@ -8,7 +8,7 @@ export type CrmRole = (typeof CRM_ROLES)[number];
 export interface CrmUserDto {
 	readonly id: number;
 	readonly fullName: string;
-	readonly email: string;
+	readonly email: string | null;
 	readonly phone: string | null;
 	readonly roles: readonly CrmRole[];
 	readonly status: StaffStatus;

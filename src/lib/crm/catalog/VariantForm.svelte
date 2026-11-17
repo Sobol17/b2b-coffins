@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
-	import { Button, Input, MoneyInput, NumberInput, Select, withToast } from '$lib/ui';
+	import { Button, Input, NumberInput, Select, withToast } from '$lib/ui';
 	import type { CrmCatalogChoicesDto, CrmVariantDto } from '$lib/types/crm-catalog';
 
 	let {
@@ -91,12 +91,6 @@
 		placeholder="Введите вес"
 		value={variant?.weightG ?? 0}
 		min={0}
-	/>
-	<MoneyInput
-		name="basePriceMinor"
-		label="Базовая цена"
-		placeholder="Введите цену"
-		valueMinor={variant?.basePriceMinor ?? 0}
 	/>
 	<div class="flex items-end gap-2">
 		<Button type="submit">{variant ? 'Сохранить вариант' : 'Добавить вариант'}</Button>

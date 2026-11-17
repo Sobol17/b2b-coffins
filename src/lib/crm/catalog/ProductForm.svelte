@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
-	import { Button, Card, Input, NumberInput, Select, withToast } from '$lib/ui';
+	import { Button, Card, Input, MoneyInput, NumberInput, Select, withToast } from '$lib/ui';
 	import type { CrmCategoryDto, CrmProductDto } from '$lib/types/crm-catalog';
 
 	let { product, categories }: { product: CrmProductDto; categories: readonly CrmCategoryDto[] } =
@@ -38,6 +38,13 @@
 				placeholder="Выберите категорию"
 				options={choices}
 				value={String(product.categoryId ?? '')}
+				required
+			/>
+			<MoneyInput
+				name="basePriceMinor"
+				label="Цена модели, ₽"
+				placeholder="Введите цену"
+				valueMinor={product.basePriceMinor}
 				required
 			/>
 			<NumberInput

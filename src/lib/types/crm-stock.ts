@@ -46,6 +46,18 @@ export interface StockRowDto {
 	readonly costPriceMinor?: number;
 }
 
+/** One registry row per model; members retain their accounting IDs and colour balances. */
+export interface StockRegistryMemberDto extends StockRowDto {
+	readonly variantLabels: readonly string[];
+	readonly positions: readonly StockPositionDto[];
+}
+
+export interface StockRegistryRowDto extends StockRowDto {
+	readonly modelId: number | null;
+	readonly members: readonly StockRegistryMemberDto[];
+	readonly costRange?: readonly [number, number];
+}
+
 export interface StockPositionDto {
 	readonly optionId: number | null;
 	readonly colorTitle: string | null;
@@ -72,6 +84,7 @@ export interface StockMoveDto {
 
 /** The journal comes apart from the card as a page of `StockMoveDto`. */
 export interface StockCardDto extends StockRowDto {
+	readonly isDeleted: boolean;
 	/** One row for a component, a row per colour for a product. */
 	readonly positions: readonly StockPositionDto[];
 	/** Colours the move form offers: the matrix of the variant, empty for a component. */

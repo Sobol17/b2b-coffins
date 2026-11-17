@@ -1,3 +1,4 @@
+import { AuthRepository } from '../auth/auth.repository';
 import { PolicyService } from '../auth/policy';
 import { generateTemporaryPassword, hashPassword } from '../auth/password';
 import { consumeRateLimit } from '../auth/rate-limit';
@@ -52,9 +53,11 @@ export class CrmUserService extends BaseService {
 		const temporaryPassword = generateTemporaryPassword();
 		const passwordHash = await hashPassword(temporaryPassword);
 		const row = this.audited({ action: 'crm_user.create', entity: 'users' }, (tx) => {
-			if (this.repo.emailTaken(input.email, tx)) {
+			if (input.email && this.repo.emailTaken(input.email, tx)) {
 				throw new ValidationError('Этот адрес уже используется', { field: 'email' });
 			}
+			if (new AuthRepository().phoneTaken(input.phone, tx))
+				throw new ValidationError('Этот телефон уже используется', { field: 'phone' });
 			const { roles, ...account } = input;
 			const id = this.repo.insert({ ...account, passwordHash }, tx);
 			this.repo.setRoles(id, roles, tx);
@@ -71,9 +74,11 @@ export class CrmUserService extends BaseService {
 			if (user.id === this.ctx.userId && !input.roles.includes('owner')) {
 				throw new ConflictError('Нельзя снять с себя роль руководителя');
 			}
-			if (this.repo.emailTaken(input.email, tx, input.id)) {
+			if (input.email && this.repo.emailTaken(input.email, tx, input.id)) {
 				throw new ValidationError('Этот адрес уже используется', { field: 'email' });
 			}
+			if (new AuthRepository().phoneTaken(input.phone, tx, input.id))
+				throw new ValidationError('Этот телефон уже используется', { field: 'phone' });
 			const { id, roles, ...contact } = input;
 			this.repo.updateContact(id, contact, tx);
 			// Existing sessions read current roles and contacts on every request.
@@ -172,10 +177,11 @@ export class CrmUserService extends BaseService {
 	}
 
 	private async sendAccess(
-		to: string,
+		to: string | null,
 		temporaryPassword: string,
 		isReset: boolean
 	): Promise<boolean> {
+		if (!to) return false;
 		try {
 			await this.mail.send(crmAccessMail({ to, temporaryPassword, isReset }));
 			return true;

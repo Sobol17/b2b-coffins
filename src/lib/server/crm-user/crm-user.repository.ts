@@ -13,7 +13,7 @@ import type { UpdateCrmUserInput } from '$lib/validation/crm-user';
 export interface CrmUserRow {
 	readonly id: number;
 	readonly fullName: string;
-	readonly email: string;
+	readonly email: string | null;
 	readonly phone: string | null;
 	readonly isActive: boolean;
 	readonly mustChangePassword: boolean;
@@ -23,7 +23,7 @@ export interface CrmUserRow {
 
 export interface NewCrmUser {
 	readonly fullName: string;
-	readonly email: string;
+	readonly email: string | null;
 	readonly phone: string | null;
 	readonly passwordHash: string;
 }

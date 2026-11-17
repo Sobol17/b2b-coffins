@@ -10,7 +10,7 @@
 <Modal
 	bind:open
 	title="Новый администратор"
-	description="Временный пароль уйдёт на почту и один раз появится на этой странице."
+	description="Временный пароль появится здесь один раз. Если указана почта, отправим его письмом."
 >
 	{#snippet body()}
 		<form
@@ -35,10 +35,9 @@
 				type="email"
 				label="Электронная почта"
 				placeholder={PLACEHOLDER.email}
-				required
 				autocomplete="off"
 			/>
-			<Input name="phone" type="tel" label="Телефон" placeholder={PLACEHOLDER.phone} />
+			<Input name="phone" type="tel" label="Телефон" placeholder={PLACEHOLDER.phone} required />
 			<Button type="submit" loading={pending} class="self-start">Выдать доступ</Button>
 		</form>
 	{/snippet}

@@ -85,7 +85,9 @@ function parseRows(sheet: ExcelJS.Worksheet, skuAt: number, priceAt: number): Pr
 		const raw = { sku: cellText(values[skuAt]), price: cellText(values[priceAt]) };
 		if (raw.sku === '' && raw.price === '') return;
 		const parsed = rowSchema.safeParse(raw);
-		if (!parsed.success) {
+		if (raw.price === '') {
+			problems.push(`строка ${index}: нет цены`);
+		} else if (!parsed.success) {
 			problems.push(`строка ${index}: ${parsed.error.issues[0]?.message ?? 'ошибка'}`);
 		} else if (seen.has(parsed.data.sku)) {
 			problems.push(`строка ${index}: артикул ${parsed.data.sku} уже был`);

@@ -5,6 +5,7 @@
 	import { resolve } from '$app/paths';
 	import MoveModal from '$lib/crm/stock/MoveModal.svelte';
 	import MovesTable from '$lib/crm/stock/MovesTable.svelte';
+	import StockDelete from '$lib/crm/stock/StockDelete.svelte';
 	import StockItemFields from '$lib/crm/stock/StockItemFields.svelte';
 	import { KIND_TITLE, MOVE_TYPE_TITLE } from '$lib/crm/stock/labels';
 	import {
@@ -58,7 +59,9 @@
 	<div class="flex flex-wrap items-center gap-4">
 		<div>
 			<h1 class="text-3xl" data-testid="stock-title">{card.title}</h1>
-			<p class="text-fg-muted">{card.code} · {KIND_TITLE[card.kind]}</p>
+			<p class="text-fg-muted">
+				{card.code} · {KIND_TITLE[card.kind]}{card.isDeleted ? ' · Удалена' : ''}
+			</p>
 		</div>
 		{#if card.canManage && card.isActive}
 			<Button class="sm:ml-auto" onclick={() => (moveOpen = true)}>Движение</Button>
@@ -124,6 +127,7 @@
 						<Checkbox name="isActive" label="Позиция активна" bind:checked={isActive} />
 						<Button type="submit" class="self-start">Сохранить позицию</Button>
 					</form>
+					<div class="mt-4"><StockDelete id={card.id} title={card.title} /></div>
 				</Card.Content>
 			</Card.Root>
 		{/if}

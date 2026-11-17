@@ -65,10 +65,15 @@ function priceOf(product: ProductDto, variantSku: string): number | undefined {
 	return product.variants.find((variant) => variant.sku === variantSku)?.priceMinor;
 }
 
-function stored(variantSku: string): { id: number; basePriceMinor: number } {
+function stored(variantSku: string): { id: number; productId: number; basePriceMinor: number } {
 	const [row] = db
-		.select({ id: productVariants.id, basePriceMinor: productVariants.basePriceMinor })
+		.select({
+			id: productVariants.id,
+			productId: products.id,
+			basePriceMinor: products.basePriceMinor
+		})
 		.from(productVariants)
+		.innerJoin(products, eq(products.id, productVariants.productId))
 		.where(eq(productVariants.sku, variantSku))
 		.all();
 	if (!row) throw new Error(`no variant ${variantSku}`);
@@ -80,25 +85,27 @@ describe('personal price of a counterparty (P2)', () => {
 		const product = productOf('MDL-201', actor('cp_admin', partnerCp));
 
 		expect(priceOf(product, 'MDL-201-180-PIN')).toBe(830_000);
+		expect(priceOf(product, 'MDL-201-190-PIN')).toBe(830_000);
+		expect(priceOf(product, 'MDL-201-200-PIN')).toBe(830_000);
 		expect(stored('MDL-201-180-PIN').basePriceMinor).not.toBe(830_000);
 	});
 
-	it('falls back to the variant price where the partner list says nothing', () => {
+	it('falls back to the model price where the partner list says nothing', () => {
 		const product = productOf('MDL-101', actor('cp_admin', partnerCp));
 
 		expect(priceOf(product, 'MDL-101-180-CHB')).toBe(stored('MDL-101-180-CHB').basePriceMinor);
 	});
 
-	it('charges a counterparty on the base list the variant price', () => {
+	it('charges a counterparty on the base list the model price', () => {
 		const product = productOf('MDL-201', actor('cp_admin', baseCp));
 
 		expect(priceOf(product, 'MDL-201-180-PIN')).toBe(stored('MDL-201-180-PIN').basePriceMinor);
 	});
 
-	it('lets a base list entry replace the variant price for everyone without an own entry', () => {
+	it('lets a base list entry replace the model price for everyone without an own entry', () => {
 		const variant = stored('MDL-101-180-CHB');
 		db.insert(priceListItems)
-			.values({ priceListId: listId('base'), variantId: variant.id, priceMinor: 470_000 })
+			.values({ priceListId: listId('base'), productId: variant.productId, priceMinor: 470_000 })
 			.run();
 		try {
 			expect(priceOf(productOf('MDL-101', actor('cp_admin', baseCp)), 'MDL-101-180-CHB')).toBe(
@@ -115,7 +122,7 @@ describe('personal price of a counterparty (P2)', () => {
 				.where(
 					and(
 						eq(priceListItems.priceListId, listId('base')),
-						eq(priceListItems.variantId, variant.id)
+						eq(priceListItems.productId, variant.productId)
 					)
 				)
 				.run();

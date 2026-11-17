@@ -9,7 +9,7 @@ const OWN_PASSWORD = 'Ochen!Nadezhnyi9';
 
 async function signIn(page: Page, email: string, password: string): Promise<void> {
 	await page.goto('/login');
-	await page.fill('input[name="email"]', email);
+	await page.fill('input[name="identifier"]', email);
 	await page.fill('input[name="password"]', password);
 	await page.click('button[type="submit"]');
 }
@@ -58,7 +58,8 @@ test('C3 DoD: a manager creates a counterparty with an administrator who signs i
 	await page.locator('input[name="inn"]').fill('7701234567');
 	await page.locator('input[name="adminFullName"]').fill('Анна Смирнова');
 	await page.locator('input[name="adminEmail"]').fill(adminEmail);
-	await page.getByRole('button', { name: 'Завести и отправить доступ' }).click();
+	await page.locator('input[name="adminPhone"]').fill(`+797${String(suffix).slice(-8)}`);
+	await page.getByRole('button', { name: 'Завести и выдать доступ' }).click();
 
 	const password = (await page.getByTestId('temporary-password').textContent())?.trim() ?? '';
 	expect(password.length).toBeGreaterThanOrEqual(12);
@@ -150,6 +151,7 @@ test('the card keeps contracts, addresses and a second administrator', async ({ 
 	const issue = page.getByTestId('modal');
 	await issue.locator('input[name="fullName"]').fill('Олег Второй');
 	await issue.locator('input[name="email"]').fill(email);
+	await issue.locator('input[name="phone"]').fill(`+798${String(Date.now()).slice(-8)}`);
 	await issue.getByRole('button', { name: 'Выдать доступ' }).click();
 	await expect(page.getByTestId('created-access')).toContainText('Администратор выдан');
 	expect(

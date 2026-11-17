@@ -1,3 +1,4 @@
+import { redirect } from '@sveltejs/kit';
 import { formAction, orHttpStatus } from '$lib/server/core/http';
 import { parseListQuery } from '$lib/server/core/list';
 import { routeId, stockActor } from '$lib/server/crm-stock/route';
@@ -5,6 +6,7 @@ import { StockItemService } from '$lib/server/crm-stock/stock-item.service';
 import { StockMoveService } from '$lib/server/crm-stock/stock-move.service';
 import {
 	stockItemUpdateSchema,
+	stockItemDeleteSchema,
 	stockJournalFiltersSchema,
 	stockMoveSchema,
 	stockReverseSchema
@@ -32,6 +34,19 @@ export const load: PageServerLoad = (event) => {
 };
 
 export const actions = {
+	delete: (event) => {
+		const { id, request, items } = context(event);
+		return formAction(
+			request,
+			'delete',
+			stockItemDeleteSchema,
+			() => {
+				items().archive(id);
+				redirect(303, '/crm/stock');
+			},
+			{ stockItemId: id }
+		);
+	},
 	update: (event) => {
 		const { id, request, items } = context(event);
 		return formAction(request, 'update', stockItemUpdateSchema, (input) =>

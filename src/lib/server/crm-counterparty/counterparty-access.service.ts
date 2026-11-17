@@ -1,3 +1,4 @@
+import { AuthRepository } from '../auth/auth.repository';
 import { generateTemporaryPassword, hashPassword } from '../auth/password';
 import { consumeRateLimit } from '../auth/rate-limit';
 import { SessionService } from '../auth/session.service';
@@ -44,7 +45,7 @@ export class CounterpartyAccessService extends CounterpartyBaseService {
 			{ action: 'counterparty.create', entity: 'counterparties' },
 			(tx) => {
 				this.validateTerms(input.terms, tx);
-				this.assertLoginFree(input.admin.email, tx);
+				this.assertLoginFree(input.admin.email, input.admin.phone, tx);
 				const staffLimit = OrgService.staffLimitDefault();
 				const id = this.counterparties.insert(input.requisites, input.terms, staffLimit, tx);
 				const region = input.terms.regionPriceListId;
@@ -78,7 +79,7 @@ export class CounterpartyAccessService extends CounterpartyBaseService {
 		const { passwordHash, temporaryPassword } = await this.newPassword();
 		const admin = this.audited({ action: 'counterparty.admin_issue', entity: 'users' }, (tx) => {
 			const counterparty = this.requireCounterparty(counterpartyId, tx);
-			this.assertLoginFree(input.email, tx);
+			this.assertLoginFree(input.email, input.phone, tx);
 			if (this.staff.countActive(counterpartyId, tx) >= counterparty.staffLimit) {
 				throw new ConflictError('Достигнут лимит сотрудников контрагента');
 			}
@@ -134,8 +135,10 @@ export class CounterpartyAccessService extends CounterpartyBaseService {
 		return { passwordHash: await hashPassword(temporaryPassword), temporaryPassword };
 	}
 
-	private assertLoginFree(email: string, tx: Tx): void {
-		if (this.staff.emailTaken(email, tx)) {
+	private assertLoginFree(email: string | null, phone: string, tx: Tx): void {
+		if (new AuthRepository().phoneTaken(phone, tx))
+			throw new ValidationError('Этот телефон уже используется', { field: 'phone' });
+		if (email && this.staff.emailTaken(email, tx)) {
 			throw new ValidationError('Этот адрес уже используется', { field: 'email' });
 		}
 	}
@@ -154,10 +157,11 @@ export class CounterpartyAccessService extends CounterpartyBaseService {
 	}
 
 	private async sendAccess(
-		to: string,
+		to: string | null,
 		counterpartyId: number,
 		temporaryPassword: string
 	): Promise<boolean> {
+		if (!to) return false;
 		const counterpartyName = this.requireCounterparty(counterpartyId).name;
 		try {
 			await this.mail.send(staffAccessMail({ to, counterpartyName, temporaryPassword }));

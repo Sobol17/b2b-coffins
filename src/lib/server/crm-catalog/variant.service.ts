@@ -33,7 +33,10 @@ export class CrmVariantService extends BaseService {
 	createVariant(input: VariantInput): CrmVariantDto {
 		return this.audited({ action: 'catalog.variant.create', entity: 'product_variants' }, (tx) => {
 			this.validateVariant(input, undefined, tx);
+			const first = this.variants.variants(input.productId, false, tx).length === 0;
 			const id = this.variants.insert(input, tx);
+			if (first && input.basePriceMinor !== undefined)
+				this.variants.setModelPrice(input.productId, input.basePriceMinor, tx);
 			return {
 				result: this.requireVariant(id, tx),
 				entityId: id,
@@ -57,6 +60,8 @@ export class CrmVariantService extends BaseService {
 			if (!input.isPublished) this.guardLastVariant(old, tx);
 			this.validateVariant(input, id, tx);
 			this.variants.update(id, input, tx);
+			if (input.basePriceMinor !== undefined)
+				this.variants.setModelPrice(input.productId, input.basePriceMinor, tx);
 			return {
 				result: this.requireVariant(id, tx),
 				entityId: id,
@@ -129,6 +134,7 @@ export class CrmVariantService extends BaseService {
 			{ action: isActive ? 'catalog.option.enable' : 'catalog.option.disable', entity: 'options' },
 			(tx) => {
 				const old = this.requireOption(id, tx);
+				if (isActive) this.validateOption(old, tx);
 				this.options.setActive(id, isActive, tx);
 				return {
 					result: this.requireOption(id, tx),
@@ -190,7 +196,10 @@ export class CrmVariantService extends BaseService {
 			throw new ValidationError('Артикул варианта уже занят');
 	}
 
-	private validateOption(input: OptionInput, tx: Tx): void {
+	private validateOption(
+		input: Pick<CrmOptionDto, 'priceDeltaMinor' | 'stockItemId'>,
+		tx: Tx
+	): void {
 		if (input.priceDeltaMinor !== 0) throw new ValidationError('Цвет не меняет цену');
 		if (input.stockItemId !== null && !this.variants.stockComponentActive(input.stockItemId, tx))
 			throw new ValidationError('Выберите учётную позицию комплектующего');

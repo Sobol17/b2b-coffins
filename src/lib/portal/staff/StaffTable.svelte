@@ -34,7 +34,7 @@
 	{#snippet cell(row: StaffMemberDto, column: DataTableColumn)}
 		{#if column.key === 'fullName'}
 			<div>{row.fullName}</div>
-			<div class="text-xs text-fg-faint">{row.email}</div>
+			<div class="text-xs text-fg-faint">{row.email ?? '—'}</div>
 		{:else if column.key === 'role'}
 			{ROLE_LABEL[row.role]}
 		{:else if column.key === 'phone'}

@@ -33,6 +33,10 @@ export class CrmPricingService extends BaseService {
 		this.assert(ctx.scope === 'crm' && PolicyService.can(ctx, 'catalog.manage'), 'catalog.manage');
 	}
 
+	modelChoices() {
+		return this.lists.modelChoices();
+	}
+
 	choices(): CrmPricingChoicesDto {
 		return { counterparties: this.rules.counterpartyChoices() };
 	}
@@ -90,25 +94,25 @@ export class CrmPricingService extends BaseService {
 	upsertPriceItem(input: PriceListItemInput): CrmPriceListDto {
 		return this.audited({ action: 'price_list.item.upsert', entity: 'price_list_items' }, (tx) => {
 			this.requireList(input.priceListId, tx);
-			if (!this.lists.variantAvailable(input.variantId, tx))
-				throw new ValidationError('Вариант не найден');
-			this.lists.upsertItem(input.priceListId, input.variantId, input.priceMinor, tx);
+			if (!this.lists.productAvailable(input.productId, tx))
+				throw new ValidationError('Модель не найдена');
+			this.lists.upsertItem(input.priceListId, input.productId, input.priceMinor, tx);
 			return {
 				result: this.listDto(this.requireList(input.priceListId, tx), tx),
 				entityId: input.priceListId,
-				after: { variantId: input.variantId, priceMinor: input.priceMinor }
+				after: { productId: input.productId, priceMinor: input.priceMinor }
 			};
 		});
 	}
 
-	deletePriceItem(priceListId: number, variantId: number): CrmPriceListDto {
+	deletePriceItem(priceListId: number, productId: number): CrmPriceListDto {
 		return this.audited({ action: 'price_list.item.delete', entity: 'price_list_items' }, (tx) => {
 			this.requireList(priceListId, tx);
-			this.lists.deleteItem(priceListId, variantId, tx);
+			this.lists.deleteItem(priceListId, productId, tx);
 			return {
 				result: this.listDto(this.requireList(priceListId, tx), tx),
 				entityId: priceListId,
-				before: { variantId },
+				before: { productId },
 				after: { removed: true }
 			};
 		});

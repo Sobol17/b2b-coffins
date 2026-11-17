@@ -57,7 +57,7 @@
 					<span data-testid="member-role">{ROLE_TITLE[row.role]}</span>
 				</div>
 				<div class="text-xs text-fg-faint">
-					{row.email}{row.phone ? `, ${row.phone}` : ''}
+					{row.email ?? '—'}{row.phone ? `, ${row.phone}` : ''}
 				</div>
 				<div class="text-xs text-fg-faint">
 					{row.lastLoginAt

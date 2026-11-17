@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { accountPhoneSchema } from './contact';
 
 /**
  * Password policy from tech.md 12. One schema serves the login form, the change form and the
@@ -13,7 +14,9 @@ export const passwordSchema = z
 	.refine((v) => /\d/.test(v), { error: 'Нужна цифра' });
 
 export const loginSchema = z.object({
-	email: z.email({ error: 'Введите адрес электронной почты' }),
+	identifier: z.union([z.string().trim().toLowerCase().pipe(z.email()), accountPhoneSchema], {
+		error: 'Введите телефон или электронную почту'
+	}),
 	password: z.string().min(1, { error: 'Введите пароль' }),
 	redirectTo: z.string().optional()
 });
