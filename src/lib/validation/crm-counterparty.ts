@@ -70,6 +70,8 @@ export const termsInputSchema = z.object({
 		.max(1000, { error: 'Не больше 1000' })
 });
 
+export const priceListInputSchema = z.object({ regionPriceListId: nullableId });
+
 export const notesInputSchema = z.object({ notes: optional(text(5000)) });
 
 /** A new portal administrator issued by the workshop. The counterparty comes from the route. */

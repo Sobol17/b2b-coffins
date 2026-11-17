@@ -23,6 +23,7 @@ import {
 	entityIdSchema,
 	issueAdminSchema,
 	notesInputSchema,
+	priceListInputSchema,
 	requisitesInputSchema,
 	termsInputSchema
 } from '$lib/validation/crm-counterparty';
@@ -89,6 +90,13 @@ export const actions = {
 		const { id, cards, request } = context(event);
 		return formAction(request, 'terms', termsInputSchema, (input) =>
 			cards().updateTerms(id, input)
+		);
+	},
+	priceList: (event) => {
+		const { id, actor, cards, request } = context(event);
+		if (!actor.canSeePrices) error(403, { code: 'forbidden', message: 'Доступ запрещён' });
+		return formAction(request, 'priceList', priceListInputSchema, (input) =>
+			cards().assignPriceList(id, input.regionPriceListId)
 		);
 	},
 	notes: (event) => {

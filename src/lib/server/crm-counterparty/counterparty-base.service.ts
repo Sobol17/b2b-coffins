@@ -43,7 +43,10 @@ export abstract class CounterpartyBaseService extends BaseService {
 		if (terms.managerId !== null && !this.counterparties.isManager(terms.managerId, tx)) {
 			throw new ValidationError('Выберите администратора мастерской', { field: 'managerId' });
 		}
-		const region = terms.regionPriceListId;
+		this.validateRegion(terms.regionPriceListId, tx);
+	}
+
+	protected validateRegion(region: number | null, tx: Tx): void {
 		if (region !== null && !this.counterparties.isRegionList(region, tx)) {
 			throw new ValidationError('Выберите региональный прайс-лист', {
 				field: 'regionPriceListId'
