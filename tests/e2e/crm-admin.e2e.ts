@@ -58,7 +58,11 @@ test.describe('the owner runs the workshop without a developer (C1)', () => {
 	test('edits contacts and roles, keeps a refused edit open, then confirms deletion', async ({
 		page
 	}) => {
-		const email = `e2e.edit.${Date.now()}@workshop.example`;
+		const runId = Date.now();
+		const email = `e2e.edit.${runId}@workshop.example`;
+		// Inactive accounts from earlier runs still reserve their undeleted phone.
+		const phone = `+790${String(runId).slice(-8)}`;
+		const formattedPhone = `+7 (${phone.slice(2, 5)}) ${phone.slice(5, 8)}-${phone.slice(8, 10)}-${phone.slice(10)}`;
 		const nextEmail = email.replace('e2e.edit.', 'e2e.updated.');
 		await page.setViewportSize({ width: 390, height: 844 });
 		await login(page, 'owner');
@@ -82,7 +86,7 @@ test.describe('the owner runs the workshop without a developer (C1)', () => {
 		await expect(modal).toBeInViewport({ ratio: 1 });
 		await expect(modal.getByLabel('Имя и фамилия')).toHaveValue('Павел Орлов');
 		await modal.getByLabel('Имя и фамилия').fill('Алексей Петров');
-		await modal.getByLabel('Телефон').fill('+7 (900) 111-22-33');
+		await modal.getByLabel('Телефон').fill(formattedPhone);
 		await modal.getByLabel('Электронная почта').fill(ACCOUNTS.cp_admin.email);
 		await modal.getByRole('button', { name: 'Роли' }).click();
 		await page.getByLabel('Столяр', { exact: true }).click();
@@ -101,11 +105,11 @@ test.describe('the owner runs the workshop without a developer (C1)', () => {
 		await page.getByRole('textbox', { name: 'Поиск' }).fill(nextEmail);
 		const editedRow = page.getByTestId('data-table-row').filter({ hasText: nextEmail });
 		await expect(editedRow).toContainText('Алексей Петров');
-		await expect(editedRow).toContainText('+79001112233');
+		await expect(editedRow).toContainText(phone);
 		await expect(editedRow.getByTestId('user-roles')).toHaveText('Водитель');
 
 		await editedRow.getByRole('button', { name: 'Сгенерировать пароль' }).click();
-		await expect(page.getByTestId('created-access')).toContainText('Логин: +79001112233');
+		await expect(page.getByTestId('created-access')).toContainText(`Логин: ${phone}`);
 		await expect(page.getByTestId('created-access')).toContainText('Письмо не отправляется');
 		await expect(page.getByTestId('temporary-password')).not.toBeEmpty();
 		await expect(modal).toBeVisible();
@@ -139,7 +143,7 @@ test.describe('the owner runs the workshop without a developer (C1)', () => {
 		await expect(modal.getByLabel('Имя и фамилия')).toBeFocused();
 		await modal.getByLabel('Имя и фамилия').fill('Новый сотрудник');
 		await modal.getByLabel('Электронная почта').fill(nextEmail);
-		await modal.getByLabel('Телефон').fill('+7 (900) 111-22-33');
+		await modal.getByLabel('Телефон').fill(formattedPhone);
 		await modal.getByRole('button', { name: 'Роли' }).click();
 		await page.getByLabel('Водитель', { exact: true }).click();
 		await page.keyboard.press('Escape');
@@ -160,8 +164,12 @@ test.describe('the owner runs the workshop without a developer (C1)', () => {
 
 		await page.getByRole('button', { name: 'Добавить запись' }).click();
 		const modal = page.getByTestId('modal');
+		// Wait for the dialog's deferred autofocus before filling a later field.
+		await expect(modal.locator('input[name="code"]')).toBeFocused();
 		await modal.locator('input[name="code"]').fill(code);
+		await expect(modal.locator('input[name="code"]')).toHaveValue(code);
 		await modal.locator('input[name="title"]').fill('Газель с тентом');
+		await expect(modal.locator('input[name="title"]')).toHaveValue('Газель с тентом');
 		await modal.getByRole('button', { name: 'Добавить' }).click();
 
 		const row = page.getByTestId('data-table-row').filter({ hasText: code });
