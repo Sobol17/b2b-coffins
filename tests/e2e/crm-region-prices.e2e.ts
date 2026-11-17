@@ -1,5 +1,8 @@
 import ExcelJS from 'exceljs';
+import { eq } from 'drizzle-orm';
 import { expect, test, type Page } from '@playwright/test';
+import { counterparties } from '../../src/lib/server/db/schema';
+import { e2eDb } from './transitions';
 import { login, logout } from './fixtures';
 
 const ORIGIN = 'http://localhost:4173';
@@ -77,7 +80,7 @@ async function uploadRegion(page: Page, title: string): Promise<void> {
 	await listForm.getByLabel('Название прайс-листа').fill(title);
 	await listForm.getByRole('button', { name: 'Добавить', exact: true }).click();
 	const listRow = page.getByRole('listitem').filter({ hasText: title });
-	await listRow.getByRole('link', { name: 'Позиции' }).click();
+	await listRow.getByRole('link', { name: `Позиции прайс-листа ${title}`, exact: true }).click();
 	await expect(page).toHaveURL(/\/crm\/prices\/\d+$/);
 
 	await page.locator('input[name="file"]').setInputFiles({
@@ -97,7 +100,7 @@ test('a regional list uploaded from XLSX prefills the prices of a new counterpar
 	page
 }) => {
 	const suffix = Date.now();
-	const region = `Иркутская область ${suffix}`;
+	const region = `Иркутская область — региональный прайс для северных районов ${suffix}`;
 	const name = `Агентство региона ${suffix}`;
 
 	await login(page, 'manager');
@@ -127,11 +130,56 @@ test('a regional list uploaded from XLSX prefills the prices of a new counterpar
 	await roundtrip(page, true, 9000);
 	await page.reload();
 	await expect(priceField(page)).toHaveValue(OWN_SHOWN);
+	const counterpartyId = Number(new URL(page.url()).pathname.split('/').at(-1));
+	const before = e2eDb()
+		.select()
+		.from(counterparties)
+		.where(eq(counterparties.id, counterpartyId))
+		.get()!;
+	const attachment = page.locator('form[action="?/priceList"]');
+	expect(
+		await attachment.evaluate((form) => [...new FormData(form as HTMLFormElement).keys()])
+	).toEqual(['regionPriceListId']);
+	await page.setViewportSize({ width: 390, height: 844 });
+	await attachment.getByRole('combobox', { name: 'Региональный прайс-лист', exact: true }).click();
+	await page.getByRole('option', { name: 'Без прайса', exact: true }).click();
+	await attachment.getByRole('button', { name: 'Сохранить привязку' }).click();
+	await expect(
+		page.getByTestId('toast').filter({ hasText: 'Привязка прайса сохранена' })
+	).toBeVisible();
+	await expect(priceField(page)).toHaveValue(OWN_SHOWN);
+	await expect(page.getByRole('button', { name: 'Заполнить из прайса' })).toHaveCount(0);
+	const detached = e2eDb()
+		.select()
+		.from(counterparties)
+		.where(eq(counterparties.id, counterpartyId))
+		.get()!;
+	expect(detached).toMatchObject({
+		regionPriceListId: null,
+		discountPercent: before.discountPercent,
+		managerId: before.managerId,
+		settlementScheme: before.settlementScheme,
+		staffLimit: before.staffLimit,
+		priceListId: before.priceListId
+	});
+	await attachment.getByRole('combobox', { name: 'Региональный прайс-лист', exact: true }).click();
+	await page.getByPlaceholder('Поиск по списку', { exact: true }).fill(region);
+	await page.getByRole('option', { name: region, exact: true }).click();
+	await attachment.getByRole('button', { name: 'Сохранить привязку' }).click();
+	await expect(attachment.locator('input[name="regionPriceListId"]')).toHaveValue(
+		String(before.regionPriceListId)
+	);
+	await expect(priceField(page)).toHaveValue(OWN_SHOWN);
+	expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(
+		true
+	);
 
 	await page.getByRole('button', { name: 'Заполнить из прайса' }).click();
 	await page.getByTestId('confirm-dialog').getByRole('button', { name: 'Заполнить' }).click();
 	await expect(page.getByTestId('toast').filter({ hasText: 'Цены заполнены' })).toBeVisible();
 	await expect(priceField(page)).toHaveValue(REGION_SHOWN);
+	// The shared logout helper uses the desktop sidebar; the mobile assertions above are complete.
+	await page.setViewportSize({ width: 1280, height: 900 });
 	await logout(page);
 });
 

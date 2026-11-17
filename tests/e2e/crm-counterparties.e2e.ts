@@ -66,6 +66,28 @@ test('C3 DoD: a manager creates a counterparty with an administrator who signs i
 	await page.getByRole('link', { name: 'Открыть карточку контрагента' }).click();
 	await expect(page.getByTestId('counterparty-name')).toHaveText(name);
 	await expect(page.getByTestId('debt-indicator')).toHaveText('Долга нет');
+	await expect(page.getByRole('heading', { name: 'Условия', exact: true })).toHaveCount(0);
+	await expect(page.locator('form[action="?/requisites"]')).toHaveCount(0);
+	await page.setViewportSize({ width: 390, height: 844 });
+	await page.getByRole('button', { name: 'Изменить реквизиты', exact: true }).click();
+	const requisites = page.getByTestId('modal');
+	await requisites.getByLabel('Юридическое название', { exact: true }).fill(`ООО ${name}`);
+	await requisites.getByLabel('Электронная почта', { exact: true }).fill(adminEmail);
+	await requisites.getByRole('button', { name: 'Сохранить реквизиты' }).click();
+	await expect(requisites).toBeHidden();
+	await expect(page.getByTestId('counterparty-overview')).toContainText(`ООО ${name}`);
+	await expect(page.getByTestId('counterparty-overview')).toContainText(adminEmail);
+	await page.getByLabel('Заметки для мастерской').fill(`Связаться после 10, ${suffix}`);
+	await page.getByRole('button', { name: 'Сохранить заметки' }).click();
+	await expect(page.getByTestId('toast').filter({ hasText: 'Заметки сохранены' })).toBeVisible();
+	await page.reload();
+	await expect(page.getByLabel('Заметки для мастерской')).toHaveValue(
+		`Связаться после 10, ${suffix}`
+	);
+	expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(
+		true
+	);
+	await page.setViewportSize({ width: 1280, height: 900 });
 
 	const counterpartyId = Number(new URL(page.url()).pathname.split('/').at(-1));
 	deliverWithMark(counterpartyId, suffix);
