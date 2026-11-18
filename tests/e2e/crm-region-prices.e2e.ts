@@ -1,7 +1,12 @@
 import ExcelJS from 'exceljs';
-import { eq } from 'drizzle-orm';
+import { eq, isNull } from 'drizzle-orm';
 import { expect, test, type Page } from '@playwright/test';
-import { counterparties } from '../../src/lib/server/db/schema';
+import {
+	counterparties,
+	priceListItems,
+	priceLists,
+	products
+} from '../../src/lib/server/db/schema';
 import { e2eDb } from './transitions';
 import { login, logout } from './fixtures';
 
@@ -181,6 +186,39 @@ test('a regional list uploaded from XLSX prefills the prices of a new counterpar
 	// The shared logout helper uses the desktop sidebar; the mobile assertions above are complete.
 	await page.setViewportSize({ width: 1280, height: 900 });
 	await logout(page);
+});
+
+test('a full price list explains why adding a model is disabled', async ({ page }) => {
+	const db = e2eDb();
+	const listId = db.transaction((tx) => {
+		const list = tx.insert(priceLists).values({ title: 'Полный прайс' }).returning().get();
+		const models = tx
+			.select({ id: products.id })
+			.from(products)
+			.where(isNull(products.deletedAt))
+			.all();
+		tx.insert(priceListItems)
+			.values(models.map(({ id }) => ({ priceListId: list.id, productId: id, priceMinor: 100000 })))
+			.run();
+		return list.id;
+	});
+	try {
+		await login(page, 'manager');
+		await page.setViewportSize({ width: 390, height: 844 });
+		await page.goto(`/crm/prices/${listId}`);
+		const add = page.getByRole('button', { name: 'Добавить', exact: true });
+		const explanation = 'Все модели уже есть в этом прайсе.';
+		await expect(add).toBeDisabled();
+		await expect(page.getByText(explanation, { exact: true })).toBeVisible();
+		await expect(add).toHaveAccessibleDescription(explanation);
+
+		await page.getByRole('button', { name: 'Удалить', exact: true }).first().click();
+		await page.getByTestId('confirm-dialog').getByRole('button', { name: 'Удалить' }).click();
+		await expect(add).toBeEnabled();
+		await expect(page.getByText(explanation, { exact: true })).toHaveCount(0);
+	} finally {
+		db.delete(priceLists).where(eq(priceLists.id, listId)).run();
+	}
 });
 
 test('a driver gets 403 on the upload and on the refill', async ({ page }) => {

@@ -31,6 +31,7 @@
 	let selectedProductId = $state('');
 	const pricedProductIds = $derived(new Set(data.list.items.map((item) => String(item.productId))));
 	const availableModels = $derived(models.filter((model) => !pricedProductIds.has(model.value)));
+	const allModelsPriced = $derived(models.length > 0 && availableModels.length === 0);
 	const modelById = $derived(new Map(data.models.map((row) => [row.id, row])));
 	const rows = $derived(
 		data.list.items.map((item) => ({
@@ -66,14 +67,23 @@
 		><Card.Content>
 			<div class="mb-4 flex flex-wrap items-center justify-between gap-3">
 				<h2 class="text-2xl">Позиции прайс-листа</h2>
-				<Button
-					class="ml-auto"
-					disabled={availableModels.length === 0}
-					onclick={() => {
-						selectedProductId = '';
-						createOpen = true;
-					}}><Plus aria-hidden="true" />Добавить</Button
+				<div
+					class="ml-auto flex flex-col items-end gap-1 sm:flex-row-reverse sm:items-center sm:gap-3"
 				>
+					<Button
+						disabled={availableModels.length === 0}
+						aria-describedby={allModelsPriced ? 'price-list-add-hint' : undefined}
+						onclick={() => {
+							selectedProductId = '';
+							createOpen = true;
+						}}><Plus aria-hidden="true" />Добавить</Button
+					>
+					{#if allModelsPriced}
+						<p id="price-list-add-hint" class="text-right text-sm text-fg-muted">
+							Все модели уже есть в этом прайсе.
+						</p>
+					{/if}
+				</div>
 			</div>
 			<Tooltip.Provider>
 				<DataTable
