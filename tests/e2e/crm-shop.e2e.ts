@@ -5,7 +5,7 @@ import { configureShopRates, passStation } from './shop-flow';
 import { addToShelf, e2eDb, emptyShelf, shopSync, statusOf } from './transitions';
 
 const ORIGIN = 'http://localhost:4173';
-// Keep these stock reservations apart from the request and delivery scenarios on size 180.
+// Reserve a separate catalog position so earlier request and delivery scenarios cannot take it.
 const COLOUR = 'Евро';
 const db = e2eDb();
 
@@ -16,7 +16,7 @@ async function acceptedRequest(page: Page, qty: number): Promise<{ number: strin
 		`Орлов Олег ${Date.now()}`,
 		COLOUR,
 		qty,
-		'MDL-201-190-PIN'
+		'MDL-203-190-PIN'
 	);
 	const card = new URL(page.url()).pathname;
 	emptyShelf(db, number);
