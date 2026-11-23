@@ -57,7 +57,7 @@
 					<span data-testid="member-role">{ROLE_TITLE[row.role]}</span>
 				</div>
 				<div class="text-xs text-fg-faint">
-					{row.email ?? '—'}{row.phone ? `, ${row.phone}` : ''}
+					{[row.email, row.phone].filter(Boolean).join(', ') || '—'}
 				</div>
 				<div class="text-xs text-fg-faint">
 					{row.lastLoginAt
@@ -80,10 +80,10 @@
 					<form
 						method="POST"
 						action="?/accessResend"
-						use:enhance={withToast({ success: `Доступ отправлен: ${row.fullName}` })}
+						use:enhance={withToast({ success: `Пароль обновлён: ${row.fullName}` })}
 					>
 						<input type="hidden" name="id" value={row.id} />
-						<Button type="submit" variant="ghost" size="sm">Отправить доступ</Button>
+						<Button type="submit" variant="ghost" size="sm">Обновить пароль</Button>
 					</form>
 				{/if}
 			{/snippet}

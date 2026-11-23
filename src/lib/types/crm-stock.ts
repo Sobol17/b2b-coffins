@@ -85,6 +85,7 @@ export interface StockMoveDto {
 /** The journal comes apart from the card as a page of `StockMoveDto`. */
 export interface StockCardDto extends StockRowDto {
 	readonly isDeleted: boolean;
+	readonly archiveModel: { readonly id: number; readonly title: string } | null;
 	/** One row for a component, a row per colour for a product. */
 	readonly positions: readonly StockPositionDto[];
 	/** Colours the move form offers: the matrix of the variant, empty for a component. */

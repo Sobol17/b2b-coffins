@@ -1,6 +1,12 @@
 import { and, eq } from 'drizzle-orm';
 import { expect, test } from '@playwright/test';
-import { dictItems, productVariants, products, stockItems } from '../../src/lib/server/db/schema';
+import {
+	dictItems,
+	productVariants,
+	products,
+	stockItems,
+	stockMoves
+} from '../../src/lib/server/db/schema';
 import { login } from './fixtures';
 import { e2eDb } from './transitions';
 
@@ -45,6 +51,36 @@ test('stock registry groups model sizes and opens the actual accounting card', a
 	await row.locator(`a[href="/crm/stock/${variant.stockItemId}"]`).click();
 	await expect(page).toHaveURL(`/crm/stock/${variant.stockItemId}`);
 	await expect(page.getByRole('button', { name: 'Сохранить позицию' })).toBeVisible();
+});
+
+test('stock rows hide imported na 60 and na 65 size labels', async ({ page }) => {
+	await login(page, 'manager');
+	const db = e2eDb();
+	const variant = db
+		.select()
+		.from(productVariants)
+		.where(eq(productVariants.sku, 'MDL-201-180-PIN'))
+		.get()!;
+	const href = `/crm/stock/${variant.stockItemId}`;
+	await page.goto('/crm/stock?search=MDL-201-180-PIN');
+	const row = page.getByTestId('data-table-row');
+	const toggle = row.getByRole('button', { name: 'Модель «Волга»' });
+	await toggle.click();
+	await expect(row.locator(`a[href="${href}"]`)).toHaveText(`${variant.sizeCode} · Сосна`);
+
+	try {
+		for (const sizeCode of ['на 60', 'на 65']) {
+			db.update(productVariants).set({ sizeCode }).where(eq(productVariants.id, variant.id)).run();
+			await page.goto('/crm/stock?search=MDL-201-180-PIN');
+			await toggle.click();
+			await expect(row.locator(`a[href="${href}"]`)).toHaveText('Сосна');
+		}
+	} finally {
+		db.update(productVariants)
+			.set({ sizeCode: variant.sizeCode })
+			.where(eq(productVariants.id, variant.id))
+			.run();
+	}
 });
 
 test('stock model disclosure respects reduced motion while keeping pointer controls usable', async ({
@@ -117,4 +153,79 @@ test('registry edits and archives a position while preserving its history card',
 		form: { type: 'purchase', qty: '1' }
 	});
 	expect(await forged.json()).toMatchObject({ type: 'failure', status: 409 });
+});
+
+test('a model is archived after one confirmation only when all of its stock is free', async ({
+	page
+}) => {
+	await login(page, 'manager');
+	const db = e2eDb();
+	const code = `ARCHIVE-MODEL-${Date.now()}`;
+	const unit = db
+		.select()
+		.from(dictItems)
+		.where(and(eq(dictItems.dict, 'unit'), eq(dictItems.code, 'pcs')))
+		.get()!;
+	const material = db.select().from(dictItems).where(eq(dictItems.dict, 'material')).get()!;
+	const model = db
+		.insert(products)
+		.values({ sku: code, title: code, isPublished: true })
+		.returning()
+		.get()!;
+	const ids = ['180', '190'].map((sizeCode) => {
+		const sku = `${code}-${sizeCode}`;
+		const item = db
+			.insert(stockItems)
+			.values({ kind: 'product', code: sku, title: sku, unitId: unit.id })
+			.returning()
+			.get()!;
+		db.insert(productVariants)
+			.values({
+				productId: model.id,
+				sku,
+				sizeCode,
+				materialId: material.id,
+				stockItemId: item.id,
+				isPublished: true
+			})
+			.run();
+		return item.id;
+	});
+	const [stockId] = ids;
+	db.insert(stockMoves)
+		.values({ stockItemId: stockId!, qty: 1, type: 'purchase', occurredAt: new Date() })
+		.run();
+	await page.goto(`/crm/stock?search=${code}`);
+	const row = page.getByTestId('data-table-row').filter({ hasText: code });
+	const remove = row.getByRole('button', { name: 'Удалить', exact: true });
+	await expect(remove).toBeVisible();
+	await remove.click();
+	const dialog = page.getByTestId('confirm-dialog');
+	await expect(dialog).toContainText('Изделие со всеми размерами');
+	await dialog.getByRole('button', { name: 'Отмена', exact: true }).click();
+	await expect(row).toBeVisible();
+
+	await remove.click();
+	await dialog.getByRole('button', { name: 'Удалить', exact: true }).click();
+	await expect(
+		page.getByTestId('toast').filter({ hasText: 'Есть остаток по позиции' })
+	).toBeVisible();
+	await expect(dialog).toBeHidden();
+	await expect(row).toBeVisible();
+	expect(db.select().from(products).where(eq(products.id, model.id)).get()?.deletedAt).toBeNull();
+
+	db.insert(stockMoves)
+		.values({ stockItemId: stockId!, qty: -1, type: 'adjustment', occurredAt: new Date() })
+		.run();
+	await remove.click();
+	await dialog.getByRole('button', { name: 'Удалить', exact: true }).click();
+	await expect(row).toHaveCount(0);
+	expect(
+		db.select().from(products).where(eq(products.id, model.id)).get()?.deletedAt
+	).toBeInstanceOf(Date);
+	await page.goto(`/crm/stock/${stockId}`);
+	await expect(page.getByText('Удалена', { exact: false })).toBeVisible();
+	expect(
+		db.select().from(stockMoves).where(eq(stockMoves.stockItemId, stockId!)).all()
+	).toHaveLength(2);
 });

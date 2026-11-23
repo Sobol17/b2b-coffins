@@ -113,14 +113,9 @@ test('a regional list uploaded from XLSX prefills the prices of a new counterpar
 
 	await page.goto('/crm/counterparties/new');
 	await page.locator('input[name="name"]').fill(name);
-	await page.locator('input[name="adminFullName"]').fill('Ирина Регионова');
-	// global-setup disables e2e.* accounts, so reruns never pile up active seats.
-	await page.locator('input[name="adminEmail"]').fill(`e2e.region.${suffix}@agency.example`);
-	await page.locator('input[name="adminPhone"]').fill(`+796${String(suffix).slice(-8)}`);
 	await page.getByLabel('Региональный прайс-лист').click();
 	await page.getByRole('option', { name: region }).click();
-	await page.getByRole('button', { name: 'Завести и выдать доступ' }).click();
-	await page.getByRole('link', { name: 'Открыть карточку контрагента' }).click();
+	await page.getByRole('button', { name: 'Завести контрагента', exact: true }).click();
 	await expect(page.getByTestId('counterparty-name')).toHaveText(name);
 
 	await page.goto(`${new URL(page.url()).pathname}?priceSearch=MDL-201`);

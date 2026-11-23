@@ -1,4 +1,5 @@
 import { redirect } from '@sveltejs/kit';
+import { requireAction } from '$lib/server/auth/guard';
 import { formAction } from '$lib/server/core/http';
 import { parseListQuery } from '$lib/server/core/list';
 import { canManageStock, stockActor } from '$lib/server/crm-stock/route';
@@ -33,9 +34,9 @@ export const actions = {
 		);
 	},
 	delete: (event) => {
-		const service = new StockItemService(stockActor(event));
-		return formAction(event.request, 'delete', stockItemDeleteSchema, ({ stockItemId }) =>
-			service.archive(stockItemId)
+		const service = new StockItemService(requireAction(stockActor(event), 'stock.manage'));
+		return formAction(event.request, 'delete', stockItemDeleteSchema, ({ stockItemId, modelId }) =>
+			service.archive(stockItemId, modelId ?? null)
 		);
 	},
 	create: (event) => {

@@ -32,7 +32,7 @@ export function actorOf(
 
 let sequence = 0;
 
-/** The parsed form of "new counterparty", each call with its own administrator login. */
+/** The parsed form of "new counterparty", each call with its own name. */
 export function newCounterparty(patch: Record<string, string> = {}) {
 	sequence += 1;
 	return createCounterpartySchema.parse({
@@ -47,9 +47,6 @@ export function newCounterparty(patch: Record<string, string> = {}) {
 		discountPercent: '3',
 		settlementScheme: 'weekly',
 		managerId: '',
-		adminFullName: 'Анна Смирнова',
-		adminEmail: `admin${sequence}@agency.example`,
-		adminPhone: `+7920${String(sequence).padStart(7, '0')}`,
 		...patch
 	});
 }

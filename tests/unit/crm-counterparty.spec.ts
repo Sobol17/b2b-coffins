@@ -20,7 +20,6 @@ import {
 	settings,
 	users
 } from '../../src/lib/server/db/schema';
-import { FakeMailDriver } from '../../src/lib/server/notifications/drivers/mail';
 import type { RoleCode } from '../../src/lib/types/roles';
 import { actorOf, counterpartyDatabase, newCounterparty } from './helpers/crm-counterparty';
 import { insertUser } from './helpers/db';
@@ -37,13 +36,11 @@ const carpenterId = insertUser({
 	counterpartyId: null
 });
 db.insert(settings).values({ key: 'counterparty.staff_limit_default', value: 2 }).run();
-const mail = new FakeMailDriver();
 
 const manager = actorOf('manager', managerId);
-const access = () => new CounterpartyAccessService(manager, mail);
+const access = () => new CounterpartyAccessService(manager);
 
 beforeEach(() => {
-	mail.reset();
 	db.delete(rateLimits).run();
 	db.delete(auditLog).run();
 });
@@ -54,7 +51,7 @@ describe('who may manage counterparties', () => {
 		for (const role of refused) {
 			const ctx = actorOf(role, carpenterId, role.startsWith('cp_') ? 1 : null);
 			expect(() => new CrmCounterpartyService(ctx)).toThrow(ForbiddenError);
-			expect(() => new CounterpartyAccessService(ctx, mail)).toThrow(ForbiddenError);
+			expect(() => new CounterpartyAccessService(ctx)).toThrow(ForbiddenError);
 			expect(() => new CounterpartyDetailService(ctx)).toThrow(ForbiddenError);
 			expect(() => new CounterpartyLedgerService(ctx)).toThrow(ForbiddenError);
 		}
@@ -62,89 +59,51 @@ describe('who may manage counterparties', () => {
 	});
 });
 
-describe('a manager creates a counterparty with its administrator (C3 DoD)', () => {
-	it('writes both rows, mails the access and shows the password once', async () => {
-		const input = newCounterparty({ managerId: String(managerId) });
-		const created = await access().create(input);
-
-		const [row] = db
-			.select()
-			.from(counterparties)
-			.where(eq(counterparties.id, created.counterpartyId))
-			.all();
+describe('CRM counterparty creation', () => {
+	it('keeps the terms and default seat limit, without journaling contact information', () => {
+		const input = newCounterparty({
+			managerId: String(managerId),
+			email: 'contact@agency.example'
+		});
+		const id = new CrmCounterpartyService(manager).create(input);
+		const row = db.select().from(counterparties).where(eq(counterparties.id, id)).get();
 		expect(row).toMatchObject({
 			name: input.requisites.name,
 			inn: '7701234567',
 			discountPercent: 3,
 			settlementScheme: 'weekly',
 			managerId,
-			// The seats come from counterparty.staff_limit_default, not from the column default.
 			staffLimit: 2
 		});
-		const [admin] = db.select().from(users).where(eq(users.id, created.access.member.id)).all();
-		expect(admin).toMatchObject({
-			scope: 'portal',
-			counterpartyId: created.counterpartyId,
-			mustChangePassword: true
-		});
-		expect(created.access.member).toMatchObject({
-			role: 'cp_admin',
-			status: 'invited',
-			isSelf: false
-		});
-		expect(await verifyPassword(admin?.passwordHash ?? '', created.access.temporaryPassword)).toBe(
-			true
-		);
-		expect(created.access.mailSent).toBe(true);
-		expect(mail.sent[0]).toMatchObject({ to: input.admin.email });
-		expect(mail.sent[0]?.text).toContain(created.access.temporaryPassword);
-		expect(mail.sent[0]?.text).toContain(input.requisites.name);
-	});
-
-	it('journals the creation without the login or the password', async () => {
-		const created = await access().create(newCounterparty());
 		const [entry] = db.select().from(auditLog).all();
-
 		expect(entry).toMatchObject({
 			action: 'counterparty.create',
 			entity: 'counterparties',
-			entityId: created.counterpartyId,
+			entityId: id,
 			actorId: managerId
 		});
-		const journal = JSON.stringify(entry);
-		expect(journal).not.toContain(created.access.member.email);
-		expect(journal).not.toContain(created.access.temporaryPassword);
+		expect(JSON.stringify(entry)).not.toContain('contact@agency.example');
 	});
 
-	it('leaves nothing behind when the administrator login is taken', async () => {
+	it('refuses invalid terms without saving the card', () => {
+		const service = new CrmCounterpartyService(manager);
 		const before = db.select().from(counterparties).all().length;
-		await expect(
-			access().create(newCounterparty({ adminEmail: 'manager@ws.example' }))
-		).rejects.toThrow(ValidationError);
+		expect(() => service.create(newCounterparty({ managerId: String(carpenterId) }))).toThrow(
+			ValidationError
+		);
+		expect(() => service.create(newCounterparty({ regionPriceListId: '999' }))).toThrow(
+			ValidationError
+		);
 		expect(db.select().from(counterparties).all()).toHaveLength(before);
 		expect(db.select().from(auditLog).all()).toHaveLength(0);
 	});
-
-	it('refuses a responsible manager who is not a manager of the workshop', async () => {
-		await expect(
-			access().create(newCounterparty({ managerId: String(carpenterId) }))
-		).rejects.toThrow(ValidationError);
-		await expect(access().create(newCounterparty({ regionPriceListId: '999' }))).rejects.toThrow(
-			ValidationError
-		);
-	});
-
-	it('keeps the counterparty when the access mail fails and says so', async () => {
-		mail.failOnce();
-		const created = await access().create(newCounterparty());
-		expect(created.access.mailSent).toBe(false);
-		expect(new CrmCounterpartyService(manager).card(created.counterpartyId).users).toHaveLength(1);
-	});
 });
+
+const create = () => new CrmCounterpartyService(manager).create(newCounterparty());
 
 describe('administrators and access of an existing counterparty', () => {
 	it('issues another administrator within the staff limit only', async () => {
-		const { counterpartyId } = await access().create(newCounterparty());
+		const counterpartyId = create();
 		const issued = await access().issueAdmin(counterpartyId, {
 			fullName: 'Иван Петров',
 			email: 'ivan.issue@agency.example',
@@ -152,18 +111,25 @@ describe('administrators and access of an existing counterparty', () => {
 		});
 
 		expect(issued.member.role).toBe('cp_admin');
-		expect(mail.sent.at(-1)?.to).toBe('ivan.issue@agency.example');
+		expect(issued.mailSent).toBe(false);
+		await expect(
+			access().issueAdmin(counterpartyId, {
+				fullName: 'Второй Администратор',
+				email: 'second@agency.example',
+				phone: '+79301234568'
+			})
+		).resolves.toMatchObject({ member: { role: 'cp_admin' } });
 		await expect(
 			access().issueAdmin(counterpartyId, {
 				fullName: 'Третий Лишний',
-				email: 'third@agency.example',
-				phone: '+79301234568'
+				email: null,
+				phone: '+79301234570'
 			})
 		).rejects.toThrow(ConflictError);
 	});
 
-	it('promotes an active employee and journals the old role', async () => {
-		const { counterpartyId } = await access().create(newCounterparty());
+	it('promotes an active employee and journals the old role', () => {
+		const counterpartyId = create();
 		const employeeId = insertUser({
 			email: 'promote@agency.example',
 			role: 'cp_employee',
@@ -181,12 +147,18 @@ describe('administrators and access of an existing counterparty', () => {
 	});
 
 	it('resends access: new temporary password, sessions ended, a disabled account refused', async () => {
-		const { counterpartyId, access: first } = await access().create(newCounterparty());
+		const counterpartyId = create();
+		const first = await access().issueAdmin(counterpartyId, {
+			fullName: 'Пароль Заново',
+			email: 'reset@agency.example',
+			phone: '+79301234571'
+		});
 		const adminId = first.member.id;
 		SessionService.create(adminId, { ip: null, userAgent: null });
 
 		const again = await access().resendAccess(counterpartyId, adminId);
 		const [row] = db.select().from(users).where(eq(users.id, adminId)).all();
+		expect(again.mailSent).toBe(false);
 		expect(await verifyPassword(row?.passwordHash ?? '', again.temporaryPassword)).toBe(true);
 		expect(db.select().from(sessions).where(eq(sessions.userId, adminId)).all()).toHaveLength(0);
 
@@ -195,14 +167,14 @@ describe('administrators and access of an existing counterparty', () => {
 	});
 
 	it('never reaches a person of another counterparty through this one', async () => {
-		const own = await access().create(newCounterparty());
-		const other = await access().create(newCounterparty());
+		const own = create();
+		const other = await access().issueAdmin(create(), {
+			fullName: 'Чужой Администратор',
+			email: null,
+			phone: '+79301234572'
+		});
 
-		expect(() => access().promoteAdmin(own.counterpartyId, other.access.member.id)).toThrow(
-			NotFoundError
-		);
-		await expect(access().resendAccess(own.counterpartyId, other.access.member.id)).rejects.toThrow(
-			NotFoundError
-		);
+		expect(() => access().promoteAdmin(own, other.member.id)).toThrow(NotFoundError);
+		await expect(access().resendAccess(own, other.member.id)).rejects.toThrow(NotFoundError);
 	});
 });

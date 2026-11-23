@@ -44,7 +44,7 @@ const SECTIONS: readonly SectionRights[] = [
 	{ prefix: '/crm/payroll', readers: ADMINS },
 	// Legacy bookmarks redirect home; the personal salary screen has been removed.
 	{ prefix: '/crm/salary', readers: CRM_ROLES },
-	// Registry edit/delete controls and card archive share stock.manage; archives keep readable history.
+	// Registry and card deletion use stock.manage; linked archive also checks catalog.manage.
 	{ prefix: '/crm/stock', readers: [...ADMINS, ...SHOP], writers: ADMINS },
 	// Delivery writes and request-card delivery confirmations require the actual driver.
 	{ prefix: '/crm/delivery', readers: [...ADMINS, 'driver'] },
@@ -54,7 +54,7 @@ const SECTIONS: readonly SectionRights[] = [
 	{ prefix: '/crm/catalog', readers: ADMINS },
 	// The toolbar create dialog and icon row actions share the existing guarded actions.
 	{ prefix: '/crm/prices', readers: ADMINS },
-	// The priceList action also checks price visibility before parsing the regional attachment.
+	// Card creation and manual portal access share counterparty.manage; priceList also checks price visibility.
 	{ prefix: '/crm/counterparties', readers: ADMINS },
 	{ prefix: '/crm/support', readers: ADMINS },
 	{ prefix: '/crm/notifications', readers: CRM_ROLES }

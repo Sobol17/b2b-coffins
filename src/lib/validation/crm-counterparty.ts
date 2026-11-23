@@ -81,19 +81,12 @@ export const issueAdminSchema = z.object({
 	phone: accountPhoneSchema
 });
 
-/**
- * One form creates the counterparty and its first administrator (tech.md v1.39). The staff limit
- * is not asked: a new counterparty takes `counterparty.staff_limit_default`.
- */
 export const createCounterpartySchema = z
 	.object({
 		...requisitesShape,
-		...termsShape,
-		adminFullName: fullNameSchema,
-		adminEmail: accountEmailSchema,
-		adminPhone: accountPhoneSchema
+		...termsShape
 	})
-	.transform(({ adminFullName, adminEmail, adminPhone, ...rest }) => ({
+	.transform((rest) => ({
 		requisites: {
 			name: rest.name,
 			legalName: rest.legalName,
@@ -108,8 +101,7 @@ export const createCounterpartySchema = z
 			discountPercent: rest.discountPercent,
 			settlementScheme: rest.settlementScheme,
 			managerId: rest.managerId
-		},
-		admin: { fullName: adminFullName, email: adminEmail, phone: adminPhone }
+		}
 	}));
 
 export const contractInputSchema = z

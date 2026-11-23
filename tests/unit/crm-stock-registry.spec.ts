@@ -5,11 +5,12 @@ import type { StockFilters } from '../../src/lib/types/crm-stock';
 import { ConflictError, ForbiddenError, ValidationError } from '../../src/lib/server/core/errors';
 import { normalizeListQuery } from '../../src/lib/server/core/list';
 import { CrmCatalogService } from '../../src/lib/server/crm-catalog/crm-catalog.service';
+import { WorkTypeRepository } from '../../src/lib/server/crm-payroll/work-type.repository';
 import { StockItemService } from '../../src/lib/server/crm-stock/stock-item.service';
 import { InventoryService } from '../../src/lib/server/crm-stock/inventory.service';
 import { StockExportService } from '../../src/lib/server/crm-stock/stock-export.service';
 import { StockMoveService } from '../../src/lib/server/crm-stock/stock-move.service';
-import { productVariants, stockItems, stockMoves } from '../../src/lib/server/db/schema';
+import { products, productVariants, stockItems, stockMoves } from '../../src/lib/server/db/schema';
 import { dictId, stockItemId } from './helpers/crm-stock';
 import { insertUser, migratedDatabase } from './helpers/db';
 import { crmActor, seedOrderingWorld } from './helpers/portal-requests';
@@ -185,9 +186,70 @@ describe('stock archive', () => {
 		expect(catalog.listOptions().find((row) => row.id === option.id)?.isActive).toBe(false);
 	});
 
-	it('refuses linked catalog variants and unauthorized actors', () => {
+	it('archives the entire model from one stock position and preserves movement history', () => {
+		const id = stockItemId(db, 'MDL-101-180-CHB');
+		const variant = db
+			.select()
+			.from(productVariants)
+			.where(eq(productVariants.stockItemId, id))
+			.get()!;
+		const workTypes = new WorkTypeRepository();
+		const workId = workTypes.insert({
+			title: 'Archive model rate',
+			roleCode: 'carpenter',
+			rateMinor: 100,
+			variantId: variant.id
+		});
+		const model = service.list({ ...query, search: 'MDL-101-180-CHB' }).rows[0]!;
+		expect(model.members.length).toBeGreaterThan(1);
+		const other = model.members.find((member) => member.id !== id)!;
+		const external = db
+			.select()
+			.from(productVariants)
+			.where(eq(productVariants.sku, 'MDL-201-200-PIN'))
+			.get()!;
+		db.update(productVariants)
+			.set({ stockItemId: other.id })
+			.where(eq(productVariants.id, external.id))
+			.run();
+		const now = new Date();
+		db.insert(stockMoves)
+			.values({ stockItemId: other.id, qty: 1, type: 'purchase', occurredAt: now })
+			.run();
+		expect(() => service.archive(id)).toThrow(/Есть остаток/);
+		db.update(productVariants)
+			.set({ stockItemId: external.stockItemId })
+			.where(eq(productVariants.id, external.id))
+			.run();
+		expect(service.card(id).isDeleted).toBe(false);
+		expect(
+			db.select().from(products).where(eq(products.id, variant.productId)).get()?.deletedAt
+		).toBeNull();
+
+		db.insert(stockMoves)
+			.values({ stockItemId: other.id, qty: -1, type: 'adjustment', occurredAt: now })
+			.run();
+		service.archive(id);
+		expect(service.list({ ...query, search: model.code }).total).toBe(0);
+		expect(
+			db.select().from(products).where(eq(products.id, variant.productId)).get()?.deletedAt
+		).toBeInstanceOf(Date);
+		expect(
+			db.select().from(productVariants).where(eq(productVariants.id, variant.id)).get()?.deletedAt
+		).toBeInstanceOf(Date);
+		expect(
+			db.select().from(stockMoves).where(eq(stockMoves.stockItemId, other.id)).all()
+		).toHaveLength(2);
+		expect(workTypes.all(undefined, true).find(({ id }) => id === workId)?.isActive).toBe(false);
+		expect(workTypes.byIds([workId])[0]?.isActive).toBe(false);
+	});
+	it('refuses deletion when the confirmed model differs from the current scope', () => {
 		const id = stockItemId(db, 'MDL-201-200-PIN');
-		expect(() => service.archive(id)).toThrow(ConflictError);
+		expect(() => service.archive(id, null)).toThrow(/связь с каталогом изменилась/i);
+		expect(service.card(id).isDeleted).toBe(false);
+	});
+	it('refuses unauthorized actors', () => {
+		const id = stockItemId(db, 'MDL-201-200-PIN');
 		expect(() => new StockItemService(crmActor('carpenter', actor.userId)).archive(id)).toThrow(
 			ForbiddenError
 		);

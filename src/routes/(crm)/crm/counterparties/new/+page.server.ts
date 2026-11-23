@@ -1,8 +1,7 @@
+import { redirect } from '@sveltejs/kit';
 import { requireAction, requireScope } from '$lib/server/auth/guard';
 import { formAction } from '$lib/server/core/http';
-import { CounterpartyAccessService } from '$lib/server/crm-counterparty/counterparty-access.service';
 import { CrmCounterpartyService } from '$lib/server/crm-counterparty/crm-counterparty.service';
-import { mailDriver } from '$lib/server/notifications/drivers/mail/select';
 import { createCounterpartySchema } from '$lib/validation/crm-counterparty';
 import type { Actions, PageServerLoad } from './$types';
 
@@ -17,7 +16,9 @@ export const load: PageServerLoad = ({ locals, url }) => ({
 
 export const actions = {
 	create: async ({ request, locals, url }) => {
-		const access = new CounterpartyAccessService(actorOf(locals, url), mailDriver());
-		return formAction(request, 'create', createCounterpartySchema, (input) => access.create(input));
+		const service = new CrmCounterpartyService(actorOf(locals, url));
+		return formAction(request, 'create', createCounterpartySchema, (input) =>
+			redirect(303, `/crm/counterparties/${service.create(input)}`)
+		);
 	}
 } satisfies Actions;

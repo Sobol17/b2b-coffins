@@ -10,7 +10,6 @@ import { CounterpartyPriceImportService } from '$lib/server/crm-counterparty/cou
 import { priceSheetUploadSchema } from '$lib/validation/crm-catalog';
 import { CounterpartyPriceService } from '$lib/server/crm-counterparty/counterparty-price.service';
 import { CrmCounterpartyService } from '$lib/server/crm-counterparty/crm-counterparty.service';
-import { mailDriver } from '$lib/server/notifications/drivers/mail/select';
 import { CounterpartyPaymentService } from '$lib/server/payment/counterparty-payment.service';
 import {
 	personalPriceEntriesFrom,
@@ -46,7 +45,7 @@ function context(event: RequestEvent) {
 		actor,
 		cards: () => new CrmCounterpartyService(actor),
 		details: () => new CounterpartyDetailService(actor),
-		access: () => new CounterpartyAccessService(actor, mailDriver()),
+		access: () => new CounterpartyAccessService(actor),
 		prices: () => new CounterpartyPriceService(actor),
 		payments: () => new CounterpartyPaymentService(actor),
 		request: event.request

@@ -89,10 +89,12 @@
 	</div>
 
 	{#if access && 'temporaryPassword' in access.dto}
-		<AccessCard
-			access={access.dto}
-			title={access.isResend ? 'Доступ отправлен повторно' : 'Администратор выдан'}
-		/>
+		{#key access.dto.temporaryPassword}
+			<AccessCard
+				access={access.dto}
+				title={access.isResend ? 'Пароль обновлён' : 'Администратор выдан'}
+			/>
+		{/key}
 	{/if}
 
 	<Tabs.Root bind:value={tab}>

@@ -4,7 +4,6 @@ import { seedCatalog, seedStockItems } from '../../scripts/seed/catalog';
 import { seedPriceLists } from '../../scripts/seed/parties';
 import { seedDicts } from '../../scripts/seed/reference';
 import { ValidationError } from '../../src/lib/server/core/errors';
-import { CounterpartyAccessService } from '../../src/lib/server/crm-counterparty/counterparty-access.service';
 import { CounterpartyPriceService } from '../../src/lib/server/crm-counterparty/counterparty-price.service';
 import { CrmCounterpartyService } from '../../src/lib/server/crm-counterparty/crm-counterparty.service';
 import {
@@ -15,7 +14,6 @@ import {
 	productVariants,
 	products
 } from '../../src/lib/server/db/schema';
-import { FakeMailDriver } from '../../src/lib/server/notifications/drivers/mail';
 import { PersonalPriceResolver } from '../../src/lib/server/pricing/personal-price';
 import { termsInputSchema } from '../../src/lib/validation/crm-counterparty';
 import { actorOf, counterpartyDatabase, newCounterparty } from './helpers/crm-counterparty';
@@ -59,11 +57,10 @@ function region(prices: Record<string, number>): number {
 	return list.id;
 }
 
-async function created(regionId: number | null): Promise<number> {
-	const result = await new CounterpartyAccessService(manager, new FakeMailDriver()).create(
+function created(regionId: number | null): number {
+	return new CrmCounterpartyService(manager).create(
 		newCounterparty({ regionPriceListId: regionId === null ? '' : String(regionId) })
 	);
-	return result.counterpartyId;
 }
 
 function row(counterpartyId: number) {
@@ -115,10 +112,10 @@ const save = (counterpartyId: number, sku: string, priceMinor: number) =>
 	]);
 
 describe('a regional price list prefills the personal one (v1.64)', () => {
-	it('copies the region into a list of the new counterparty alone', async () => {
+	it('copies the region into a list of the new counterparty alone', () => {
 		const irkutsk = region({ [SKU]: 950_000, [OTHER_SKU]: 990_000 });
 
-		const id = await created(irkutsk);
+		const id = created(irkutsk);
 
 		const cp = row(id);
 		expect(cp.regionPriceListId).toBe(irkutsk);
@@ -134,14 +131,14 @@ describe('a regional price list prefills the personal one (v1.64)', () => {
 		expect(charged(id, SKU)).toBe(950_000);
 	});
 
-	it('leaves a counterparty without a region on the base prices', async () => {
-		const id = await created(null);
+	it('leaves a counterparty without a region on the base prices', () => {
+		const id = created(null);
 		expect(row(id)).toMatchObject({ regionPriceListId: null, priceListId: null });
 	});
 
-	it('shows the region in the «Базовая» column and keeps the individual price on top', async () => {
+	it('shows the region in the «Базовая» column and keeps the individual price on top', () => {
 		const irkutsk = region({ [SKU]: 950_000 });
-		const id = await created(irkutsk);
+		const id = created(irkutsk);
 
 		save(id, SKU, 900_000);
 
@@ -149,9 +146,9 @@ describe('a regional price list prefills the personal one (v1.64)', () => {
 		expect(charged(id, SKU)).toBe(900_000);
 	});
 
-	it('falls back to the region when the individual price is cleared', async () => {
+	it('falls back to the region when the individual price is cleared', () => {
 		const irkutsk = region({ [SKU]: 950_000 });
-		const id = await created(irkutsk);
+		const id = created(irkutsk);
 
 		save(id, SKU, 0);
 
@@ -159,8 +156,8 @@ describe('a regional price list prefills the personal one (v1.64)', () => {
 		expect(charged(id, SKU)).toBe(950_000);
 	});
 
-	it('changes only the «Базовая» column when the card moves to another region', async () => {
-		const id = await created(region({ [SKU]: 950_000 }));
+	it('changes only the «Базовая» column when the card moves to another region', () => {
+		const id = created(region({ [SKU]: 950_000 }));
 		save(id, SKU, 900_000);
 		const angarsk = region({ [SKU]: 970_000 });
 
@@ -170,8 +167,8 @@ describe('a regional price list prefills the personal one (v1.64)', () => {
 		expect(tab(id, SKU)).toMatchObject({ basePriceMinor: 970_000, personalPriceMinor: 900_000 });
 	});
 
-	it('prefills a counterparty that holds no list of its own when a region is set', async () => {
-		const id = await created(null);
+	it('prefills a counterparty that holds no list of its own when a region is set', () => {
+		const id = created(null);
 
 		terms(id, region({ [SKU]: 960_000 }));
 
@@ -179,8 +176,8 @@ describe('a regional price list prefills the personal one (v1.64)', () => {
 		expect(tab(id, SKU)?.personalPriceMinor).toBe(960_000);
 	});
 
-	it('refills the personal list from the region on demand and journals it', async () => {
-		const id = await created(region({ [SKU]: 950_000 }));
+	it('refills the personal list from the region on demand and journals it', () => {
+		const id = created(region({ [SKU]: 950_000 }));
 		save(id, SKU, 900_000);
 		terms(id, region({ [SKU]: 980_000, [OTHER_SKU]: 1_010_000 }));
 		const own = row(id).priceListId;
@@ -196,16 +193,16 @@ describe('a regional price list prefills the personal one (v1.64)', () => {
 		});
 	});
 
-	it('refuses to refill without a region', async () => {
-		const id = await created(null);
+	it('refuses to refill without a region', () => {
+		const id = created(null);
 		expect(() => new CounterpartyPriceService(manager).refill(id)).toThrow(ValidationError);
 	});
 
-	it('takes a region only among the lists of regions: not the base, not a personal one', async () => {
+	it('takes a region only among the lists of regions: not the base, not a personal one', () => {
 		const base = seeded.get('base') ?? 0;
-		await expect(created(base)).rejects.toThrow(ValidationError);
-		const other = await created(region({ [SKU]: 950_000 }));
-		await expect(created(row(other).priceListId)).rejects.toThrow(ValidationError);
+		expect(() => created(base)).toThrow(ValidationError);
+		const other = created(region({ [SKU]: 950_000 }));
+		expect(() => created(row(other).priceListId)).toThrow(ValidationError);
 		expect(
 			new CrmCounterpartyService(manager).choices().priceLists.every((list) => list.id !== base)
 		).toBe(true);
