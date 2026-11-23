@@ -1,4 +1,4 @@
-import { and, asc, eq, inArray, isNull, ne, sql } from 'drizzle-orm';
+import { and, asc, eq, inArray, isNull, ne, or, sql } from 'drizzle-orm';
 import { BaseRepository } from '../core/repository';
 import type { Tx } from '../db/client';
 import {
@@ -9,6 +9,7 @@ import {
 	productOptions,
 	products,
 	productVariants,
+	requestItemOptions,
 	requestItems,
 	requests,
 	shopJobs,
@@ -72,10 +73,11 @@ export class StockItemRepository extends BaseRepository<typeof stockItems> {
 		return this.select().where(isNull(stockItems.deletedAt)).all();
 	}
 
-	modelLinks() {
-		return this.db()
+	modelLinks(tx?: Tx, stockItemId?: number) {
+		return this.db(tx)
 			.select({
 				stockItemId: productVariants.stockItemId,
+				variantId: productVariants.id,
 				modelId: products.id,
 				modelTitle: products.title,
 				modelCode: products.sku,
@@ -85,7 +87,13 @@ export class StockItemRepository extends BaseRepository<typeof stockItems> {
 			.from(productVariants)
 			.innerJoin(products, eq(products.id, productVariants.productId))
 			.innerJoin(dictItems, eq(dictItems.id, productVariants.materialId))
-			.where(and(isNull(productVariants.deletedAt), isNull(products.deletedAt)))
+			.where(
+				and(
+					isNull(productVariants.deletedAt),
+					isNull(products.deletedAt),
+					stockItemId === undefined ? undefined : eq(productVariants.stockItemId, stockItemId)
+				)
+			)
 			.all();
 	}
 
@@ -97,41 +105,28 @@ export class StockItemRepository extends BaseRepository<typeof stockItems> {
 			.run();
 	}
 
-	hasAssignments(id: number, tx: Tx): boolean {
-		const variant = this.db(tx)
-			.select({ id: productVariants.id })
-			.from(productVariants)
-			.innerJoin(products, eq(products.id, productVariants.productId))
-			.where(
-				and(
-					eq(productVariants.stockItemId, id),
-					isNull(productVariants.deletedAt),
-					isNull(products.deletedAt)
-				)
-			)
-			.limit(1)
-			.get();
-		const option = this.db(tx)
+	linkedOptions(stockIds: number[], tx: Tx): number[] {
+		return this.db(tx)
 			.select({ id: options.id })
 			.from(options)
-			.where(and(eq(options.stockItemId, id), eq(options.isActive, true)))
-			.limit(1)
-			.get();
-		const draft = this.db(tx)
-			.select({ id: inventoryLines.id })
-			.from(inventoryLines)
-			.innerJoin(inventories, eq(inventories.id, inventoryLines.inventoryId))
-			.where(and(eq(inventoryLines.stockItemId, id), eq(inventories.status, 'draft')))
-			.limit(1)
-			.get();
+			.where(and(inArray(options.stockItemId, stockIds), eq(options.isActive, true)))
+			.all()
+			.map(({ id }) => id);
+	}
+
+	hasInventoryDraft(stockIds: number[], tx: Tx): boolean {
 		return (
-			!!(variant || option || draft) ||
-			this.hasOpenRequests(id, tx) ||
-			this.hasOpenProduction(id, tx)
+			this.db(tx)
+				.select({ id: inventoryLines.id })
+				.from(inventoryLines)
+				.innerJoin(inventories, eq(inventories.id, inventoryLines.inventoryId))
+				.where(and(inArray(inventoryLines.stockItemId, stockIds), eq(inventories.status, 'draft')))
+				.limit(1)
+				.get() !== undefined
 		);
 	}
 
-	private hasOpenRequests(id: number, tx: Tx): boolean {
+	hasOpenRequests(stockIds: number[], modelId: number | undefined, tx: Tx): boolean {
 		return (
 			this.db(tx)
 				.select({ id: requestItems.id })
@@ -140,7 +135,7 @@ export class StockItemRepository extends BaseRepository<typeof stockItems> {
 				.innerJoin(productVariants, eq(productVariants.id, requestItems.variantId))
 				.where(
 					and(
-						eq(productVariants.stockItemId, id),
+						this.relatedRequestLine(stockIds, modelId, tx),
 						inArray(requests.status, ['draft', 'new', 'in_work', 'ready'])
 					)
 				)
@@ -149,16 +144,29 @@ export class StockItemRepository extends BaseRepository<typeof stockItems> {
 		);
 	}
 
-	private hasOpenProduction(id: number, tx: Tx): boolean {
+	hasOpenProduction(stockIds: number[], modelId: number | undefined, tx: Tx): boolean {
 		return (
 			this.db(tx)
 				.select({ id: shopJobs.id })
 				.from(shopJobs)
 				.innerJoin(requestItems, eq(requestItems.id, shopJobs.requestItemId))
 				.innerJoin(productVariants, eq(productVariants.id, requestItems.variantId))
-				.where(and(eq(productVariants.stockItemId, id), isNull(shopJobs.finishedAt)))
+				.where(and(this.relatedRequestLine(stockIds, modelId, tx), isNull(shopJobs.finishedAt)))
 				.limit(1)
 				.get() !== undefined
+		);
+	}
+
+	private relatedRequestLine(stockIds: number[], modelId: number | undefined, tx: Tx) {
+		const linesUsingOptions = this.db(tx)
+			.select({ id: requestItemOptions.itemId })
+			.from(requestItemOptions)
+			.innerJoin(options, eq(options.id, requestItemOptions.optionId))
+			.where(inArray(options.stockItemId, stockIds));
+		return or(
+			inArray(productVariants.stockItemId, stockIds),
+			modelId === undefined ? undefined : eq(productVariants.productId, modelId),
+			inArray(requestItems.id, linesUsingOptions)
 		);
 	}
 

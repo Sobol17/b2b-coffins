@@ -127,7 +127,13 @@
 						<Checkbox name="isActive" label="Позиция активна" bind:checked={isActive} />
 						<Button type="submit" class="self-start">Сохранить позицию</Button>
 					</form>
-					<div class="mt-4"><StockDelete id={card.id} title={card.title} /></div>
+					<div class="mt-4">
+						<StockDelete
+							id={card.id}
+							title={card.archiveModel?.title ?? card.title}
+							modelId={card.archiveModel?.id}
+						/>
+					</div>
 				</Card.Content>
 			</Card.Root>
 		{/if}

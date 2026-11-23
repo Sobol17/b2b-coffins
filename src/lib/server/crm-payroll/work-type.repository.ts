@@ -20,6 +20,17 @@ const COLUMNS = {
 	isActive: workTypes.isActive
 };
 
+// A canonical variant may be archived while another size of its model/material is still in use.
+const AVAILABLE_FOR_DAY = sql<boolean>`(${workTypes.isActive} and (
+	${workTypes.variantId} is null or (${products.deletedAt} is null and exists (
+		select 1 from product_variants current_variant
+		where current_variant.product_id = ${productVariants.productId}
+		  and current_variant.material_id = ${productVariants.materialId}
+		  and current_variant.deleted_at is null
+	))
+))`.mapWith(Boolean);
+const DAY_COLUMNS = { ...COLUMNS, isActive: AVAILABLE_FOR_DAY };
+
 // Works follow the shop floor (tech.md v1.61): carpenter, grinder, painter, upholsterer, then general.
 const FLOOR_ORDER = sql`case ${workTypes.roleCode} ${sql.join(
 	WORK_ROLES.map((role, index) => sql`when ${role} then ${index}`),
@@ -34,7 +45,7 @@ export class WorkTypeRepository extends BaseRepository<typeof workTypes> {
 
 	all(tx?: Tx, includeHistorical = false): WorkTypeDto[] {
 		return this.db(tx)
-			.select(COLUMNS)
+			.select(includeHistorical ? DAY_COLUMNS : COLUMNS)
 			.from(workTypes)
 			.leftJoin(productVariants, eq(productVariants.id, workTypes.variantId))
 			.leftJoin(products, eq(products.id, productVariants.productId))
@@ -63,7 +74,7 @@ export class WorkTypeRepository extends BaseRepository<typeof workTypes> {
 	byIds(ids: readonly number[], tx?: Tx): WorkTypeDto[] {
 		if (ids.length === 0) return [];
 		return this.db(tx)
-			.select(COLUMNS)
+			.select(DAY_COLUMNS)
 			.from(workTypes)
 			.leftJoin(productVariants, eq(productVariants.id, workTypes.variantId))
 			.leftJoin(products, eq(products.id, productVariants.productId))

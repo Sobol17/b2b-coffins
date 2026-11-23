@@ -55,6 +55,12 @@
 	</span>
 </button>
 
+{#if canManage}
+	<div class="mt-2 pl-3">
+		<StockDelete id={row.id} title={row.title} modelId={row.modelId ?? undefined} />
+	</div>
+{/if}
+
 <!-- Keep closing content out of keyboard navigation while its outro finishes. -->
 <div id={panelId} inert={!open} aria-hidden={!open}>
 	{#if open}
@@ -79,7 +85,6 @@
 								<Button variant="secondary" size="sm" onclick={() => onEdit?.(member)}
 									>Изменить</Button
 								>
-								<StockDelete id={member.id} title={member.title} />
 							</div>
 						{/if}
 					</div>

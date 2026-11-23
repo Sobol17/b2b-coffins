@@ -1,4 +1,5 @@
 import { redirect } from '@sveltejs/kit';
+import { requireAction } from '$lib/server/auth/guard';
 import { formAction, orHttpStatus } from '$lib/server/core/http';
 import { parseListQuery } from '$lib/server/core/list';
 import { routeId, stockActor } from '$lib/server/crm-stock/route';
@@ -16,6 +17,7 @@ import type { Actions, PageServerLoad, RequestEvent } from './$types';
 function context(event: RequestEvent) {
 	const actor = stockActor(event);
 	return {
+		actor,
 		id: routeId(event.params.id, 'Позиция не найдена'),
 		request: event.request,
 		items: () => new StockItemService(actor),
@@ -35,13 +37,14 @@ export const load: PageServerLoad = (event) => {
 
 export const actions = {
 	delete: (event) => {
-		const { id, request, items } = context(event);
+		const { actor, id, request, items } = context(event);
+		requireAction(actor, 'stock.manage');
 		return formAction(
 			request,
 			'delete',
 			stockItemDeleteSchema,
-			() => {
-				items().archive(id);
+			({ modelId }) => {
+				items().archive(id, modelId ?? null);
 				redirect(303, '/crm/stock');
 			},
 			{ stockItemId: id }

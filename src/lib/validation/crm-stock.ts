@@ -85,7 +85,10 @@ export type StockItemCreateInput = z.infer<typeof stockItemCreateSchema>;
 /** The kind stays as created: moves and norms already hang on it (tech.md v1.45). */
 export const stockItemUpdateSchema = z.object({ ...itemFields, isActive: checkbox });
 export const stockItemRegistryUpdateSchema = stockItemUpdateSchema.extend({ stockItemId: id });
-export const stockItemDeleteSchema = z.object({ stockItemId: id });
+export const stockItemDeleteSchema = z.object({
+	stockItemId: id,
+	modelId: z.preprocess((value) => (value === '' ? undefined : value), id.optional())
+});
 export type StockItemUpdateInput = z.infer<typeof stockItemUpdateSchema>;
 
 /** One manual move: a purchase or an adjustment, the quantity signed as on the shelf. */

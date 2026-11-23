@@ -44,7 +44,7 @@ const SECTIONS: readonly SectionRights[] = [
 	{ prefix: '/crm/payroll', readers: ADMINS },
 	// Legacy bookmarks redirect home; the personal salary screen has been removed.
 	{ prefix: '/crm/salary', readers: CRM_ROLES },
-	// Registry edit/delete controls and card archive share stock.manage; archives keep readable history.
+	// Registry and card deletion use stock.manage; linked archive also checks catalog.manage.
 	{ prefix: '/crm/stock', readers: [...ADMINS, ...SHOP], writers: ADMINS },
 	// Delivery writes and request-card delivery confirmations require the actual driver.
 	{ prefix: '/crm/delivery', readers: [...ADMINS, 'driver'] },
