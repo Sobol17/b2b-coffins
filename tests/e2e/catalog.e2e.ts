@@ -65,7 +65,7 @@ test('the product page offers colour and optional gloss', async ({ page }) => {
 
 	const form = page.locator('form[action="?/add"]');
 	await expect(form.locator('label')).toHaveText(['Размер', 'Цвет', 'Блеск', 'Количество']);
-	const gloss = form.getByRole('combobox', { name: 'Блеск', exact: true });
+	const gloss = form.getByRole('button', { name: 'Блеск', exact: true });
 	const options = form.locator('input[name="option"]');
 	await expect(options).toHaveCount(1);
 	await gloss.click();
