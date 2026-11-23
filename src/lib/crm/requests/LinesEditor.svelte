@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { Button, Combobox, NumberInput, Select } from '$lib/ui';
+	import type { OptionKind } from '$lib/types/catalog';
 	import type { CrmRequestVariantChoice } from '$lib/types/crm-request';
 	import { MAX_CREATE_LINES } from '$lib/validation/crm-request';
 
@@ -13,11 +14,18 @@
 		readonly key: number;
 		variantId: string;
 		optionId: string;
+		glossOptionId: string;
 		qty: number;
 	}
 
 	let counter = 0;
-	const blank = (): Line => ({ key: (counter += 1), variantId: '', optionId: '', qty: 1 });
+	const blank = (): Line => ({
+		key: (counter += 1),
+		variantId: '',
+		optionId: '',
+		glossOptionId: '',
+		qty: 1
+	});
 	let lines = $state<Line[]>([blank()]);
 
 	const variantOptions = $derived(
@@ -27,32 +35,48 @@
 		}))
 	);
 
-	function colours(variantId: string) {
+	function optionsOf(variantId: string, kind: OptionKind, empty: string) {
 		const variant = variants.find((candidate) => String(candidate.id) === variantId);
 		return [
-			{ value: '', label: 'Без цвета' },
-			...(variant?.options ?? []).map((option) => ({
-				value: String(option.id),
-				label: option.title
-			}))
+			{ value: '', label: empty },
+			...(variant?.options ?? [])
+				.filter((option) => option.kind === kind)
+				.map((option) => ({
+					value: String(option.id),
+					label: option.title
+				}))
 		];
 	}
 </script>
 
 <div class="flex flex-col gap-4" data-testid="request-lines">
 	{#each lines as line, index (line.key)}
-		<div class="grid gap-3 rounded-inset bg-surface-muted p-3 sm:grid-cols-[1fr_12rem_8rem_auto]">
+		<div
+			class="grid gap-3 rounded-inset bg-surface-muted p-3 sm:grid-cols-2 lg:grid-cols-[minmax(0,2fr)_1fr_1fr_6rem_auto]"
+		>
 			<Combobox
 				label={index === 0 ? 'Позиция' : undefined}
 				options={variantOptions}
 				placeholder="Выберите позицию"
-				bind:value={line.variantId}
+				bind:value={
+					() => line.variantId,
+					(value) => {
+						line.variantId = value;
+						line.optionId = '';
+					}
+				}
 			/>
 			<Select
 				label={index === 0 ? 'Цвет' : undefined}
-				options={colours(line.variantId)}
+				options={optionsOf(line.variantId, 'color', 'Без цвета')}
 				placeholder="Выберите цвет"
 				bind:value={line.optionId}
+			/>
+			<Select
+				label={index === 0 ? 'Блеск' : undefined}
+				options={optionsOf(line.variantId, 'gloss', 'Без указания')}
+				placeholder="Выберите блеск"
+				bind:value={line.glossOptionId}
 			/>
 			<NumberInput
 				label={index === 0 ? 'Штук' : undefined}
@@ -63,6 +87,7 @@
 			/>
 			<input type="hidden" name="variantId" value={line.variantId} />
 			<input type="hidden" name="optionId" value={line.optionId} />
+			<input type="hidden" name="glossOptionId" value={line.glossOptionId} />
 			<input type="hidden" name="qty" value={line.qty} />
 			<Button
 				variant="ghost"

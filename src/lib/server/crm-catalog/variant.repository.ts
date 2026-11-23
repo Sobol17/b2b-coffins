@@ -52,8 +52,15 @@ export class ManagedVariantRepository extends VariantReferenceRepository {
 			.where(and(isNull(productVariants.deletedAt), isNull(products.deletedAt)))
 			.orderBy(asc(products.title), asc(productVariants.sku))
 			.all();
+		const sizes = this.db()
+			.select({ code: dictItems.code, title: dictItems.title })
+			.from(dictItems)
+			.where(and(eq(dictItems.dict, 'coffin_size'), eq(dictItems.isActive, true)))
+			.orderBy(asc(dictItems.sortOrder), asc(dictItems.title), asc(dictItems.id))
+			.all();
 		return {
 			materials,
+			sizes,
 			stockProducts: items.filter((row) => row.kind === 'product'),
 			stockComponents: items.filter((row) => row.kind === 'component'),
 			variants

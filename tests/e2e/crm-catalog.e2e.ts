@@ -53,8 +53,10 @@ test('C2 fills and publishes a model through CRM; the portal never receives cost
 	await page.getByRole('button', { name: 'Добавить вариант' }).click();
 	const variant = page.locator('form[action="?/createVariant"]');
 	await variant.locator('input[name="sku"]').fill(`${sku}-190`);
-	await variant.locator('input[name="sizeCode"]').fill('190');
-	await variant.locator('[data-slot="select-trigger"]').first().click();
+	await variant.getByRole('combobox', { name: 'Размер', exact: true }).click();
+	await expect(page.getByRole('option', { name: '50 см (маленький)' })).toBeVisible();
+	await page.getByRole('option', { name: '190 см', exact: true }).click();
+	await variant.getByRole('combobox', { name: 'Материал', exact: true }).click();
 	await page.getByRole('option').first().click();
 	await variant.getByRole('button', { name: 'Добавить вариант' }).click();
 	await expect(page.getByText(`${sku}-190`)).toBeVisible();
@@ -193,6 +195,18 @@ test('C2 fills and publishes a model through CRM; the portal never receives cost
 	const storefront = await page.goto('/portal/catalog');
 	await expect(page.getByText(category)).toBeVisible();
 	expect((await storefront?.text()) ?? '').not.toContain('costPriceMinor');
+	await page.getByTestId('showcase-tile').filter({ hasText: title }).click();
+	await page.getByRole('combobox', { name: 'Блеск', exact: true }).click();
+	await page.getByRole('option', { name: 'Глянцевый', exact: true }).click();
+	await page.getByTestId('add-to-draft').click();
+	await expect(
+		page.getByTestId('toast').filter({ hasText: 'Позиция добавлена в заявку' })
+	).toBeVisible();
+	await page.goto('/portal/cart');
+	await expect(page.getByTestId('draft-line').filter({ hasText: title })).toContainText(
+		'Глянцевый'
+	);
+	await page.getByRole('button', { name: 'Очистить' }).click();
 	expect((await page.goto('/crm/catalog'))?.status()).toBe(403);
 	await page.goto('/portal/profile');
 	await logout(page);

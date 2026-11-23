@@ -2,7 +2,13 @@ import { eq } from 'drizzle-orm';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { ForbiddenError, NotFoundError, ValidationError } from '../../src/lib/server/core/errors';
 import { CrmRequestCreateService } from '../../src/lib/server/crm-request/crm-request-create.service';
-import { auditLog, productVariants, requestItems, requests } from '../../src/lib/server/db/schema';
+import {
+	auditLog,
+	productVariants,
+	requestItemOptions,
+	requestItems,
+	requests
+} from '../../src/lib/server/db/schema';
 import { JOB_PAYLOAD_SCHEMAS } from '../../src/lib/server/queue/topics';
 import { crmRequestCreateSchema } from '../../src/lib/validation/crm-request';
 import { insertUser, migratedDatabase } from './helpers/db';
@@ -114,6 +120,23 @@ describe('a request entered by the workshop (C4)', () => {
 			.all();
 		expect(line?.unitPriceMinor).toBeGreaterThan(0);
 		expect(row?.totalMinor).toBe((line?.unitPriceMinor ?? 0) * 3);
+	});
+
+	it('keeps the colour and gloss on a phone order line', () => {
+		const gloss = optionId(db, 'Матовый');
+		const line = { variantId: VOLGA_180, optionId: WALNUT, glossOptionId: gloss, qty: 2 };
+		const created = service().create(form({ lines: [line] }));
+		const choices = db
+			.select({ id: requestItemOptions.optionId })
+			.from(requestItemOptions)
+			.innerJoin(requestItems, eq(requestItems.id, requestItemOptions.itemId))
+			.where(eq(requestItems.requestId, created.id))
+			.all();
+		expect(choices.map((row) => row.id)).toEqual(expect.arrayContaining([WALNUT, gloss]));
+		expect(requestRow(created.id)?.itemsTotalMinor).toBe(1_660_000);
+		expect(() =>
+			service().create(form({ lines: [{ ...line, optionId: gloss, glossOptionId: WALNUT }] }))
+		).toThrow(ValidationError);
 	});
 
 	it('merges the same position and colour into one line', () => {

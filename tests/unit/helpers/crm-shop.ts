@@ -22,6 +22,7 @@ const DAY_MS = 86_400_000;
 export interface InWorkOptions {
 	readonly inDays?: number;
 	readonly urgent?: boolean;
+	readonly gloss?: string;
 	readonly accept?: boolean;
 }
 
@@ -60,7 +61,12 @@ export function seedShopWorld(db: Db, tag: string) {
 
 	/** A counterparty request in walnut, accepted into work unless told otherwise. */
 	function inWork(qty: number, opts: InWorkOptions = {}): number {
-		new DraftService(actors.admin).addItem({ variantId: volga, qty, optionIds: [walnut] });
+		const gloss = opts.gloss ? [optionId(db, opts.gloss)] : [];
+		new DraftService(actors.admin).addItem({
+			variantId: volga,
+			qty,
+			optionIds: [walnut, ...gloss]
+		});
 		const { id } = new RequestSubmitService(actors.admin).submit({
 			deliveryAddressId: world.homeAddressId,
 			deliveryAt: new Date(Date.now() + (opts.inDays ?? 10) * DAY_MS),

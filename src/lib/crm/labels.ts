@@ -37,6 +37,7 @@ export const USER_STATUS_TONE: Readonly<Record<StaffStatus, StatusTone>> = {
 
 export const DICT_TITLE: Readonly<Record<DictCode, string>> = {
 	material: 'Материалы',
+	coffin_size: 'Размеры гробов',
 	finish: 'Отделка',
 	fabric: 'Ткани',
 	hardware: 'Фурнитура',

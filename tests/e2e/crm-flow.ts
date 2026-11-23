@@ -4,7 +4,7 @@ import { expect, type Page } from '@playwright/test';
 export async function enterRequest(
 	page: Page,
 	deceased: string,
-	colour = 'Чёрный',
+	colour = 'Евро',
 	qty = 1
 ): Promise<string> {
 	await page.goto('/crm/requests/new');

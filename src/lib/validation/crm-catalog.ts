@@ -54,7 +54,7 @@ export const productInputSchema = z.object({
 export const variantInputSchema = z.object({
 	productId: id,
 	sku,
-	sizeCode: z.string().trim().min(1).max(30),
+	sizeCode: z.string().min(1),
 	materialId: id,
 	lengthMm: optionalNumber.default(null),
 	widthMm: optionalNumber.default(null),

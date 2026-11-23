@@ -25,6 +25,22 @@ export class VariantReferenceRepository extends BaseRepository<typeof productVar
 		);
 	}
 
+	sizeActive(code: string, tx: Tx): boolean {
+		return (
+			this.db(tx)
+				.select({ id: dictItems.id })
+				.from(dictItems)
+				.where(
+					and(
+						eq(dictItems.code, code),
+						eq(dictItems.dict, 'coffin_size'),
+						eq(dictItems.isActive, true)
+					)
+				)
+				.get() !== undefined
+		);
+	}
+
 	materialActive(id: number, tx: Tx): boolean {
 		return (
 			this.db(tx)

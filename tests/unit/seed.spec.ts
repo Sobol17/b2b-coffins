@@ -133,14 +133,25 @@ describe('migrations and seed on a clean database', () => {
 		}
 	});
 
-	it('offers a colour as the only option and never charges for it (v1.22)', () => {
+	it('offers the approved colours and gloss without surcharges', () => {
 		const rows = db
-			.select({ kind: options.kind, priceDeltaMinor: options.priceDeltaMinor })
+			.select()
 			.from(options)
-			.all();
-
-		expect(rows.length).toBeGreaterThan(0);
-		for (const row of rows) expect(row).toEqual({ kind: 'color', priceDeltaMinor: 0 });
+			.all()
+			.filter((row) => row.isActive);
+		expect(
+			rows
+				.filter((row) => row.kind === 'color')
+				.map((row) => row.title)
+				.sort()
+		).toEqual(['Белый', 'Евро', 'Красное дерево', 'Орех']);
+		expect(
+			rows
+				.filter((row) => row.kind === 'gloss')
+				.map((row) => row.title)
+				.sort()
+		).toEqual(['Глянцевый', 'Матовый']);
+		expect(rows.every((row) => row.priceDeltaMinor === 0)).toBe(true);
 	});
 
 	// Mail left the event channels in v1.49; the texts of push arrive with its driver in C15.

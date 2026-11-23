@@ -1,5 +1,5 @@
 /** The client picks only a size and a colour (v1.22); the size is the variant itself. */
-export const OPTION_KINDS = ['color'] as const;
+export const OPTION_KINDS = ['color', 'gloss'] as const;
 export type OptionKind = (typeof OPTION_KINDS)[number];
 
 export const CATALOG_SORTS = ['sortOrder', 'title', 'price'] as const;

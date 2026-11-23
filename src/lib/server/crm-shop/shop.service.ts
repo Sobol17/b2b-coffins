@@ -44,12 +44,19 @@ export class ShopService extends ShopBaseService {
 	task(taskId: number): ShopTaskDto {
 		const task = this.requireTask(taskId);
 		const jobs = this.shop.jobsOf(task.id);
-		const colours = this.lines.colours(jobs.map((job) => job.itemId));
+		const itemIds = jobs.map((job) => job.itemId);
+		const colours = this.lines.colours(itemIds);
 		const titles = PositionTitles.read(
 			this.shop,
 			jobs.map((job) => ({ variantId: job.variantId, optionId: colours.get(job.itemId) ?? null }))
 		);
-		const dto = ShopDtoMapper.toTask(task, jobs, colours, titles);
+		const dto = ShopDtoMapper.toTask(
+			task,
+			jobs,
+			colours,
+			titles,
+			this.shop.glossTitlesByItem(itemIds)
+		);
 		const units = new ShopUnitRepository().dtos(
 			jobs.map((job) => job.id),
 			task.station,

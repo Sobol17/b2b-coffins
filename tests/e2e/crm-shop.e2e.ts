@@ -6,7 +6,7 @@ import { addToShelf, e2eDb, emptyShelf, shopSync, statusOf } from './transitions
 
 const ORIGIN = 'http://localhost:4173';
 // Wenge is left to this spec: the portal specs order the default walnut, C4 takes black.
-const COLOUR = 'Венге';
+const COLOUR = 'Евро';
 const db = e2eDb();
 
 /** A request of the manager with nothing on the shelf, accepted into work. */
