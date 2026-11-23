@@ -1,9 +1,4 @@
-import type {
-	ContractDto,
-	CreatedStaffDto,
-	SettlementScheme,
-	StaffMemberDto
-} from './counterparty';
+import type { ContractDto, SettlementScheme, StaffMemberDto } from './counterparty';
 import type { DeliveryAddressDto } from './request';
 
 /** Counterparty card of the workshop, tech.md §8 (C3). Money keys only for a role with prices. */
@@ -84,11 +79,6 @@ export interface CrmPaymentMarkDto {
 export interface CrmCounterpartyChoicesDto {
 	readonly managers: readonly { readonly id: number; readonly fullName: string }[];
 	readonly priceLists: readonly { readonly id: number; readonly title: string }[];
-}
-
-export interface CreatedCounterpartyDto {
-	readonly counterpartyId: number;
-	readonly access: CreatedStaffDto;
 }
 
 /** Filters of the «Цены» tab of a counterparty card (v1.56). */

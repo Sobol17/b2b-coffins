@@ -7,9 +7,9 @@ import { e2eDb } from './transitions';
 const ORIGIN = 'http://localhost:4173';
 const OWN_PASSWORD = 'Ochen!Nadezhnyi9';
 
-async function signIn(page: Page, email: string, password: string): Promise<void> {
+async function signIn(page: Page, identifier: string, password: string): Promise<void> {
 	await page.goto('/login');
-	await page.fill('input[name="identifier"]', email);
+	await page.fill('input[name="identifier"]', identifier);
 	await page.fill('input[name="password"]', password);
 	await page.click('button[type="submit"]');
 }
@@ -42,13 +42,13 @@ function deliverWithMark(counterpartyId: number, suffix: number): void {
 		.run();
 }
 
-test('C3 DoD: a manager creates a counterparty with an administrator who signs in, and the debt matches the marks', async ({
+test('C3 DoD: a manager creates a card, then issues access to the administrator who signs in, and the debt matches the marks', async ({
 	page
 }) => {
 	const suffix = Date.now();
 	const name = `Агентство C3 ${suffix}`;
-	// global-setup disables e2e.* accounts, so reruns never pile up active seats.
-	const adminEmail = `e2e.c3.${suffix}@agency.example`;
+	const phone = `+797${String(suffix).slice(-8)}`;
+	const contactEmail = `e2e.c3.${suffix}@agency.example`;
 
 	await login(page, 'manager');
 	await page.goto('/crm/counterparties');
@@ -56,15 +56,22 @@ test('C3 DoD: a manager creates a counterparty with an administrator who signs i
 	await expect(page).toHaveURL('/crm/counterparties/new');
 	await page.locator('input[name="name"]').fill(name);
 	await page.locator('input[name="inn"]').fill('7701234567');
-	await page.locator('input[name="adminFullName"]').fill('Анна Смирнова');
-	await page.locator('input[name="adminEmail"]').fill(adminEmail);
-	await page.locator('input[name="adminPhone"]').fill(`+797${String(suffix).slice(-8)}`);
-	await page.getByRole('button', { name: 'Завести и выдать доступ' }).click();
-
+	await page.getByRole('button', { name: 'Завести контрагента', exact: true }).click();
+	await expect(page.getByTestId('counterparty-name')).toHaveText(name);
+	await page.getByRole('tab', { name: 'Пользователи' }).click();
+	await expect(page.getByText('Пользователей нет')).toBeVisible();
+	await page.getByRole('button', { name: 'Выдать администратора' }).click();
+	const issue = page.getByTestId('modal');
+	await issue.getByLabel('Имя и фамилия').fill('Анна Смирнова');
+	await issue.getByLabel('Телефон').fill(phone);
+	await issue.getByRole('button', { name: 'Сгенерировать пароль' }).click();
 	const password = (await page.getByTestId('temporary-password').textContent())?.trim() ?? '';
 	expect(password.length).toBeGreaterThanOrEqual(12);
-	await page.getByRole('link', { name: 'Открыть карточку контрагента' }).click();
-	await expect(page.getByTestId('counterparty-name')).toHaveText(name);
+	await page.context().grantPermissions(['clipboard-read', 'clipboard-write']);
+	await page.getByRole('button', { name: 'Скопировать пароль' }).click();
+	await expect(page.getByRole('status').filter({ hasText: 'Пароль скопирован' })).toBeVisible();
+	expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(password);
+	await page.getByRole('tab', { name: 'Карточка' }).click();
 	await expect(page.getByTestId('debt-indicator')).toHaveText('Долга нет');
 	await expect(page.getByRole('heading', { name: 'Условия', exact: true })).toHaveCount(0);
 	await expect(page.locator('form[action="?/requisites"]')).toHaveCount(0);
@@ -72,15 +79,16 @@ test('C3 DoD: a manager creates a counterparty with an administrator who signs i
 	await page.getByRole('button', { name: 'Изменить реквизиты', exact: true }).click();
 	const requisites = page.getByTestId('modal');
 	await requisites.getByLabel('Юридическое название', { exact: true }).fill(`ООО ${name}`);
-	await requisites.getByLabel('Электронная почта', { exact: true }).fill(adminEmail);
+	await requisites.getByLabel('Электронная почта', { exact: true }).fill(contactEmail);
 	await requisites.getByRole('button', { name: 'Сохранить реквизиты' }).click();
 	await expect(requisites).toBeHidden();
 	await expect(page.getByTestId('counterparty-overview')).toContainText(`ООО ${name}`);
-	await expect(page.getByTestId('counterparty-overview')).toContainText(adminEmail);
+	await expect(page.getByTestId('counterparty-overview')).toContainText(contactEmail);
 	await page.getByLabel('Заметки для мастерской').fill(`Связаться после 10, ${suffix}`);
 	await page.getByRole('button', { name: 'Сохранить заметки' }).click();
 	await expect(page.getByTestId('toast').filter({ hasText: 'Заметки сохранены' })).toBeVisible();
 	await page.reload();
+	await expect(page.getByTestId('temporary-password')).toHaveCount(0);
 	await expect(page.getByLabel('Заметки для мастерской')).toHaveValue(
 		`Связаться после 10, ${suffix}`
 	);
@@ -99,7 +107,7 @@ test('C3 DoD: a manager creates a counterparty with an administrator who signs i
 	await expect(mark.filter({ hasText: 'Банковский перевод' })).toContainText(/40\s000/);
 
 	await page.getByRole('tab', { name: 'Пользователи' }).click();
-	await expect(page.getByTestId('data-table-row').filter({ hasText: adminEmail })).toContainText(
+	await expect(page.getByTestId('data-table-row').filter({ hasText: phone })).toContainText(
 		'Приглашён'
 	);
 	await page.goto(`/crm/counterparties?search=${encodeURIComponent(name)}&hasDebt=true`);
@@ -108,14 +116,14 @@ test('C3 DoD: a manager creates a counterparty with an administrator who signs i
 	);
 
 	await logout(page);
-	await signIn(page, adminEmail, password);
+	await signIn(page, phone, password);
 	await expect(page).toHaveURL('/password/change');
 	await page.fill('input[name="currentPassword"]', password);
 	await page.fill('input[name="newPassword"]', OWN_PASSWORD);
 	await page.fill('input[name="repeatPassword"]', OWN_PASSWORD);
 	await page.click('button[type="submit"]');
 	await expect(page).toHaveURL(/\/login\?changed=1/);
-	await signIn(page, adminEmail, OWN_PASSWORD);
+	await signIn(page, phone, OWN_PASSWORD);
 	await expect(page).toHaveURL('/portal');
 });
 
@@ -174,7 +182,7 @@ test('the card keeps contracts, addresses and a second administrator', async ({ 
 	await issue.locator('input[name="fullName"]').fill('Олег Второй');
 	await issue.locator('input[name="email"]').fill(email);
 	await issue.locator('input[name="phone"]').fill(`+798${String(Date.now()).slice(-8)}`);
-	await issue.getByRole('button', { name: 'Выдать доступ' }).click();
+	await issue.getByRole('button', { name: 'Сгенерировать пароль' }).click();
 	await expect(page.getByTestId('created-access')).toContainText('Администратор выдан');
 	expect(
 		(await page.getByTestId('temporary-password').textContent())?.trim().length

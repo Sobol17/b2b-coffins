@@ -25,12 +25,6 @@ const terms = {
 	settlementScheme: 'weekly',
 	managerId: '3'
 };
-const admin = {
-	adminFullName: 'Анна Смирнова',
-	adminEmail: ' Anna@RS.example ',
-	adminPhone: '8 (900) 123-45-67'
-};
-
 describe('C3 counterparty forms', () => {
 	it('stores an empty requisite as null and needs only the name', () => {
 		expect(requisitesInputSchema.parse(requisites)).toEqual({
@@ -76,13 +70,8 @@ describe('C3 counterparty forms', () => {
 		).toBe(false);
 	});
 
-	it('creates a counterparty only together with its administrator', () => {
-		const parsed = createCounterpartySchema.parse({ ...requisites, ...terms, ...admin });
-		expect(parsed.admin).toEqual({
-			fullName: 'Анна Смирнова',
-			email: 'anna@rs.example',
-			phone: '+79001234567'
-		});
+	it('accepts requisites and terms without a portal administrator', () => {
+		const parsed = createCounterpartySchema.parse({ ...requisites, ...terms });
 		expect(parsed.requisites.name).toBe('Ритуал-Сервис');
 		expect(parsed.terms).toEqual({
 			regionPriceListId: null,
@@ -90,7 +79,7 @@ describe('C3 counterparty forms', () => {
 			settlementScheme: 'weekly',
 			managerId: 3
 		});
-		expect(createCounterpartySchema.safeParse({ ...requisites, ...terms }).success).toBe(false);
+		expect(parsed).not.toHaveProperty('admin');
 	});
 
 	it('refuses a contract that ends before it is signed', () => {

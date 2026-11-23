@@ -1,7 +1,6 @@
 import { eq } from 'drizzle-orm';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { NotFoundError } from '../../src/lib/server/core/errors';
-import { CounterpartyAccessService } from '../../src/lib/server/crm-counterparty/counterparty-access.service';
 import { CounterpartyDetailService } from '../../src/lib/server/crm-counterparty/counterparty-detail.service';
 import { CounterpartyLedgerService } from '../../src/lib/server/crm-counterparty/counterparty-ledger.service';
 import { CrmCounterpartyService } from '../../src/lib/server/crm-counterparty/crm-counterparty.service';
@@ -11,7 +10,6 @@ import {
 	paymentMarks,
 	requests
 } from '../../src/lib/server/db/schema';
-import { FakeMailDriver } from '../../src/lib/server/notifications/drivers/mail';
 import { actorOf, counterpartyDatabase, newCounterparty } from './helpers/crm-counterparty';
 import { insertUser } from './helpers/db';
 
@@ -59,15 +57,12 @@ function mark(requestId: number, amountMinor: number): void {
 		.run();
 }
 
-beforeAll(async () => {
-	const access = new CounterpartyAccessService(manager, new FakeMailDriver());
-	ownId = (
-		await access.create(
-			newCounterparty({ name: 'Ритуал-Сервис', inn: '7702345678', managerId: String(managerId) })
-		)
-	).counterpartyId;
-	otherId = (await access.create(newCounterparty({ name: 'Память', inn: '5001234567' })))
-		.counterpartyId;
+beforeAll(() => {
+	const service = new CrmCounterpartyService(manager);
+	ownId = service.create(
+		newCounterparty({ name: 'Ритуал-Сервис', inn: '7702345678', managerId: String(managerId) })
+	);
+	otherId = service.create(newCounterparty({ name: 'Память', inn: '5001234567' }));
 	const delivered = request(ownId, 'C3-1', 'delivered', 100_000);
 	mark(delivered, 30_000);
 	const awaiting = request(ownId, 'C3-2', 'awaiting_payment', 50_000);
@@ -127,7 +122,7 @@ describe('debt indicator agrees with the registry of payment marks (C3 DoD)', ()
 			expect.objectContaining({
 				name: 'Ритуал-Сервис',
 				managerName: 'Марина Круглова',
-				staffCount: 1
+				staffCount: 0
 			})
 		]);
 	});

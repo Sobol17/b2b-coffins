@@ -4,74 +4,22 @@ import { consumeRateLimit } from '../auth/rate-limit';
 import { SessionService } from '../auth/session.service';
 import { ConflictError, NotFoundError, ValidationError } from '../core/errors';
 import type { Tx } from '../db/client';
-import { logger } from '../logger';
-import type { MailDriver } from '../notifications/drivers/mail';
-import { staffAccessMail } from '../notifications/templates/staff-access';
-import { OrgService } from '../settings/org.service';
 import { StaffDtoMapper } from '../staff/dto';
 import { StaffRepository, type StaffRow } from '../staff/staff.repository';
 import { CounterpartyBaseService } from './counterparty-base.service';
-import { PersonalListFiller } from './personal-list';
 import { CrmCounterpartyRepository } from './crm-counterparty.repository';
 import type { ActorContext } from '$lib/types/actor';
 import type { CreatedStaffDto, StaffMemberDto } from '$lib/types/counterparty';
-import type { CreatedCounterpartyDto } from '$lib/types/crm-counterparty';
-import type { CreateCounterpartyInput, IssueAdminInput } from '$lib/validation/crm-counterparty';
+import type { IssueAdminInput } from '$lib/validation/crm-counterparty';
 
-/**
- * Portal access the workshop hands out (C3): a new counterparty with its first administrator,
- * another administrator, and a fresh temporary password. The password mail goes through the driver
- * directly, as in P2: the secret must not sit in the outbox (tech.md 7.1).
- */
+/** Portal administrators and temporary passwords issued by the workshop (C3). */
 export class CounterpartyAccessService extends CounterpartyBaseService {
 	constructor(
 		ctx: ActorContext,
-		private readonly mail: MailDriver,
 		counterparties: CrmCounterpartyRepository = new CrmCounterpartyRepository(),
-		private readonly staff: StaffRepository = new StaffRepository(),
-		private readonly filler: PersonalListFiller = new PersonalListFiller()
+		private readonly staff: StaffRepository = new StaffRepository()
 	) {
 		super(ctx, counterparties);
-	}
-
-	/**
-	 * One transaction for both rows: a counterparty without an administrator cannot sign in and
-	 * cannot be fixed from the portal (the same rule as `pnpm admin counterparty:create`).
-	 * @throws ValidationError for a used login or an unknown manager or price list.
-	 */
-	async create(input: CreateCounterpartyInput): Promise<CreatedCounterpartyDto> {
-		const { passwordHash, temporaryPassword } = await this.newPassword();
-		const created = this.audited(
-			{ action: 'counterparty.create', entity: 'counterparties' },
-			(tx) => {
-				this.validateTerms(input.terms, tx);
-				this.assertLoginFree(input.admin.email, input.admin.phone, tx);
-				const staffLimit = OrgService.staffLimitDefault();
-				const id = this.counterparties.insert(input.requisites, input.terms, staffLimit, tx);
-				const region = input.terms.regionPriceListId;
-				if (region !== null) {
-					this.filler.fill({ id, name: input.requisites.name }, region, false, tx);
-				}
-				const adminId = this.staff.insertMember(
-					{ ...input.admin, role: 'cp_admin', counterpartyId: id, passwordHash },
-					tx
-				);
-				return {
-					result: { id, admin: this.requireMember(id, adminId, tx) },
-					entityId: id,
-					after: { ...input.terms, staffLimit, adminId }
-				};
-			}
-		);
-		const mailSent = await this.sendAccess(created.admin.email, created.id, temporaryPassword);
-		return {
-			counterpartyId: created.id,
-			access: {
-				member: StaffDtoMapper.toMember(created.admin, this.ctx),
-				temporaryPassword,
-				mailSent
-			}
-		};
 	}
 
 	/** @throws ValidationError for a used login, ConflictError at the staff limit. */
@@ -93,8 +41,7 @@ export class CounterpartyAccessService extends CounterpartyBaseService {
 				after: { counterpartyId, role: 'cp_admin' }
 			};
 		});
-		const mailSent = await this.sendAccess(admin.email, counterpartyId, temporaryPassword);
-		return { member: StaffDtoMapper.toMember(admin, this.ctx), temporaryPassword, mailSent };
+		return { member: StaffDtoMapper.toMember(admin, this.ctx), temporaryPassword, mailSent: false };
 	}
 
 	/** @throws ConflictError for a disabled account or one that already administers. */
@@ -124,8 +71,11 @@ export class CounterpartyAccessService extends CounterpartyBaseService {
 			SessionService.destroyAllFor(userId, tx);
 			return { result: { ...row, mustChangePassword: true }, entityId: userId };
 		});
-		const mailSent = await this.sendAccess(member.email, counterpartyId, temporaryPassword);
-		return { member: StaffDtoMapper.toMember(member, this.ctx), temporaryPassword, mailSent };
+		return {
+			member: StaffDtoMapper.toMember(member, this.ctx),
+			temporaryPassword,
+			mailSent: false
+		};
 	}
 
 	/** Spends the `staff.create` limit before hashing: argon2 is the expensive part of the call. */
@@ -154,22 +104,5 @@ export class CounterpartyAccessService extends CounterpartyBaseService {
 		if (!row.isActive)
 			throw new ConflictError('Учётная запись отключена администратором контрагента');
 		return row;
-	}
-
-	private async sendAccess(
-		to: string | null,
-		counterpartyId: number,
-		temporaryPassword: string
-	): Promise<boolean> {
-		if (!to) return false;
-		const counterpartyName = this.requireCounterparty(counterpartyId).name;
-		try {
-			await this.mail.send(staffAccessMail({ to, counterpartyName, temporaryPassword }));
-			return true;
-		} catch (err) {
-			// The password is set either way; the manager sees it once and hands it over in person.
-			logger.warn({ err: err instanceof Error ? err.message : 'unknown' }, 'access mail failed');
-			return false;
-		}
 	}
 }

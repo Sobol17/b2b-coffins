@@ -10,7 +10,7 @@
 <Modal
 	bind:open
 	title="Новый администратор"
-	description="Временный пароль появится здесь один раз. Если указана почта, отправим его письмом."
+	description="Скопируйте временный пароль после выдачи доступа и передайте его администратору."
 >
 	{#snippet body()}
 		<form
@@ -38,7 +38,7 @@
 				autocomplete="off"
 			/>
 			<Input name="phone" type="tel" label="Телефон" placeholder={PLACEHOLDER.phone} required />
-			<Button type="submit" loading={pending} class="self-start">Выдать доступ</Button>
+			<Button type="submit" loading={pending} class="self-start">Сгенерировать пароль</Button>
 		</form>
 	{/snippet}
 </Modal>

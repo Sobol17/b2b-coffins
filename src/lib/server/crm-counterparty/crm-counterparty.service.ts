@@ -1,5 +1,6 @@
 import { DebtRepository } from '../counterparty/debt.repository';
 import type { Tx } from '../db/client';
+import { OrgService } from '../settings/org.service';
 import { StaffDtoMapper } from '../staff/dto';
 import { StaffRepository } from '../staff/staff.repository';
 import { CounterpartyBaseService } from './counterparty-base.service';
@@ -15,7 +16,11 @@ import type {
 	CrmCounterpartyListItemDto
 } from '$lib/types/crm-counterparty';
 import type { ListQuery, Page } from '$lib/types/list';
-import type { RequisitesInput, TermsInput } from '$lib/validation/crm-counterparty';
+import type {
+	CreateCounterpartyInput,
+	RequisitesInput,
+	TermsInput
+} from '$lib/validation/crm-counterparty';
 
 /** Registry and card of the counterparties for the workshop (tech.md 14, C3). */
 export class CrmCounterpartyService extends CounterpartyBaseService {
@@ -62,6 +67,24 @@ export class CrmCounterpartyService extends CounterpartyBaseService {
 
 	choices(): CrmCounterpartyChoicesDto {
 		return this.counterparties.choices();
+	}
+
+	/** Creates the card independently from any portal account. */
+	create(input: CreateCounterpartyInput): number {
+		return this.audited({ action: 'counterparty.create', entity: 'counterparties' }, (tx) => {
+			this.validateTerms(input.terms, tx);
+			const staffLimit = OrgService.staffLimitDefault();
+			const id = this.counterparties.insert(input.requisites, input.terms, staffLimit, tx);
+			if (input.terms.regionPriceListId !== null) {
+				this.filler.fill(
+					{ id, name: input.requisites.name },
+					input.terms.regionPriceListId,
+					false,
+					tx
+				);
+			}
+			return { result: id, entityId: id, after: { ...input.terms, staffLimit } };
+		});
 	}
 
 	/** Names, requisites and contacts. The journal keeps which fields moved, not their values. */
