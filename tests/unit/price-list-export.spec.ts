@@ -6,7 +6,7 @@ import { seedDicts } from '../../scripts/seed/reference';
 import { PolicyService } from '../../src/lib/server/auth/policy';
 import { PriceListExportService } from '../../src/lib/server/catalog/price-list-export.service';
 import { ForbiddenError } from '../../src/lib/server/core/errors';
-import { counterparties, productVariants } from '../../src/lib/server/db/schema';
+import { counterparties, products } from '../../src/lib/server/db/schema';
 import type { ActorContext } from '../../src/lib/types/actor';
 import type { RoleCode } from '../../src/lib/types/roles';
 import { migratedDatabase } from './helpers/db';
@@ -36,11 +36,12 @@ function actor(role: RoleCode): ActorContext {
 }
 
 describe('price list export (P3)', () => {
-	it('lists every visible variant at the personal price of the counterparty', () => {
+	it('lists every visible model once at the personal price of the counterparty', () => {
 		const lines = new PriceListExportService(actor('cp_admin')).lines();
 
-		expect(lines).toHaveLength(db.select().from(productVariants).all().length);
-		expect(lines.find((line) => line.sku === 'MDL-201-180-PIN')).toMatchObject({
+		expect(lines).toHaveLength(db.select().from(products).all().length);
+		expect(new Set(lines.map((line) => line.sku)).size).toBe(lines.length);
+		expect(lines.find((line) => line.sku === 'MDL-201')).toMatchObject({
 			productTitle: 'Модель «Волга»',
 			categoryTitle: 'Стандарт',
 			priceMinor: 830_000
@@ -58,8 +59,8 @@ describe('price list export (P3)', () => {
 		expect(sheet?.rowCount).toBe(service.lines().length + 1);
 		const row = sheet
 			?.getRows(2, sheet.rowCount - 1)
-			?.find((r) => r.getCell(1).value === 'MDL-201-180-PIN');
-		expect(row?.getCell(7).value).toBe(8300);
+			?.find((r) => r.getCell(1).value === 'MDL-201');
+		expect(row?.getCell(3).value).toBe(8300);
 	});
 
 	it('refuses an employee: the price list is money', async () => {

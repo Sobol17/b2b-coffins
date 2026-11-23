@@ -6,7 +6,7 @@ import type { ActorContext } from '$lib/types/actor';
 
 export interface ProfileRow {
 	readonly id: number;
-	readonly email: string;
+	readonly email: string | null;
 	readonly fullName: string;
 	readonly phone: string | null;
 }

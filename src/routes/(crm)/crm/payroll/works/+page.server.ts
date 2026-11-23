@@ -1,3 +1,4 @@
+import { parseListQuery } from '$lib/server/core/list';
 import { formAction } from '$lib/server/core/http';
 import { canManagePayroll, payrollActor } from '$lib/server/crm-payroll/route';
 import { WorkTypeService } from '$lib/server/crm-payroll/work-type.service';
@@ -12,7 +13,11 @@ export const load: PageServerLoad = (event) => {
 	const actor = payrollActor(event);
 	const service = new WorkTypeService(actor);
 	const canManage = canManagePayroll(actor);
-	return { works: service.list(), variants: canManage ? service.variantChoices() : [], canManage };
+	return {
+		matrix: service.matrix(parseListQuery(event.url)),
+		variants: canManage ? service.variantChoices() : [],
+		canManage
+	};
 };
 
 export const actions = {

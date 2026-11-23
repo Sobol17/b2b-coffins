@@ -129,12 +129,6 @@
 				onPay={(line) => (paying = line)}
 			/>
 			<div class="flex flex-wrap items-center gap-3">
-				<p class="text-xl">
-					Итого к выплате:
-					<span class="font-medium tabular-nums" data-testid="week-total">
-						{roubles(week.totalPayoutMinor)}
-					</span>
-				</p>
 				<div class="flex flex-wrap gap-2 sm:ml-auto">
 					<!-- A file with a query string: a built url the client router must not render. -->
 					<!-- eslint-disable svelte/no-navigation-without-resolve -->

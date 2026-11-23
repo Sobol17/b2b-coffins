@@ -8,13 +8,13 @@ test('a portal employee edits the own contact and it survives a reload', async (
 	await page.goto('/portal/profile');
 
 	await page.fill('input[name="fullName"]', 'Ольга Гущина-Тест');
-	await page.fill('input[name="phone"]', '+7 916 333-33-33');
+	await page.fill('input[name="phone"]', '+7 916 444-44-44');
 	await page.click('button:has-text("Сохранить")');
 	await expect(page.getByTestId('profile-saved')).toBeVisible();
 
 	await page.reload();
 	await expect(page.locator('input[name="fullName"]')).toHaveValue('Ольга Гущина-Тест');
-	await expect(page.locator('input[name="phone"]')).toHaveValue('+7 916 333-33-33');
+	await expect(page.locator('input[name="phone"]')).toHaveValue('+79164444444');
 
 	// Put the seed values back: other specs read this account.
 	await page.fill('input[name="fullName"]', 'Ольга Гущина');
@@ -30,7 +30,7 @@ test('the server rejects a malformed phone and keeps the old value', async ({ pa
 
 	await page.fill('input[name="phone"]', 'позвоните мне');
 	await page.click('button:has-text("Сохранить")');
-	await expect(page.locator('text=Телефон: цифры, пробелы, скобки и дефис')).toBeVisible();
+	await expect(page.locator('text=Введите номер телефона')).toBeVisible();
 
 	await page.reload();
 	await expect(page.locator('input[name="phone"]')).toHaveValue(before);

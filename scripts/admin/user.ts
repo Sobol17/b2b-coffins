@@ -1,3 +1,4 @@
+import { accountEmailSchema, accountPhoneSchema } from '../../src/lib/validation/contact';
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { hashPassword } from '../../src/lib/server/auth/password';
@@ -8,12 +9,12 @@ import { readOptions, STRING_OPTION } from './args';
 
 const schema = z
 	.object({
-		email: z.email(),
+		email: accountEmailSchema,
 		name: z.string().min(1),
 		role: z.enum(ROLE_CODES),
 		password: z.string().min(12),
 		counterparty: z.string().optional(),
-		phone: z.string().optional()
+		phone: accountPhoneSchema
 	})
 	.refine((v) => !isPortalRole(v.role) || v.counterparty !== undefined, {
 		error: 'portal roles require --counterparty',
@@ -60,7 +61,7 @@ export async function userCreate(db: Db, argv: readonly string[]): Promise<void>
 			email: input.email,
 			passwordHash: await hashPassword(input.password),
 			fullName: input.name,
-			phone: input.phone ?? null,
+			phone: input.phone,
 			scope,
 			counterpartyId,
 			// CLI hands out a temporary password: the account must change it on first login.

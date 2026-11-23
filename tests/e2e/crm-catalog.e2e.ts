@@ -1,4 +1,4 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Locator, type Page } from '@playwright/test';
 import { login, logout } from './fixtures';
 
 // The server render shows the button before hydration wires it, so the click is retried.
@@ -7,6 +7,13 @@ async function openModal(page: Page, button: string): Promise<void> {
 		await page.getByRole('button', { name: button }).click();
 		await expect(page.getByTestId('modal')).toBeVisible({ timeout: 1000 });
 	}).toPass();
+}
+
+/** Bits closes tooltips on scroll, so finish scrolling before moving the pointer. */
+async function hoverTooltip(page: Page, trigger: Locator, text: string): Promise<void> {
+	await trigger.scrollIntoViewIfNeeded();
+	await trigger.hover();
+	await expect(page.getByRole('tooltip')).toHaveText(text);
 }
 
 test('C2 fills and publishes a model through CRM; the portal never receives cost', async ({
@@ -38,13 +45,20 @@ test('C2 fills and publishes a model through CRM; the portal never receives cost
 	await expect(page).toHaveURL(/\/crm\/catalog\/\d+$/);
 	const productUrl = new URL(page.url()).pathname;
 
+	const modelForm = page.locator('form[action="?/update"]');
+	await modelForm.getByLabel('Цена модели, ₽').fill('1000');
+	await modelForm.getByRole('button', { name: 'Сохранить', exact: true }).click();
+	await expect(page.getByTestId('toast').filter({ hasText: 'Модель сохранена' })).toBeVisible();
+
 	await page.getByRole('button', { name: 'Добавить вариант' }).click();
 	const variant = page.locator('form[action="?/createVariant"]');
 	await variant.locator('input[name="sku"]').fill(`${sku}-190`);
-	await variant.locator('input[name="sizeCode"]').fill('190');
-	await variant.locator('[data-slot="select-trigger"]').first().click();
+	await variant.getByRole('button', { name: 'Размер', exact: true }).click();
+	await expect(page.getByRole('option', { name: '50 см (маленький)' })).toBeVisible();
+	await page.getByRole('option', { name: '190 см', exact: true }).click();
+	await variant.getByRole('button', { name: 'Материал', exact: true }).click();
 	await page.getByRole('option').first().click();
-	await variant.getByLabel('Базовая цена').fill('1000');
+	const materialId = await variant.locator('input[name="materialId"]').inputValue();
 	await variant.getByRole('button', { name: 'Добавить вариант' }).click();
 	await expect(page.getByText(`${sku}-190`)).toBeVisible();
 	const variantId = await page
@@ -76,21 +90,64 @@ test('C2 fills and publishes a model through CRM; the portal never receives cost
 	await listForm.getByRole('button', { name: 'Добавить', exact: true }).click();
 	const listRow = page.getByRole('listitem').filter({ hasText: listTitle });
 	await expect(listRow).toBeVisible();
-	await listRow.getByRole('link', { name: 'Позиции' }).click();
+	const listLink = listRow.getByRole('link', {
+		name: `Позиции прайс-листа ${listTitle}`,
+		exact: true
+	});
+	await expect(listLink).toHaveAttribute('href', /\/crm\/prices\/\d+$/);
+	await expect(listRow.getByRole('button', { name: 'Изменить', exact: true })).toHaveText('');
+	await hoverTooltip(
+		page,
+		listRow.getByRole('button', { name: 'Изменить', exact: true }),
+		'Изменить прайс-лист'
+	);
+	await listRow.getByRole('button', { name: 'Изменить', exact: true }).click();
+	await expect(page).toHaveURL(/\/crm\/prices$/);
+	await expect(page.getByTestId('modal')).toContainText('Изменить прайс-лист');
+	await page.getByTestId('modal').getByRole('button', { name: 'Отмена', exact: true }).click();
+	await expect(listRow.getByRole('button', { name: 'Удалить', exact: true })).toHaveText('');
+	await listRow.getByRole('button', { name: 'Удалить', exact: true }).click();
+	await expect(page.getByTestId('confirm-dialog')).toContainText(listTitle);
+	await expect(page).toHaveURL(/\/crm\/prices$/);
+	await page.getByTestId('confirm-dialog').getByRole('button', { name: 'Отмена' }).click();
+	// The title remains a native keyboard link; its stretched area also covers the row's gutter.
+	await listLink.focus();
+	await expect(listLink).toBeFocused();
+	await listRow.click({ position: { x: 4, y: 4 } });
 	await expect(page).toHaveURL(/\/crm\/prices\/\d+$/);
 	await page.getByRole('button', { name: 'Добавить', exact: true }).click();
 	const itemForm = page.getByTestId('modal').locator('form[action="?/upsert"]');
-	await itemForm.locator('[data-slot="select-trigger"]').click();
-	await page.getByRole('option', { name: new RegExp(`${sku}-190`) }).click();
+	await expect(itemForm.getByRole('button', { name: 'Добавить', exact: true })).toBeDisabled();
+	await itemForm.getByRole('combobox', { name: 'Изделие', exact: true }).click();
+	await expect(page.getByPlaceholder('Поиск по списку')).toBeFocused();
+	const modelOptions = page.locator('[data-slot="command-list"]');
+	await expect(modelOptions).toBeVisible();
+	expect(
+		await modelOptions.evaluate((list) => ({
+			overflow: getComputedStyle(list).overflowY,
+			bounded: list.scrollHeight > list.clientHeight
+		}))
+	).toEqual({ overflow: 'auto', bounded: true });
+	await modelOptions.evaluate((list) => {
+		list.scrollTop = list.scrollHeight;
+	});
+	expect(await modelOptions.evaluate((list) => list.scrollTop)).toBeGreaterThan(0);
+	await page.getByPlaceholder('Поиск по списку', { exact: true }).fill(sku);
+	await page.getByRole('option', { name: `${title} · ${sku}`, exact: true }).click();
+	await expect(itemForm.locator('input[name="productId"]')).not.toHaveValue('');
+	await expect(itemForm.getByRole('button', { name: 'Добавить', exact: true })).toBeEnabled();
+	await expect(itemForm.getByRole('button', { name: 'Добавить', exact: true })).toHaveCSS(
+		'cursor',
+		'pointer'
+	);
 	await itemForm.getByLabel('Цена').fill('1100');
 	await itemForm.getByRole('button', { name: 'Добавить', exact: true }).click();
 	await expect(page.getByTestId('modal')).toBeHidden();
-	const priceRow = page.getByTestId('data-table-row').filter({ hasText: `${sku}-190` });
+	const priceRow = page.getByTestId('data-table-row').filter({ hasText: sku });
 	await expect(priceRow).toContainText(title);
 	await expect(priceRow).toContainText(/1\s100/);
 	await expect(priceRow.getByRole('button', { name: 'Изменить' })).toHaveText('');
-	await priceRow.getByRole('button', { name: 'Изменить' }).hover();
-	await expect(page.getByRole('tooltip')).toContainText('Изменить цену');
+	await hoverTooltip(page, priceRow.getByRole('button', { name: 'Изменить' }), 'Изменить цену');
 	await priceRow.getByRole('button', { name: 'Изменить' }).click();
 	const editPrice = page.getByTestId('modal');
 	await expect(editPrice.getByLabel('Цена')).toHaveValue(/1\s100/);
@@ -117,6 +174,7 @@ test('C2 fills and publishes a model through CRM; the portal never receives cost
 	await login(page, 'manager');
 	const response = await page.goto(productUrl);
 	const body = (await response?.text()) ?? '';
+	await expect(page.getByLabel('Цена модели, ₽')).toHaveValue(/1\s000/);
 	// The administrator reads the cost of the stock item on the variant (tech.md v1.62).
 	expect(body).toContain('costPriceMinor');
 	const saved = await page.request.post(`${productUrl}?/updateVariant`, {
@@ -125,7 +183,7 @@ test('C2 fills and publishes a model through CRM; the portal never receives cost
 			id: variantId,
 			sku: `${sku}-190`,
 			sizeCode: '190',
-			materialId: '1',
+			materialId,
 			basePriceMinor: '100000',
 			stockItemId: '',
 			isPublished: 'true'
@@ -138,6 +196,18 @@ test('C2 fills and publishes a model through CRM; the portal never receives cost
 	const storefront = await page.goto('/portal/catalog');
 	await expect(page.getByText(category)).toBeVisible();
 	expect((await storefront?.text()) ?? '').not.toContain('costPriceMinor');
+	await page.getByTestId('showcase-tile').filter({ hasText: title }).click();
+	await page.getByRole('button', { name: 'Блеск', exact: true }).click();
+	await page.getByRole('option', { name: 'Глянцевый', exact: true }).click();
+	await page.getByTestId('add-to-draft').click();
+	await expect(
+		page.getByTestId('toast').filter({ hasText: 'Позиция добавлена в заявку' })
+	).toBeVisible();
+	await page.goto('/portal/cart');
+	await expect(page.getByTestId('draft-line').filter({ hasText: title })).toContainText(
+		'Глянцевый'
+	);
+	await page.getByRole('button', { name: 'Очистить' }).click();
 	expect((await page.goto('/crm/catalog'))?.status()).toBe(403);
 	await page.goto('/portal/profile');
 	await logout(page);

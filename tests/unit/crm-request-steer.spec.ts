@@ -105,7 +105,12 @@ describe('the priority of a request (C4)', () => {
 		stockUp(id);
 		settleWork(manager);
 		loadUp(id);
-		move(manager, id, 'delivered');
+		const driverId = insertUser({
+			email: 'priority-driver@example.test',
+			role: 'driver',
+			counterpartyId: null
+		});
+		move(crmActor('driver', driverId), id, 'delivered');
 		expect(() => priorities().setPriority(id, 'normal')).toThrow(ConflictError);
 	});
 

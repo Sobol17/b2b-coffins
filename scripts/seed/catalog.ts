@@ -120,6 +120,10 @@ export function upsertVariantStockItem(db: Db, sku: string, title: string, unitI
 	return row.id;
 }
 
+function minPrice(variants: readonly { basePriceMinor: number }[]): number {
+	return Math.min(...variants.map((row) => row.basePriceMinor));
+}
+
 export function seedCatalog(db: Db): { products: number; variants: number } {
 	const fixture = loadFixture('catalog.json', catalogFixture);
 	const pcsUnitId = dictIdByCode(db, 'unit', 'pcs');
@@ -147,6 +151,7 @@ export function seedCatalog(db: Db): { products: number; variants: number } {
 				title: product.title,
 				categoryId,
 				description: product.description,
+				basePriceMinor: minPrice(product.variants),
 				isPublished: true,
 				sortOrder: product.sortOrder
 			})

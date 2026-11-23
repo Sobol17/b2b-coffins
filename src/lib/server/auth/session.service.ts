@@ -12,7 +12,7 @@ const RENEW_AFTER_DAYS = 15;
 
 export interface SessionUser {
 	readonly id: number;
-	readonly email: string;
+	readonly email: string | null;
 	readonly fullName: string;
 	readonly scope: 'portal' | 'crm';
 	readonly counterpartyId: number | null;

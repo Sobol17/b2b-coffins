@@ -28,6 +28,7 @@ export const products = sqliteTable(
 		title: text('title').notNull(),
 		categoryId: integer('category_id').references(() => categories.id),
 		description: text('description'),
+		basePriceMinor: money('base_price_minor'),
 		isPublished: bool('is_published').notNull().default(false),
 		sortOrder: integer('sort_order').notNull().default(0),
 		createdAt: createdAt(),
@@ -66,7 +67,7 @@ export const productVariants = sqliteTable(
 	(t) => [uniqueIndex('variants_sku_uq').on(t.sku), index('variants_product_idx').on(t.productId)]
 );
 
-/** Options: the colour of the product, the only choice besides the size (v1.22). */
+/** Product options: colour per variant and gloss shared by all variants. */
 export const options = sqliteTable('options', {
 	id: pk(),
 	kind: text('kind', { enum: OPTION_KINDS }).notNull(),

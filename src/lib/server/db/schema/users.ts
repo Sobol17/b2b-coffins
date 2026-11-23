@@ -15,7 +15,7 @@ export const users = sqliteTable(
 	'users',
 	{
 		id: pk(),
-		email: text('email').notNull(),
+		email: text('email'),
 		login: text('login'),
 		passwordHash: text('password_hash').notNull(),
 		fullName: text('full_name').notNull(),
@@ -35,6 +35,9 @@ export const users = sqliteTable(
 	(t) => [
 		uniqueIndex('users_email_uq')
 			.on(t.email)
+			.where(sql`${t.deletedAt} is null`),
+		uniqueIndex('users_phone_uq')
+			.on(t.phone)
 			.where(sql`${t.deletedAt} is null`),
 		index('users_counterparty_idx').on(t.counterpartyId)
 	]

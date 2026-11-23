@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
-	import { Button, Input, MoneyInput, NumberInput, Select, withToast } from '$lib/ui';
+	import { Button, Input, NumberInput, Select, withToast } from '$lib/ui';
 	import type { CrmCatalogChoicesDto, CrmVariantDto } from '$lib/types/crm-catalog';
 
 	let {
@@ -15,6 +15,13 @@
 	const materials = $derived(
 		choices.materials.map((row) => ({ value: String(row.id), label: row.title }))
 	);
+	const sizes = $derived.by(() => {
+		const entries = choices.sizes.map((row) => ({ value: row.code, label: row.title }));
+		const current = variant?.sizeCode;
+		return current && !entries.some((row) => row.value === current)
+			? [{ value: current, label: current }, ...entries]
+			: entries;
+	});
 	const stock = $derived([
 		{ value: '', label: 'Без учётной позиции' },
 		...choices.stockProducts.map((row) => ({
@@ -42,10 +49,11 @@
 		value={variant?.sku ?? ''}
 		required
 	/>
-	<Input
+	<Select
 		name="sizeCode"
 		label="Размер"
-		placeholder="Введите размер"
+		placeholder="Выберите размер"
+		options={sizes}
 		value={variant?.sizeCode ?? ''}
 		required
 	/>
@@ -91,12 +99,6 @@
 		placeholder="Введите вес"
 		value={variant?.weightG ?? 0}
 		min={0}
-	/>
-	<MoneyInput
-		name="basePriceMinor"
-		label="Базовая цена"
-		placeholder="Введите цену"
-		valueMinor={variant?.basePriceMinor ?? 0}
 	/>
 	<div class="flex items-end gap-2">
 		<Button type="submit">{variant ? 'Сохранить вариант' : 'Добавить вариант'}</Button>

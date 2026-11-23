@@ -89,5 +89,21 @@
 				{work ? 'Сохранить' : 'Добавить'}
 			</Button>
 		</form>
+		{#if work}
+			<form
+				method="POST"
+				action={work.isActive ? '?/disable' : '?/enable'}
+				use:enhance={withToast({
+					success: work.isActive ? 'Работа выключена' : 'Работа включена',
+					onSuccess: onClose
+				})}
+				class="mt-4"
+			>
+				<input type="hidden" name="id" value={work.id} />
+				<Button type="submit" variant="secondary"
+					>{work.isActive ? 'Выключить работу' : 'Включить работу'}</Button
+				>
+			</form>
+		{/if}
 	{/snippet}
 </Modal>

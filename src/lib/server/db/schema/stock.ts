@@ -27,7 +27,8 @@ export const stockItems = sqliteTable(
 		costPriceMinor: money('cost_price_minor'),
 		isActive: bool('is_active').notNull().default(true),
 		createdAt: createdAt(),
-		updatedAt: updatedAt()
+		updatedAt: updatedAt(),
+		deletedAt: ts('deleted_at')
 	},
 	(t) => [uniqueIndex('stock_items_code_uq').on(t.code)]
 );

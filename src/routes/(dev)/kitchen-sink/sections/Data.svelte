@@ -2,6 +2,7 @@
 	import {
 		AnimatedCounter,
 		Breadcrumbs,
+		Button,
 		DataTable,
 		FilterBar,
 		Pagination,
@@ -26,7 +27,8 @@
 	const columns: DataTableColumn[] = [
 		{ key: 'number', label: 'Номер', sortable: true },
 		{ key: 'status', label: 'Статус' },
-		{ key: 'totalMinor', label: 'Сумма', align: 'end' }
+		{ key: 'totalMinor', label: 'Сумма', align: 'end' },
+		{ key: 'actions', label: 'Действие' }
 	];
 
 	const allRows: DemoRow[] = Array.from({ length: 7 }, (_, index) => ({
@@ -38,6 +40,7 @@
 	}));
 
 	let query = $state<ListQuery>({ page: 1, perPage: 3 });
+	let rowActions = $state(0);
 	const rows = $derived(
 		allRows.slice((query.page - 1) * query.perPage, query.page * query.perPage)
 	);
@@ -66,6 +69,7 @@
 			total={allRows.length}
 			{query}
 			onQueryChange={(next) => (query = next)}
+			rowHref={() => resolve('/portal')}
 			exportUrl="/api/health?format=xlsx"
 		>
 			{#snippet cell(row: DemoRow, column: DataTableColumn)}
@@ -73,11 +77,21 @@
 					<StatusBadge status={row.status} />
 				{:else if column.key === 'totalMinor'}
 					<PriceCell valueMinor={row.totalMinor} />
+				{:else if column.key === 'actions'}
+					<Button variant="secondary" onclick={() => (rowActions += 1)}>Отметить</Button>
 				{:else}
 					{row.number}
 				{/if}
 			{/snippet}
+			{#snippet footer(column: DataTableColumn)}
+				{#if column.key === 'number'}
+					Итого на странице
+				{:else if column.key === 'totalMinor'}
+					<PriceCell valueMinor={rows.reduce((sum, row) => sum + (row.totalMinor ?? 0), 0)} />
+				{/if}
+			{/snippet}
 		</DataTable>
+		<output data-testid="row-actions">Отмечено: {rowActions}</output>
 	</div>
 </Showcase>
 

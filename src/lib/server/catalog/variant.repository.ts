@@ -45,6 +45,7 @@ export interface VariantCategoryRow {
 
 export interface PriceListVariantRow {
 	readonly id: number;
+	readonly productId: number;
 	readonly sku: string;
 	readonly sizeCode: string;
 	readonly materialTitle: string;
@@ -101,7 +102,8 @@ export class VariantRepository extends BaseRepository<typeof productVariants> {
 		return this.db()
 			.select({
 				id: productVariants.id,
-				sku: productVariants.sku,
+				productId: products.id,
+				sku: products.sku,
 				sizeCode: productVariants.sizeCode,
 				materialTitle: dictItems.title,
 				lengthMm: productVariants.lengthMm,
@@ -122,10 +124,10 @@ export class VariantRepository extends BaseRepository<typeof productVariants> {
 			.all();
 	}
 
-	/** Active options allowed per variant, defaults first. */
+	/** Active colours by variant and shared gloss choices. */
 	findOptions(variantIds: readonly number[]): OptionRow[] {
 		if (variantIds.length === 0) return [];
-		return this.db()
+		const colours = this.db()
 			.select({
 				variantId: productOptions.variantId,
 				id: options.id,
@@ -135,9 +137,27 @@ export class VariantRepository extends BaseRepository<typeof productVariants> {
 			})
 			.from(productOptions)
 			.innerJoin(options, eq(options.id, productOptions.optionId))
-			.where(and(inArray(productOptions.variantId, [...variantIds]), eq(options.isActive, true)))
-			.orderBy(asc(options.kind), sql`${productOptions.isDefault} desc`, asc(options.title))
+			.where(
+				and(
+					inArray(productOptions.variantId, [...variantIds]),
+					eq(options.kind, 'color'),
+					eq(options.isActive, true)
+				)
+			)
+			.orderBy(sql`${productOptions.isDefault} desc`, asc(options.title))
 			.all();
+		const gloss = this.db()
+			.select({ id: options.id, kind: options.kind, title: options.title })
+			.from(options)
+			.where(and(eq(options.kind, 'gloss'), eq(options.isActive, true)))
+			.orderBy(asc(options.title))
+			.all();
+		return [
+			...colours,
+			...variantIds.flatMap((variantId) =>
+				gloss.map((row) => ({ ...row, variantId, isDefault: false }))
+			)
+		];
 	}
 
 	findPrices(variantIds: readonly number[], withCost: boolean): Map<number, PriceRow> {
@@ -145,8 +165,9 @@ export class VariantRepository extends BaseRepository<typeof productVariants> {
 		const where = inArray(productVariants.id, [...variantIds]);
 		if (!withCost) {
 			const rows = this.db()
-				.select({ id: productVariants.id, basePriceMinor: productVariants.basePriceMinor })
+				.select({ id: productVariants.id, basePriceMinor: products.basePriceMinor })
 				.from(productVariants)
+				.innerJoin(products, eq(products.id, productVariants.productId))
 				.where(where)
 				.all();
 			return new Map(rows.map((row) => [row.id, { basePriceMinor: row.basePriceMinor }]));
@@ -154,11 +175,12 @@ export class VariantRepository extends BaseRepository<typeof productVariants> {
 		const rows = this.db()
 			.select({
 				id: productVariants.id,
-				basePriceMinor: productVariants.basePriceMinor,
+				basePriceMinor: products.basePriceMinor,
 				// The cost lives on the stock item since v1.62; a variant without one costs nothing known.
 				costPriceMinor: sql<number>`coalesce(${stockItems.costPriceMinor}, 0)`
 			})
 			.from(productVariants)
+			.innerJoin(products, eq(products.id, productVariants.productId))
 			.leftJoin(stockItems, eq(stockItems.id, productVariants.stockItemId))
 			.where(where)
 			.all();

@@ -45,6 +45,7 @@ export interface CrmProductDto {
 	readonly title: string;
 	readonly categoryId: number | null;
 	readonly description: string | null;
+	readonly basePriceMinor: number;
 	readonly isPublished: boolean;
 	readonly isDeleted: boolean;
 	readonly sortOrder: number;
@@ -69,7 +70,7 @@ export interface CrmPriceListDto {
 	readonly isBase: boolean;
 	readonly validFrom: string | null;
 	readonly validTo: string | null;
-	readonly items: readonly { readonly variantId: number; readonly priceMinor: number }[];
+	readonly items: readonly { readonly productId: number; readonly priceMinor: number }[];
 }
 
 export interface CrmDiscountRuleDto {
@@ -82,6 +83,7 @@ export interface CrmDiscountRuleDto {
 }
 
 export interface CrmCatalogChoicesDto {
+	readonly sizes: readonly { readonly code: string; readonly title: string }[];
 	readonly materials: readonly { readonly id: number; readonly title: string }[];
 	readonly stockProducts: readonly {
 		readonly id: number;

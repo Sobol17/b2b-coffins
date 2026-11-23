@@ -30,14 +30,18 @@
 		SCHEME_OPTIONS.find((option) => option.value === value)?.label ?? value;
 </script>
 
-<DataTable {columns} {rows} {total} {query} {onQueryChange} emptyTitle="Контрагентов не найдено">
+<DataTable
+	{columns}
+	{rows}
+	{total}
+	{query}
+	{onQueryChange}
+	rowHref={(row) => resolve(`/crm/counterparties/${row.id}`)}
+	emptyTitle="Контрагентов не найдено"
+>
 	{#snippet cell(row: CrmCounterpartyListItemDto, column: DataTableColumn)}
 		{#if column.key === 'name'}
-			<!-- The name opens the card: a separate column for the link fell off a phone screen. -->
-			<a
-				class="font-medium text-link hover:text-link-hover"
-				href={resolve(`/crm/counterparties/${row.id}`)}>{row.name}</a
-			>
+			<span class="font-medium text-link">{row.name}</span>
 			<div class="text-xs text-fg-faint">{row.inn ? `ИНН ${row.inn}` : 'ИНН не указан'}</div>
 		{:else if column.key === 'managerName'}
 			{row.managerName ?? '—'}

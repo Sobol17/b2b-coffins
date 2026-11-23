@@ -1,6 +1,7 @@
 import pino from 'pino';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { InventoryService } from '../../src/lib/server/crm-stock/inventory.service';
+import { StockItemService } from '../../src/lib/server/crm-stock/stock-item.service';
 import { StockMoveService } from '../../src/lib/server/crm-stock/stock-move.service';
 import { backoffSeconds } from '../../src/lib/server/queue/backoff';
 import { InvalidPayloadError } from '../../src/lib/server/queue/job-handler';
@@ -8,7 +9,13 @@ import { createStockThresholdCheckHandler } from '../../src/lib/server/queue/han
 import { JOB_PAYLOAD_SCHEMAS, jobKey } from '../../src/lib/server/queue/topics';
 import { Worker } from '../../src/lib/server/queue/worker';
 import { StockThreshold } from '../../src/lib/server/stock/stock-threshold';
-import { fanoutJobs, resetInventories, stockItemId, thresholdJobs } from './helpers/crm-stock';
+import {
+	dictId,
+	fanoutJobs,
+	resetInventories,
+	stockItemId,
+	thresholdJobs
+} from './helpers/crm-stock';
 import { insertUser, migratedDatabase } from './helpers/db';
 import { crmActor, optionId, resetRequests, seedOrderingWorld } from './helpers/portal-requests';
 
@@ -113,6 +120,25 @@ describe('the handler', () => {
 
 		await worker().drain();
 
+		expect(thresholdJobs(db).map((job) => job.status)).toEqual(['done']);
+		expect(fanoutJobs(db)).toEqual([]);
+	});
+
+	it('does not notify about a position archived after its check was queued', async () => {
+		const items = new StockItemService(manager);
+		const id = items.create({
+			kind: 'component',
+			code: 'ARCHIVED-THRESHOLD',
+			title: 'Archived shelf',
+			unitId: dictId(db, 'unit', 'pcs'),
+			minThreshold: 5
+		});
+		purchase(id, 1);
+		const moves = new StockMoveService(manager);
+		const move = moves.journal(id, { page: 1, perPage: 25 }).rows[0]!;
+		moves.reverse(id, move.id);
+		items.archive(id);
+		await worker().drain();
 		expect(thresholdJobs(db).map((job) => job.status)).toEqual(['done']);
 		expect(fanoutJobs(db)).toEqual([]);
 	});

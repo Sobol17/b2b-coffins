@@ -1,4 +1,4 @@
-import { and, eq, gt, isNull } from 'drizzle-orm';
+import { and, eq, gt, isNull, sql, ne } from 'drizzle-orm';
 import { database, type Tx } from '../db/client';
 import { passwordResetTokens, users } from '../db/schema';
 
@@ -10,9 +10,33 @@ export class AuthRepository {
 		const [row] = database
 			.select()
 			.from(users)
-			.where(and(eq(users.email, email), isNull(users.deletedAt)))
+			.where(and(eq(sql`lower(${users.email})`, email), isNull(users.deletedAt)))
 			.all();
 		return row;
+	}
+
+	findByPhone(phone: string): UserRow | undefined {
+		return database
+			.select()
+			.from(users)
+			.where(and(eq(users.phone, phone), isNull(users.deletedAt)))
+			.get();
+	}
+
+	phoneTaken(phone: string, tx?: Tx, exceptId?: number): boolean {
+		return (
+			(tx ?? database)
+				.select({ id: users.id })
+				.from(users)
+				.where(
+					and(
+						eq(users.phone, phone),
+						isNull(users.deletedAt),
+						exceptId === undefined ? undefined : ne(users.id, exceptId)
+					)
+				)
+				.get() !== undefined
+		);
 	}
 
 	findById(id: number): UserRow | undefined {

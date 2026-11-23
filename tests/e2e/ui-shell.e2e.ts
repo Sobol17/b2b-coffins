@@ -23,7 +23,7 @@ test('the login form is built from the kit and still reports a bad password', as
 	await page.goto('/login');
 	await expect(page.getByRole('button', { name: 'Войти' })).toHaveAttribute('data-slot', 'button');
 
-	await page.fill('input[name="email"]', 'admin@ritual-service.example');
+	await page.fill('input[name="identifier"]', 'admin@ritual-service.example');
 	await page.fill('input[name="password"]', 'definitely-not-the-password');
 	await page.click('button[type="submit"]');
 

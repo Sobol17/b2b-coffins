@@ -1,3 +1,4 @@
+import { DeliveryService } from '$lib/server/crm-delivery/delivery.service';
 import { error } from '@sveltejs/kit';
 import { requireAction, requireScope } from '$lib/server/auth/guard';
 import { formAction, orHttpStatus } from '$lib/server/core/http';
@@ -26,6 +27,8 @@ function context(event: RequestEvent) {
 	);
 	return {
 		id: parsed.data,
+		delivery: () => new DeliveryService(actor),
+		defaultDriverId: actor.roles.includes('driver') ? actor.userId : null,
 		request: event.request,
 		priorities: () => new CrmRequestPriorityService(actor),
 		items: () => new CrmRequestItemsService(actor),
@@ -36,9 +39,14 @@ function context(event: RequestEvent) {
 }
 
 export const load: PageServerLoad = (event) => {
-	const { id, cards } = context(event);
+	const { id, cards, delivery, defaultDriverId } = context(event);
 	const service = cards();
-	return orHttpStatus(() => ({ card: service.card(id), choices: service.choices() }));
+	return orHttpStatus(() => ({
+		card: service.card(id),
+		choices: service.choices(),
+		drivers: delivery().driverChoices(),
+		defaultDriverId
+	}));
 };
 
 export const actions = {

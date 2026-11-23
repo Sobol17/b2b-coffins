@@ -1,10 +1,11 @@
 import { and, eq, inArray } from 'drizzle-orm';
 import { BaseRepository } from '../core/repository';
-import { counterparties, priceListItems, priceLists } from '../db/schema';
+import { counterparties, priceListItems, priceLists, productVariants } from '../db/schema';
 
 export interface PriceListRow {
 	readonly id: number;
 	readonly isBase: boolean;
+	readonly isPersonal: boolean;
 	readonly validFrom: Date | null;
 	readonly validTo: Date | null;
 }
@@ -12,6 +13,7 @@ export interface PriceListRow {
 const LIST_COLUMNS = {
 	id: priceLists.id,
 	isBase: priceLists.isBase,
+	isPersonal: priceLists.isPersonal,
 	validFrom: priceLists.validFrom,
 	validTo: priceLists.validTo
 };
@@ -60,12 +62,13 @@ export class PriceRepository extends BaseRepository<typeof priceListItems> {
 	itemsFor(priceListId: number, variantIds: readonly number[]): Map<number, number> {
 		if (variantIds.length === 0) return new Map();
 		const rows = this.db()
-			.select({ variantId: priceListItems.variantId, priceMinor: priceListItems.priceMinor })
+			.select({ variantId: productVariants.id, priceMinor: priceListItems.priceMinor })
 			.from(priceListItems)
+			.innerJoin(productVariants, eq(productVariants.productId, priceListItems.productId))
 			.where(
 				and(
 					eq(priceListItems.priceListId, priceListId),
-					inArray(priceListItems.variantId, [...variantIds])
+					inArray(productVariants.id, [...variantIds])
 				)
 			)
 			.all();

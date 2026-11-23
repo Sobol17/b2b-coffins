@@ -10,36 +10,35 @@
 		DataTable,
 		Modal,
 		ConfirmDialog,
-		FileInput,
 		MoneyInput,
-		Select,
-		withToast,
-		type ToastSpec
+		Combobox,
+		buttonVariants,
+		withToast
 	} from '$lib/ui';
+	import PriceSheetImportForm from '$lib/crm/catalog/PriceSheetImportForm.svelte';
 	import { formatMinor } from '$lib/utils/format';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
-	const variants = $derived(
-		data.variants.map((row) => ({
+	const models = $derived(
+		data.models.map((row) => ({
 			value: String(row.id),
 			label: `${row.productTitle} · ${row.sku}`
 		}))
 	);
-	let importing = $state(false);
 	let createOpen = $state(false);
 	let creating = $state(false);
-	const pricedVariantIds = $derived(new Set(data.list.items.map((item) => String(item.variantId))));
-	const availableVariants = $derived(
-		variants.filter((variant) => !pricedVariantIds.has(variant.value))
-	);
-	const variantById = $derived(new Map(data.variants.map((row) => [row.id, row])));
+	let selectedProductId = $state('');
+	const pricedProductIds = $derived(new Set(data.list.items.map((item) => String(item.productId))));
+	const availableModels = $derived(models.filter((model) => !pricedProductIds.has(model.value)));
+	const allModelsPriced = $derived(models.length > 0 && availableModels.length === 0);
+	const modelById = $derived(new Map(data.models.map((row) => [row.id, row])));
 	const rows = $derived(
 		data.list.items.map((item) => ({
 			...item,
-			id: item.variantId,
-			title: variantById.get(item.variantId)?.productTitle ?? 'Изделие удалено из каталога',
-			sku: variantById.get(item.variantId)?.sku ?? `#${item.variantId}`
+			id: item.productId,
+			title: modelById.get(item.productId)?.productTitle ?? 'Изделие удалено из каталога',
+			sku: modelById.get(item.productId)?.sku ?? `#${item.productId}`
 		}))
 	);
 	let editing = $state<(typeof rows)[number] | null>(null);
@@ -47,11 +46,6 @@
 	let deleteOpen = $state(false);
 	let deleteForm: HTMLFormElement;
 	let saving = $state(false);
-
-	function importedToast(data: Record<string, unknown> | undefined): ToastSpec {
-		const count = typeof data?.['imported'] === 'number' ? data['imported'] : 0;
-		return { title: 'Прайс загружен', description: `Цен в листе: ${count}.` };
-	}
 </script>
 
 <svelte:head><title>{data.list.title} · CRM</title></svelte:head>
@@ -60,16 +54,36 @@
 	<Breadcrumbs
 		items={[{ label: 'Прайсы и скидки', href: resolve('/crm/prices') }, { label: data.list.title }]}
 	/>
-	<h1 class="text-3xl">{data.list.title}</h1>
+	<div class="flex flex-wrap items-center justify-between gap-3">
+		<h1 class="text-3xl">{data.list.title}</h1>
+		<a
+			class={buttonVariants({ variant: 'secondary' })}
+			href={resolve(`/crm/prices/${data.list.id}/export.xlsx`)}
+			download
+			data-sveltekit-reload>Скачать Excel</a
+		>
+	</div>
 	<Card.Root
 		><Card.Content>
 			<div class="mb-4 flex flex-wrap items-center justify-between gap-3">
 				<h2 class="text-2xl">Позиции прайс-листа</h2>
-				<Button
-					class="ml-auto"
-					disabled={availableVariants.length === 0}
-					onclick={() => (createOpen = true)}><Plus aria-hidden="true" />Добавить</Button
+				<div
+					class="ml-auto flex flex-col items-end gap-1 sm:flex-row-reverse sm:items-center sm:gap-3"
 				>
+					<Button
+						disabled={availableModels.length === 0}
+						aria-describedby={allModelsPriced ? 'price-list-add-hint' : undefined}
+						onclick={() => {
+							selectedProductId = '';
+							createOpen = true;
+						}}><Plus aria-hidden="true" />Добавить</Button
+					>
+					{#if allModelsPriced}
+						<p id="price-list-add-hint" class="text-right text-sm text-fg-muted">
+							Все модели уже есть в этом прайсе.
+						</p>
+					{/if}
+				</div>
 			</div>
 			<Tooltip.Provider>
 				<DataTable
@@ -133,27 +147,7 @@
 		</Card.Content></Card.Root
 	>
 
-	<Card.Root>
-		<Card.Content class="flex flex-col gap-4">
-			<h2 class="text-2xl">Загрузить прайс из файла</h2>
-			<form
-				method="POST"
-				action="?/import"
-				enctype="multipart/form-data"
-				class="flex flex-col gap-4"
-				use:enhance={withToast({ pending: (value) => (importing = value), success: importedToast })}
-			>
-				<FileInput
-					name="file"
-					accept=".xlsx"
-					label="Файл XLSX"
-					hint="Первая строка: «Артикул» и «Цена». Файл заменит все цены листа."
-					required
-				/>
-				<Button type="submit" class="self-start" loading={importing}>Загрузить</Button>
-			</form>
-		</Card.Content>
-	</Card.Root>
+	<PriceSheetImportForm />
 </div>
 
 <Modal
@@ -174,7 +168,7 @@
 					onSuccess: () => (editing = null)
 				})}
 			>
-				<input type="hidden" name="variantId" value={editing.variantId} />
+				<input type="hidden" name="productId" value={editing.productId} />
 				<MoneyInput
 					name="priceMinor"
 					label="Цена"
@@ -198,7 +192,7 @@
 	action="?/delete"
 	use:enhance={withToast({ success: 'Цена удалена' })}
 >
-	<input type="hidden" name="id" value={deleting?.variantId ?? ''} />
+	<input type="hidden" name="id" value={deleting?.productId ?? ''} />
 </form>
 <ConfirmDialog
 	bind:open={deleteOpen}
@@ -220,18 +214,19 @@
 		<form
 			method="POST"
 			action="?/upsert"
-			class="flex flex-col gap-4"
+			class="flex flex-col gap-6"
 			use:enhance={withToast({
 				pending: (value) => (creating = value),
 				success: 'Цена сохранена',
 				onSuccess: () => (createOpen = false)
 			})}
 		>
-			<Select
-				name="variantId"
+			<Combobox
+				name="productId"
 				label="Изделие"
 				placeholder="Выберите изделие"
-				options={availableVariants}
+				options={availableModels}
+				bind:value={selectedProductId}
 				required
 			/>
 			<MoneyInput
@@ -245,7 +240,7 @@
 				<Button variant="secondary" disabled={creating} onclick={() => (createOpen = false)}
 					>Отмена</Button
 				>
-				<Button type="submit" loading={creating}>Добавить</Button>
+				<Button type="submit" loading={creating} disabled={!selectedProductId}>Добавить</Button>
 			</div>
 		</form>
 	{/snippet}

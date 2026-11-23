@@ -1,7 +1,7 @@
-import { and, asc, eq, inArray, isNull, ne } from 'drizzle-orm';
+import { and, asc, eq, inArray, isNull, ne, or } from 'drizzle-orm';
 import { BaseRepository } from '../core/repository';
 import type { Tx } from '../db/client';
-import { counterparties, priceListItems, priceLists, productVariants } from '../db/schema';
+import { counterparties, priceListItems, priceLists, products } from '../db/schema';
 
 export interface ManagedPriceListRow {
 	readonly id: number;
@@ -63,57 +63,67 @@ export class ManagedPriceListRepository extends BaseRepository<typeof priceLists
 			this.db(tx)
 				.select({ id: counterparties.id })
 				.from(counterparties)
-				.where(eq(counterparties.priceListId, id))
+				.where(or(eq(counterparties.priceListId, id), eq(counterparties.regionPriceListId, id)))
 				.get() !== undefined
 		);
+	}
+
+	modelChoices() {
+		return this.db()
+			.select({ id: products.id, sku: products.sku, productTitle: products.title })
+			.from(products)
+			.where(isNull(products.deletedAt))
+			.orderBy(asc(products.title))
+			.all();
 	}
 
 	items(id: number, tx?: Tx) {
 		return this.db(tx)
-			.select({ variantId: priceListItems.variantId, priceMinor: priceListItems.priceMinor })
+			.select({ productId: priceListItems.productId, priceMinor: priceListItems.priceMinor })
 			.from(priceListItems)
-			.where(eq(priceListItems.priceListId, id))
-			.orderBy(asc(priceListItems.variantId))
+			.innerJoin(products, eq(products.id, priceListItems.productId))
+			.where(and(eq(priceListItems.priceListId, id), isNull(products.deletedAt)))
+			.orderBy(asc(priceListItems.productId))
 			.all();
 	}
 
-	variantAvailable(id: number, tx: Tx): boolean {
+	productAvailable(id: number, tx: Tx): boolean {
 		return (
 			this.db(tx)
-				.select({ id: productVariants.id })
-				.from(productVariants)
-				.where(eq(productVariants.id, id))
+				.select({ id: products.id })
+				.from(products)
+				.where(and(eq(products.id, id), isNull(products.deletedAt)))
 				.get() !== undefined
 		);
 	}
 
-	upsertItem(priceListId: number, variantId: number, priceMinor: number, tx: Tx): void {
+	upsertItem(priceListId: number, productId: number, priceMinor: number, tx: Tx): void {
 		this.db(tx)
 			.insert(priceListItems)
-			.values({ priceListId, variantId, priceMinor })
+			.values({ priceListId, productId, priceMinor })
 			.onConflictDoUpdate({
-				target: [priceListItems.priceListId, priceListItems.variantId],
+				target: [priceListItems.priceListId, priceListItems.productId],
 				set: { priceMinor }
 			})
 			.run();
 	}
 
-	deleteItem(priceListId: number, variantId: number, tx: Tx): void {
+	deleteItem(priceListId: number, productId: number, tx: Tx): void {
 		this.db(tx)
 			.delete(priceListItems)
 			.where(
-				and(eq(priceListItems.priceListId, priceListId), eq(priceListItems.variantId, variantId))
+				and(eq(priceListItems.priceListId, priceListId), eq(priceListItems.productId, productId))
 			)
 			.run();
 	}
 
 	/** Live variants by SKU: what an uploaded sheet may price (v1.64). */
-	variantIdsBySku(skus: readonly string[], tx: Tx): Map<string, number> {
+	productIdsBySku(skus: readonly string[], tx: Tx): Map<string, number> {
 		if (skus.length === 0) return new Map();
 		const rows = this.db(tx)
-			.select({ id: productVariants.id, sku: productVariants.sku })
-			.from(productVariants)
-			.where(and(inArray(productVariants.sku, [...skus]), isNull(productVariants.deletedAt)))
+			.select({ id: products.id, sku: products.sku })
+			.from(products)
+			.where(and(inArray(products.sku, [...skus]), isNull(products.deletedAt)))
 			.all();
 		return new Map(rows.map((row) => [row.sku, row.id]));
 	}
@@ -121,7 +131,7 @@ export class ManagedPriceListRepository extends BaseRepository<typeof priceLists
 	/** The list holds exactly these prices afterwards. */
 	replaceItems(
 		priceListId: number,
-		rows: readonly { variantId: number; priceMinor: number }[],
+		rows: readonly { productId: number; priceMinor: number }[],
 		tx: Tx
 	): void {
 		this.db(tx).delete(priceListItems).where(eq(priceListItems.priceListId, priceListId)).run();

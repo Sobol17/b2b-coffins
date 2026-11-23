@@ -5,7 +5,7 @@ import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 import type { Db } from '../../src/lib/server/db/client';
 import { readPriceSheet, type PriceSheetRow } from '../../src/lib/server/crm-pricing/price-sheet';
-import { priceListItems, priceLists, productVariants } from '../../src/lib/server/db/schema';
+import { priceListItems, priceLists, products } from '../../src/lib/server/db/schema';
 import { toMinor } from '../../src/lib/utils/money';
 import { readOptions, STRING_OPTION } from './args';
 
@@ -69,17 +69,17 @@ export async function priceImport(db: Db, argv: readonly string[]): Promise<void
 		let count = 0;
 		for (const row of rows) {
 			const [variant] = tx
-				.select({ id: productVariants.id })
-				.from(productVariants)
-				.where(eq(productVariants.sku, row.sku))
+				.select({ id: products.id })
+				.from(products)
+				.where(eq(products.sku, row.sku))
 				.all();
-			if (!variant) throw new Error(`unknown variant sku ${row.sku}`);
+			if (!variant) throw new Error(`unknown model sku ${row.sku}`);
 
 			const { priceMinor } = row;
 			tx.insert(priceListItems)
-				.values({ priceListId: list.id, variantId: variant.id, priceMinor })
+				.values({ priceListId: list.id, productId: variant.id, priceMinor })
 				.onConflictDoUpdate({
-					target: [priceListItems.priceListId, priceListItems.variantId],
+					target: [priceListItems.priceListId, priceListItems.productId],
 					set: { priceMinor }
 				})
 				.run();

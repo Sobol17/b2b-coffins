@@ -57,7 +57,12 @@ export const crmRequestFiltersSchema = z
 		stockOnly: counterparty === 'stock' ? true : undefined
 	}));
 
-const lineSchema = z.object({ variantId: id, optionId: optionalId, qty });
+const lineSchema = z.object({
+	variantId: id,
+	optionId: optionalId,
+	glossOptionId: optionalId.optional(),
+	qty
+});
 
 /**
  * The creation form of the workshop. A counterparty request carries the whole delivery block, the
@@ -98,23 +103,20 @@ export type CrmRequestCreateInput = z.infer<typeof crmRequestCreateSchema>;
 export function crmRequestCreateForm(form: FormData): Record<string, unknown> {
 	const variants = form.getAll('variantId');
 	const options = form.getAll('optionId');
+	const gloss = form.getAll('glossOptionId');
 	const quantities = form.getAll('qty');
 	return {
 		...Object.fromEntries(form),
 		lines: variants.map((variantId, index) => ({
 			variantId,
 			optionId: options[index] ?? '',
+			...(gloss[index] === undefined ? {} : { glossOptionId: gloss[index] }),
 			qty: quantities[index]
 		}))
 	};
 }
 
-export const addLineSchema = z.object({
-	variantId: id,
-	optionId: optionalId,
-	qty,
-	comment: changeCommentSchema
-});
+export const addLineSchema = lineSchema.extend({ comment: changeCommentSchema });
 
 export const lineQtySchema = z.object({ itemId: id, qty, comment: changeCommentSchema });
 export const removeLineSchema = z.object({ itemId: id, comment: changeCommentSchema });

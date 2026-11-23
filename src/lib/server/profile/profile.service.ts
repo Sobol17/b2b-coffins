@@ -1,5 +1,6 @@
+import { AuthRepository } from '../auth/auth.repository';
 import { PolicyService } from '../auth/policy';
-import { NotFoundError } from '../core/errors';
+import { NotFoundError, ValidationError } from '../core/errors';
 import { BaseService } from '../core/service';
 import { ProfileDtoMapper, type ProfileDto } from './dto';
 import { ProfileRepository, type ProfileRow } from './profile.repository';
@@ -26,6 +27,8 @@ export class ProfileService extends BaseService {
 		this.assert(PolicyService.can(this.ctx, 'portal.access'), 'portal.access');
 		return this.audited({ action: 'profile.update', entity: 'users' }, (tx) => {
 			const before = this.requireOwn(tx);
+			if (new AuthRepository().phoneTaken(input.phone, tx, before.id))
+				throw new ValidationError('Этот телефон уже используется', { field: 'phone' });
 			this.repo.updateContact(before.id, input, tx);
 			return {
 				result: ProfileDtoMapper.toDto({ ...before, ...input }),

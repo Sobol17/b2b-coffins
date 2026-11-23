@@ -49,13 +49,13 @@ test('an anonymous visitor is sent to the login form, not to a contour', async (
 
 test('a wrong password answers the same way as an unknown address', async ({ page }) => {
 	await page.goto('/login');
-	await page.fill('input[name="email"]', ACCOUNTS.manager.email);
+	await page.fill('input[name="identifier"]', ACCOUNTS.manager.email);
 	await page.fill('input[name="password"]', 'definitely-not-the-password');
 	await page.click('button[type="submit"]');
 	const wrongPassword = await page.getByTestId('form-error').textContent();
 
 	await page.goto('/login');
-	await page.fill('input[name="email"]', 'nobody@nowhere.example');
+	await page.fill('input[name="identifier"]', 'nobody@nowhere.example');
 	await page.fill('input[name="password"]', 'definitely-not-the-password');
 	await page.click('button[type="submit"]');
 	const unknownAddress = await page.getByTestId('form-error').textContent();

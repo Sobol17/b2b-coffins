@@ -27,6 +27,7 @@ test.describe('the owner runs the workshop without a developer (C1)', () => {
 		await expect(modal.locator('input[name="fullName"]')).toBeFocused();
 		await modal.locator('input[name="fullName"]').fill('Павел Орлов');
 		await modal.locator('input[name="email"]').fill(email);
+		await modal.locator('input[name="phone"]').fill(`+795${String(Date.now()).slice(-8)}`);
 		await expect(modal.locator('input[name="email"]')).toHaveValue(email);
 		await modal.getByRole('button', { name: 'Роли' }).click();
 		await page.getByLabel('Столяр', { exact: true }).click();
@@ -48,7 +49,7 @@ test.describe('the owner runs the workshop without a developer (C1)', () => {
 
 		await logout(page);
 		await page.goto('/login');
-		await page.fill('input[name="email"]', email);
+		await page.fill('input[name="identifier"]', email);
 		await page.fill('input[name="password"]', password);
 		await page.click('button[type="submit"]');
 		await expect(page).toHaveURL('/password/change');
@@ -57,15 +58,21 @@ test.describe('the owner runs the workshop without a developer (C1)', () => {
 	test('edits contacts and roles, keeps a refused edit open, then confirms deletion', async ({
 		page
 	}) => {
-		const email = `e2e.edit.${Date.now()}@workshop.example`;
+		const runId = Date.now();
+		const email = `e2e.edit.${runId}@workshop.example`;
+		// Inactive accounts from earlier runs still reserve their undeleted phone.
+		const phone = `+790${String(runId).slice(-8)}`;
+		const formattedPhone = `+7 (${phone.slice(2, 5)}) ${phone.slice(5, 8)}-${phone.slice(8, 10)}-${phone.slice(10)}`;
 		const nextEmail = email.replace('e2e.edit.', 'e2e.updated.');
 		await page.setViewportSize({ width: 390, height: 844 });
 		await login(page, 'owner');
 		await page.goto('/crm/settings/users');
 		await page.getByRole('button', { name: 'Добавить пользователя' }).click();
 		const modal = page.getByTestId('modal');
+		await expect(modal.getByLabel('Имя и фамилия')).toBeFocused();
 		await modal.getByLabel('Имя и фамилия').fill('Павел Орлов');
 		await modal.getByLabel('Электронная почта').fill(email);
+		await modal.getByLabel('Телефон').fill(`+794${String(Date.now()).slice(-8)}`);
 		await modal.getByRole('button', { name: 'Роли' }).click();
 		await page.getByLabel('Столяр', { exact: true }).click();
 		await page.keyboard.press('Escape');
@@ -75,13 +82,16 @@ test.describe('the owner runs the workshop without a developer (C1)', () => {
 		await page.getByRole('textbox', { name: 'Поиск' }).fill(email);
 		const row = page.getByTestId('data-table-row').filter({ hasText: email });
 		await row.getByRole('button', { name: 'Изменить', exact: true }).click();
+		await page.setViewportSize({ width: 390, height: 540 });
 		await expect(modal).toBeInViewport({ ratio: 1 });
 		await expect(modal.getByLabel('Имя и фамилия')).toHaveValue('Павел Орлов');
 		await modal.getByLabel('Имя и фамилия').fill('Алексей Петров');
-		await modal.getByLabel('Телефон').fill('+7 (900) 111-22-33');
+		await modal.getByLabel('Телефон').fill(formattedPhone);
 		await modal.getByLabel('Электронная почта').fill(ACCOUNTS.cp_admin.email);
-		await modal.getByLabel('Столяр', { exact: true }).click();
-		await modal.getByLabel('Водитель', { exact: true }).click();
+		await modal.getByRole('button', { name: 'Роли' }).click();
+		await page.getByLabel('Столяр', { exact: true }).click();
+		await page.getByLabel('Водитель', { exact: true }).click();
+		await page.keyboard.press('Escape');
 		await modal.getByRole('button', { name: 'Сохранить изменения' }).click();
 		await expect(modal.getByTestId('edit-user-error')).toContainText('Этот адрес уже используется');
 		await expect(modal).toBeInViewport({ ratio: 1 });
@@ -91,17 +101,36 @@ test.describe('the owner runs the workshop without a developer (C1)', () => {
 		await modal.getByLabel('Электронная почта').fill(nextEmail.toUpperCase());
 		await modal.getByRole('button', { name: 'Сохранить изменения' }).click();
 		await expect(modal).toBeHidden();
+		await page.setViewportSize({ width: 1280, height: 900 });
 		await page.getByRole('textbox', { name: 'Поиск' }).fill(nextEmail);
 		const editedRow = page.getByTestId('data-table-row').filter({ hasText: nextEmail });
 		await expect(editedRow).toContainText('Алексей Петров');
-		await expect(editedRow).toContainText('+7 (900) 111-22-33');
+		await expect(editedRow).toContainText(phone);
 		await expect(editedRow.getByTestId('user-roles')).toHaveText('Водитель');
 
 		await editedRow.getByRole('button', { name: 'Сгенерировать пароль' }).click();
-		await expect(page.getByTestId('created-access')).toContainText(`Логин: ${nextEmail}`);
+		await expect(page.getByTestId('created-access')).toContainText(`Логин: ${phone}`);
 		await expect(page.getByTestId('created-access')).toContainText('Письмо не отправляется');
 		await expect(page.getByTestId('temporary-password')).not.toBeEmpty();
+		await expect(modal).toBeVisible();
+		await expect(modal.getByTestId('temporary-password')).toBeInViewport();
+		const resetPassword = (await modal.getByTestId('temporary-password').textContent())!.trim();
+		await page.context().grantPermissions(['clipboard-read', 'clipboard-write']);
+		await modal.getByRole('button', { name: 'Скопировать пароль' }).click();
+		await expect
+			.poll(() => page.evaluate(() => navigator.clipboard.readText()))
+			.toBe(resetPassword);
+		await modal.getByRole('button', { name: 'Готово', exact: true }).click();
+		await editedRow.getByRole('button', { name: 'Изменить', exact: true }).click();
+		await page.setViewportSize({ width: 390, height: 540 });
+		await expect(modal).toBeInViewport({ ratio: 1 });
+		await expect(modal.getByRole('button', { name: 'Роли' })).toHaveText('Водитель');
+		await expect(modal.getByRole('button', { name: 'Сбросить пароль', exact: true })).toHaveCount(
+			0
+		);
+		await modal.getByRole('button', { name: 'Отмена', exact: true }).click();
 
+		await page.setViewportSize({ width: 1280, height: 900 });
 		await editedRow.getByRole('button', { name: 'Удалить', exact: true }).click();
 		await expect(modal).toContainText('Работы, выплаты и журнал сохранятся');
 		await modal.getByRole('button', { name: 'Отмена' }).click();
@@ -114,6 +143,7 @@ test.describe('the owner runs the workshop without a developer (C1)', () => {
 		await expect(modal.getByLabel('Имя и фамилия')).toBeFocused();
 		await modal.getByLabel('Имя и фамилия').fill('Новый сотрудник');
 		await modal.getByLabel('Электронная почта').fill(nextEmail);
+		await modal.getByLabel('Телефон').fill(formattedPhone);
 		await modal.getByRole('button', { name: 'Роли' }).click();
 		await page.getByLabel('Водитель', { exact: true }).click();
 		await page.keyboard.press('Escape');
@@ -134,8 +164,12 @@ test.describe('the owner runs the workshop without a developer (C1)', () => {
 
 		await page.getByRole('button', { name: 'Добавить запись' }).click();
 		const modal = page.getByTestId('modal');
+		// Wait for the dialog's deferred autofocus before filling a later field.
+		await expect(modal.locator('input[name="code"]')).toBeFocused();
 		await modal.locator('input[name="code"]').fill(code);
+		await expect(modal.locator('input[name="code"]')).toHaveValue(code);
 		await modal.locator('input[name="title"]').fill('Газель с тентом');
+		await expect(modal.locator('input[name="title"]')).toHaveValue('Газель с тентом');
 		await modal.getByRole('button', { name: 'Добавить' }).click();
 
 		const row = page.getByTestId('data-table-row').filter({ hasText: code });

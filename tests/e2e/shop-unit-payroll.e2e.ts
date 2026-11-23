@@ -19,11 +19,13 @@ import { e2eDb, emptyShelf } from './transitions';
 const db = e2eDb();
 const ORIGIN = 'http://localhost:4173';
 
-test('a worker claims one piece, earns pending pay and receives confirmed pay without seeing another salary', async ({
+test('a worker claims one piece and the manager confirms and pays the earned share', async ({
 	page
 }) => {
 	await login(page, 'carpenter');
 	expect((await page.goto('/crm/salary'))?.status()).toBe(200);
+	await expect(page).toHaveURL(/\/crm$/);
+	await expect(page.getByRole('link', { name: 'Моя зарплата', exact: true })).toHaveCount(0);
 	await page.context().clearCookies();
 	// These are isolated E2E payroll fixtures, not the workshop database.
 	db.delete(payrollLines).run();
@@ -32,7 +34,7 @@ test('a worker claims one piece, earns pending pay and receives confirmed pay wi
 	db.delete(shopUnitWorks).run();
 	db.delete(workDays).run();
 	await login(page, 'manager');
-	const number = await enterRequest(page, `Расчёт ${Date.now()}`, 'Венге', 1);
+	const number = await enterRequest(page, `Расчёт ${Date.now()}`, 'Евро', 1, 'MDL-102-180-PIN');
 	emptyShelf(db, number);
 	await page.getByRole('button', { name: 'Принять в работу' }).click();
 	await expect(page.locator('[data-slot="badge"]').filter({ hasText: 'В работе' })).toBeVisible();
@@ -99,14 +101,6 @@ test('a worker claims one piece, earns pending pay and receives confirmed pay wi
 	});
 	const refusal = await stolen.json();
 	expect(refusal, JSON.stringify(refusal)).toMatchObject({ type: 'failure', status: 409 });
-	await page.context().clearCookies();
-	await login(page, 'carpenter');
-	await page.goto('/crm/salary');
-	await expect(page.getByTestId('salary-pending')).toHaveText('Ждёт расчёта');
-	await expect(page.getByTestId('salary-work')).toContainText('Ждёт состава бригады');
-	await expect(page.getByText(other.fullName, { exact: true })).toHaveCount(0);
-	await page.context().clearCookies();
-	await login(page, 'manager');
 	await page.goto('/crm/payroll');
 	await expect(page.getByTestId('week-pending')).toContainText('1 работа');
 	await expect(page.getByRole('button', { name: 'Закрыть неделю', exact: true })).toBeDisabled();
@@ -127,13 +121,14 @@ test('a worker claims one piece, earns pending pay and receives confirmed pay wi
 		.first()
 		.click();
 	await expect(page.getByText('День сохранён, работы подтверждены').first()).toBeVisible();
+	await page.goto('/crm/payroll');
+	await expect(
+		page.getByRole('row', { name: new RegExp(own.fullName) }).getByTestId('line-payout')
+	).toHaveText('425 ₽');
 	await page.context().clearCookies();
 	await login(page, 'carpenter');
 	await page.goto(`/crm/salary?staffId=${other.id}`);
-	await expect(page.getByTestId('salary-pending')).toHaveText('0 ₽');
-	await expect(page.getByTestId('salary-accrued')).toHaveText('425 ₽');
-	await expect(page.getByTestId('salary-work')).toContainText('Начислено');
-	await expect(page.getByTestId('salary-work')).toContainText('425 ₽');
+	await expect(page).toHaveURL(/\/crm$/);
 	await expect(page.getByText(other.fullName, { exact: true })).toHaveCount(0);
 	const forbidden = await page.request.post(`${dayPath}?/confirm`, {
 		headers: { origin: ORIGIN },
@@ -160,15 +155,10 @@ test('a worker claims one piece, earns pending pay and receives confirmed pay wi
 	await expect(
 		page.getByRole('row', { name: new RegExp(own.fullName) }).getByTestId('line-paid')
 	).toBeVisible();
-	await page.context().clearCookies();
-	await login(page, 'carpenter');
-	await page.goto('/crm/salary');
-	await expect(page.getByTestId('salary-paid')).toContainText('425 ₽');
-	await expect(page.getByTestId('salary-payout')).toHaveText('0 ₽');
-	await expect(page.getByTestId('salary-work')).toContainText('Выплачено');
 	await page.setViewportSize({ width: 390, height: 844 });
+	await expect(page.getByTestId('week-total')).toBeVisible();
 	expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(
 		true
 	);
-	await page.screenshot({ path: '/tmp/b2b-coffins-salary-mobile.png', fullPage: true });
+	await page.screenshot({ path: '/tmp/b2b-coffins-payroll-mobile.png', fullPage: true });
 });

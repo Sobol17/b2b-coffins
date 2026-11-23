@@ -23,7 +23,10 @@
 
 <li class="flex flex-col gap-2 border-t border-border pt-3" data-testid="shop-job">
 	<div class="flex flex-wrap gap-x-3 gap-y-1">
-		<span class="flex-1 font-medium">{positionTitle(job)} · {colourTitle(job)}</span>
+		<span class="flex-1 font-medium"
+			>{positionTitle(job)} · {colourTitle(job)}{#if job.glossTitle}
+				· Блеск: {job.glossTitle}{/if}</span
+		>
 		<span class="text-sm">Артикул {job.sku}</span>
 	</div>
 	{#if job.engraving}

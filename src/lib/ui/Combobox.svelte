@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { ChevronDown } from '@lucide/svelte';
 	import { cn } from '$lib/utils/cn';
 	import * as Popover from '$lib/ui/base/popover/index.js';
 	import Button from '$lib/ui/base/button/button.svelte';
@@ -61,16 +62,29 @@
 						{...props}
 						variant="secondary"
 						class={cn('w-full justify-between font-normal', !selected && 'text-muted-foreground')}
+						role="combobox"
+						aria-expanded={open}
+						aria-required={required}
 						aria-invalid={error ? 'true' : undefined}
+						aria-describedby={error ? `${fieldId}-error` : hint ? `${fieldId}-hint` : undefined}
 					>
-						{selected?.label ?? placeholder}
+						<span class="min-w-0 truncate text-left">{selected?.label ?? placeholder}</span>
+						<ChevronDown
+							aria-hidden="true"
+							class={cn(
+								'ml-2 size-4 shrink-0 text-fg-faint transition-transform duration-150 motion-reduce:transition-none',
+								open && 'rotate-180'
+							)}
+						/>
 					</Button>
 				{/snippet}
 			</Popover.Trigger>
-			<Popover.Content class="w-(--bits-popover-anchor-width) p-0">
+			<Popover.Content
+				class="max-h-(--bits-popover-content-available-height) w-(--bits-popover-anchor-width) max-w-[calc(100vw-2rem)] overflow-hidden p-0 motion-reduce:animate-none"
+			>
 				{#if panel.component}
 					{@const Panel = panel.component}
-					<Panel {options} {searchable} onChoose={choose} />
+					<Panel {options} {searchable} {value} onChoose={choose} />
 				{:else}
 					<PanelFallback failed={panel.failed} />
 				{/if}

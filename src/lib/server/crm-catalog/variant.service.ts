@@ -33,7 +33,10 @@ export class CrmVariantService extends BaseService {
 	createVariant(input: VariantInput): CrmVariantDto {
 		return this.audited({ action: 'catalog.variant.create', entity: 'product_variants' }, (tx) => {
 			this.validateVariant(input, undefined, tx);
+			const first = this.variants.variants(input.productId, false, tx).length === 0;
 			const id = this.variants.insert(input, tx);
+			if (first && input.basePriceMinor !== undefined)
+				this.variants.setModelPrice(input.productId, input.basePriceMinor, tx);
 			return {
 				result: this.requireVariant(id, tx),
 				entityId: id,
@@ -47,9 +50,18 @@ export class CrmVariantService extends BaseService {
 			const old = this.requireVariant(id, tx);
 			if (old.isDeleted || old.productId !== input.productId)
 				throw new ConflictError('Вариант нельзя перенести в другую модель');
+			if (
+				old.materialId !== input.materialId &&
+				this.variants.hasPayrollRates(old.productId, [old.materialId, input.materialId], tx)
+			)
+				throw new ConflictError(
+					'Материал связан с общей расценкой работ. Создайте отдельный вариант нужного материала.'
+				);
 			if (!input.isPublished) this.guardLastVariant(old, tx);
-			this.validateVariant(input, id, tx);
+			this.validateVariant(input, old, tx);
 			this.variants.update(id, input, tx);
+			if (input.basePriceMinor !== undefined)
+				this.variants.setModelPrice(input.productId, input.basePriceMinor, tx);
 			return {
 				result: this.requireVariant(id, tx),
 				entityId: id,
@@ -122,6 +134,7 @@ export class CrmVariantService extends BaseService {
 			{ action: isActive ? 'catalog.option.enable' : 'catalog.option.disable', entity: 'options' },
 			(tx) => {
 				const old = this.requireOption(id, tx);
+				if (isActive) this.validateOption(old, tx);
 				this.options.setActive(id, isActive, tx);
 				return {
 					result: this.requireOption(id, tx),
@@ -172,18 +185,23 @@ export class CrmVariantService extends BaseService {
 		return row;
 	}
 
-	private validateVariant(input: VariantInput, exceptId: number | undefined, tx: Tx): void {
+	private validateVariant(input: VariantInput, old: CrmVariantDto | undefined, tx: Tx): void {
 		const product = this.products.findProduct(input.productId, tx);
 		if (!product || product.deletedAt) throw new ValidationError('Модель не найдена');
+		if (input.sizeCode !== old?.sizeCode && !this.variants.sizeActive(input.sizeCode, tx))
+			throw new ValidationError('Выберите действующий размер из справочника');
 		if (!this.variants.materialActive(input.materialId, tx))
 			throw new ValidationError('Выберите действующий материал');
 		if (input.stockItemId !== null && !this.variants.stockProductActive(input.stockItemId, tx))
 			throw new ValidationError('Выберите учётную позицию изделия');
-		if (this.variants.skuTaken(input.sku, exceptId, tx))
+		if (this.variants.skuTaken(input.sku, old?.id, tx))
 			throw new ValidationError('Артикул варианта уже занят');
 	}
 
-	private validateOption(input: OptionInput, tx: Tx): void {
+	private validateOption(
+		input: Pick<CrmOptionDto, 'priceDeltaMinor' | 'stockItemId'>,
+		tx: Tx
+	): void {
 		if (input.priceDeltaMinor !== 0) throw new ValidationError('Цвет не меняет цену');
 		if (input.stockItemId !== null && !this.variants.stockComponentActive(input.stockItemId, tx))
 			throw new ValidationError('Выберите учётную позицию комплектующего');

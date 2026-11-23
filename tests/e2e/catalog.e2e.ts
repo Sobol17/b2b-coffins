@@ -57,15 +57,23 @@ test('the product page quotes the personal price to the administrator', async ({
 	await expect(page.getByTestId('product-page-price')).toContainText(/8\u00a0300(?![,\d])/);
 });
 
-test('the product page asks for the size and the colour only', async ({ page }) => {
+test('the product page offers colour and optional gloss', async ({ page }) => {
 	await login(page, 'cp_employee');
 	// A draft left by another spec swaps the quantity field for a counter.
 	await emptyCart(page);
 	await openVolga(page);
 
 	const form = page.locator('form[action="?/add"]');
-	await expect(form.locator('label')).toHaveText(['Размер', 'Цвет', 'Количество']);
-	await expect(form.locator('input[name="option"]')).toHaveCount(1);
+	await expect(form.locator('label')).toHaveText(['Размер', 'Цвет', 'Блеск', 'Количество']);
+	const gloss = form.getByRole('button', { name: 'Блеск', exact: true });
+	const options = form.locator('input[name="option"]');
+	await expect(options).toHaveCount(1);
+	await gloss.click();
+	await page.getByRole('option', { name: 'Матовый', exact: true }).click();
+	await expect(options).toHaveCount(2);
+	await gloss.click();
+	await page.getByRole('option', { name: 'Без указания', exact: true }).click();
+	await expect(options).toHaveCount(1);
 });
 
 test('the employee sees the same product with a dash and no money in the server answer', async ({

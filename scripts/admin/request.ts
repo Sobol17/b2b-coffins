@@ -1,4 +1,4 @@
-import { and, eq } from 'drizzle-orm';
+import { and, eq, isNull } from 'drizzle-orm';
 import { z } from 'zod';
 import { PolicyService } from '../../src/lib/server/auth/policy';
 import type { Db } from '../../src/lib/server/db/client';
@@ -52,13 +52,19 @@ export function requestTransition(db: Db, argv: readonly string[]): void {
 }
 
 /** The console acts as a real user: the same roles, the same counterparty, the same rights. */
-export function actorContext(db: Db, email: string): ActorContext {
+export function actorContext(db: Db, identifier: string | number): ActorContext {
 	const [user] = db
 		.select({ id: users.id, counterpartyId: users.counterpartyId })
 		.from(users)
-		.where(and(eq(users.email, email), eq(users.isActive, true)))
+		.where(
+			and(
+				typeof identifier === 'number' ? eq(users.id, identifier) : eq(users.email, identifier),
+				eq(users.isActive, true),
+				isNull(users.deletedAt)
+			)
+		)
 		.all();
-	if (!user) throw new Error(`user ${email} not found`);
+	if (!user) throw new Error(`user ${identifier} not found`);
 
 	const codes = db
 		.select({ code: roles.code })
@@ -68,7 +74,7 @@ export function actorContext(db: Db, email: string): ActorContext {
 		.all()
 		.map((role) => role.code)
 		.filter((code): code is RoleCode => (ROLE_CODES as readonly string[]).includes(code));
-	if (codes.length === 0) throw new Error(`user ${email} has no role`);
+	if (codes.length === 0) throw new Error(`user ${identifier} has no role`);
 
 	return {
 		userId: user.id,

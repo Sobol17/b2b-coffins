@@ -12,7 +12,7 @@ import type { RoleCode } from '$lib/types/roles';
 export interface StaffRow {
 	readonly id: number;
 	readonly fullName: string;
-	readonly email: string;
+	readonly email: string | null;
 	readonly phone: string | null;
 	readonly role: RoleCode;
 	readonly isActive: boolean;
@@ -22,7 +22,7 @@ export interface StaffRow {
 
 export interface NewMember {
 	readonly fullName: string;
-	readonly email: string;
+	readonly email: string | null;
 	readonly phone: string | null;
 	readonly role: PortalRole;
 	readonly counterpartyId: number;

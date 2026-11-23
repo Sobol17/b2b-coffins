@@ -9,7 +9,7 @@ async function submitLogin(
 	password: string
 ): Promise<void> {
 	await page.goto('/login');
-	await page.fill('input[name="email"]', email);
+	await page.fill('input[name="identifier"]', email);
 	await page.fill('input[name="password"]', password);
 	await page.click('button[type="submit"]');
 }

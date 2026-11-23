@@ -1,3 +1,4 @@
+import { PayrollAccrualService } from '../crm-payroll/payroll-accrual.service';
 import { PolicyService } from '../auth/policy';
 import { ConflictError, ForbiddenError, NotFoundError, ValidationError } from '../core/errors';
 import { BaseService } from '../core/service';
@@ -57,8 +58,13 @@ export class RequestTransitionService extends BaseService {
 	 * the automatic steps, so a delivery paid in full closes in `paid` with one action (invariant 7).
 	 * @throws the refusals of `move`, and ValidationError for cash on a stock request.
 	 */
-	deliver(requestId: number, cashCollected: boolean): SubmittedRequestDto {
-		const input = { to: 'delivered', reasonId: null, comment: null } as const;
+	deliver(requestId: number, cashCollected: boolean, driverUserId?: number): SubmittedRequestDto {
+		const input = {
+			to: 'delivered',
+			reasonId: null,
+			comment: null,
+			...(driverUserId === undefined ? {} : { driverUserId })
+		} as const;
 		return this.run(requestId, input, (request, tx) => {
 			if (!cashCollected) return { cashCollected };
 			if (request.counterpartyId === null) {
@@ -111,6 +117,12 @@ export class RequestTransitionService extends BaseService {
 
 			this.step(request.id, transition, this.ctx.userId, input, tx);
 			const extra = afterMove(request, tx);
+			if (transition.to === 'delivered')
+				extra.driverUserId = new PayrollAccrualService(this.ctx).delivery(
+					request.id,
+					input.driverUserId,
+					tx
+				);
 			// An accepted request asks the shop for what the shelf lacks before it may turn ready.
 			if (transition.to === 'in_work') new ShopDispatch().run(tx);
 			const status = this.chainAutoSteps(request.id, transition.to, tx);

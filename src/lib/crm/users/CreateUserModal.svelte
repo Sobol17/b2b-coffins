@@ -22,7 +22,7 @@
 <Modal
 	bind:open
 	title="Новый пользователь"
-	description="Временный пароль уйдёт на почту и один раз появится на этой странице."
+	description="Временный пароль появится здесь один раз. Если указана почта, отправим его письмом."
 >
 	{#snippet body()}
 		<form
@@ -48,7 +48,6 @@
 				type="email"
 				label="Электронная почта"
 				placeholder={PLACEHOLDER.email}
-				required
 				autocomplete="off"
 				error={errors?.email?.join(', ')}
 			/>
@@ -58,6 +57,7 @@
 				label="Телефон"
 				placeholder={PLACEHOLDER.phone}
 				error={errors?.phone?.join(', ')}
+				required
 			/>
 			<RolePicker error={errors?.roles?.join(', ')} />
 

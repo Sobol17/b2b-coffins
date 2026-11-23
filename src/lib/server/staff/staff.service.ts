@@ -1,3 +1,4 @@
+import { AuthRepository } from '../auth/auth.repository';
 import { PolicyService } from '../auth/policy';
 import { generateTemporaryPassword, hashPassword } from '../auth/password';
 import { consumeRateLimit } from '../auth/rate-limit';
@@ -59,9 +60,11 @@ export class StaffService extends BaseService {
 		const temporaryPassword = generateTemporaryPassword();
 		const passwordHash = await hashPassword(temporaryPassword);
 		const member = this.audited({ action: 'staff.create', entity: 'users' }, (tx) => {
-			if (this.repo.emailTaken(input.email, tx)) {
+			if (input.email && this.repo.emailTaken(input.email, tx)) {
 				throw new ValidationError('Этот адрес уже используется', { field: 'email' });
 			}
+			if (new AuthRepository().phoneTaken(input.phone, tx))
+				throw new ValidationError('Этот телефон уже используется', { field: 'phone' });
 			this.assertBelowLimit(counterpartyId, tx);
 			const id = this.repo.insertMember({ ...input, counterpartyId, passwordHash }, tx);
 			return { result: this.requireMember(id, tx), entityId: id, after: { role: input.role } };
@@ -139,8 +142,9 @@ export class StaffService extends BaseService {
 		}
 	}
 
-	private async sendAccess(to: string, temporaryPassword: string): Promise<boolean> {
+	private async sendAccess(to: string | null, temporaryPassword: string): Promise<boolean> {
 		const counterpartyName = this.counterparties.findOwn(this.ctx)?.name ?? '';
+		if (!to) return false;
 		try {
 			await this.mail.send(staffAccessMail({ to, counterpartyName, temporaryPassword }));
 			return true;

@@ -25,7 +25,11 @@ const terms = {
 	settlementScheme: 'weekly',
 	managerId: '3'
 };
-const admin = { adminFullName: 'Анна Смирнова', adminEmail: ' Anna@RS.example ', adminPhone: '' };
+const admin = {
+	adminFullName: 'Анна Смирнова',
+	adminEmail: ' Anna@RS.example ',
+	adminPhone: '8 (900) 123-45-67'
+};
 
 describe('C3 counterparty forms', () => {
 	it('stores an empty requisite as null and needs only the name', () => {
@@ -77,7 +81,7 @@ describe('C3 counterparty forms', () => {
 		expect(parsed.admin).toEqual({
 			fullName: 'Анна Смирнова',
 			email: 'anna@rs.example',
-			phone: null
+			phone: '+79001234567'
 		});
 		expect(parsed.requisites.name).toBe('Ритуал-Сервис');
 		expect(parsed.terms).toEqual({
@@ -127,11 +131,15 @@ describe('C3 counterparty forms', () => {
 
 	it('lower-cases the login of a new administrator', () => {
 		expect(
-			issueAdminSchema.parse({ fullName: 'Иван Петров', email: 'IVAN@rs.example', phone: '' })
+			issueAdminSchema.parse({
+				fullName: 'Иван Петров',
+				email: 'IVAN@rs.example',
+				phone: '8 (900) 123-45-67'
+			})
 		).toEqual({
 			fullName: 'Иван Петров',
 			email: 'ivan@rs.example',
-			phone: null
+			phone: '+79001234567'
 		});
 	});
 

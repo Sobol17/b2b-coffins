@@ -21,7 +21,7 @@ export interface RequestFacts {
 
 export interface Person {
 	readonly userId: number;
-	readonly email: string;
+	readonly email: string | null;
 	readonly roles: RoleCode[];
 }
 
@@ -33,7 +33,7 @@ export interface DispatchRow {
 	readonly status: NotificationStatus;
 	readonly attempts: number;
 	readonly entityId: number;
-	readonly email: string;
+	readonly email: string | null;
 }
 
 export interface LogRow {

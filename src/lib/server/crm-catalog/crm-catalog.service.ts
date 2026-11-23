@@ -177,6 +177,7 @@ export class CrmCatalogService extends CrmVariantService {
 			title: row.title,
 			categoryId: row.categoryId,
 			description: row.description,
+			basePriceMinor: row.basePriceMinor,
 			isPublished: row.isPublished,
 			isDeleted: row.deletedAt !== null,
 			sortOrder: row.sortOrder,

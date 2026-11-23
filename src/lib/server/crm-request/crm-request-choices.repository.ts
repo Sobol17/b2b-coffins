@@ -1,15 +1,9 @@
 import { and, asc, eq, isNull } from 'drizzle-orm';
+import { VariantRepository } from '../catalog/variant.repository';
 import { productVisible, variantVisible } from '../catalog/visibility';
 import { BaseRepository } from '../core/repository';
 import type { Tx } from '../db/client';
-import {
-	counterparties,
-	dictItems,
-	options,
-	productOptions,
-	productVariants,
-	products
-} from '../db/schema';
+import { counterparties, dictItems, productVariants, products } from '../db/schema';
 import type { CrmRequestChoicesDto, CrmRequestVariantChoice } from '$lib/types/crm-request';
 
 // The workshop orders what the storefront offers: a hidden model is hidden for a phone order too.
@@ -75,18 +69,12 @@ export class CrmRequestChoicesRepository extends BaseRepository<typeof counterpa
 			.where(and(productVisible(STOREFRONT), variantVisible(STOREFRONT)))
 			.orderBy(asc(products.title), asc(productVariants.sku))
 			.all();
-		const matrix = this.db()
-			.select({ variantId: productOptions.variantId, id: options.id, title: options.title })
-			.from(productOptions)
-			.innerJoin(options, eq(options.id, productOptions.optionId))
-			.where(eq(options.isActive, true))
-			.orderBy(asc(options.title))
-			.all();
+		const matrix = new VariantRepository().findOptions(rows.map((row) => row.id));
 		return rows.map((row) => ({
 			...row,
 			options: matrix
 				.filter((option) => option.variantId === row.id)
-				.map(({ id, title }) => ({ id, title }))
+				.map(({ id, title, kind }) => ({ id, title, kind }))
 		}));
 	}
 }

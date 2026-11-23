@@ -28,7 +28,7 @@ export const actions = {
 		} catch (err) {
 			if (!(err instanceof AppError)) throw err;
 			// One message for a wrong password and for an unknown address: no account enumeration.
-			return fail(422, { formError: userMessage(err), email: parsed.data.email });
+			return fail(422, { formError: userMessage(err), identifier: parsed.data.identifier });
 		}
 
 		setSessionCookie(

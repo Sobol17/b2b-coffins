@@ -27,7 +27,7 @@ export const OTHER_COUNTERPARTY_ADMIN = {
 
 export async function loginAs(page: Page, account: { email: string; password: string }) {
 	await page.goto('/login');
-	await page.fill('input[name="email"]', account.email);
+	await page.fill('input[name="identifier"]', account.email);
 	await page.fill('input[name="password"]', account.password);
 	await page.click('button[type="submit"]');
 	await page.waitForURL(HOME_BY_SCOPE.portal);
@@ -45,7 +45,7 @@ export const HOME_BY_SCOPE = { crm: '/crm', portal: '/portal' } as const;
 export async function login(page: Page, role: RoleKey): Promise<void> {
 	const account = ACCOUNTS[role];
 	await page.goto('/login');
-	await page.fill('input[name="email"]', account.email);
+	await page.fill('input[name="identifier"]', account.email);
 	await page.fill('input[name="password"]', account.password);
 	await page.click('button[type="submit"]');
 	await page.waitForURL(HOME_BY_SCOPE[account.scope]);

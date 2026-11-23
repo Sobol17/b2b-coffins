@@ -46,26 +46,25 @@ export class CounterpartyPriceService extends CounterpartyBaseService {
 	): Page<CounterpartyPriceRowDto> {
 		this.requireCounterparty(counterpartyId);
 		const { rows, total } = this.prices.variants(query);
-		const ids = rows.map((row) => row.variantId);
+		const ids = rows.map((row) => row.productId);
 		const at = this.now();
 		const baseId = this.lists.baseLists().find((list) => isPriceListActive(list, at))?.id;
-		const base =
-			baseId === undefined ? new Map<number, number>() : this.lists.itemsFor(baseId, ids);
+		const base = baseId === undefined ? new Map<number, number>() : this.prices.items(baseId, ids);
 		// «Базовая» is what the counterparty pays without its own price: the region first (v1.64).
 		const regionId = this.resolver.activeRegion(counterpartyId, at);
 		const region =
-			regionId === undefined ? new Map<number, number>() : this.lists.itemsFor(regionId, ids);
+			regionId === undefined ? new Map<number, number>() : this.prices.items(regionId, ids);
 		const own = this.lists.counterpartyList(counterpartyId);
 		const personal =
 			own && !own.isBase && isPriceListActive(own, at)
-				? this.lists.itemsFor(own.id, ids)
+				? this.prices.items(own.id, ids)
 				: new Map<number, number>();
 
 		return {
 			rows: rows.map((row) => ({
 				...row,
-				basePriceMinor: region.get(row.variantId) ?? base.get(row.variantId) ?? row.basePriceMinor,
-				personalPriceMinor: personal.get(row.variantId) ?? null
+				basePriceMinor: region.get(row.productId) ?? base.get(row.productId) ?? row.basePriceMinor,
+				personalPriceMinor: personal.get(row.productId) ?? null
 			})),
 			total,
 			page: query.page,
@@ -102,18 +101,28 @@ export class CounterpartyPriceService extends CounterpartyBaseService {
 	 */
 	save(
 		counterpartyId: number,
-		entries: readonly PersonalPriceEntry[]
+		entries: readonly PersonalPriceEntry[],
+		replace = false
 	): CounterpartyPriceSaveResult {
 		const counterparty = this.requireCounterparty(counterpartyId);
-		const ids = entries.map((entry) => entry.variantId);
-		const live = this.prices.liveVariantIds(ids);
+		const ids = entries.map((entry) => entry.productId);
+		const live = this.prices.liveProductIds(ids);
 		if (ids.some((id) => !live.has(id))) throw new ValidationError('Неизвестная позиция');
 
 		const own = this.lists.counterpartyList(counterpartyId);
 		const choice = choosePersonalList(own, own ? this.prices.holders(own.id) : 0, this.now());
 		const source = choice.kind === 'reuse' ? choice.listId : choice.copyFromId;
-		const stored = source === null ? new Map<number, number>() : this.prices.items(source, ids);
-		const plan = planPersonalPrices(entries, stored);
+		const stored =
+			source === null
+				? new Map<number, number>()
+				: this.prices.items(source, replace ? undefined : ids);
+		const desired = [...entries];
+		if (replace) {
+			const included = new Set(ids);
+			for (const productId of stored.keys())
+				if (!included.has(productId)) desired.push({ productId, priceMinor: 0 });
+		}
+		const plan = planPersonalPrices(desired, stored);
 		const result = { updated: plan.upserts.length, cleared: plan.clears.length };
 		if (result.updated === 0 && result.cleared === 0) return result;
 
@@ -137,7 +146,7 @@ export class CounterpartyPriceService extends CounterpartyBaseService {
 					before: { priceListId: own?.id ?? null },
 					after: {
 						priceListId: listId,
-						updated: plan.upserts.map((row) => row.variantId),
+						updated: plan.upserts.map((row) => row.productId),
 						cleared: [...plan.clears]
 					}
 				};

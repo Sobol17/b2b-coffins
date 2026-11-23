@@ -8,6 +8,7 @@
 	import StockTable from '$lib/crm/stock/StockTable.svelte';
 	import { KIND_OPTIONS } from '$lib/crm/stock/labels';
 	import { Button, Card, FilterBar, type FilterField } from '$lib/ui';
+	import type { StockRowDto } from '$lib/types/crm-stock';
 	import type { ListQuery } from '$lib/types/list';
 	import { filtersOf, listQueryOf, withListQuery } from '$lib/utils/list-url';
 	import type { PageProps } from './$types';
@@ -48,6 +49,8 @@
 	// The sheet repeats what the table shows: same filters, search and sorting.
 	const exportUrl = $derived(`${resolve('/crm/stock/export.xlsx')}${page.url.search}`);
 	let createOpen = $state(false);
+	let editing = $state<StockRowDto | undefined>();
+	let editOpen = $state(false);
 
 	function changeQuery(next: ListQuery): void {
 		// Same page with a rewritten query string, so there is no route pattern to resolve.
@@ -64,7 +67,8 @@
 		<div>
 			<h1 class="mb-2 text-3xl">Склад</h1>
 			<p class="max-w-2xl text-fg-muted">
-				Остаток позиции равен сумме её движений. Откройте позицию, чтобы увидеть каждое.
+				Изделия сгруппированы по моделям. Разверните модель, чтобы увидеть размеры, цвета и
+				отдельные позиции.
 			</p>
 		</div>
 		<div class="flex flex-wrap gap-2 sm:ml-auto">
@@ -84,6 +88,11 @@
 				onQueryChange={changeQuery}
 				{exportUrl}
 				canSeeCost={data.choices.canSeeCost}
+				canManage={data.canManage}
+				onEdit={(item) => {
+					editing = item;
+					editOpen = true;
+				}}
 			/>
 		</Card.Content>
 	</Card.Root>
@@ -91,4 +100,5 @@
 
 {#if data.canManage}
 	<StockItemModal bind:open={createOpen} choices={data.choices} />
+	{#if editing}<StockItemModal bind:open={editOpen} choices={data.choices} item={editing} />{/if}
 {/if}

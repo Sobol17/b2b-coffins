@@ -10,7 +10,7 @@ import { isPriceListActive, type PriceListWindow } from '../request/pricing';
 export const PERSONAL_PRICE_MAX_MINOR = 100_000_000;
 
 export interface PersonalPriceEntry {
-	readonly variantId: number;
+	readonly productId: number;
 	/** Zero clears the price: the variant falls back to the base price list. */
 	readonly priceMinor: number;
 }
@@ -23,6 +23,7 @@ export interface PersonalPricePlan {
 export interface OwnPriceList extends PriceListWindow {
 	readonly id: number;
 	readonly isBase: boolean;
+	readonly isPersonal: boolean;
 }
 
 /**
@@ -34,10 +35,9 @@ export type PersonalListChoice =
 	| { readonly kind: 'fork'; readonly copyFromId: number | null };
 
 /**
- * The list a counterparty pays by is its own only while nobody else holds it. A base list, an
- * expired list and a list shared with another counterparty are never edited from one card: the
- * edit would move the prices of others or would not apply at all.
- * @param holders counterparties assigned to `own`, this one included.
+ * Only an active personal list exclusively assigned to this counterparty may be edited. A
+ * regional or shared list is copied first so editing one card never changes another's prices.
+ * @param holders direct assignments plus regional references to `own`, this one included.
  */
 export function choosePersonalList(
 	own: OwnPriceList | undefined,
@@ -47,7 +47,9 @@ export function choosePersonalList(
 	if (own === undefined || own.isBase || !isPriceListActive(own, at)) {
 		return { kind: 'fork', copyFromId: null };
 	}
-	return holders <= 1 ? { kind: 'reuse', listId: own.id } : { kind: 'fork', copyFromId: own.id };
+	return own.isPersonal && holders === 1
+		? { kind: 'reuse', listId: own.id }
+		: { kind: 'fork', copyFromId: own.id };
 }
 
 /**
@@ -64,11 +66,11 @@ export function planPersonalPrices(
 	const seen = new Set<number>();
 
 	for (const entry of entries) {
-		if (seen.has(entry.variantId)) continue;
-		seen.add(entry.variantId);
-		const stored = current.get(entry.variantId);
+		if (seen.has(entry.productId)) continue;
+		seen.add(entry.productId);
+		const stored = current.get(entry.productId);
 		if (entry.priceMinor === 0) {
-			if (stored !== undefined) clears.push(entry.variantId);
+			if (stored !== undefined) clears.push(entry.productId);
 			continue;
 		}
 		if (stored !== entry.priceMinor) upserts.push(entry);
@@ -82,7 +84,7 @@ export function applyPersonalPricePlan(
 	plan: PersonalPricePlan
 ): Map<number, number> {
 	const next = new Map(current);
-	for (const variantId of plan.clears) next.delete(variantId);
-	for (const upsert of plan.upserts) next.set(upsert.variantId, upsert.priceMinor);
+	for (const productId of plan.clears) next.delete(productId);
+	for (const upsert of plan.upserts) next.set(upsert.productId, upsert.priceMinor);
 	return next;
 }

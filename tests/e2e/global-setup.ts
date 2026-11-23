@@ -6,6 +6,7 @@ import {
 	dictItems,
 	discountRules,
 	payrollPeriods,
+	payrollAccruals,
 	rateLimits,
 	requests,
 	roles,
@@ -103,6 +104,7 @@ export default async function globalSetup(): Promise<void> {
 	db.delete(workEntries).run();
 	db.delete(workDays).run();
 	db.delete(payrollPeriods).run();
+	db.delete(payrollAccruals).run();
 	db.delete(shopUnitWorks).run();
 	db.delete(shopUnits).run();
 	db.delete(shopJobs).run();

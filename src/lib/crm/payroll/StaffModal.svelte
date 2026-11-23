@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
-	import { Button, Combobox, Input, Modal, withToast } from '$lib/ui';
+	import { Button, Combobox, Input, Modal, MoneyInput, Select, withToast } from '$lib/ui';
 	import type { StaffDto } from '$lib/types/crm-payroll';
 
 	/* One dialog for a new worker and for an edit of one. */
@@ -20,6 +20,14 @@
 	} = $props();
 
 	let pending = $state(false);
+	let payRole = $derived(open && worker ? worker.payRole : 'piecework');
+	const payOptions = [
+		{ value: 'piecework', label: 'Работник цеха / сдельная оплата' },
+		{ value: 'director', label: 'Руководитель · 350 ₽ за готовое изделие' },
+		{ value: 'administrator', label: 'Администратор · 300 ₽ за готовое изделие' },
+		{ value: 'driver', label: 'Водитель · 200 ₽ за доставленное изделие' },
+		{ value: 'laborer', label: 'Разнорабочий · месячный оклад' }
+	];
 	const userOptions = $derived([
 		{ value: '', label: 'Без учётной записи' },
 		...users.map((user) => ({ value: String(user.id), label: user.fullName })),
@@ -53,18 +61,39 @@
 				required
 				maxlength={120}
 			/>
-			<div
-				class="min-w-0 [&_button]:h-auto [&_button]:min-h-11 [&_button]:py-2 [&_button]:text-left [&_button]:whitespace-normal"
-			>
-				<Combobox
-					name="userId"
-					label="Учётная запись"
-					placeholder="Выберите учётную запись"
-					options={userOptions}
-					value={String(worker?.userId ?? '')}
-					hint="Связь показывает сотруднику его работы и личную зарплату."
+			<Select
+				name="payRole"
+				placeholder="Выберите роль"
+				label="Роль в выплатах"
+				options={payOptions}
+				bind:value={payRole}
+			/>
+			{#if payRole === 'laborer'}
+				<input type="hidden" name="userId" value="" />
+				<MoneyInput
+					name="monthlySalaryMinor"
+					placeholder="Введите оклад"
+					label="Месячный оклад, ₽"
+					valueMinor={worker?.monthlySalaryMinor ?? 6000000}
+					required
 				/>
-			</div>
+				<p class="text-sm text-fg-muted">
+					Расчёт 27-го числа каждого месяца. Вход в систему не нужен.
+				</p>
+			{:else}
+				<div
+					class="min-w-0 [&_button]:h-auto [&_button]:min-h-11 [&_button]:py-2 [&_button]:text-left [&_button]:whitespace-normal"
+				>
+					<Combobox
+						name="userId"
+						label="Учётная запись"
+						placeholder="Выберите учётную запись"
+						options={userOptions}
+						value={String(worker?.userId ?? '')}
+						hint="Связь показывает сотруднику его работы и личную зарплату."
+					/>
+				</div>
+			{/if}
 			<Input
 				name="position"
 				label="Должность"

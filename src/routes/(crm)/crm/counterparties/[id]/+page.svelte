@@ -34,8 +34,13 @@
 	const pricesError = $derived(
 		form &&
 			'action' in form &&
-			(form.action === 'prices' || form.action === 'refill') &&
+			(form.action === 'prices' || form.action === 'refill' || form.action === 'priceImport') &&
 			'formError' in form
+			? form.formError
+			: undefined
+	);
+	const attachmentError = $derived(
+		form && 'action' in form && form.action === 'priceList' && 'formError' in form
 			? form.formError
 			: undefined
 	);
@@ -69,7 +74,7 @@
 		items={[{ label: 'Контрагенты', href: resolve('/crm/counterparties') }, { label: card.name }]}
 	/>
 	<div class="flex flex-wrap items-center gap-4">
-		<h1 class="text-3xl" data-testid="counterparty-name">{card.name}</h1>
+		<h1 class="max-w-full text-3xl break-words" data-testid="counterparty-name">{card.name}</h1>
 		<DebtIndicator debt={card.debt} />
 		{#if card.debt && card.debt.debtMinor > 0}
 			<Button
@@ -100,7 +105,7 @@
 			<Tabs.Trigger value="ledger">Заявки и оплаты</Tabs.Trigger>
 		</Tabs.List>
 		<Tabs.Content value="card" class="pt-4">
-			<CounterpartyForms {card} choices={data.choices} />
+			<CounterpartyForms {card} />
 		</Tabs.Content>
 		<Tabs.Content value="contracts" class="flex flex-col gap-6 pt-4">
 			<ContractsPanel contracts={card.contracts} timeZone={data.timezone} />
@@ -112,9 +117,12 @@
 		{#if data.prices}
 			<Tabs.Content value="prices" class="pt-4">
 				<PricesPanel
+					counterpartyId={card.id}
 					prices={data.prices.page}
 					categories={data.prices.categories}
-					hasRegion={card.regionPriceListId !== null}
+					regionPriceListId={card.regionPriceListId}
+					priceLists={data.choices.priceLists}
+					{attachmentError}
 					formError={pricesError}
 				/>
 			</Tabs.Content>

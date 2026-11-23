@@ -4,7 +4,6 @@
 	import { page } from '$app/state';
 	import CookieNotice from '$lib/legal/CookieNotice.svelte';
 	import { BrandMark, Button, Card, ErrorState, Input } from '$lib/ui';
-	import { PLACEHOLDER } from '$lib/utils/placeholders';
 	import type { ActionData, PageData } from './$types';
 
 	let { data, form }: { data: PageData; form: ActionData } = $props();
@@ -37,13 +36,14 @@
 			<input type="hidden" name="redirectTo" value={data.redirectTo} />
 
 			<Input
-				name="email"
-				type="email"
-				label="Электронная почта"
-				placeholder={PLACEHOLDER.email}
+				name="identifier"
+				type="text"
+				label="Телефон или электронная почта"
+				placeholder="Введите телефон или почту"
 				autocomplete="username"
 				required
-				value={form?.email ?? ''}
+				value={form?.identifier ?? ''}
+				error={form?.errors?.identifier?.join(', ')}
 			/>
 
 			<Input

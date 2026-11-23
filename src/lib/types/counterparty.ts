@@ -11,7 +11,7 @@ export type StaffStatus = (typeof STAFF_STATUSES)[number];
 export interface ContactDto {
 	readonly fullName: string;
 	readonly phone: string | null;
-	readonly email: string;
+	readonly email: string | null;
 }
 
 export interface StaffPreviewDto extends ContactDto {
@@ -55,7 +55,7 @@ export interface StaffFilters {
 export interface StaffMemberDto {
 	readonly id: number;
 	readonly fullName: string;
-	readonly email: string;
+	readonly email: string | null;
 	readonly phone: string | null;
 	readonly role: PortalRole;
 	readonly status: StaffStatus;

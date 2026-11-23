@@ -6,6 +6,8 @@ import { parseListQuery } from '$lib/server/core/list';
 import { CounterpartyAccessService } from '$lib/server/crm-counterparty/counterparty-access.service';
 import { CounterpartyDetailService } from '$lib/server/crm-counterparty/counterparty-detail.service';
 import { CounterpartyLedgerService } from '$lib/server/crm-counterparty/counterparty-ledger.service';
+import { CounterpartyPriceImportService } from '$lib/server/crm-counterparty/counterparty-price-import.service';
+import { priceSheetUploadSchema } from '$lib/validation/crm-catalog';
 import { CounterpartyPriceService } from '$lib/server/crm-counterparty/counterparty-price.service';
 import { CrmCounterpartyService } from '$lib/server/crm-counterparty/crm-counterparty.service';
 import { mailDriver } from '$lib/server/notifications/drivers/mail/select';
@@ -21,6 +23,7 @@ import {
 	entityIdSchema,
 	issueAdminSchema,
 	notesInputSchema,
+	priceListInputSchema,
 	requisitesInputSchema,
 	termsInputSchema
 } from '$lib/validation/crm-counterparty';
@@ -89,6 +92,13 @@ export const actions = {
 			cards().updateTerms(id, input)
 		);
 	},
+	priceList: (event) => {
+		const { id, actor, cards, request } = context(event);
+		if (!actor.canSeePrices) error(403, { code: 'forbidden', message: 'Доступ запрещён' });
+		return formAction(request, 'priceList', priceListInputSchema, (input) =>
+			cards().assignPriceList(id, input.regionPriceListId)
+		);
+	},
 	notes: (event) => {
 		const { id, cards, request } = context(event);
 		return formAction(request, 'notes', notesInputSchema, (input) =>
@@ -148,6 +158,21 @@ export const actions = {
 		return formAction(request, 'adminPromote', entityIdSchema, (input) =>
 			access().promoteAdmin(id, input.id)
 		);
+	},
+	priceImport: async (event) => {
+		const { id, actor, request } = context(event);
+		const parsed = priceSheetUploadSchema.safeParse(Object.fromEntries(await request.formData()));
+		if (!parsed.success)
+			return fail(422, { action: 'priceImport', formError: 'Выберите файл XLSX' });
+		try {
+			const imported = await new CounterpartyPriceImportService(actor).replaceFromSheet(
+				id,
+				new Uint8Array(await parsed.data.file.arrayBuffer())
+			);
+			return { action: 'priceImport' as const, imported };
+		} catch (err) {
+			return actionFailure(err);
+		}
 	},
 	prices: async (event) => {
 		const { id, prices, request } = context(event);

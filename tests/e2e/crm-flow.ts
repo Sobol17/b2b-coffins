@@ -4,8 +4,9 @@ import { expect, type Page } from '@playwright/test';
 export async function enterRequest(
 	page: Page,
 	deceased: string,
-	colour = 'Чёрный',
-	qty = 1
+	colour = 'Евро',
+	qty = 1,
+	sku = 'MDL-201-180-PIN'
 ): Promise<string> {
 	await page.goto('/crm/requests/new');
 	const counterparty = page.getByRole('option', { name: 'Ритуал-Сервис' });
@@ -22,8 +23,8 @@ export async function enterRequest(
 	await page.getByLabel('Время доставки').fill('10:00');
 	await page.getByLabel('ФИО умершего').fill(deceased);
 
-	await page.getByRole('button', { name: 'Позиция', exact: true }).click();
-	await page.getByPlaceholder('Введите название').fill('Волга');
+	await page.getByRole('combobox', { name: 'Позиция', exact: true }).click();
+	await page.getByPlaceholder('Поиск по списку').fill(sku);
 	await page.getByRole('option').first().click();
 	// A colourless line would draw on the colourless opening stock of the seed (tech.md v1.41).
 	await page.getByTestId('request-lines').locator('[data-slot="select-trigger"]').first().click();

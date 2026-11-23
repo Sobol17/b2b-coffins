@@ -31,6 +31,8 @@
 	const workRows = $derived(
 		(data.report?.works ?? []).map((row) => ({ ...row, id: row.workTypeId }))
 	);
+	const totalDays = $derived(staffRows.reduce((sum, row) => sum + row.daysWorked, 0));
+	const totalQty = $derived(workRows.reduce((sum, row) => sum + row.qty, 0));
 	type StaffRow = (typeof staffRows)[number];
 	type WorkRow = (typeof workRows)[number];
 </script>
@@ -73,13 +75,18 @@
 							<span class="tabular-nums">{roubles(row.accruedMinor)}</span>
 						{/if}
 					{/snippet}
+					{#snippet footer(column: DataTableColumn)}
+						{#if column.key === 'fullName'}
+							Итого
+						{:else if column.key === 'daysWorked'}
+							<span class="tabular-nums">{totalDays}</span>
+						{:else if column.key === 'accrued'}
+							<span class="tabular-nums" data-testid="report-accrued">
+								{roubles(data.report.accruedTotalMinor)}
+							</span>
+						{/if}
+					{/snippet}
 				</ReportTable>
-				<p>
-					Начислено всего:
-					<span class="font-medium tabular-nums" data-testid="report-accrued">
-						{roubles(data.report.accruedTotalMinor)}
-					</span>
-				</p>
 			</Card.Content>
 		</Card.Root>
 
@@ -96,13 +103,18 @@
 							<span class="tabular-nums">{roubles(row.amountMinor)}</span>
 						{/if}
 					{/snippet}
+					{#snippet footer(column: DataTableColumn)}
+						{#if column.key === 'title'}
+							Итого
+						{:else if column.key === 'qty'}
+							<span class="tabular-nums" data-testid="report-qty">{totalQty}</span>
+						{:else if column.key === 'amount'}
+							<span class="tabular-nums" data-testid="report-works">
+								{roubles(data.report.worksTotalMinor)}
+							</span>
+						{/if}
+					{/snippet}
 				</ReportTable>
-				<p>
-					Сделано работ на:
-					<span class="font-medium tabular-nums" data-testid="report-works">
-						{roubles(data.report.worksTotalMinor)}
-					</span>
-				</p>
 				<p class="text-sm text-fg-muted">
 					Начислено меньше суммы работ на остаток от деления: долю за день система округляет до
 					рубля вниз.

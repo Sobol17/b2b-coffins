@@ -1,9 +1,10 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
-	import { resolve } from '$app/paths';
 	import DiscountRuleForm from '$lib/crm/catalog/DiscountRuleForm.svelte';
 	import PriceListForm from '$lib/crm/catalog/PriceListForm.svelte';
-	import { Button, Card, Modal, buttonVariants, withToast } from '$lib/ui';
+	import PriceListRow from '$lib/crm/catalog/PriceListRow.svelte';
+	import { Button, Card, Modal, withToast } from '$lib/ui';
+	import * as Tooltip from '$lib/ui/base/tooltip/index.js';
 	import type { CrmDiscountRuleDto, CrmPriceListDto } from '$lib/types/crm-catalog';
 	import type { PageProps } from './$types';
 
@@ -23,7 +24,7 @@
 	<div>
 		<h1 class="mb-2 text-3xl">Прайсы и скидки</h1>
 		<p class="max-w-2xl text-fg-muted">
-			Прайс-лист задаёт цены вариантов, правило скидки уменьшает их для контрагента или категории.
+			Прайс-лист задаёт цены моделей, правило скидки уменьшает их для контрагента или категории.
 		</p>
 	</div>
 	<Card.Root
@@ -35,36 +36,13 @@
 				>
 			</div>
 			{#if data.lists.length === 0}<p class="text-fg-muted">Прайс-листов пока нет.</p>{/if}
-			<ul class="divide-y divide-border">
-				{#each data.lists as list (list.id)}
-					<li class="flex flex-wrap items-center gap-2 py-3">
-						<div class="min-w-56 flex-1">
-							<strong>{list.title}</strong>
-							<p class="text-sm text-fg-muted">
-								{list.isBase ? 'Базовый' : 'Персональный'} · {caption(list.validFrom, list.validTo)} ·
-								позиций: {list.items.length}
-							</p>
-						</div>
-						<a
-							href={resolve(`/crm/prices/${list.id}`)}
-							class={buttonVariants({ variant: 'secondary', size: 'sm' })}>Позиции</a
-						>
-						<Button variant="ghost" size="sm" onclick={() => (editingList = list)}>Изменить</Button>
-						<form
-							method="POST"
-							action="?/deleteList"
-							use:enhance={withToast({ success: 'Прайс-лист удалён' })}
-						>
-							<input type="hidden" name="id" value={list.id} /><Button
-								type="submit"
-								variant="ghost"
-								class="text-danger"
-								size="sm">Удалить</Button
-							>
-						</form>
-					</li>
-				{/each}
-			</ul>
+			<Tooltip.Provider>
+				<ul class="divide-y divide-border">
+					{#each data.lists as list (list.id)}
+						<PriceListRow {list} onEdit={() => (editingList = list)} />
+					{/each}
+				</ul>
+			</Tooltip.Provider>
 		</Card.Content></Card.Root
 	>
 	<Card.Root

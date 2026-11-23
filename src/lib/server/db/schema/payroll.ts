@@ -1,5 +1,5 @@
 import { integer, sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqlite-core';
-import { PAYROLL_PERIOD_STATUSES } from '$lib/types/crm-payroll';
+import { STAFF_PAY_ROLES, PAYROLL_PERIOD_STATUSES } from '$lib/types/crm-payroll';
 import { WORK_ROLES } from '$lib/types/roles';
 import { bool, createdAt, money, pk, ts, updatedAt } from './_shared';
 import { users } from './users';
@@ -8,6 +8,9 @@ import { shopTasks, shopUnits } from './shop';
 
 export const staff = sqliteTable('staff', {
 	id: pk(),
+	payRole: text('pay_role', { enum: STAFF_PAY_ROLES }).notNull().default('piecework'),
+	monthlySalaryMinor: integer('monthly_salary_minor').notNull().default(6000000),
+	systemKey: text('system_key').unique(),
 	fullName: text('full_name').notNull(),
 	position: text('position'),
 	userId: integer('user_id').references(() => users.id), // optional system account
@@ -155,4 +158,33 @@ export const payrollLines = sqliteTable(
 		paidComment: text('paid_comment')
 	},
 	(t) => [uniqueIndex('payroll_lines_uq').on(t.periodId, t.staffId)]
+);
+
+export const payrollAccruals = sqliteTable(
+	'payroll_accruals',
+	{
+		id: pk(),
+		staffId: integer('staff_id')
+			.notNull()
+			.references(() => staff.id),
+		source: text('source', { enum: ['production', 'delivery'] }).notNull(),
+		sourceId: integer('source_id').notNull(),
+		workDate: ts('work_date').notNull(),
+		qty: integer('qty').notNull(),
+		rateMinor: money('rate_minor')
+	},
+	(t) => [uniqueIndex('payroll_accrual_source_uq').on(t.source, t.sourceId, t.staffId)]
+);
+
+export const staffSalaryTerms = sqliteTable(
+	'staff_salary_terms',
+	{
+		id: pk(),
+		staffId: integer('staff_id')
+			.notNull()
+			.references(() => staff.id, { onDelete: 'cascade' }),
+		effectiveOn: text('effective_on').notNull(),
+		amountMinor: money('amount_minor')
+	},
+	(t) => [uniqueIndex('staff_salary_term_uq').on(t.staffId, t.effectiveOn)]
 );

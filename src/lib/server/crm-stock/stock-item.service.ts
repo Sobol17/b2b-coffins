@@ -1,15 +1,16 @@
-import { NotFoundError, ValidationError } from '../core/errors';
+import { ConflictError, NotFoundError, ValidationError } from '../core/errors';
 import type { Tx } from '../db/client';
 import { StockDtoMapper } from './dto';
 import { StockBaseService } from './stock-base.service';
 import { StockItemRepository, type StockItemRow } from './stock-item.repository';
+import { StockRegistry } from './stock-registry';
 import { StockMoveRepository } from './stock-move.repository';
 import type { ActorContext } from '$lib/types/actor';
 import type {
 	StockCardDto,
 	StockChoicesDto,
 	StockFilters,
-	StockRowDto
+	StockRegistryRowDto
 } from '$lib/types/crm-stock';
 import type { ListQuery, Page } from '$lib/types/list';
 import type { StockItemCreateInput, StockItemUpdateInput } from '$lib/validation/crm-stock';
@@ -27,10 +28,13 @@ export class StockItemService extends StockBaseService {
 		super(ctx);
 	}
 
-	list(query: ListQuery<StockFilters>): Page<StockRowDto> {
-		const { rows, total } = this.items.list(query);
+	list(query: ListQuery<StockFilters>): Page<StockRegistryRowDto> {
+		const { rows, total } = new StockRegistry(this.items, this.moves).list(
+			query,
+			this.ctx.canSeeCost
+		);
 		return {
-			rows: rows.map((row) => StockDtoMapper.toRow(row, this.ctx.canSeeCost)),
+			rows,
 			total,
 			page: query.page,
 			perPage: query.perPage
@@ -38,7 +42,7 @@ export class StockItemService extends StockBaseService {
 	}
 
 	/** The registry as filtered and sorted on the screen, without paging. */
-	exportRows(query: ListQuery<StockFilters>): StockRowDto[] {
+	exportRows(query: ListQuery<StockFilters>): StockRegistryRowDto[] {
 		return this.list({ ...query, page: 1, perPage: EXPORT_LIMIT }).rows;
 	}
 
@@ -49,7 +53,8 @@ export class StockItemService extends StockBaseService {
 			...StockDtoMapper.toRow(row, this.ctx.canSeeCost),
 			positions: this.moves.positions(id).map((position) => StockDtoMapper.toPosition(position)),
 			colors: row.kind === 'product' ? this.items.colours(id) : [],
-			canManage: this.canManage
+			isDeleted: row.deletedAt !== null,
+			canManage: this.canManage && row.deletedAt === null
 		};
 	}
 
@@ -72,12 +77,13 @@ export class StockItemService extends StockBaseService {
 		});
 	}
 
-	/** The item is switched off rather than deleted: its moves keep pointing at it. */
+	/** Updates accounting fields without changing movement history. */
 	update(id: number, input: StockItemUpdateInput): void {
 		this.assertManage();
 		this.assertCost(input);
 		this.audited({ action: 'stock.item.update', entity: 'stock_items' }, (tx) => {
 			const before = this.require(id, tx);
+			if (before.deletedAt) throw new ConflictError('Позиция удалена, изменения закрыты');
 			this.check(input, id, tx);
 			this.items.update(id, input, tx);
 			return {
@@ -92,6 +98,30 @@ export class StockItemService extends StockBaseService {
 					...(input.costPriceMinor === undefined ? {} : { costPriceMinor: before.costPriceMinor })
 				},
 				after: { ...input }
+			};
+		});
+	}
+
+	/** Archive an unused zero-balance item while keeping every historical reference. */
+	archive(id: number): void {
+		this.assertManage();
+		this.audited({ action: 'stock.item.delete', entity: 'stock_items' }, (tx) => {
+			const item = this.require(id, tx);
+			if (item.deletedAt) throw new ConflictError('Позиция уже удалена');
+			if (this.moves.positions(id, tx).some((position) => position.balance !== 0)) {
+				throw new ConflictError('Сначала обнулите остатки по всем цветам позиции');
+			}
+			if (this.items.hasAssignments(id, tx)) {
+				throw new ConflictError(
+					'Позиция используется в каталоге, заявке, производстве или черновике инвентаризации'
+				);
+			}
+			this.items.archive(id, tx);
+			return {
+				result: undefined,
+				entityId: id,
+				before: { code: item.code },
+				after: { isDeleted: true }
 			};
 		});
 	}

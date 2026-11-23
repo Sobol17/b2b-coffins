@@ -15,7 +15,7 @@ import { shopProgressSchema } from '../../src/lib/validation/crm-shop';
 import { seedShopWorld } from './helpers/crm-shop';
 import { thresholdJobs } from './helpers/crm-stock';
 import { insertUser, migratedDatabase } from './helpers/db';
-import { crmActor, resetRequests } from './helpers/portal-requests';
+import { crmActor, optionId, resetRequests } from './helpers/portal-requests';
 import { statusOf } from './helpers/transitions';
 
 const db = migratedDatabase();
@@ -52,6 +52,17 @@ const audits = (action: string) =>
 	db.select().from(auditLog).where(eq(auditLog.action, action)).all();
 
 beforeEach(() => resetRequests(db));
+
+it('passes gloss to the shop and produces stock by colour', () => {
+	const id = inWork(1, { gloss: 'Глянцевый' });
+	for (const station of ['carpenter', 'grinder', 'painter', 'upholsterer'] as const) {
+		expect(reads(STATION_ACTOR[station]).task(openVisit(id, station)).jobs).toMatchObject([
+			{ glossTitle: 'Глянцевый', colorTitle: 'Орех' }
+		]);
+		finish(id, station);
+	}
+	expect(productions()).toMatchObject([{ stockItemId, optionId: optionId(db, 'Орех'), qty: 1 }]);
+});
 
 describe('rights on the stations (tech.md §19)', () => {
 	it('opens the screen to the crew and the heads and closes it to the driver and the portal', () => {

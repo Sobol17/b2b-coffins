@@ -14,6 +14,7 @@
 	import Pagination from './Pagination.svelte';
 	import type { ListQuery } from '$lib/types/list';
 	import type { Snippet } from 'svelte';
+	import type { ResolvedPathname } from '$app/types';
 
 	/*
 	 * The one registry table of the app (tech.md 4.3). Paging and sorting are server side: the
@@ -26,8 +27,10 @@
 		query,
 		onQueryChange,
 		exportUrl,
+		rowHref,
 		emptyTitle = 'Ничего не найдено',
-		cell
+		cell,
+		footer
 	}: {
 		columns: readonly DataTableColumn[];
 		rows: readonly TRow[];
@@ -35,9 +38,14 @@
 		query: ListQuery;
 		onQueryChange: (next: ListQuery) => void;
 		exportUrl?: string | undefined;
+		rowHref?: ((row: TRow) => ResolvedPathname) | undefined;
 		emptyTitle?: string;
 		cell: Snippet<[TRow, DataTableColumn]>;
+		footer?: Snippet<[DataTableColumn]> | undefined;
 	} = $props();
+	const tableId = $props.id();
+	const linkedRowClass =
+		'relative isolate cursor-pointer focus-within:bg-surface-muted [&_a:not([data-row-link])]:relative [&_a:not([data-row-link])]:z-10 [&_button]:relative [&_button]:z-10 [&_input]:relative [&_input]:z-10 [&_select]:relative [&_select]:z-10 [&_textarea]:relative [&_textarea]:z-10 [&_label]:relative [&_label]:z-10';
 
 	function toggleSort(column: DataTableColumn): void {
 		if (column.sortable !== true) return;
@@ -112,12 +120,15 @@
 				</Table.Row>
 			</Table.Header>
 			<Table.Body>
-				{#each rows as row (row.id)}
+				{#each rows as row, rowIndex (row.id)}
 					<Table.Row
 						data-testid="data-table-row"
-						class="border-0 hover:bg-surface-muted max-sm:flex max-sm:flex-col max-sm:gap-1 max-sm:border-b max-sm:border-border max-sm:py-3 max-sm:last:border-b-0 max-sm:hover:bg-transparent"
+						class={[
+							'border-0 hover:bg-surface-muted max-sm:flex max-sm:flex-col max-sm:gap-1 max-sm:border-b max-sm:border-border max-sm:py-3 max-sm:last:border-b-0 max-sm:hover:bg-transparent',
+							rowHref && linkedRowClass
+						]}
 					>
-						{#each columns as column (column.key)}
+						{#each columns as column, columnIndex (column.key)}
 							<Table.Cell
 								data-label={column.label}
 								class={[
@@ -128,8 +139,21 @@
 									'max-sm:first:block max-sm:first:pb-1 max-sm:first:text-left max-sm:first:text-base max-sm:first:before:hidden'
 								]}
 							>
+								{#if rowHref && columnIndex === 0}
+									<!-- The caller supplies a resolved path; keep native middle-click and keyboard behavior. -->
+									<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -->
+									<a
+										data-row-link
+										href={rowHref(row)}
+										aria-labelledby={`${tableId}-${rowIndex}`}
+										class="absolute inset-0 rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+									></a>
+								{/if}
 								<!-- One box for the value: its parts stay together on a card. An empty one hides the line. -->
-								<div class="contents max-sm:block max-sm:min-w-0 max-sm:break-words">
+								<div
+									id={columnIndex === 0 ? `${tableId}-${rowIndex}` : undefined}
+									class="contents max-sm:block max-sm:min-w-0 max-sm:break-words"
+								>
 									{@render cell(row, column)}
 								</div>
 							</Table.Cell>
@@ -137,6 +161,29 @@
 					</Table.Row>
 				{/each}
 			</Table.Body>
+			{#if footer}
+				<Table.Footer class="bg-surface-muted max-sm:block">
+					<Table.Row
+						class="border-0 hover:bg-transparent max-sm:flex max-sm:flex-col max-sm:gap-1 max-sm:py-3"
+					>
+						{#each columns as column (column.key)}
+							<Table.Cell
+								data-label={column.label}
+								class={[
+									'border-t border-border px-2.5 py-4 first:pl-2 last:pr-2',
+									column.align === 'end' && 'text-right',
+									'max-sm:flex max-sm:items-center max-sm:justify-between max-sm:gap-4 max-sm:border-0 max-sm:px-1 max-sm:py-0.5 max-sm:text-right max-sm:whitespace-normal max-sm:before:shrink-0 max-sm:before:text-left max-sm:before:text-xs max-sm:before:font-normal max-sm:before:text-fg-faint max-sm:before:content-[attr(data-label)] max-sm:has-[>div:empty]:hidden',
+									'max-sm:first:block max-sm:first:pb-1 max-sm:first:text-left max-sm:first:text-base max-sm:first:before:hidden'
+								]}
+							>
+								<div class="contents max-sm:block max-sm:min-w-0 max-sm:break-words">
+									{@render footer(column)}
+								</div>
+							</Table.Cell>
+						{/each}
+					</Table.Row>
+				</Table.Footer>
+			{/if}
 		</Table.Root>
 	</div>
 

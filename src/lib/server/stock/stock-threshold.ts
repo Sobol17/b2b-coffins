@@ -1,4 +1,4 @@
-import { eq, sql } from 'drizzle-orm';
+import { and, eq, isNull, sql } from 'drizzle-orm';
 import { BaseRepository } from '../core/repository';
 import type { Tx } from '../db/client';
 import { stockItems, stockMoves } from '../db/schema';
@@ -31,7 +31,13 @@ export class StockThreshold extends BaseRepository<typeof stockItems> {
 			})
 			.from(stockItems)
 			.leftJoin(stockMoves, eq(stockMoves.stockItemId, stockItems.id))
-			.where(eq(stockItems.id, stockItemId))
+			.where(
+				and(
+					eq(stockItems.id, stockItemId),
+					eq(stockItems.isActive, true),
+					isNull(stockItems.deletedAt)
+				)
+			)
 			.groupBy(stockItems.id)
 			.all();
 		return row;

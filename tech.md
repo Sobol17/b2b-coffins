@@ -1,8 +1,8 @@
 # tech.md — ядро проекта
 
 **Проект:** B2B-портал + CRM для столярной мастерской (производство гробов)
-**Версия ядра:** v2.10
-**Дата:** 12.11.2026
+**Версия ядра:** v2.15
+**Дата:** 23.11.2026
 **Статус:** основная разработка завершена; сопровождение, исправления и улучшения по текущим задачам владельца. Первоначальные этапы и слайсы сохранены как архив (§2, §14).
 **Владелец файла:** Sobol17 (тимлид и единственный разработчик)
 **Источник требований:** `TZ_B2B_CRM_stolyarka_v06.md`
@@ -255,11 +255,11 @@ export const money = (name: string) => integer(name).notNull().default(0); // mi
 ```ts
 export const users = sqliteTable('users', {
   id: pk(),
-  email: text('email').notNull(),
+  email: text('email'),
   login: text('login'),
   passwordHash: text('password_hash').notNull(),
   fullName: text('full_name').notNull(),
-  phone: text('phone'),
+  phone: text('phone'), // canonical international number; null only on legacy accounts
   scope: text('scope', { enum: ['portal', 'crm'] }).notNull(),
   counterpartyId: integer('counterparty_id').references(() => counterparties.id), // null for crm scope
   isActive: integer('is_active', { mode: 'boolean' }).notNull().default(true),
@@ -271,6 +271,7 @@ export const users = sqliteTable('users', {
   createdAt: createdAt(), updatedAt: updatedAt(), deletedAt: ts('deleted_at')
 }, (t) => ({
   emailUq: uniqueIndex('users_email_uq').on(t.email).where(sql`${t.deletedAt} is null`),
+  phoneUq: uniqueIndex('users_phone_uq').on(t.phone).where(sql`${t.deletedAt} is null`),
   cpIdx: index('users_counterparty_idx').on(t.counterpartyId)
 }));
 
@@ -361,7 +362,7 @@ export const products = sqliteTable('products', {
   sku: text('sku').notNull(),
   title: text('title').notNull(),
   categoryId: integer('category_id').references(() => categories.id),
-  description: text('description'),
+  description: text('description'), basePriceMinor: money('base_price_minor'),
   isPublished: integer('is_published', { mode: 'boolean' }).notNull().default(false),
   sortOrder: integer('sort_order').notNull().default(0),
   createdAt: createdAt(), updatedAt: updatedAt(), deletedAt: ts('deleted_at')
@@ -372,7 +373,7 @@ export const categories = sqliteTable('categories', {
   parentId: integer('parent_id'), sortOrder: integer('sort_order').notNull().default(0)
 });
 
-// Variant = size + material. Price and stock hang on the variant.
+// Variant = size + material. Stock hangs on the variant; price belongs to its model.
 export const productVariants = sqliteTable('product_variants', {
   id: pk(),
   productId: integer('product_id').notNull().references(() => products.id, { onDelete: 'cascade' }),
@@ -388,10 +389,10 @@ export const productVariants = sqliteTable('product_variants', {
   createdAt: createdAt(), updatedAt: updatedAt(), deletedAt: ts('deleted_at')
 }, (t) => ({ skuUq: uniqueIndex('variants_sku_uq').on(t.sku), prodIdx: index('variants_product_idx').on(t.productId) }));
 
-// Options: the colour of the product, the only choice besides the size.
+// Options: colour per variant and gloss shared by all variants.
 export const options = sqliteTable('options', {
   id: pk(),
-  kind: text('kind', { enum: ['color'] }).notNull(),
+  kind: text('kind', { enum: ['color', 'gloss'] }).notNull(),
   title: text('title').notNull(),
   priceDeltaMinor: integer('price_delta_minor').notNull().default(0),
   stockItemId: integer('stock_item_id').references(() => stockItems.id),
@@ -445,9 +446,9 @@ export const priceLists = sqliteTable('price_lists', {
 export const priceListItems = sqliteTable('price_list_items', {
   id: pk(),
   priceListId: integer('price_list_id').notNull().references(() => priceLists.id, { onDelete: 'cascade' }),
-  variantId: integer('variant_id').notNull().references(() => productVariants.id, { onDelete: 'cascade' }),
+  productId: integer('product_id').notNull().references(() => products.id, { onDelete: 'cascade' }),
   priceMinor: money('price_minor')
-}, (t) => ({ uq: uniqueIndex('pli_uq').on(t.priceListId, t.variantId) }));
+}, (t) => ({ uq: uniqueIndex('pli_uq').on(t.priceListId, t.productId) }));
 
 // Agency price (P7): the counterparty shows it to its own client. Display only, never part of a request sum.
 export const counterpartyProductPrices = sqliteTable('counterparty_product_prices', {
@@ -468,9 +469,11 @@ export const discountRules = sqliteTable('discount_rules', {
 });
 ```
 
-Индивидуальные цены контрагента пишутся только в лист, который не базовый, действует сейчас и назначен одному этому контрагенту. Иначе сервис заводит новый лист «Индивидуальные цены: <название>», копирует в него позиции прежнего небазового листа и меняет `counterparties.price_list_id`. Выбор листа и план правок делает `lib/domain/pricing/personal-price.ts`: цена 0 удаляет позицию, неизменная цена в план не попадает.
+Цена хранится на модели: `products.base_price_minor`, одна позиция `(price_list_id, product_id)` в каждом прайсе. Размер, материал/тип и цвет не меняют цену. `product_variants.base_price_minor` остаётся legacy-полем, расчёты его не читают. Переход берёт минимум базовых цен вариантов как базовую цену модели и минимум явно заданных цен модели внутри каждого прайса. Запись частичного прайса теперь применяется ко всем размерам модели, даже если раньше другие размеры брали базовую цену; уже замороженные суммы заявок не меняются.
 
-Региональный прайс это лист с `is_base = false` и `is_personal = false`, его выбирают в `counterparties.region_price_list_id`. Регион только предзаполняет личный лист: при заведении контрагента и при смене региона у контрагента без своего листа сервис копирует позиции региона в новый лист с `is_personal = true`. Уже заведённые личные цены смена региона не трогает, их заменяет кнопка «Заполнить из прайса» (`PersonalListFiller.fill(..., overwrite = true)`). Цена строки берётся по цепочке: личный лист, действующий региональный, действующий базовый, `base_price_minor`. Пустое личное поле значит цену региона.
+Индивидуальные цены контрагента пишутся только в лист, который не базовый, имеет `is_personal = true`, действует сейчас, назначен ровно одному этому контрагенту и никому не назначен как региональный. Иначе сервис заводит новый лист «Индивидуальные цены: <название>», копирует в него позиции прежнего небазового листа и меняет `counterparties.price_list_id`. Выбор листа и план правок делает `lib/domain/pricing/personal-price.ts`: цена 0 удаляет позицию, неизменная цена в план не попадает.
+
+Региональный прайс это лист с `is_base = false` и `is_personal = false`, его выбирают в `counterparties.region_price_list_id`. Регион только предзаполняет личный лист: при заведении контрагента и при смене региона у контрагента без своего листа сервис копирует позиции региона в новый лист с `is_personal = true`. Уже заведённые личные цены смена региона не трогает, их заменяет кнопка «Заполнить из прайса» (`PersonalListFiller.fill(..., overwrite = true)`). Цена строки берётся по цепочке: личный лист, действующий региональный, действующий базовый, `products.base_price_minor`. Пустое личное поле значит цену региона.
 
 ### 5.6 Заявка (ядро)
 
@@ -571,7 +574,7 @@ export const stockItems = sqliteTable('stock_items', {
   minThreshold: integer('min_threshold').notNull().default(0),
   costPriceMinor: money('cost_price_minor'),          // cost of one unit, owner and manager only; the margin reads it
   isActive: integer('is_active', { mode: 'boolean' }).notNull().default(true),
-  createdAt: createdAt(), updatedAt: updatedAt()
+  createdAt: createdAt(), updatedAt: updatedAt(), deletedAt: ts('deleted_at')
 }, (t) => ({ codeUq: uniqueIndex('stock_items_code_uq').on(t.code) }));
 
 // Balance is never stored. It is the sum of moves. Append-only table.
@@ -620,6 +623,9 @@ export const inventoryLines = sqliteTable('inventory_lines', {
 export const staff = sqliteTable('staff', {
   id: pk(),
   fullName: text('full_name').notNull(),
+  payRole: text('pay_role', { enum: STAFF_PAY_ROLES }).notNull().default('piecework'),
+  monthlySalaryMinor: integer('monthly_salary_minor').notNull().default(6000000),
+  systemKey: text('system_key').unique(),
   position: text('position'),
   userId: integer('user_id').references(() => users.id),    // optional system account
   hiredAt: ts('hired_at'), firedAt: ts('fired_at'),
@@ -1248,7 +1254,7 @@ export interface ListQuery<F = Record<string, unknown>> {
 export interface Page<T> { rows: T[]; total: number; page: number; perPage: number; }
 
 // catalog.ts — role projections of the catalog (P1). Price keys are optional and never selected for a price-blind role.
-export const OPTION_KINDS = ['color'] as const;
+export const OPTION_KINDS = ['color', 'gloss'] as const;
 export const CATALOG_SORTS = ['sortOrder','title','price'] as const;   // price: personal price; a price-blind role sorts by the agency price, models without one go last
 export interface CatalogFilters {                                        // one variant has to satisfy all filters at once (P3)
   categoryId?: number; materialIds?: number[]; colorOptionIds?: number[];
@@ -1282,7 +1288,7 @@ export interface ProductDto {
 
 // counterparty.ts — counterparty card and portal staff (P2). Money and the discount only for a role with prices.
 export const STAFF_STATUSES = ['active','invited','disabled'] as const;   // derived, never stored
-export interface ContactDto { fullName: string; phone: string | null; email: string; }
+export interface ContactDto { fullName: string; phone: string | null; email: string | null; }
 export interface CounterpartySummaryDto { name: string; manager: ContactDto | null; }
 // Requisites and the contract discount are not on the portal card: the CRM card (C3) keeps them.
 export interface CounterpartyCardDto {
@@ -1292,7 +1298,7 @@ export interface CounterpartyCardDto {
   debtMinor?: number; yearPurchasesMinor?: number; yearDeliveries?: number;
 }
 export interface StaffMemberDto {
-  id: number; fullName: string; email: string; phone: string | null; role: PortalRole;
+  id: number; fullName: string; email: string | null; phone: string | null; role: PortalRole;
   status: StaffStatus; lastLoginAt: string | null; isSelf: boolean;
 }
 export interface StaffPageDto extends Page<StaffMemberDto> { activeCount: number; staffLimit: number; }
@@ -1301,7 +1307,7 @@ export interface CreatedStaffDto { member: StaffMemberDto; temporaryPassword: st
 // crm.ts — workshop accounts, dictionaries, settings and the audit journal (C1). Owner only.
 export type CrmRole = (typeof CRM_ROLES)[number];
 export interface CrmUserDto {
-  id: number; fullName: string; email: string; phone: string | null;
+  id: number; fullName: string; email: string | null; phone: string | null;
   roles: CrmRole[]; status: StaffStatus; lastLoginAt: string | null; isSelf: boolean;
 }
 export interface CrmUserFilters { role?: CrmRole; status?: StaffStatus; }
@@ -1339,7 +1345,7 @@ export interface CrmVariantDto {
   options: { optionId: number; isDefault: boolean }[];
 }
 export interface CrmProductDto {
-  id: number; sku: string; title: string; categoryId: number | null; description: string | null;
+  id: number; sku: string; title: string; categoryId: number | null; description: string | null; basePriceMinor: number;
   isPublished: boolean; isDeleted: boolean; sortOrder: number;
   media: CrmMediaDto[]; variants: CrmVariantDto[];
 }
@@ -1349,13 +1355,14 @@ export interface CrmProductListItemDto {
 }
 export interface CrmPriceListDto {
   id: number; title: string; isBase: boolean; validFrom: string | null; validTo: string | null;
-  items: { variantId: number; priceMinor: number }[];
+  items: { productId: number; priceMinor: number }[];
 }
 export interface CrmDiscountRuleDto {
   id: number; counterpartyId: number | null; categoryId: number | null;
   percent: number; validFrom: string | null; validTo: string | null;
 }
 export interface CrmCatalogChoicesDto {
+  sizes: { code: string; title: string }[];
   materials: { id: number; title: string }[];
   stockProducts: { id: number; code: string; title: string }[];
   stockComponents: { id: number; code: string; title: string }[];
@@ -1399,7 +1406,7 @@ export interface CreatedCounterpartyDto { counterpartyId: number; access: Create
 // basePriceMinor is the chain without the personal list: region, base list, variant price.
 export interface CounterpartyPriceFilters { search?: string; categoryId?: number; }
 export interface CounterpartyPriceRowDto {
-  variantId: number; productTitle: string; categoryTitle: string; sku: string; sizeCode: string;
+  productId: number; productTitle: string; categoryTitle: string | null; sku: string;
   basePriceMinor: number; personalPriceMinor: number | null;
 }
 export interface CounterpartyPriceSaveResult { updated: number; cleared: number; }
@@ -1467,7 +1474,7 @@ export interface ShopPositionDto {                   // a stock position of a pr
   productTitle: string; sku: string; sizeCode: string; materialTitle: string; colorTitle: string | null;
 }
 export interface ShopJobDto extends ShopPositionDto {
-  id: number; itemId: number;
+  id: number; itemId: number; glossTitle: string | null;
   engraving: string | null; comment: string | null;
   qty: number; doneQty: number;
 }
@@ -1568,7 +1575,9 @@ export const PAYROLL_RATE_MAX_MINOR = 100_000_000;      // 1 000 000 roubles per
 export const PAYROLL_ADJUSTMENT_MAX_MINOR = 100_000_000;
 export const PAYROLL_SHARE_STEP_MINOR = 100;            // a worker's day pay is whole roubles, rounded down
 export const PAYROLL_REPORT_MAX_DAYS = 366;
-export interface StaffDto { id: number; fullName: string; position: string | null; isActive: boolean; hasAccount: boolean; }
+export const STAFF_PAY_ROLES = ['piecework', 'director', 'administrator', 'driver', 'laborer'] as const;
+export type StaffPayRole = (typeof STAFF_PAY_ROLES)[number];
+export interface StaffDto { id: number; fullName: string; position: string | null; isActive: boolean; hasAccount: boolean; payRole: StaffPayRole; monthlySalaryMinor: number; }
 export interface WorkTypeDto { id: number; title: string; rateMinor: number; roleCode: WorkRole | null; isActive: boolean; }   // listed in WORK_ROLES order, general works last
 export interface WorkEntryDto { workTypeId: number; title: string; qty: number; rateMinor: number; amountMinor: number; staffIds: number[]; }
 export interface WorkDayStaffDto { id: number; fullName: string; position: string | null; present: boolean; }
@@ -1790,7 +1799,7 @@ export interface DashboardDto {
 export type Minor = number & { readonly __brand: 'minor' };
 
 // dicts.ts
-export const DICT_CODES = ['material','finish','fabric','hardware','unit','refusal_reason','stock_move_reason','transport'] as const;
+export const DICT_CODES = ['material','coffin_size','finish','fabric','hardware','unit','refusal_reason','stock_move_reason','transport'] as const;
 export const STOCK_MOVE_TYPES = ['production','shipment','adjustment','inventory','reversal','purchase'] as const;
 export const JOB_TOPICS = ['notification.dispatch','notification.fanout','charity.recount','stock.threshold.check','session.cleanup'] as const;
 
@@ -1892,7 +1901,7 @@ export class RequestDtoMapper {
 | `DatePicker` / `DateRangePicker` | `bind:value: string`, ISO-строки, `placeholder` по умолчанию «Выберите дату» и «Выберите период» |
 | `FileUpload` | `accept`, `maxSizeMb`, `multiple`, `fields` (доп. поля формы, например владелец файла), `onUploaded(mediaId)` |
 | `FileInput` | `name`, `accept`, `label`, `hint`, `error`, `required`: файл уходит с формой action в `multipart/form-data`, без коллекции загрузок |
-| `DataTable` | `columns`, `rows`, `total`, `query: ListQuery`, `onQueryChange`, `exportUrl`, серверная пагинация; на ширине телефона строка рисуется карточкой: первая колонка заголовком, остальные парами «подпись: значение», пустые пары скрыты, DOM один |
+| `DataTable` | `rowHref?: (row: TRow) => ResolvedPathname` — настоящая ссылка на всю строку, с клавиатурным фокусом и открытием в новой вкладке; первая ячейка содержит название ссылки без вложенных ссылок, отдельные интерактивные элементы сохраняют свои действия; `footer?: Snippet<[DataTableColumn]>` — итоговая строка в `tfoot`, на телефоне с подписями колонок; `columns`, `rows`, `total`, `query: ListQuery`, `onQueryChange`, `exportUrl`, серверная пагинация; на ширине телефона строка рисуется карточкой: первая колонка заголовком, остальные парами «подпись: значение», пустые пары скрыты, DOM один |
 | `FilterBar` | `fields` (у каждого поля свой `placeholder`), `bind:filters`, сохранение в URL, `pageKey?` (ключ страницы, который сбрасывает смена фильтра, по умолчанию `page`); на телефоне поля открывает кнопка «Фильтры: N» |
 | `Modal` / `Drawer` / `ConfirmDialog` | `open`, `title`, `onClose`, `{#snippet body()}` |
 | `Toast` (`toast.success/error/info/warning`) | глобальный стор на рунах; `(title, { description?, durationMs?, action?: { label, href } })`, `durationMs: 0` держит тост до закрытия, наведение и фокус ставят таймер на паузу, повтор того же текста перезапускает тост вместо копии, в стопке не больше четырёх. Исход form action показывает `withToast({ success?, reset?, pending?, onSuccess? })` из `lib/ui/form-toast.ts`: успех своим текстом, `formError` сервера текстом ошибки, ошибки полей фразой «Проверьте поля формы», обрыв связи отдельной фразой |
@@ -1993,6 +2002,7 @@ CD нет. Мёрдж в `main` ничего не разворачивает, с
 
 Требования обязательны к каждому изменению, не выносятся в отдельную задачу «сделать безопасность в конце».
 
+- **Логин и контакты учётной записи.** `LoginInput = { identifier: string; password: string; redirectTo?: string }`: телефон или прежний email. Номер хранится в каноническом международном формате, ввод с пробелами/скобками/дефисами допускается; 8 в начале российского номера заменяется на +7, десятизначный номер получает +7. Телефон обязателен при создании и редактировании; почта необязательна и хранится `null` при пустом поле. Неудалённые записи имеют уникальные нормализованные номера и непустые email. Старые записи без телефона сохраняются, входят по email до заполнения номера. Почтовое восстановление доступно только при заданной почте; без неё доступ перевыдаёт администратор, временный пароль показывается в форме. Пустая почта не вызывает отправку письма. Один общий формат логина используется для лимита попыток и поиска; существующие парольные и сессионные ограничения сохраняются.
 - **Аутентификация.** Пароли argon2id (`memoryCost >= 19456`, `timeCost >= 2`). Сессия на сервере, в куку кладём случайный идентификатор, в БД его хеш. Кука `httpOnly`, `secure`, `sameSite=lax`, срок 30 дней с продлением. Смена пароля и блокировка убивают все сессии пользователя. Пока учётная запись должна сменить временный пароль, чтение уходит на `/password/change`, а запись получает 403. Адрес возврата после входа (`redirectTo`) принимается только как путь этого хоста, `//host` и `/\host` отбрасываются (`lib/utils/local-path.ts`).
 - **Права.** Проверка на сервере на каждое действие и каждый переход статуса, а не только на отрисовку экрана. Роут проверяет право до разбора формы. Единая точка: `PolicyService.can(actor, action, subject)`, матрица и экраны в §19. Скрытие кнопки в UI защитой не считается.
 - **Row-level.** Каждый репозиторий портального домена принимает `counterpartyId` из `ActorContext` и подмешивает его в `where`. Метод без этого фильтра не проходит ревью. Работник мастерской без `request.read.any` видит заявки только в статусах, из которых его роль делает переход. Экран доставки по праву `delivery.work` показывает заявки контрагентов в `ready` и, только на чтение, в `in_work`.
@@ -2497,7 +2507,7 @@ Payload push-уведомления не содержит цен, персона
 | Главная портала | `/portal` | `cp_admin`, `cp_employee` | P6, блоки дополняют P2, P4, P8 | Заголовок с именем контрагента и договором (P2). Три показателя: заявки в работе с суммой для `cp_admin`, ближайшая готовность по `readyAt`, скидка `discountPercent` (P2). Панели «Собрать заявку» и «Повторить заявку» (P4). Таблица активных заявок `new…awaiting_payment` и закрытых за три месяца (P6). Баннер пожертвований в макете отсутствует, P8 ставит его под показателями |
 | Каталог | `/portal/catalog` | обе | P3, P7 | Группы верхнего уровня `categories` с подкатегориями, число артикулов, «от N ₽» по закупочной цене для `cp_admin` и по цене агентства для `cp_employee` (P7), кнопка «Скачать прайс-лист XLSX» только для `cp_admin` |
 | Листинг товаров | `/portal/catalog/[categoryId]` | обе | P3, P7 | Фильтры: материал (`dict_items` `material`), цвет (`options` `color`), длина (`lengthMm`). Сортировка, число на странице, выбранные фильтры чипами, сетка карточек с артикулом, названием и ценой. Наличие не показывается. Из P7: карточка показывает цену агентства, у `cp_admin` под ней закупочная серым, сотрудник сортирует по цене агентства |
-| Карточка товара | `/portal/catalog/product/[productId]` | обе | P3 просмотр, P4 добавление, P7 цена | Галерея `media`, характеристики из полей варианта и справочника материалов, описание, выбор размера (`sizeCode` варианта) и цвета из `options` по матрице `product_options`, других опций нет, цена за штуку, количество, «Добавить в заявку» (P4), похожие позиции той же категории. Из P7: цена агентства на модель, у `cp_admin` рядом закупочная серым |
+| Карточка товара | `/portal/catalog/product/[productId]` | обе | P3 просмотр, P4 добавление, P7 цена | Галерея `media`, характеристики из полей варианта и справочника материалов, описание, выбор размера (`sizeCode` варианта), цвета по матрице `product_options` и блеска из общего списка, цена за штуку, количество, «Добавить в заявку» (P4), похожие позиции той же категории. Из P7: цена агентства на модель, у `cp_admin` рядом закупочная серым |
 | Корзина | `/portal/cart` | обе | P4, P7 | Черновик заявки: строки с вариантом и опциями, цена и сумма строки для `cp_admin`, количество, удаление, очистка. Отгрузка (P11): адрес из `delivery_addresses`, дата и время доставки, ФИО умершего, все четыре поля обязательны; самовывоза нет. Комментарий необязателен. Поле «Ваш номер заявки» не рисуется. Итог: позиции, изделия, сумма, скидка по договору, к оплате (только `cp_admin`). Из P7: в строке цена агентства за штуку, суммы строки и итога в ценах агентства не считаются. «Оформить заявку» выполняет `draft -> new` |
 | Мои заявки | `/portal/requests` | обе | P6 | Раскладка профиля с боковым меню, строки-карточки: номер, дата, статус, первая позиция, число позиций и изделий, сумма для `cp_admin`, автор (`createdById`) для администратора. Чипы статусов с числами, поиск по номеру, сортировка. Фильтр периода из DoD P6 добавляется, в макете его нет. «Новая заявка» ведёт в каталог |
 | Заявка (детальная) | `/portal/requests/[id]` | обе | P6, P7, P8 | Показатели: позиции, сумма (`cp_admin`), статус. Состав заявки `DataTable`, комментарий, параметры отгрузки (адрес, срок, ФИО умершего, P11) и скидка, «Повторить заявку» (P4), «Отменить заявку» для `new -> cancelled` (P5), карточка менеджера. Из DoD P6 добавляются `Stepper` истории статусов, переписка с менеджером (`comments` без `isInternal`, только на чтение; рядом обращения по заявке и кнопка «Написать по заявке») и вложения, из P7 цена агентства в строке состава, из P8 строка «в фонд с этой заявки» |
@@ -2581,7 +2591,7 @@ Payload push-уведомления не содержит цен, персона
 | `shop.work` | `owner`, `manager`, роли цеха | экран цеха и визиты: роль цеха только своей станции, `owner` и `manager` всех |
 | `delivery.work` | `owner`, `manager`, `driver` | экран доставки, погрузка, «Доставлено» |
 | `payroll.read`, `payroll.manage` | `owner`, `manager` | выплаты |
-| `payroll.self.read` | все роли CRM | только собственная зарплата `/crm/salary` |
+| `payroll.self.read` | все роли CRM | собственные расчёты; пользовательский экран убран |
 | `reports.read` | `owner` | отчёты |
 | `charity.manage` | `owner` | перечисления в фонд |
 | `settings.manage` | `owner` | настройки, пользователи, справочники, уведомления, документ фонда |
@@ -2613,7 +2623,7 @@ Payload push-уведомления не содержит цен, персона
 | `/crm/support`, `/[id]` | `owner`, `manager` | | обращения §20.13 |
 | `/crm/stock`, `/[id]`, `/inventories`, `/inventories/[id]`, выгрузки | `owner`, `manager`, роли цеха | `owner`, `manager` | склад §20.9 |
 | `/crm/payroll`, `/day/[date]`, `/staff`, `/works`, `/reports`, `/sheet.xlsx` | `owner`, `manager` | | выплаты §20.10 |
-| `/crm/salary` | все роли CRM | | личная зарплата §20.17 |
+| `/crm/salary` | все роли CRM | | переход на `/crm` для старых ссылок |
 | `/crm/reports` и вкладки `sales`, `counterparties`, `stock`, `funnel`, `lost`, `charity`, у каждой `export.xlsx` | `owner` | | отчёты §20.11 |
 | `/crm/finance`, `/export.xlsx` | `owner` | | финансы §20.12 |
 | `/crm/catalog`, `/[id]`, `/categories`, `/options`, `/crm/prices`, `/[id]` | `owner`, `manager` | | каталог и прайсы §20.8 |
@@ -2631,15 +2641,15 @@ Payload push-уведомления не содержит цен, персона
 
 ### 20.1 Портал
 
-**Каталог.** Черновые и удалённые позиции видит только `catalog.manage`, скрытая модель или вариант отвечает порталу 404 вместе с фото. Категории образуют дерево по `parent_id`, раздел включает подкатегории. Фильтры листинга: материал, цвет, длина; все условия проверяются одним вариантом модели. Обложка модели это первое фото по `(sort_order, id)`. Опция изделия одна, цвет (`OPTION_KINDS = ['color']`), цвет цену не меняет. Наличие на складе витрина не показывает, параметр адреса `inStock` игнорируется. Сортировка по цене идёт по минимальной персональной цене модели; у роли без цен она игнорируется, чтобы порядок не выдавал цены, а у `cp_employee` идёт по цене агентства, модель без неё в конце. Прайс-лист XLSX `/portal/catalog/price-list.xlsx` отдаётся синхронно и только роли с ценами, цена пишется целым числом с форматом `#,##0`.
+**Каталог.** Черновые и удалённые позиции видит только `catalog.manage`, скрытая модель или вариант отвечает порталу 404 вместе с фото. Категории образуют дерево по `parent_id`, раздел включает подкатегории. Фильтры листинга: материал, цвет, длина; все условия проверяются одним вариантом модели. Обложка модели это первое фото по `(sort_order, id)`. Цвет выбирают из матрицы варианта, блеск из общего списка «Матовый», «Глянцевый». Блеск можно оставить неуказанным. Обе опции передаются в строку заявки и не меняют цену. Фильтр цвета принимает только действующие цвета. Наличие на складе витрина не показывает, параметр адреса `inStock` игнорируется. Сортировка по цене идёт по минимальной персональной цене модели; у роли без цен она игнорируется, чтобы порядок не выдавал цены, а у `cp_employee` идёт по цене агентства, модель без неё в конце. Прайс-лист XLSX `/portal/catalog/price-list.xlsx` содержит одну строку на модель с артикулом модели и отдаётся синхронно и только роли с ценами, цена пишется целым числом с форматом `#,##0`.
 
 **Поиск в шапке.** Поле «Поиск» (на телефоне лупа) и Ctrl/Cmd+K открывают палитру с тремя группами: разделы меню роли, группы каталога и до шести моделей. Разделы подбираются в браузере по началу слова и синонимам, группы и модели отдаёт `GET /portal/search?q=` (`SiteSearchService`, право `catalog.read`, `q` от 2 до 64 символов). Ответ `SiteSearchDto` ценовых ключей не несёт.
 
 **Текстовый поиск.** Весь поиск приложения идёт через `containsText` из `lib/server/core/search.ts`: регистр не важен и для кириллицы (SQLite-функция `unicode_lower`), `%` и `_` во вводе ищутся как обычные символы. `like` напрямую в репозиториях не пишется.
 
-**Черновик и отправка.** Черновик один на пользователя в своём контрагенте и получает номер из `numbering_sequences` при создании: формат `{prefix}{period}-{00001}`, период считается в `org.timezone`, новый период начинает счёт с единицы. Опции позиции только из матрицы варианта, без повторов и не больше одной каждого вида. Одинаковые позиции складываются, в строке не больше 999 штук. Суммы черновика считаются и хранятся для любой роли, DTO отдаёт их только роли с ценами. Отправка `draft -> new` проходит машину состояний, пересчитывает цены на момент отправки и в одной транзакции пишет историю, событие `request.submitted` и аудит; частоту держит `request.submit`. Повтор заявки копирует позиции в черновик и пропускает недоступные. Страница товара показывает счётчик вместо «Добавить в заявку», если в черновике уже есть строка того же варианта с теми же опциями; «−» на одной штуке удаляет строку.
+**Черновик и отправка.** Черновик один на пользователя в своём контрагенте и получает номер из `numbering_sequences` при создании: формат `{prefix}{period}-{00001}`, период считается в `org.timezone`, новый период начинает счёт с единицы. Цвет позиции из матрицы варианта, блеск из общего списка. В строке не больше одной опции каждого вида. Одинаковые позиции складываются, в строке не больше 999 штук. Суммы черновика считаются и хранятся для любой роли, DTO отдаёт их только роли с ценами. Отправка `draft -> new` проходит машину состояний, пересчитывает цены на момент отправки и в одной транзакции пишет историю, событие `request.submitted` и аудит; частоту держит `request.submit`. Повтор заявки копирует позиции в черновик и пропускает недоступные. Страница товара показывает счётчик вместо «Добавить в заявку», если в черновике уже есть строка того же варианта с теми же опциями; «−» на одной штуке удаляет строку.
 
-**Цена строки.** Персональная цена варианта (§5.5) плюс надбавки опций, умноженные на количество. Скидка строки равна большему из договорной `counterparties.discount_percent` и подходящих действующих `discount_rules`. Правила с `counterparty_id = null` общие, с `category_id = null` охватывают все категории, правило категории действует на её потомков. Суммы строк с одинаковым процентом складываются до округления скидки. `DraftDto.discountPercent` показывает округлённый эффективный процент, `discountMinor` остаётся точным.
+**Цена строки.** Персональная цена модели (§5.5) умноженная на количество; опции цены не меняют. Скидка строки равна большему из договорной `counterparties.discount_percent` и подходящих действующих `discount_rules`. Правила с `counterparty_id = null` общие, с `category_id = null` охватывают все категории, правило категории действует на её потомков. Суммы строк с одинаковым процентом складываются до округления скидки. `DraftDto.discountPercent` показывает округлённый эффективный процент, `discountMinor` остаётся точным.
 
 **Цена агентства.** Одна цена контрагента на модель (`counterparty_product_prices`), размер и опции её не меняют. Она только для показа клиенту: в `total_minor`, скидку, отчисление в фонд и прайс-лист XLSX не входит. `cp_admin` задаёт её на экране «Мои цены» и видит рядом закупочную серым, `cp_employee` видит только её. Пустое поле значит «цена не задана», сотрудник видит прочерк. Аудит `agency_price.set`.
 
@@ -2689,7 +2699,7 @@ Payload push-уведомления не содержит цен, персона
 - **Визит.** Штуки, пришедшие на станцию, ложатся в открытый визит заявки на этой станции; если его нет, визит создаётся и публикует `shop.task_arrived`. «Взять в работу» ставит `taken_at` и `taken_by_id` один раз, повтор ничего не пишет. Счётчик задания принимает новое значение `done_qty` от 0 до `qty`, а не прибавку; это административная ручная отметка без автоматической зарплаты. «Передать дальше» открыто, когда у визита есть задания и каждое сделано целиком; оно закрывает визит, и каждое задание переходит в визит следующей станции с `done_qty = 0`. На обивщике задание завершается: пишется движение `production` на `+qty` по позиции строки, `finished_at` и `production_move_id`. Повторная передача закрытого визита отвечает 409 и ничего не пишет.
 - **Порядок визитов** на станции: срочные, ближний `deliveryAt`, без срока, затем `accepted_at` заявки, затем id визита. Списки «Новые» (визит не взят) и «В работе» (взят), поиск по номеру заявки, не больше `SHOP_TASK_LIMIT` визитов в списке.
 - **Готовность** ставит система (§6.2, инвариант 5). Открытые задания заявки, ставшей `ready`, остаются: досылка снимает несделанное у столяра, остальное доделывается и ложится на полку.
-- **Что видит исполнитель:** номер заявки, «Срочно», срок доставки, комментарий заявки, по заданию модель, артикул, размер, материал, цвет, гравировку, комментарий строки, «Нужно N шт» и счётчик «Сделано N из M», отдельные ящики с номерами и закреплёнными исполнителями. Цен, контрагента, адреса и ФИО умершего нет.
+- **Что видит исполнитель:** номер заявки, «Срочно», срок доставки, комментарий заявки, по заданию модель, артикул, размер, материал, цвет, блеск, гравировку, комментарий строки, «Нужно N шт» и счётчик «Сделано N из M», отдельные ящики с номерами и закреплёнными исполнителями. Цен, контрагента, адреса и ФИО умершего нет.
 - **Экран** `/crm/shop` по праву `shop.work`: станции актора, у `owner` и `manager` все четыре с переключением. Визит `/crm/shop/[id]` с кнопками «Взять в работу» и «Выполнено» у каждого ящика, общей кнопкой «Передать дальше» и счётчиками заданий. Экран рассчитан на телефон, тач-цели не меньше 44 px. Роли цеха получают «Цех» первым пунктом меню.
 - **Карточка заявки CRM** показывает по строке `CrmLineShopDto`: «Со склада N», станции с «Сделано N из M», сделанное и номера заявок, которые держат позицию выше по очереди.
 - Удалённая правкой строка теряет задания вместе с собой. Приход изделия помимо станций пишут приходом или корректировкой склада.
@@ -2726,25 +2736,32 @@ Payload push-уведомления не содержит цен, персона
 - **Условия**: ответственный менеджер из активных учётных записей CRM с ролью `manager` или `owner`, региональный прайс только из листов с `is_base = false` и `is_personal = false`, схема расчётов, скидка, лимит.
 - **Договоры** добавляются, правятся и удаляются, `valid_until` не раньше `signed_at`; портал показывает последний по `signed_at`. Скан договора не загружается.
 - **Адреса** удаляются мягко, потому что на них ссылаются заявки. Адрес по умолчанию один, выбор нового снимает флаг с прежнего. Архивации контрагента нет, `is_active` не меняется.
-- **Карточка** отдаёт историю заявок без черновиков и реестр отметок оплаты новыми сверху.
-- **Вкладка «Цены»** по `counterparty.manage` и только роли с ценами: администратор вводит цену каждого варианта по правилам §5.5, повторная отправка того же ничего не пишет. Колонка «Базовая» показывает цепочку цены без личного листа. «Заполнить из прайса» с подтверждением заменяет личные цены ценами региона (form action `refill`).
+- **Карточка** отдаёт историю заявок без черновиков и реестр отметок оплаты новыми сверху. Вкладка «Карточка» группирует контакты и реквизиты с редактированием в модальном окне; заметки сохраняются отдельно. Блок «Условия» в карточке не показывается, ранее сохранённые менеджер, схема расчётов, скидка и лимит сотрудников сохраняются.
+- **Привязка прайса** находится во вкладке «Цены». Form action `priceList` принимает только `regionPriceListId: number | null`, сервис `CrmCounterpartyService.assignPriceList(id, regionPriceListId)` требует `counterparty.manage` и видимость цен. Допустим только региональный лист (`is_base = false`, `is_personal = false`), `null` снимает привязку. Сохранение обновляет только привязку в транзакции и пишет `counterparty.terms_update` с прежним и новым `regionPriceListId`; остальные условия не пересылаются и не меняются. При смене на непустой регион копирование сохраняет прежнее правило: заполнить личный прайс, только если его ещё нет; замена существующих личных цен требует отдельного `refill` с подтверждением.
+- **Вкладка «Цены»** по `counterparty.manage` и только роли с ценами: одна строка модели, администратор вводит её цену по правилам §5.5, повторная отправка того же ничего не пишет. Колонка «Базовая» показывает цепочку цены без личного листа. «Заполнить из прайса» с подтверждением заменяет личные цены ценами региона (form action `refill`).
 
 Аудит: `counterparty.create`, `counterparty.update`, `counterparty.terms_update`, `counterparty.notes_update`, `counterparty.contract_create`, `counterparty.contract_update`, `counterparty.contract_delete`, `counterparty.address_create`, `counterparty.address_update`, `counterparty.address_delete`, `counterparty.address_default`, `counterparty.admin_issue`, `counterparty.admin_promote`, `counterparty.access_resend`, `counterparty.prices_update` (старый и новый `priceListId`), `counterparty.prices_refill`. Контакты людей и пароли в журнал не пишутся.
 
 ### 20.8 Каталог и прайсы
 
+- **Размеры гробов.** `dict_items.dict = 'coffin_size'`, код хранится в `product_variants.size_code`. В CRM новый размер выбирают только из действующих записей. При редактировании можно оставить прежнее значение, включая произвольный размер из старой карточки. Миграция добавляет коды 50, 80, 100, 120, 140 с пометкой «маленький» и коды 160–220 с шагом 10. Импорт прайса сохраняет размеры источника.
+- **Цвета.** Белый, Евро, Красное дерево, Орех. Миграция сохраняет id записей и матрицу совместимости. Венге и Чёрный выключаются для нового выбора, ссылки на них в старых заявках и остатках сохраняются.
+- **Блеск.** `options.kind = 'gloss'` с нулевой надбавкой, без складской позиции. Обе опции доступны любому заказываемому варианту. Матрица CRM по-прежнему редактирует цвета. Строка заявки принимает до одной опции каждого вида. В CRM поля `optionId` и `glossOptionId` передаются отдельно; отсутствующий блеск допустим для старых форм. Цех читает `ShopJobDto.glossTitle: string | null` из опций исходной строки. Склад, распределение и погрузка используют вариант и цвет.
+
 - **Каталог** ведут `owner` и `manager` по `catalog.manage`: категории, модели, варианты, цвета, матрица совместимости, фото с обложкой и порядком. Модели и варианты удаляются мягко, цвета выключаются, категория с потомками или моделями не удаляется. Скрытие модели или варианта сразу закрывает их и фото модели для портала. Формы создания открываются в `Modal` по кнопке.
 - **Складская позиция** варианта выбирается из существующих `stock_items.kind = 'product'`. Себестоимость варианта читается из его позиции (§20.9), вариант без позиции стоит 0. Видят её роли с `canSeeCost`, для прочих колонка не выбирается.
-- **Позиции прайса** `/crm/prices/[id]` показываются таблицей: изделие, артикул, цена и действия. Кнопка «+ Добавить» справа в заголовке таблицы открывает модальную форму с вариантами, которых ещё нет в листе. Действия строки — иконки редактирования и удаления с подсказками и доступными названиями; удаление требует подтверждения.
+- **Позиции прайса** `/crm/prices/[id]` показываются таблицей: модель, артикул модели, цена и действия. Размеры, материал/тип и цвет строк не добавляют. Кнопка «+ Добавить» справа в заголовке таблицы открывает модальную форму с моделями, которых ещё нет в листе. Действия строки — иконки редактирования и удаления с подсказками и доступными названиями; удаление требует подтверждения.
 - **Прайс-листы** действуют в полуоткрытом окне `[valid_from, valid_to)`, базовых листов в один момент действует не больше одного. Правила скидок описаны в §20.1.
-- **Региональный прайс** загружается на странице листа `/crm/prices/[id]` файлом XLSX (form action `import`, `catalog.manage`, лимит `file.upload`): первая строка «Артикул» и «Цена» (или `sku` и `price`), не больше 2 МБ и 5000 строк, сигнатура ZIP проверяется `matchesSignature`, каждая строка проходит Zod, повтор или неизвестный артикул отклоняют весь файл. Файл заменяет все позиции листа одной транзакцией и в хранилище не попадает. Чтение листа общее с CLI `price:import` (`lib/server/crm-pricing/price-sheet.ts`).
+- **Региональный прайс** загружается на странице листа `/crm/prices/[id]` файлом XLSX (form action `import`, `catalog.manage`, лимит `file.upload`): первая строка «Артикул» и «Цена» (или `sku` и `price`), не больше 2 МБ и 5000 строк, сигнатура ZIP проверяется `matchesSignature`, каждая строка проходит Zod, повтор или неизвестный артикул модели, пустая или некорректная цена отклоняют весь файл. Файл заменяет все позиции листа одной транзакцией и в хранилище не попадает. Чтение листа общее с CLI `price:import` (`lib/server/crm-pricing/price-sheet.ts`).
 
 Аудит: `catalog.category.*`, `catalog.product.*`, `catalog.variant.*`, `catalog.option.*`, `catalog.compatibility.update`, `catalog.media.add`, `catalog.media.order`, `catalog.media.remove`, `price_list.create`, `price_list.update`, `price_list.delete`, `price_list.item.upsert`, `price_list.item.delete`, `price_list.import`, `discount_rule.create`, `discount_rule.update`, `discount_rule.delete`.
 
+- **Excel.** Прайс выгружается через `/crm/prices/[id]/export.xlsx`, личные действующие цены контрагента через `/crm/counterparties/[id]/prices.xlsx`; обе выгрузки только для владельца/менеджера с правами соответствующего раздела и ценами. Столбцы: «Артикул», «Модель», «Цена», одна строка на модель; лимит 5000 моделей, превышение отклоняет выгрузку без частичного файла; файл можно загрузить обратно. Числовое значение цены в редактируемом XLSX сохраняет копейки без округления; отображение по-прежнему в целых рублях. В карточке контрагента `priceImport` (`counterparty.manage`, только роли с ценами) принимает тот же XLSX и атомарно заменяет личные цены только этого контрагента, при необходимости создавая собственный лист. Общий региональный прайс не меняется. Экспорт личного прайса содержит эффективные цены с учётом цепочки подстановки, без скидки по договору. Парсинг и лимиты общие с региональным импортом.
+
 ### 20.9 Склад
 
-- **Позиция.** Изделие хранится парой «вариант, цвет»: остаток равен сумме движений по `(stock_item_id, option_id)`, складскую позицию изделию даёт `product_variants.stock_item_id`. Реестр `/crm/stock` показывает остаток позиции суммой по всем цветам, карточка `/crm/stock/[id]` раскладывает его по цветам и журналу движений. Свёртку делает `lib/domain/stock/balance.ts`.
-- **Учётную позицию** создают и правят в реестре: код, название, вид, единица, порог, активность, себестоимость. Вид после создания не меняется, позиция не удаляется.
+- **Позиция.** Изделие хранится парой «вариант, цвет»: остаток равен сумме движений по `(stock_item_id, option_id)`, складскую позицию изделию даёт `product_variants.stock_item_id`. Реестр `/crm/stock` группирует позиции изделий по модели до фильтрации и пагинации; размер, материал и цвет раскрываются внутри строки вместе с действиями над реальными позициями. Комплектующие и позиции без модели идут отдельно. Итоговый остаток равен сумме позиций, предупреждения о минусе и пороге сохраняются для любого участника. `StockRegistryRowDto` расширяет `StockRowDto` полями `modelId: number | null`, `members: StockRegistryMemberDto[]`, необязательным `costRange` только для роли с себестоимостью. `StockRegistryMemberDto` содержит `StockRowDto`, `variantLabels: string[]` и `positions: StockPositionDto[]`; диапазон себестоимости `readonly [number, number]` появляется только при разных ценах участников. `StockCardDto.isDeleted: boolean` закрывает формы архивной карточки. Реестр показывает суммарный остаток по всем цветам, карточка `/crm/stock/[id]` раскладывает его по цветам и журналу движений. Свёртку делает `lib/domain/stock/balance.ts`.
+- **Учётную позицию** создают и правят из реестра и карточки: код, название, вид, единица, порог, активность, себестоимость. Вид после создания не меняется. Удаление ставит `deleted_at`, выключает позицию и исключает её из текущего реестра и новых операций; карточка и журнал доступны для истории без записи. Сервер запрещает удаление при ненулевом остатке любого цвета, действующей связи с каталогом, незавершённой заявке или черновике инвентаризации. Аудит `stock.item.delete`.
 - **Себестоимость** одной единицы (`stock_items.cost_price_minor`) вводят руками полем «Себестоимость, ₽» в целых рублях от 0 до `STOCK_COST_MAX_MINOR`; пустое поле оставляет прежнее значение. Видят и пишут её только роли с `canSeeCost`, запись от прочих получает 403. Её читают каталог, отчёт маржи и форма позиции.
 - **Ручное движение.** `purchase` (приход) только с плюсом, причина необязательна. `adjustment` (корректировка) со знаком и с обязательной причиной из `stock_move_reason`. Ноль отклоняется, у изделия цвет обязан входить в матрицу варианта, у комплектующего цвета нет, `occurred_at` ставит сервер, в одном движении не больше `STOCK_MOVE_MAX` единиц.
 - **Сторно** (§6.3) есть только у `purchase` и `adjustment`, один раз на движение, сторно само не сторнируется. Выпуск исправляет корректировка, погрузку снимает экран доставки, инвентаризацию исправляет новая инвентаризация.
@@ -2756,6 +2773,18 @@ Payload push-уведомления не содержит цен, персона
 
 ### 20.10 Выплаты
 
+#### Начисления вне станций (решение владельца 12.11.2026)
+
+- Роль оплаты сотрудника отделена от роли доступа: `StaffPayRole = 'piecework' | 'director' | 'administrator' | 'driver' | 'laborer'`. Разнорабочий не получает учётную запись. `staff.pay_role` по умолчанию `piecework`, `monthly_salary_minor` по умолчанию 6 000 000, `system_key` nullable unique для идемпотентного добавления штатных получателей.
+- Мигратор добавляет отсутствующих «Руководитель Олег», «Руководитель Виталий», «Администратор» без логинов; повторный запуск не меняет их настройки и не создаёт дублей. Водитель выбирается из активных учётных записей с ролью driver и связывается с сотрудником выплат.
+- После выпуска партии с последней станции каждому активному руководителю начисляется 35 000 копеек за штуку, администратору 30 000. Основание — завершённый shop job, включая ручное завершение администратором. Старые выпуски не пересчитываются.
+- Подтверждение доставки требует `driverUserId`; сам водитель подставляется по умолчанию. Сервер проверяет активность и роль выбранного пользователя. Любой путь перехода в delivered требует водителя. Выбор водителя доступен и в разделе доставки, и при подтверждении в карточке заявки, включая заявки на склад. Начисление выбранному сотруднику — 20 000 копеек за штуку заявки. Выбор и начисление сохраняются атомарно с переходом.
+- `payroll_accruals`: id, staff_id FK staff, source ('production' | 'delivery'), source_id integer, work_date timestamp, qty integer, rate_minor integer. Unique(source, source_id, staff_id). Цена и получатель замораживаются; повтор не начисляет снова. Закрытая неделя блокирует запись.
+- Оклад разнорабочего целиком начисляется 27-го числа по таймзоне организации и входит в соответствующую недельную ведомость, без отметки присутствия и без пропорции дням. До 27-го начисления нет. Создание и изменение параметров сохраняет `staff_salary_terms`: id, staff_id FK staff, effective_on text YYYY-MM-DD, amount_minor integer (0 при выключении или смене роли), unique(staff_id, effective_on). Первое условие при создании сотрудника действует с сегодняшнего дня; изменения существующего сотрудника действуют со следующего дня. Для 27-го выбирается последнее условие с effective_on <= дата расчёта; история не пересчитывается. Изменение условий, влияющее на начисление в закрытой неделе (включая досрочно закрытые будущие недели), отклоняется до её переоткрытия. Чтение не изменяет БД.
+- Начисления входят в ведомость, закрытие, XLSX, отчёт и личный итог сотрудника. Закрытие с ненулевым начислением допускается без ручных дней. Нельзя закрыть неделю раньше предстоящего в ней начисления оклада 27-го числа.
+- `StaffDto` дополнен payRole и monthlySalaryMinor; формы create/update принимают те же поля. Изменения и условия оклада входят в существующий аудит staff.*. Управление доступно по payroll.manage.
+- Таблица расценок: компактные ячейки, редактирование по кнопке суммы, переключение активности внутри формы редактирования. В одном блоке вкладки «Расценки позиций» и «Дополнительные работы». Пагинация позиций 7/20/50, по умолчанию 7, поиск сбрасывает страницу. Единые ставки руководителей, администратора и водителя показаны отдельно от расценок станций и не дублируются в каждой позиции.
+
 Столярная оплата бригадная; автоматические работы других станций принадлежат исполнителю (§20.17). Раздел читают по `payroll.read`, меняют по `payroll.manage`. Чистая логика в `lib/domain/payroll/calc.ts`.
 
 - **Справочники.** Сотрудники (`staff`) и виды работ с ценой за единицу и ролью цеха из `WORK_ROLES` (`null` это общая работа). Список работ и выбор работы в дне идут в порядке цеха, общие в конце, в дне работа подписана «Роль: название».
@@ -2763,9 +2792,9 @@ Payload push-уведомления не содержит цен, персона
 - **Доля работника за день** равна `floor(Σ amount_minor / число исполнителей)` по записям, где он исполнитель, с округлением до рубля вниз один раз от суммы дня; остаток остаётся у мастерской. Пришёл, но ни в одной работе не участвовал: 0 ₽, день в счётчик дней идёт. Доли считаются на лету.
 - **Форма дня** шлёт строки `entry.<n>.work`, `entry.<n>.qty`, `entry.<n>.staff.<id>`: строку без количества сервер пропускает, строку без исполнителей или с исполнителем вне состава отклоняет. Будущую дату отметить нельзя. День без людей и без работ не хранится. «Скопировать прошлый день» переносит в пустой день состав последнего отмеченного дня, работы не переносит.
 - **Неделя.** `payroll.week_closing_day` это ISO-день недели закрытия; период длится 7 дней и начинается в этот день в `org.timezone`. Строку `payroll_periods` создаёт первое завершение работы, запись дня или корректировки. Свод открытой недели считается на лету: дни, начислено (сумма долей), корректировка, к выплате `accrued + adjustment`. Корректировка со знаком и с обязательным комментарием, выплата в минус не уходит.
-- **Закрытие** `open -> calculated` замораживает `payroll_lines` в своей транзакции и публикует `payroll.week_closed`; неделя без дней и корректировок не закрывается. В `calculated` и `paid` дни, работы и корректировки не меняются (`ConflictError`). Переоткрытие требует комментарий; период с отметкой выплаты не переоткрывается, сначала отметку снимают. Повторное закрытие той же недели второй раз не уведомляет.
+- **Закрытие** `open -> calculated` замораживает `payroll_lines` в своей транзакции и публикует `payroll.week_closed`; неделя без дней, начислений и корректировок не закрывается. В `calculated` и `paid` дни, работы и корректировки не меняются (`ConflictError`). Переоткрытие требует комментарий; период с отметкой выплаты не переоткрывается, сначала отметку снимают. Повторное закрытие той же недели второй раз не уведомляет.
 - **Выплата** отмечается по строке с суммой больше нуля в `calculated`. Когда отмечены все такие строки, период становится `paid`, снятие отметки возвращает `calculated`.
-- **Выгрузки и отчёт.** Ведомость недели в XLSX синхронно. Отчёт за произвольные даты: по сотрудникам (дни, начислено) и по видам работ (количество, сумма), корректировки в него не входят.
+- **Выгрузки и отчёт.** Внизу недельной таблицы строка «Итого» суммирует дни, начисления, корректировки и к выплате за выбранную неделю; в отчёте за даты итоги дней/начислений и количества/суммы работ. Ведомость недели в XLSX синхронно. Отчёт за произвольные даты: по сотрудникам (дни, начислено) и по видам работ (количество, сумма), корректировки в него не входят.
 
 Аудит: `staff.create`, `staff.update`, `staff.enable`, `staff.disable`, `work_type.create`, `work_type.update` (роль до и после), `work_type.enable`, `work_type.disable`, `payroll.day.save`, `payroll.adjust`, `payroll.close`, `payroll.reopen`, `payroll.pay`, `payroll.unpay`.
 
@@ -2815,7 +2844,7 @@ Payload push-уведомления не содержит цен, персона
 
 Всё под `/crm/settings` открывает только `owner`: настройки по `settings.manage`, журнал по `audit.read`.
 
-- **Пользователи мастерской.** При создании письмо с временным паролем уходит через `MailDriver` напрямую и расходует `staff.create`. Руководитель не может отключить себя, сбросить себе пароль и снять с себя `owner`, поэтому в мастерской всегда остаётся активный руководитель. При добавлении роли выбираются в выпадающем списке с чекбоксами; выбранные роли видны в закрытом поле. Сброс генерирует временный пароль в админке без письма и показывает его один раз вместе с текущим логином; `mailSent = false`. Все прежние сессии отзываются. Аудит `crm_user.create`, `crm_user.roles_change`, `crm_user.enable`, `crm_user.disable`, `crm_user.password_reset`.
+- **Пользователи мастерской.** При создании письмо с временным паролем уходит через `MailDriver` напрямую и расходует `staff.create`. Руководитель не может отключить себя, сбросить себе пароль и снять с себя `owner`, поэтому в мастерской всегда остаётся активный руководитель. При добавлении и редактировании роли выбираются в выпадающем списке с чекбоксами; выбранные роли видны в закрытом поле. Сброс доступен из строки пользователя, генерирует временный пароль в админке без письма и открывает отдельное окно с текущим логином и кнопкой «Скопировать пароль». При отказе буфера обмена пароль можно выделить вручную. Закрытие окна или обновление страницы скрывает пароль; `mailSent = false`. Все прежние сессии отзываются. Аудит `crm_user.create`, `crm_user.roles_change`, `crm_user.enable`, `crm_user.disable`, `crm_user.password_reset`.
 - **Редактирование и удаление.** `settings.manage` меняет ФИО, почту, телефон и роли учётной записи мастерской. Почта нормализуется и остаётся уникальной среди неудалённых учётных записей. После удаления адрес можно использовать при создании или редактировании другого пользователя; старая запись и её история сохраняются. Обновление ролей и контактов атомарно; журнал хранит признаки изменённых полей без ПДн. Удаление ставит `deleted_at`, выключает доступ и отзывает все сессии; связанные работы, выплаты и аудит сохраняются. Собственную запись удалить нельзя. Аудит `crm_user.update`, `crm_user.delete`.
 - **Справочники.** Запись выключается, а не удаляется, код после создания не меняется. Аудит `dict.create`, `dict.update`, `dict.enable`, `dict.disable`.
 - **Настройки.** Формы ключей в §5.9. Сохранение пишет одну строку `settings.update` со старым и новым значением под ключом настройки.
@@ -2829,7 +2858,9 @@ Payload push-уведомления не содержит цен, персона
 - **CRM.** Боковое меню на shadcn `sidebar` (§19.4), состояние хранит кука `sidebar_state`. Подменю раздела рисует один `SectionTabs`, списки вкладок лежат в `lib/crm/sections.ts`. На телефоне нижняя панель: «Главная», три первых раздела роли и «Ещё», которая открывает шторку меню; кнопка меню в шапке скрыта. Оболочка держит один landmark `main`.
 - **Таблицы.** `DataTable` там, где строки сравнивают по колонкам: заявки, склад, движения, ведомость, отчёты, журнал, оплаты. Короткий справочник с кнопками в строке рисует `EntityList` из `lib/crm`: пользователи, сотрудники, работы, справочники, инвентаризации, модели каталога, состав заявки.
 - **Портал.** Шапка только навигирует, «Выйти» стоит последним пунктом бокового меню профиля; на телефоне меню профиля это строка вкладок. Страница ошибки отвечает на 403, 404 и сбой и показывает `requestId`. Вместо отсутствующего фото рисуется знак мастерской.
+- **Действия.** Активные кнопки показывают курсор-указатель. Строка прайс-листа целиком открывает его позиции и подсвечивается при наведении; карандаш и корзина имеют подписи для скринридера и подсказки. Группы склада раскрываются шевроном с анимацией до 180 мс; при reduced motion анимация отключена.
 - **Поля ввода.** Пустых полей нет: `Input`, `Textarea`, `NumberInput`, `MoneyInput`, `Select`, `Combobox` и `FilterField` требуют `placeholder`. Текст короткий, «Введите номер», «Выберите роль», без примеров и пояснений. Тексты полей почты, телефона и имени лежат в `lib/utils/placeholders.ts`, e2e `ui-placeholders` проверяет видимые поля.
+- **Поиск в списках.** `Combobox` открывает поиск с фокусом в поле, показывает выбранный вариант и прокручивает варианты внутри панели. Панель ограничена доступным пространством экрана; длинные названия переносятся в списке. Добавление модели в прайс недоступно до выбора изделия.
 - **Отказы.** Форма получает текст отказа через `userMessage`: коды `forbidden`, `not_found`, `rate_limited` не выводят внутренние имена действий. Отказ доменного сервиса в `load` отдаётся своим статусом через `orHttpStatus`, иначе SvelteKit превращает его в 500.
 
 ---
@@ -2840,7 +2871,7 @@ Payload push-уведомления не содержит цен, персона
 
 **Публичный каталог.** `/catalog` открыт гостю и вошедшему пользователю. Он показывает все опубликованные неудалённые модели, включая модели без фото: название, артикул, описание, категорию и характеристики опубликованных вариантов. Поиск по названию и артикулу, фильтр категории и серверная пагинация используют общие хелперы реестров. `PublicCatalogProductDto` содержит `id`, `sku`, `title`, `description`, `categoryId`, `categoryTitle`, `coverMediaId` и массив `variants` с размером и материалом; цен, себестоимости и остатков в SQL-проекции и DTO нет. Скрытые и удалённые варианты не приходят. Изображения идут через существующий публичный маршрут опубликованных моделей. Блок каталога лендинга становится горизонтальным слайдером с доступными кнопками и ссылкой «Смотреть все» на `/catalog`; ссылка на каталог есть в шапке. Новые UI используют существующие примитивы и токены.
 
-**Расценки позиции.** `work_types.variant_id` связывает вид работы с вариантом изделия. Для пары «вариант, роль цеха» одна расценка, включая явно введённый ноль; у привязанной работы роль обязательна. `WorkTypeDto` дополняется `variantId?: number | null`, `variantLabel?: string | null`, `StaffDto` полем `userId?: number | null`; старые входы без необязательных id сохраняют существующую связь, пустое значение формы снимает её. Название, роль, вариант и цену вводят в форме «Виды работ»; выбор варианта доступен только `payroll.manage`. Старые работы с пустым `variant_id` сохраняются для ручного ввода и автоматически к изделиям не привязываются. Автоматическое выполнение требует активную расценку своей роли на вариант. Замороженная цена выполненной работы не меняется вместе со справочником.
+**Расценки позиции.** `work_types.variant_id` указывает на вариант-представитель модели и материала: минимальный id среди всех её размеров, включая архивные. Размер не влияет на стоимость работы. Для пары «модель + материал, роль цеха» одна расценка, включая явно введённый ноль; у привязанной работы роль обязательна. `WorkTypeDto` дополняется `variantId?: number | null`, `variantLabel?: string | null`, `StaffDto` полем `userId?: number | null`; старые входы без необязательных id сохраняют существующую связь, пустое значение формы снимает её. Название, роль, вариант и цену вводят в форме «Виды работ»; выбор варианта доступен только `payroll.manage`. Старые работы с пустым `variant_id` сохраняются для ручного ввода и автоматически к изделиям не привязываются. Автоматическое выполнение выбирает активную расценку своей роли через вариант-представитель; это работает и для размеров, добавленных позднее. Переход оставляет одну общую расценку, а старые расценки других размеров выключает и сохраняет под исходными id для истории: они доступны только в днях, где уже использовались, и не редактируются в справочнике. Ссылки исторических записей, замороженные суммы и составы исполнителей не меняются. Смена материала варианта запрещена, если у исходной или целевой пары «модель + материал» есть расценки, включая архивные; для нового материала создают отдельный вариант; при разных ценах или активности миграция отказывается выбирать произвольно. Замороженная цена выполненной работы не меняется вместе со справочником.
 
 **Постоянный ящик.** `shop_units` содержит `id: pk()`, `request_item_id: nullable FK request_items ON DELETE SET NULL`, `job_id: nullable FK shop_jobs ON DELETE SET NULL`, `product_title: text NOT NULL`, `request_number: text NOT NULL`, `legacy_done: bool NOT NULL DEFAULT false`. Одна строка соответствует одному физическому изделию. При объединении заданий ящики переходят в целевое задание; их id не меняются. Досылка снимает только свободные несделанные ящики столяра, взятые и выполненные сохраняются. Удаление строки заявки со взятыми или выполненными изделиями отклоняется; свободные изделия удаляются вместе с заданием. Существующие агрегированные отметки разворачиваются в ящики с `legacy_done`, без выдуманного исполнителя и начисления за прошлые работы.
 
@@ -2852,7 +2883,7 @@ Payload push-уведомления не содержит цен, персона
 
 **Подтверждение дня.** `work_day_staff.is_carpenter` фиксирует отмеченную администратором столярную бригаду конкретного дня. Форма дня передаёт `carpenterStaffIds: number[]`, подмножество присутствующих; старые формы без этого поля сохраняют прежний состав бригады. «Сохранить день и подтвердить работы» передаёт ту же полную форму, что сохранение дня, и по `payroll.manage` в одной транзакции сохраняет присутствующих, бригаду и ручные записи, затем переносит все завершённые неподтверждённые работы даты в `work_entries`, добавляя исполнителей в присутствующих. Для столяров исполнители записи равны отмеченной бригаде; пустая бригада отклоняется. Для остальных станций единственный исполнитель это закреплённый работник. `work_entries.shop_unit_work_id` с уникальным индексом предотвращает дубль. Повтор подтверждения не начисляет деньги второй раз; поздние завершения подтверждаются следующим нажатием. Автоматические записи показываются отдельно, ручное сохранение дня их не удаляет и не меняет. После первого подтверждения столярной работы состав бригады дня менять нельзя. Недельные `PayrollDayCellDto.pendingCount` и `pendingTotalMinor` показывают число и сумму замороженных расценок неподтверждённых работ дня, даже если день ещё не отмечен. Это сумма работ до распределения по сотрудникам; она не входит в начисленное до подтверждения. Закрытие недели с неподтверждёнными работами отклоняется; недельный экран показывает ссылки на соответствующие дни. Выполнение в закрытой неделе отклоняется до изменения счётчиков. Ручные записи сохраняют собственную замороженную цену, даже если автоматическая запись того же вида выполнена по другой цене. Расчёт долей и округление сохраняют §20.10; фактическая выдача денег остаётся отдельным действием `payroll.pay`. Аудит `payroll.day.confirm`.
 
-**Личная зарплата.** Право `payroll.self.read` получают роли CRM; `/crm/salary` возвращает только сотрудника, связанного с `actor.userId`, его предварительные работы, подтверждённое начисление, корректировку, сумму к выплате и отметку выплаты за выбранную неделю. Ни id другого сотрудника, ни query-параметр не меняют владельца выборки. Работник не получает общую ведомость, чужие суммы и цены изделий. При отсутствии связи показывается пустое состояние; неоднозначная связь отклоняется. Для связанного сотрудника без строки закрытой недели возвращается нулевая собственная строка; выключенный сотрудник сохраняет отображение своих предварительных работ. Денежные поля личной зарплаты относятся только к оплате труда; запрет на цены изделий сохраняется. `OwnPayrollDto` содержит `week: { startsOn, endsOn, status }`, `line: PayrollLineDto | null`, `pendingMinor: number`, `pending: { unitId: number; productTitle: string; station: WorkRole; completedAt: string; shareMinor: number }[]`. Дополнительно `OwnPayrollDto.works: OwnPayrollWorkDto[]` сохраняет собственный журнал и после подтверждения/выплаты. `OwnPayrollWorkDto = { unitId: number; productTitle: string; station: WorkRole; workDate: string; completedAt: string; shareMinor: number | null; status: 'awaiting_crew' | 'awaiting_confirmation' | 'confirmed' | 'paid' }`. Выборка журнала ограничивается собственным исполнителем либо собственной долей в столярной бригаде на уровне SQL; после подтверждения доля берётся из замороженной записи и её состава. Для столяра предварительная доля зависит от текущего состава дня и отмечена предварительной; до отметки бригады положительная доля в журнале равна `null`, состояние `awaiting_crew`, а истинная нулевая расценка остаётся 0. Старые поля `pending` и `pendingMinor` сохраняются для совместимости. Доля строки округлена вниз до рубля, окончательное начисление округляется один раз за день по §20.10; журнал не заменяет итог дня. После отметки выплаты остаток к выплате на личном экране равен нулю, выданная сумма и дата показаны отдельно. Ссылка «Моя зарплата» доступна в меню роли. Новые маршруты и действия отражаются в матрице CRM e2e.
+**Личная зарплата.** Право `payroll.self.read` получают роли CRM; `/crm/salary` возвращает только сотрудника, связанного с `actor.userId`, его предварительные работы, подтверждённое начисление, корректировку, сумму к выплате и отметку выплаты за выбранную неделю. Ни id другого сотрудника, ни query-параметр не меняют владельца выборки. Работник не получает общую ведомость, чужие суммы и цены изделий. При отсутствии связи показывается пустое состояние; неоднозначная связь отклоняется. Для связанного сотрудника без строки закрытой недели возвращается нулевая собственная строка; выключенный сотрудник сохраняет отображение своих предварительных работ. Денежные поля личной зарплаты относятся только к оплате труда; запрет на цены изделий сохраняется. `OwnPayrollDto` содержит `week: { startsOn, endsOn, status }`, `line: PayrollLineDto | null`, `pendingMinor: number`, `pending: { unitId: number; productTitle: string; station: WorkRole; completedAt: string; shareMinor: number }[]`. Дополнительно `OwnPayrollDto.works: OwnPayrollWorkDto[]` сохраняет собственный журнал и после подтверждения/выплаты. `OwnPayrollWorkDto = { unitId: number; productTitle: string; station: WorkRole; workDate: string; completedAt: string; shareMinor: number | null; status: 'awaiting_crew' | 'awaiting_confirmation' | 'confirmed' | 'paid' }`. Выборка журнала ограничивается собственным исполнителем либо собственной долей в столярной бригаде на уровне SQL; после подтверждения доля берётся из замороженной записи и её состава. Для столяра предварительная доля зависит от текущего состава дня и отмечена предварительной; до отметки бригады положительная доля в журнале равна `null`, состояние `awaiting_crew`, а истинная нулевая расценка остаётся 0. Старые поля `pending` и `pendingMinor` сохраняются для совместимости. Доля строки округлена вниз до рубля, окончательное начисление округляется один раз за день по §20.10; журнал не заменяет итог дня. После отметки выплаты остаток к выплате на личном экране равен нулю, выданная сумма и дата показаны отдельно. Личный экран и пункт «Моя зарплата» убраны; старый `/crm/salary` после проверки CRM-доступа перенаправляет на `/crm`. Сервисы собственного расчёта и исторические данные сохраняются. Новые маршруты и действия отражаются в матрице CRM e2e.
 
 ---
 
@@ -2872,7 +2903,6 @@ Payload push-уведомления не содержит цен, персона
 - IP-фильтр входа в CRM.
 - Импорт и версии расценок работ: цену вида работ вводят руками.
 - Наличие на складе в витрине портала.
-- Опции изделия кроме цвета.
 - Поле «Ваш номер заявки» в корзине (колонка `external_number` остаётся для поиска и демо).
 - Скан договора и архивация контрагента.
 - CD и workflow деплоя. Номера K6 (стал C15) и C11 не переиспользуются.

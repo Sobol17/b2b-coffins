@@ -49,7 +49,7 @@ export function newCounterparty(patch: Record<string, string> = {}) {
 		managerId: '',
 		adminFullName: 'Анна Смирнова',
 		adminEmail: `admin${sequence}@agency.example`,
-		adminPhone: '',
+		adminPhone: `+7920${String(sequence).padStart(7, '0')}`,
 		...patch
 	});
 }

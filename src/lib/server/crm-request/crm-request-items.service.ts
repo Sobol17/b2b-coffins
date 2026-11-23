@@ -37,10 +37,7 @@ export class CrmRequestItemsService extends CrmRequestBaseService {
 		this.change(requestId, {
 			comment: input.comment,
 			apply: (request, tx) => {
-				const optionIds = this.writer.checkedOptions(
-					input.variantId,
-					input.optionId === null ? [] : [input.optionId]
-				);
+				const optionIds = this.writer.checkedCrmOptions(input);
 				this.writer.putLine(
 					request.id,
 					{ variantId: input.variantId, optionIds, qty: input.qty },

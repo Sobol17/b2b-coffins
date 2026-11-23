@@ -84,6 +84,29 @@ test.describe('the kit in a mobile viewport', () => {
 		);
 		expect(overflow).toBeLessThanOrEqual(0);
 	});
+
+	test('opens and searches the combobox without widening the phone screen', async ({ page }) => {
+		await openKitchenSink(page);
+		const field = page.locator('[data-primitive="Combobox"]');
+		const trigger = field.getByRole('combobox');
+		await trigger.click();
+		const search = page.getByPlaceholder('Поиск по списку');
+		await expect(search).toBeFocused();
+		await search.fill('Берёза');
+		await expect(page.getByRole('option')).toHaveCount(1);
+		await page.keyboard.press('ArrowDown');
+		await page.keyboard.press('Enter');
+		await expect(trigger).toContainText('Берёза');
+		await expect(trigger).toBeFocused();
+		await trigger.click();
+		await expect(page.getByRole('option', { name: 'Сосна', exact: true })).toBeVisible();
+		await page.keyboard.press('Escape');
+		await expect(trigger).toHaveAttribute('aria-expanded', 'false');
+		const overflow = await page.evaluate(
+			() => document.documentElement.scrollWidth - document.documentElement.clientWidth
+		);
+		expect(overflow).toBeLessThanOrEqual(0);
+	});
 });
 
 test('the kit works from the keyboard', async ({ page }) => {
@@ -96,6 +119,22 @@ test('the kit works from the keyboard', async ({ page }) => {
 	await page.keyboard.press('Escape');
 	await expect(page.getByTestId('modal')).toBeHidden();
 	await expect(page.getByTestId('open-modal')).toBeFocused();
+});
+
+test('the combobox keeps search and options inside a short viewport', async ({ page }) => {
+	await page.setViewportSize({ width: 390, height: 180 });
+	await openKitchenSink(page);
+	await page.locator('[data-primitive="Combobox"]').getByRole('combobox').click();
+	const panel = page.locator('[data-slot="popover-content"]');
+	await expect(panel).toBeVisible();
+	const box = await panel.boundingBox();
+	expect(box).not.toBeNull();
+	expect(box?.y ?? -1).toBeGreaterThanOrEqual(0);
+	// Floating UI positions on subpixels; allow rounding at the viewport edge.
+	expect(Math.round((box?.y ?? 0) + (box?.height ?? 0))).toBeLessThanOrEqual(180);
+	await expect(page.getByPlaceholder('Поиск по списку')).toBeInViewport();
+	await page.getByPlaceholder('Поиск по списку').fill('Берёза');
+	await page.getByRole('option', { name: 'Берёза', exact: true }).click();
 });
 
 test('the toast shows an error and closes again', async ({ page }) => {
@@ -161,6 +200,23 @@ test('the registry table pages through the server query', async ({ page }) => {
 
 	const secondPage = await table.getByTestId('data-table-row').first().textContent();
 	expect(secondPage).not.toBe(firstPage);
+});
+
+test('a linked table row keeps its own button usable', async ({ page }) => {
+	await openKitchenSink(page);
+	const table = page.locator('[data-primitive="DataTable"]');
+	const row = table.getByTestId('data-table-row').first();
+	await expect(row.getByRole('link', { name: 'З-1000', exact: true })).toHaveAttribute(
+		'href',
+		'/portal'
+	);
+	await row.getByRole('button', { name: 'Отметить', exact: true }).click();
+	await expect(table.getByTestId('row-actions')).toHaveText('Отмечено: 1');
+	await expect(page).toHaveURL('/kitchen-sink');
+	await page.setViewportSize({ width: 390, height: 844 });
+	await row.getByRole('button', { name: 'Отметить', exact: true }).click();
+	await expect(table.getByTestId('row-actions')).toHaveText('Отмечено: 2');
+	await expect(page).toHaveURL('/kitchen-sink');
 });
 
 test('the money input takes whole rubles and keeps the amount in kopecks', async ({ page }) => {

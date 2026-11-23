@@ -4,48 +4,55 @@
 		"fullName": "Игорь Соболев",
 		"role": "owner",
 		"password": "Crm!Owner1",
-		"staffPosition": "Руководитель"
+		"staffPosition": "Руководитель",
+		"phone": "+79001000000"
 	},
 	{
 		"email": "manager@workshop.example",
 		"fullName": "Марина Круглова",
 		"role": "manager",
 		"password": "Crm!Manager1",
-		"staffPosition": "Администратор"
+		"staffPosition": "Администратор",
+		"phone": "+79001000001"
 	},
 	{
 		"email": "carpenter@workshop.example",
 		"fullName": "Николай Ершов",
 		"role": "carpenter",
 		"password": "Crm!Carp1",
-		"staffPosition": "Столяр"
+		"staffPosition": "Столяр",
+		"phone": "+79001000002"
 	},
 	{
 		"email": "grinder@workshop.example",
 		"fullName": "Олег Шмелёв",
 		"role": "grinder",
 		"password": "Crm!Grind1",
-		"staffPosition": "Шлифовщик"
+		"staffPosition": "Шлифовщик",
+		"phone": "+79001000003"
 	},
 	{
 		"email": "painter@workshop.example",
 		"fullName": "Виктор Панин",
 		"role": "painter",
 		"password": "Crm!Paint1",
-		"staffPosition": "Маляр"
+		"staffPosition": "Маляр",
+		"phone": "+79001000004"
 	},
 	{
 		"email": "upholsterer@workshop.example",
 		"fullName": "Денис Обухов",
 		"role": "upholsterer",
 		"password": "Crm!Uphol1",
-		"staffPosition": "Обивщик"
+		"staffPosition": "Обивщик",
+		"phone": "+79001000005"
 	},
 	{
 		"email": "driver@workshop.example",
 		"fullName": "Сергей Гаврилов",
 		"role": "driver",
 		"password": "Crm!Driver1",
-		"staffPosition": "Водитель"
+		"staffPosition": "Водитель",
+		"phone": "+79001000006"
 	}
 ]

@@ -16,7 +16,7 @@ import { e2eDb } from './transitions';
 const suffix = Date.now();
 const sku = `E2E-DIRECTORY-${suffix}`;
 const model = `E2E Модель ${suffix}`;
-const variantLabel = `${sku}-180 · ${model} · 180`;
+let variantLabel: string;
 const accountName = `E2E Учётная запись ${suffix}`;
 const workerName = `E2E Сотрудник ${suffix}`;
 const otherName = `E2E Другой ${suffix}`;
@@ -27,6 +27,7 @@ let userId: number;
 test.beforeAll(() => {
 	const db = e2eDb();
 	const material = db.select().from(dictItems).where(eq(dictItems.dict, 'material')).get()!;
+	variantLabel = `${sku} · ${model} · ${material.title}`;
 	productId = db.insert(products).values({ sku, title: model }).returning().get()!.id;
 	variantId = db
 		.insert(productVariants)
@@ -51,7 +52,7 @@ test.afterAll(() => {
 	const db = e2eDb();
 	db.delete(workTypes).where(eq(workTypes.variantId, variantId)).run();
 	db.delete(staff)
-		.where(inArray(staff.fullName, [workerName, otherName]))
+		.where(inArray(staff.fullName, [workerName, otherName, `${workerName} оклад`]))
 		.run();
 	db.delete(users).where(eq(users.id, userId)).run();
 	db.delete(productVariants).where(eq(productVariants.id, variantId)).run();
@@ -85,10 +86,12 @@ test('the manager assigns a role rate to a catalog position and sees conflicts i
 	await choose(page, 'Роль', 'Столяр');
 	await modal.getByRole('button', { name: 'Добавить', exact: true }).click();
 	await expect(modal).toBeHidden();
-	const row = page.getByTestId('data-table-row').filter({ hasText: title });
+	await page.getByRole('searchbox', { name: 'Поиск по работам и позициям' }).fill(sku);
+	await page.getByRole('button', { name: 'Найти', exact: true }).click();
+	const row = page.getByTestId('data-table-row').filter({ hasText: variantLabel });
 	await expect(row.getByTestId('work-variant')).toHaveText(variantLabel);
 	await expect(row.getByTestId('work-rate')).toHaveText('0 ₽');
-	await row.getByRole('button', { name: 'Изменить', exact: true }).click();
+	await row.getByRole('button', { name: /^Изменить: Столяр/ }).click();
 	await expect(modal.getByLabel('Позиция каталога', { exact: true })).toHaveText(variantLabel);
 	await modal.getByLabel('Стоимость за единицу, ₽').fill('250');
 	await modal.getByRole('button', { name: 'Сохранить', exact: true }).click();
@@ -165,4 +168,25 @@ test('a workshop worker cannot read choices or post directory changes', async ({
 		});
 		expect(response.status()).toBe(403);
 	}
+});
+
+test('the manager creates and edits a laborer salary without a login', async ({ page }) => {
+	await login(page, 'manager');
+	await page.goto('/crm/payroll/staff');
+	await openModal(page, 'Добавить сотрудника');
+	const modal = page.getByTestId('modal');
+	await modal.getByLabel('ФИО').fill(`${workerName} оклад`);
+	await choose(page, 'Роль в выплатах', 'Разнорабочий · месячный оклад');
+	await expect(modal.getByLabel('Учётная запись', { exact: true })).toHaveCount(0);
+	await expect(modal.locator('input[name=monthlySalaryMinor]')).toHaveValue('6000000');
+	await modal.getByRole('button', { name: 'Добавить', exact: true }).click();
+	await expect(modal).toBeHidden();
+	const row = page.getByTestId('data-table-row').filter({ hasText: `${workerName} оклад` });
+	await expect(row.getByTestId('staff-account')).toHaveText('Без учётной записи');
+	await row.getByRole('button', { name: 'Изменить', exact: true }).click();
+	await modal.getByLabel('Месячный оклад, ₽').fill('70000');
+	await modal.getByRole('button', { name: 'Сохранить', exact: true }).click();
+	await expect(modal).toBeHidden();
+	await row.getByRole('button', { name: 'Изменить', exact: true }).click();
+	await expect(modal.locator('input[name=monthlySalaryMinor]')).toHaveValue('7000000');
 });

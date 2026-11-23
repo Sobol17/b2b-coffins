@@ -1,20 +1,15 @@
 import { z } from 'zod';
 import { STAFF_STATUSES } from '$lib/types/counterparty';
 import { PORTAL_ROLES } from '$lib/types/roles';
-import { fullNameSchema, phoneSchema } from './contact';
+import { fullNameSchema, accountPhoneSchema, accountEmailSchema } from './contact';
 
 const memberId = z.coerce.number().int().positive();
 
 /** New portal account. The counterparty never comes from the form: it is the administrator's own. */
 export const createStaffSchema = z.object({
 	fullName: fullNameSchema,
-	// Stored lower-cased: the login form and the uniqueness check must agree on one spelling.
-	email: z
-		.string()
-		.trim()
-		.toLowerCase()
-		.pipe(z.email({ error: 'Введите адрес электронной почты' })),
-	phone: phoneSchema,
+	email: accountEmailSchema,
+	phone: accountPhoneSchema,
 	role: z.enum(PORTAL_ROLES, { error: 'Выберите роль' })
 });
 

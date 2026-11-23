@@ -51,6 +51,7 @@ export interface ShopPositionDto {
 }
 
 export interface ShopJobDto extends ShopPositionDto {
+	readonly glossTitle: string | null;
 	readonly id: number;
 	readonly itemId: number;
 	readonly engraving: string | null;

@@ -1,9 +1,11 @@
 <script lang="ts">
 	import { resolve } from '$app/paths';
-	import { DataTable, TONE_CLASS, type DataTableColumn } from '$lib/ui';
-	import type { StockRowDto } from '$lib/types/crm-stock';
+	import { Button, DataTable, TONE_CLASS, type DataTableColumn } from '$lib/ui';
+	import type { StockRegistryRowDto } from '$lib/types/crm-stock';
 	import type { ListQuery } from '$lib/types/list';
 	import { formatMinor } from '$lib/utils/format';
+	import StockDelete from './StockDelete.svelte';
+	import StockModelDisclosure from './StockModelDisclosure.svelte';
 	import { KIND_TITLE } from './labels';
 
 	let {
@@ -12,15 +14,19 @@
 		query,
 		onQueryChange,
 		exportUrl,
-		canSeeCost = false
+		canSeeCost = false,
+		canManage = false,
+		onEdit
 	}: {
-		rows: readonly StockRowDto[];
+		rows: readonly StockRegistryRowDto[];
 		total: number;
 		query: ListQuery;
 		onQueryChange: (next: ListQuery) => void;
 		exportUrl: string;
 		/** Adds the cost column: owner and administrator only (v1.62). */
 		canSeeCost?: boolean;
+		canManage?: boolean;
+		onEdit?: (item: StockRegistryRowDto['members'][number]) => void;
 	} = $props();
 
 	const columns: DataTableColumn[] = $derived([
@@ -46,14 +52,23 @@
 	{exportUrl}
 	emptyTitle="Позиций не найдено"
 >
-	{#snippet cell(row: StockRowDto, column: DataTableColumn)}
+	{#snippet cell(row: StockRegistryRowDto, column: DataTableColumn)}
 		{#if column.key === 'code'}
 			<span class="text-fg-muted">{row.code}</span>
 		{:else if column.key === 'title'}
-			<a
-				class={['font-medium hover:text-link-hover', row.isActive ? 'text-link' : 'text-fg-muted']}
-				href={resolve(`/crm/stock/${row.id}`)}>{row.title}</a
-			>
+			{#if row.modelId !== null}
+				<StockModelDisclosure {row} {canManage} {onEdit} />
+			{:else}
+				<a
+					class={['font-medium text-link hover:text-link-hover', !row.isActive && 'text-fg-muted']}
+					href={resolve(`/crm/stock/${row.id}`)}>{row.title}</a
+				>
+				{#if canManage}<div class="mt-2 flex flex-wrap gap-2">
+						<Button variant="secondary" size="sm" onclick={() => onEdit?.(row.members[0]!)}
+							>Изменить</Button
+						><StockDelete id={row.id} title={row.title} />
+					</div>{/if}
+			{/if}
 		{:else if column.key === 'kind'}
 			{KIND_TITLE[row.kind]}
 		{:else if column.key === 'balance'}
@@ -66,7 +81,9 @@
 			<span class="text-xs text-fg-muted">{row.unitTitle}</span>
 		{:else if column.key === 'cost'}
 			<span class="tabular-nums" data-testid="stock-cost">
-				{row.costPriceMinor ? `${formatMinor(row.costPriceMinor)} ₽` : '—'}
+				{#if row.costRange}{formatMinor(row.costRange[0])}–{formatMinor(row.costRange[1])} ₽{:else}{row.costPriceMinor
+						? `${formatMinor(row.costPriceMinor)} ₽`
+						: '—'}{/if}
 			</span>
 		{:else if column.key === 'minThreshold'}
 			{row.minThreshold === 0 ? '—' : row.minThreshold}

@@ -99,11 +99,10 @@ export interface CounterpartyPriceFilters {
 
 /** One variant on the «Цены» tab (v1.56). The tab exists only for a role with prices. */
 export interface CounterpartyPriceRowDto {
-	readonly variantId: number;
+	readonly productId: number;
 	readonly productTitle: string;
 	readonly categoryTitle: string | null;
 	readonly sku: string;
-	readonly sizeCode: string;
 	/** What the counterparty pays without its own price: the base list, then the variant price. */
 	readonly basePriceMinor: number;
 	/** The counterparty's own price, null while it pays the base one. */

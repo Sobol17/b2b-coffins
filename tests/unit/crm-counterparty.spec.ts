@@ -148,7 +148,7 @@ describe('administrators and access of an existing counterparty', () => {
 		const issued = await access().issueAdmin(counterpartyId, {
 			fullName: 'Иван Петров',
 			email: 'ivan.issue@agency.example',
-			phone: null
+			phone: '+79301234567'
 		});
 
 		expect(issued.member.role).toBe('cp_admin');
@@ -157,7 +157,7 @@ describe('administrators and access of an existing counterparty', () => {
 			access().issueAdmin(counterpartyId, {
 				fullName: 'Третий Лишний',
 				email: 'third@agency.example',
-				phone: null
+				phone: '+79301234568'
 			})
 		).rejects.toThrow(ConflictError);
 	});

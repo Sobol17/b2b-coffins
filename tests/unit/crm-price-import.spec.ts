@@ -5,12 +5,7 @@ import { seedCatalog, seedStockItems } from '../../scripts/seed/catalog';
 import { seedDicts } from '../../scripts/seed/reference';
 import { ForbiddenError, ValidationError } from '../../src/lib/server/core/errors';
 import { PriceImportService } from '../../src/lib/server/crm-pricing/price-import.service';
-import {
-	auditLog,
-	priceListItems,
-	priceLists,
-	productVariants
-} from '../../src/lib/server/db/schema';
+import { auditLog, priceListItems, priceLists, products } from '../../src/lib/server/db/schema';
 import { actorOf, counterpartyDatabase } from './helpers/crm-counterparty';
 import { insertUser } from './helpers/db';
 
@@ -48,9 +43,9 @@ function newList(): number {
 
 function prices(listId: number): Record<string, number> {
 	const rows = db
-		.select({ sku: productVariants.sku, priceMinor: priceListItems.priceMinor })
+		.select({ sku: products.sku, priceMinor: priceListItems.priceMinor })
 		.from(priceListItems)
-		.innerJoin(productVariants, eq(productVariants.id, priceListItems.variantId))
+		.innerJoin(products, eq(products.id, priceListItems.productId))
 		.where(eq(priceListItems.priceListId, listId))
 		.all();
 	return Object.fromEntries(rows.map((row) => [row.sku, row.priceMinor]));
@@ -66,13 +61,13 @@ describe('a regional price list uploaded as XLSX (v1.64)', () => {
 		const count = await upload(
 			id,
 			await sheet([
-				['MDL-201-180-PIN', 9500],
-				['MDL-201-190-PIN', 9850.5]
+				['MDL-201', 9500],
+				['MDL-202', 9850.5]
 			])
 		);
 
 		expect(count).toBe(2);
-		expect(prices(id)).toEqual({ 'MDL-201-180-PIN': 950_000, 'MDL-201-190-PIN': 985_050 });
+		expect(prices(id)).toEqual({ 'MDL-201': 950_000, 'MDL-202': 985_050 });
 		expect(db.select().from(auditLog).all().at(-1)).toMatchObject({
 			action: 'price_list.import',
 			entityId: id,
@@ -85,41 +80,41 @@ describe('a regional price list uploaded as XLSX (v1.64)', () => {
 		await upload(
 			id,
 			await sheet([
-				['MDL-201-180-PIN', 9500],
-				['MDL-201-190-PIN', 9800]
+				['MDL-201', 9500],
+				['MDL-202', 9800]
 			])
 		);
 
-		await upload(id, await sheet([['MDL-201-180-PIN', 9600]]));
+		await upload(id, await sheet([['MDL-201', 9600]]));
 
-		expect(prices(id)).toEqual({ 'MDL-201-180-PIN': 960_000 });
+		expect(prices(id)).toEqual({ 'MDL-201': 960_000 });
 	});
 
 	it('takes English headers in any case', async () => {
 		const id = newList();
-		await upload(id, await sheet([['MDL-201-180-PIN', 9500]], ['SKU', 'Price']));
-		expect(prices(id)).toEqual({ 'MDL-201-180-PIN': 950_000 });
+		await upload(id, await sheet([['MDL-201', 9500]], ['SKU', 'Price']));
+		expect(prices(id)).toEqual({ 'MDL-201': 950_000 });
 	});
 
 	it('refuses the whole file for an unknown SKU, a bad price or a repeated row', async () => {
 		const id = newList();
-		await upload(id, await sheet([['MDL-201-180-PIN', 9500]]));
+		await upload(id, await sheet([['MDL-201', 9500]]));
 
 		for (const rows of [
 			[
-				['MDL-201-180-PIN', 9600],
+				['MDL-201', 9600],
 				['NO-SUCH', 100]
 			],
-			[['MDL-201-180-PIN', 'девять']],
-			[['MDL-201-180-PIN', -1]],
+			[['MDL-201', 'девять']],
+			[['MDL-201', -1]],
 			[
-				['MDL-201-180-PIN', 9600],
-				['MDL-201-180-PIN', 9700]
+				['MDL-201', 9600],
+				['MDL-201', 9700]
 			]
 		]) {
 			await expect(upload(id, await sheet(rows))).rejects.toThrow(ValidationError);
 		}
-		expect(prices(id)).toEqual({ 'MDL-201-180-PIN': 950_000 });
+		expect(prices(id)).toEqual({ 'MDL-201': 950_000 });
 	});
 
 	it('refuses a file that is not XLSX and a sheet without the columns', async () => {

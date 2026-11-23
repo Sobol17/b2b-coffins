@@ -46,6 +46,7 @@ export const productInputSchema = z.object({
 	title,
 	categoryId: id,
 	description: nullableText.default(null),
+	basePriceMinor: money.optional(),
 	sortOrder: z.coerce.number().int().min(0).max(100000).default(0),
 	isPublished: checkbox.default(false)
 });
@@ -53,13 +54,13 @@ export const productInputSchema = z.object({
 export const variantInputSchema = z.object({
 	productId: id,
 	sku,
-	sizeCode: z.string().trim().min(1).max(30),
+	sizeCode: z.string().min(1),
 	materialId: id,
 	lengthMm: optionalNumber.default(null),
 	widthMm: optionalNumber.default(null),
 	heightMm: optionalNumber.default(null),
 	weightG: optionalNumber.default(null),
-	basePriceMinor: money,
+	basePriceMinor: money.optional(),
 	stockItemId: nullableId,
 	isPublished: checkbox.default(false)
 });
@@ -94,7 +95,7 @@ export const priceListInputSchema = z
 
 export const priceListItemInputSchema = z.object({
 	priceListId: id,
-	variantId: id,
+	productId: id,
 	priceMinor: money
 });
 

@@ -12,8 +12,8 @@ import { userCreate } from './admin/user';
 
 const USAGE = `pnpm admin <command> [options]
 
-  user:create          --email --name --role --password [--counterparty] [--phone]
-  counterparty:create  --name --price-list --admin-email --admin-name --admin-password
+  user:create          --phone --name --role --password [--counterparty] [--email]
+  counterparty:create  --name --price-list --admin-phone --admin-name --admin-password [--admin-email]
                        [--discount] [--scheme] [--inn] [--address] [--phone] [--email]
   price:import         --file <xlsx|csv> --price-list
   catalog:import       --file <json> [--hide-others]

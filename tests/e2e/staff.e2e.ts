@@ -6,7 +6,7 @@ const OWN_PASSWORD = 'Ochen!Nadezhnyi9';
 
 async function signIn(page: Page, email: string, password: string): Promise<void> {
 	await page.goto('/login');
-	await page.fill('input[name="email"]', email);
+	await page.fill('input[name="identifier"]', email);
 	await page.fill('input[name="password"]', password);
 	await page.click('button[type="submit"]');
 }
@@ -35,6 +35,7 @@ test('an administrator gives access to an employee who replaces the temporary pa
 	}).toPass();
 	await modal.locator('input[name="fullName"]').fill('Анна Белова');
 	await modal.locator('input[name="email"]').fill(email);
+	await modal.locator('input[name="phone"]').fill(`+796${String(Date.now()).slice(-8)}`);
 	await modal.getByRole('button', { name: 'Создать доступ' }).click();
 
 	const password = (await page.getByTestId('temporary-password').textContent())?.trim() ?? '';

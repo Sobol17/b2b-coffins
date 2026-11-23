@@ -1,3 +1,4 @@
+import { loginSchema } from '$lib/validation/auth';
 import { createHash, randomBytes } from 'node:crypto';
 import { config } from '../config';
 import { AuditService } from '../audit/audit.service';
@@ -34,19 +35,22 @@ export class AuthService {
 	) {}
 
 	async login(
-		input: { email: string; password: string },
+		input: { identifier: string; password: string },
 		meta: { ip: string | null; userAgent: string | null }
 	): Promise<LoginResult> {
 		// Keyed by address and IP together: one office behind a single NAT must not lock itself out
 		// because several people signed in, while one account stays capped from one source.
-		const limitKey = `${meta.ip ?? 'unknown'}|${input.email}`;
+		const { identifier } = loginSchema.parse(input);
+		const limitKey = `${meta.ip ?? 'unknown'}|${identifier}`;
 		consumeRateLimit('login', limitKey);
 
-		const user = this.repo.findByEmail(input.email);
+		const user = identifier.includes('@')
+			? this.repo.findByEmail(identifier)
+			: this.repo.findByPhone(identifier);
 		if (!user || !user.isActive) {
 			// Hash anyway: an early return here leaks account existence through response timing.
 			await verifyPassword(DUMMY_HASH, input.password).catch(() => false);
-			throw new ValidationError('Неверный адрес или пароль');
+			throw new ValidationError('Неверный телефон, почта или пароль');
 		}
 		if (user.lockedUntil && user.lockedUntil > new Date()) {
 			throw new ConflictError('Учётная запись временно заблокирована');
@@ -55,7 +59,7 @@ export class AuthService {
 		const ok = await verifyPassword(user.passwordHash, input.password);
 		if (!ok) {
 			this.registerFailure(user);
-			throw new ValidationError('Неверный адрес или пароль');
+			throw new ValidationError('Неверный телефон, почта или пароль');
 		}
 
 		this.repo.recordSuccess(user.id);
@@ -119,8 +123,8 @@ export class AuthService {
 	async requestReset(email: string, ip: string | null): Promise<void> {
 		consumeRateLimit('password.reset', ip ?? email);
 
-		const user = this.repo.findByEmail(email);
-		if (!user || !user.isActive) return;
+		const user = this.repo.findByEmail(email.trim().toLowerCase());
+		if (!user || !user.isActive || !user.email) return;
 
 		const token = randomBytes(32).toString('base64url');
 		this.repo.createResetToken(

@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, isNull, sql } from 'drizzle-orm';
 import { countExpression, offsetFor } from '../core/list';
 import { BaseRepository } from '../core/repository';
 import type { Tx } from '../db/client';
@@ -126,7 +126,9 @@ export class InventoryRepository extends BaseRepository<typeof inventories> {
 				? base.leftJoin(stockMoves, eq(stockMoves.stockItemId, stockItems.id))
 				: base.innerJoin(stockMoves, eq(stockMoves.stockItemId, stockItems.id));
 		return joined
-			.where(and(eq(stockItems.kind, kind), eq(stockItems.isActive, true)))
+			.where(
+				and(eq(stockItems.kind, kind), eq(stockItems.isActive, true), isNull(stockItems.deletedAt))
+			)
 			.groupBy(stockItems.id, stockMoves.optionId)
 			.orderBy(asc(stockItems.id))
 			.all();

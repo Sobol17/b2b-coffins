@@ -1,3 +1,5 @@
+import { pageWorkMatrix } from '$lib/crm/payroll/work-matrix';
+import type { ListQuery } from '$lib/types/list';
 import { NotFoundError, ValidationError } from '../core/errors';
 import type { Tx } from '../db/client';
 import { PayrollBaseService } from './payroll-base.service';
@@ -19,6 +21,9 @@ export class WorkTypeService extends PayrollBaseService {
 		super(ctx);
 	}
 
+	matrix(query: ListQuery) {
+		return pageWorkMatrix(this.repo.all(), this.repo.variantChoices(), query);
+	}
 	list(): WorkTypeDto[] {
 		return this.repo.all();
 	}
@@ -33,7 +38,8 @@ export class WorkTypeService extends PayrollBaseService {
 		this.assertManage();
 		return this.audited({ action: 'work_type.create', entity: 'work_types' }, (tx) => {
 			this.assertFreeTitle(input.title, null, tx);
-			const variantId = input.variantId ?? null;
+			const variantId =
+				input.variantId == null ? null : this.repo.canonicalVariantId(input.variantId, tx);
 			this.assertVariant(variantId, input.roleCode, null, tx);
 			const id = this.repo.insert({ ...input, variantId }, tx);
 			return { result: this.require(id, tx), entityId: id, after: { ...input, variantId } };
@@ -45,10 +51,15 @@ export class WorkTypeService extends PayrollBaseService {
 		this.assertManage();
 		return this.audited({ action: 'work_type.update', entity: 'work_types' }, (tx) => {
 			const before = this.require(input.id, tx);
+			this.assertCurrent(before, tx);
 			this.assertFreeTitle(input.title, input.id, tx);
 			const { title, rateMinor, roleCode } = input;
 			const variantId =
-				input.variantId === undefined ? (before.variantId ?? null) : input.variantId;
+				input.variantId === undefined
+					? (before.variantId ?? null)
+					: input.variantId === null
+						? null
+						: this.repo.canonicalVariantId(input.variantId, tx);
 			this.assertVariant(variantId, roleCode, input.id, tx);
 			this.repo.update(input.id, { title, rateMinor, roleCode, variantId }, tx);
 			return {
@@ -71,6 +82,7 @@ export class WorkTypeService extends PayrollBaseService {
 		const action = isActive ? 'work_type.enable' : 'work_type.disable';
 		return this.audited({ action, entity: 'work_types' }, (tx) => {
 			const before = this.require(id, tx);
+			this.assertCurrent(before, tx);
 			this.repo.update(id, { isActive }, tx);
 			return {
 				result: { ...before, isActive },
@@ -79,6 +91,16 @@ export class WorkTypeService extends PayrollBaseService {
 				after: { isActive }
 			};
 		});
+	}
+
+	private assertCurrent(work: WorkTypeDto, tx: Tx): void {
+		if (
+			work.variantId != null &&
+			this.repo.canonicalVariantId(work.variantId, tx) !== work.variantId
+		)
+			throw new ValidationError(
+				'Архивная расценка размера сохранена только для истории. Измените общую расценку позиции.'
+			);
 	}
 
 	private assertFreeTitle(title: string, exceptId: number | null, tx: Tx): void {

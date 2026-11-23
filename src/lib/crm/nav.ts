@@ -26,7 +26,6 @@ export interface CrmNavRights {
 	readonly delivery: boolean;
 	readonly stock: boolean;
 	readonly payroll: boolean;
-	readonly salary?: boolean;
 	readonly reports: boolean;
 	readonly catalog: boolean;
 	readonly counterparties: boolean;
@@ -118,16 +117,6 @@ export function crmNav(can: CrmNavRights): CrmNavLink[] {
 				label: 'Выплаты',
 				icon: WalletIcon,
 				hint: 'Отметка дней и недельная ведомость'
-			}
-		},
-		{
-			show: can.salary ?? false,
-			link: {
-				group: BOOKS,
-				href: resolve('/crm/salary'),
-				label: 'Моя зарплата',
-				icon: WalletIcon,
-				hint: 'Мои начисления, подтверждения и выплаты'
 			}
 		},
 		{

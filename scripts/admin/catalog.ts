@@ -92,7 +92,8 @@ function upsertProduct(
 		title: product.title,
 		categoryId,
 		description: product.description ?? null,
-		sortOrder: product.sortOrder
+		sortOrder: product.sortOrder,
+		basePriceMinor: Math.min(...product.variants.map((row) => row.basePriceMinor))
 	};
 	// A rerun updates the price list, but never publishes again what the CRM has hidden.
 	const [row] = db

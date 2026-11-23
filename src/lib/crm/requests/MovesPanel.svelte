@@ -6,9 +6,13 @@
 	/** Moves the state machine offers this actor; the server still checks every guard (tech.md 6). */
 	let {
 		targets,
-		refusalReasons
+		refusalReasons,
+		drivers,
+		defaultDriverId
 	}: {
 		targets: readonly RequestStatus[];
+		drivers: readonly { id: number; fullName: string }[];
+		defaultDriverId: number | null;
 		refusalReasons: readonly { id: number; title: string }[];
 	} = $props();
 
@@ -33,9 +37,20 @@
 		<form
 			method="POST"
 			action="?/move"
+			class="flex flex-wrap items-end gap-2"
 			use:enhance={withToast({ success: 'Статус заявки изменён' })}
 		>
 			<input type="hidden" name="to" value={target} />
+			{#if target === 'delivered'}
+				<Select
+					name="driverUserId"
+					label="Водитель"
+					placeholder="Кто отвёз изделия"
+					required
+					options={drivers.map((driver) => ({ value: String(driver.id), label: driver.fullName }))}
+					value={String(defaultDriverId ?? '')}
+				/>
+			{/if}
 			<Button type="submit">{FORWARD[target]}</Button>
 		</form>
 	{/each}

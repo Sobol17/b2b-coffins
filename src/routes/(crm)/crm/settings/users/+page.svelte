@@ -7,7 +7,7 @@
 	import EditUserModal from '$lib/crm/users/EditUserModal.svelte';
 	import DeleteUserModal from '$lib/crm/users/DeleteUserModal.svelte';
 	import UsersTable from '$lib/crm/users/UsersTable.svelte';
-	import { Button, Card, ErrorState, FilterBar, type FilterField } from '$lib/ui';
+	import { Button, Card, ErrorState, FilterBar, Modal, type FilterField } from '$lib/ui';
 	import type { CrmUserDto } from '$lib/types/crm';
 	import type { ListQuery } from '$lib/types/list';
 	import { filtersOf, listQueryOf, withListQuery } from '$lib/utils/list-url';
@@ -72,8 +72,8 @@
 		>
 	</div>
 
-	{#if access?.access}
-		<AccessCard access={access.access} isReset={access.action === 'reset'} />
+	{#if access?.access && access.action !== 'reset'}
+		<AccessCard access={access.access} isReset={false} />
 	{/if}
 
 	{#if failure && !inModal}
@@ -103,6 +103,15 @@
 		</Card.Content>
 	</Card.Root>
 </div>
+
+{#if access?.access && access.action === 'reset'}
+	<Modal open title="Новый временный пароль" onClose={() => (form = null)}>
+		{#snippet body()}
+			<AccessCard access={access.access} isReset={true} />
+			<Button type="button" onclick={() => (form = null)}>Готово</Button>
+		{/snippet}
+	</Modal>
+{/if}
 
 <CreateUserModal
 	bind:open={createOpen}

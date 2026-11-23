@@ -1,3 +1,4 @@
+import { CompensationRepository } from './compensation.repository';
 import { NotFoundError, ValidationError } from '../core/errors';
 import type { Tx } from '../db/client';
 import { PayrollDtoMapper } from './dto';
@@ -33,11 +34,26 @@ export class PayrollStaffService extends PayrollBaseService {
 		return this.audited({ action: 'staff.create', entity: 'staff' }, (tx) => {
 			const userId = input.userId ?? null;
 			this.assertUser(userId, null, tx);
-			const id = this.repo.insert({ ...input, userId }, tx);
+			this.assertPayRole(input.payRole ?? 'piecework', userId);
+			const id = this.repo.insert(
+				{
+					...input,
+					userId,
+					payRole: input.payRole ?? 'piecework',
+					monthlySalaryMinor: input.monthlySalaryMinor ?? 6000000
+				},
+				tx
+			);
+			new CompensationRepository().salaryTerm(this.require(id, tx), true, tx);
 			return {
 				result: PayrollDtoMapper.toStaff(this.require(id, tx)),
 				entityId: id,
-				after: { position: input.position, userId }
+				after: {
+					position: input.position,
+					userId,
+					payRole: input.payRole,
+					monthlySalaryMinor: input.monthlySalaryMinor
+				}
 			};
 		});
 	}
@@ -49,17 +65,33 @@ export class PayrollStaffService extends PayrollBaseService {
 			const before = this.require(input.id, tx);
 			const userId = input.userId === undefined ? before.userId : input.userId;
 			if (input.userId !== undefined) this.assertUser(userId, input.id, tx);
+			const payRole = input.payRole ?? before.payRole;
+			const monthlySalaryMinor = input.monthlySalaryMinor ?? before.monthlySalaryMinor;
+			this.assertPayRole(payRole, userId);
 			this.repo.update(
 				input.id,
-				{ fullName: input.fullName, position: input.position, userId },
+				{ fullName: input.fullName, position: input.position, userId, payRole, monthlySalaryMinor },
 				tx
 			);
+			if (payRole !== before.payRole || monthlySalaryMinor !== before.monthlySalaryMinor)
+				new CompensationRepository().salaryTerm(this.require(input.id, tx), false, tx);
 			return {
 				result: PayrollDtoMapper.toStaff(this.require(input.id, tx)),
 				entityId: input.id,
 				// Names are personal data: the journal keeps which fields moved, not the name itself.
-				before: { position: before.position, userId: before.userId },
-				after: { position: input.position, userId, renamed: before.fullName !== input.fullName }
+				before: {
+					position: before.position,
+					userId: before.userId,
+					payRole: before.payRole,
+					monthlySalaryMinor: before.monthlySalaryMinor
+				},
+				after: {
+					position: input.position,
+					userId,
+					payRole,
+					monthlySalaryMinor,
+					renamed: before.fullName !== input.fullName
+				}
 			};
 		});
 	}
@@ -71,6 +103,8 @@ export class PayrollStaffService extends PayrollBaseService {
 		return this.audited({ action, entity: 'staff' }, (tx) => {
 			const before = this.require(id, tx);
 			this.repo.update(id, { isActive }, tx);
+			if (before.isActive !== isActive)
+				new CompensationRepository().salaryTerm({ ...before, isActive }, false, tx);
 			return {
 				result: PayrollDtoMapper.toStaff({ ...before, isActive }),
 				entityId: id,
@@ -78,6 +112,11 @@ export class PayrollStaffService extends PayrollBaseService {
 				after: { isActive }
 			};
 		});
+	}
+
+	private assertPayRole(role: string, userId: number | null): void {
+		if (role === 'laborer' && userId !== null)
+			throw new ValidationError('Разнорабочий учитывается без учётной записи', { field: 'userId' });
 	}
 
 	private require(id: number, tx: Tx): StaffRow {

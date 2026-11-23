@@ -102,6 +102,25 @@ export class CrmCounterpartyService extends CounterpartyBaseService {
 		});
 	}
 
+	/** Changes only the regional attachment; existing personal prices need an explicit refill. */
+	assignPriceList(id: number, regionPriceListId: number | null): CrmCounterpartyCardDto {
+		this.assert(this.ctx.canSeePrices, 'counterparty.prices');
+		return this.audited({ action: 'counterparty.terms_update', entity: 'counterparties' }, (tx) => {
+			const old = this.requireCounterparty(id, tx);
+			this.validateRegion(regionPriceListId, tx);
+			this.counterparties.update(id, { regionPriceListId }, tx);
+			if (regionPriceListId !== null && regionPriceListId !== old.regionPriceListId) {
+				this.filler.fill(old, regionPriceListId, false, tx);
+			}
+			return {
+				result: this.card(id, tx),
+				entityId: id,
+				before: { regionPriceListId: old.regionPriceListId },
+				after: { regionPriceListId }
+			};
+		});
+	}
+
 	/** Free text about people may sit in the notes, so the journal only records that they changed. */
 	updateNotes(id: number, notes: string | null): CrmCounterpartyCardDto {
 		return this.audited({ action: 'counterparty.notes_update', entity: 'counterparties' }, (tx) => {

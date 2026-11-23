@@ -38,7 +38,7 @@ describe('owner dashboard (C13)', () => {
 			expect.objectContaining({ counterpartyId: world.cpId })
 		]);
 		expect(result.topModels).toHaveLength(1);
-		expect(result.payrollAccruedMinor).toBe(0);
+		expect(result.payrollAccruedMinor).toBe(2 * 20000);
 	});
 
 	it('keeps the state of today when the period is empty', () => {

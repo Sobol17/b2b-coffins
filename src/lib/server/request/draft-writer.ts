@@ -1,4 +1,4 @@
-import { VariantRepository } from '../catalog/variant.repository';
+import { VariantRepository, type OptionRow } from '../catalog/variant.repository';
 import { DeliveryAddressRepository } from '../counterparty/delivery-address.repository';
 import { NotFoundError, ValidationError } from '../core/errors';
 import type { Tx } from '../db/client';
@@ -8,6 +8,7 @@ import { DraftItemRepository } from './draft-item.repository';
 import { DraftRepository, type DraftRow } from './draft.repository';
 import { checkOptionSelection, sameSelection } from '$lib/domain/request/item-options';
 import type { ActorContext } from '$lib/types/actor';
+import type { OptionKind } from '$lib/types/catalog';
 import { MAX_LINE_QTY } from '$lib/validation/request';
 
 export interface NewLine {
@@ -54,8 +55,36 @@ export class DraftWriter {
 	 * @throws NotFoundError for a variant the storefront does not offer, ValidationError for options.
 	 */
 	checkedOptions(variantId: number, optionIds: readonly number[]): number[] {
+		return this.validateOptions(this.orderableOptions(variantId), optionIds);
+	}
+
+	checkedCrmOptions(line: {
+		variantId: number;
+		optionId: number | null;
+		glossOptionId?: number | null | undefined;
+	}): number[] {
+		const allowed = this.orderableOptions(line.variantId);
+		const selected: [OptionKind, number | null | undefined][] = [
+			['color', line.optionId],
+			['gloss', line.glossOptionId]
+		];
+		const ids = selected.flatMap(([kind, id]) => {
+			if (id == null) return [];
+			if (!allowed.some((option) => option.id === id && option.kind === kind)) {
+				throw new ValidationError('Такое сочетание опций недоступно для выбранного размера');
+			}
+			return [id];
+		});
+		return this.validateOptions(allowed, ids);
+	}
+
+	private orderableOptions(variantId: number): OptionRow[] {
 		if (!this.lines.findOrderableVariant(variantId)) throw new NotFoundError('variant');
-		const check = checkOptionSelection(this.variants.findOptions([variantId]), optionIds);
+		return this.variants.findOptions([variantId]);
+	}
+
+	private validateOptions(allowed: readonly OptionRow[], optionIds: readonly number[]): number[] {
+		const check = checkOptionSelection(allowed, optionIds);
 		if (!check.ok) {
 			throw new ValidationError('Такое сочетание опций недоступно для выбранного размера', {
 				reason: check.reason,

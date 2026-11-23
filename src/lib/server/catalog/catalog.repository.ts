@@ -2,7 +2,14 @@ import { and, asc, desc, eq, exists, gte, inArray, lte, or, sql, type SQL } from
 import { countExpression, offsetFor } from '../core/list';
 import { containsText } from '../core/search';
 import { BaseRepository } from '../core/repository';
-import { categories, media, productOptions, productVariants, products } from '../db/schema';
+import {
+	categories,
+	media,
+	options,
+	productOptions,
+	productVariants,
+	products
+} from '../db/schema';
 import { productVisible, variantVisible, type Visibility } from './visibility';
 import type { CatalogFilters } from '$lib/types/catalog';
 
@@ -191,9 +198,12 @@ export class CatalogRepository extends BaseRepository<typeof products> {
 						this.db()
 							.select({ one: sql`1` })
 							.from(productOptions)
+							.innerJoin(options, eq(options.id, productOptions.optionId))
 							.where(
 								and(
 									eq(productOptions.variantId, productVariants.id),
+									eq(options.kind, 'color'),
+									eq(options.isActive, true),
 									inArray(productOptions.optionId, [...filters.colorOptionIds])
 								)
 							)
