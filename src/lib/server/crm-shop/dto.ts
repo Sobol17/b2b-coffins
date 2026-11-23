@@ -74,7 +74,8 @@ export class ShopDtoMapper {
 		row: ShopTaskRow,
 		jobs: readonly ShopJobRow[],
 		colours: ReadonlyMap<number, number>,
-		titles: PositionTitles
+		titles: PositionTitles,
+		gloss: ReadonlyMap<number, string>
 	): ShopTaskDto {
 		const open = row.completedAt === null;
 		return {
@@ -82,7 +83,14 @@ export class ShopDtoMapper {
 			comment: row.comment,
 			takenByName: row.takenByName,
 			completedAt: row.completedAt?.toISOString() ?? null,
-			jobs: jobs.map((job) => ShopDtoMapper.toJob(job, colours.get(job.itemId) ?? null, titles)),
+			jobs: jobs.map((job) =>
+				ShopDtoMapper.toJob(
+					job,
+					colours.get(job.itemId) ?? null,
+					titles,
+					gloss.get(job.itemId) ?? null
+				)
+			),
 			canTake: open && row.takenAt === null,
 			canComplete: open && isVisitDone(jobs)
 		};
@@ -91,12 +99,14 @@ export class ShopDtoMapper {
 	private static toJob(
 		job: ShopJobRow,
 		optionId: number | null,
-		titles: PositionTitles
+		titles: PositionTitles,
+		glossTitle: string | null
 	): ShopJobDto {
 		return {
 			...titles.position(job.variantId, optionId),
 			id: job.id,
 			itemId: job.itemId,
+			glossTitle,
 			engraving: job.engraving,
 			comment: job.comment,
 			qty: job.qty,

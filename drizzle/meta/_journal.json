@@ -204,6 +204,13 @@
       "when": 1794896917401,
       "tag": "0028_model_prices_phone_stock",
       "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "6",
+      "when": 1795401642690,
+      "tag": "0029_coffin_catalog_options",
+      "breakpoints": true
     }
   ]
 }

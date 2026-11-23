@@ -1,4 +1,4 @@
-import { and, asc, eq, inArray } from 'drizzle-orm';
+import { and, asc, eq, inArray, sql } from 'drizzle-orm';
 import { BaseRepository } from '../core/repository';
 import type { Tx } from '../db/client';
 import { options } from '../db/schema';
@@ -14,13 +14,14 @@ export class ManagedOptionRepository extends BaseRepository<typeof options> {
 		return this.db(tx)
 			.select({
 				id: options.id,
-				kind: options.kind,
+				kind: sql<'color'>`${options.kind}`,
 				title: options.title,
 				priceDeltaMinor: options.priceDeltaMinor,
 				stockItemId: options.stockItemId,
 				isActive: options.isActive
 			})
 			.from(options)
+			.where(eq(options.kind, 'color'))
 			.orderBy(asc(options.title), asc(options.id))
 			.all();
 	}
@@ -35,7 +36,9 @@ export class ManagedOptionRepository extends BaseRepository<typeof options> {
 			this.db(tx)
 				.select({ id: options.id })
 				.from(options)
-				.where(and(inArray(options.id, [...ids]), eq(options.isActive, true)))
+				.where(
+					and(inArray(options.id, [...ids]), eq(options.kind, 'color'), eq(options.isActive, true))
+				)
 				.all()
 				.map((row) => row.id)
 		);

@@ -1,3 +1,4 @@
+import type { OptionKind } from './catalog';
 import type { CrmLineShopDto } from './crm-shop';
 import type { WorkRole } from './roles';
 import type { CrmPaymentMarkDto } from './crm-counterparty';
@@ -89,7 +90,11 @@ export interface CrmRequestVariantChoice {
 	readonly productTitle: string;
 	readonly sizeCode: string;
 	readonly materialTitle: string;
-	readonly options: readonly { readonly id: number; readonly title: string }[];
+	readonly options: readonly {
+		readonly id: number;
+		readonly title: string;
+		readonly kind: OptionKind;
+	}[];
 }
 
 export interface CrmRequestChoicesDto {

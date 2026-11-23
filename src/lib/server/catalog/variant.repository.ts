@@ -124,10 +124,10 @@ export class VariantRepository extends BaseRepository<typeof productVariants> {
 			.all();
 	}
 
-	/** Active options allowed per variant, defaults first. */
+	/** Active colours by variant and shared gloss choices. */
 	findOptions(variantIds: readonly number[]): OptionRow[] {
 		if (variantIds.length === 0) return [];
-		return this.db()
+		const colours = this.db()
 			.select({
 				variantId: productOptions.variantId,
 				id: options.id,
@@ -137,9 +137,27 @@ export class VariantRepository extends BaseRepository<typeof productVariants> {
 			})
 			.from(productOptions)
 			.innerJoin(options, eq(options.id, productOptions.optionId))
-			.where(and(inArray(productOptions.variantId, [...variantIds]), eq(options.isActive, true)))
-			.orderBy(asc(options.kind), sql`${productOptions.isDefault} desc`, asc(options.title))
+			.where(
+				and(
+					inArray(productOptions.variantId, [...variantIds]),
+					eq(options.kind, 'color'),
+					eq(options.isActive, true)
+				)
+			)
+			.orderBy(sql`${productOptions.isDefault} desc`, asc(options.title))
 			.all();
+		const gloss = this.db()
+			.select({ id: options.id, kind: options.kind, title: options.title })
+			.from(options)
+			.where(and(eq(options.kind, 'gloss'), eq(options.isActive, true)))
+			.orderBy(asc(options.title))
+			.all();
+		return [
+			...colours,
+			...variantIds.flatMap((variantId) =>
+				gloss.map((row) => ({ ...row, variantId, isDefault: false }))
+			)
+		];
 	}
 
 	findPrices(variantIds: readonly number[], withCost: boolean): Map<number, PriceRow> {

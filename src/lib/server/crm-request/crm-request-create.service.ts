@@ -66,13 +66,10 @@ export class CrmRequestCreateService extends CrmRequestBaseService {
 		});
 	}
 
-	/** Same lines merge into one, like in the cart; a colour must belong to the size (tech.md 5.4). */
+	/** Same variant and options merge into one line (tech.md §5.4). */
 	private addLines(requestId: number, lines: CrmRequestCreateInput['lines'], tx: Tx): void {
 		for (const line of lines) {
-			const optionIds = this.writer.checkedOptions(
-				line.variantId,
-				line.optionId === null ? [] : [line.optionId]
-			);
+			const optionIds = this.writer.checkedCrmOptions(line);
 			this.writer.putLine(
 				requestId,
 				{ variantId: line.variantId, optionIds, qty: line.qty },

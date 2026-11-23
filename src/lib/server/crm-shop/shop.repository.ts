@@ -7,6 +7,7 @@ import {
 	options,
 	productVariants,
 	products,
+	requestItemOptions,
 	requestItems,
 	requests,
 	shopJobs,
@@ -96,6 +97,17 @@ export class ShopRepository extends BaseRepository<typeof shopTasks> {
 			.where(inArray(options.id, [...ids]))
 			.all();
 		return new Map(rows.map((row) => [row.id, row.title]));
+	}
+
+	glossTitlesByItem(itemIds: readonly number[]): Map<number, string> {
+		if (itemIds.length === 0) return new Map();
+		const rows = this.db()
+			.select({ itemId: requestItemOptions.itemId, title: options.title })
+			.from(requestItemOptions)
+			.innerJoin(options, eq(options.id, requestItemOptions.optionId))
+			.where(and(inArray(requestItemOptions.itemId, [...itemIds]), eq(options.kind, 'gloss')))
+			.all();
+		return new Map(rows.map((row) => [row.itemId, row.title]));
 	}
 
 	/** Open visits of a station, unordered: the domain orders them; the search goes by number. */

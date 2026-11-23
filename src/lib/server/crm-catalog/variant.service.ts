@@ -58,7 +58,7 @@ export class CrmVariantService extends BaseService {
 					'Материал связан с общей расценкой работ. Создайте отдельный вариант нужного материала.'
 				);
 			if (!input.isPublished) this.guardLastVariant(old, tx);
-			this.validateVariant(input, id, tx);
+			this.validateVariant(input, old, tx);
 			this.variants.update(id, input, tx);
 			if (input.basePriceMinor !== undefined)
 				this.variants.setModelPrice(input.productId, input.basePriceMinor, tx);
@@ -185,14 +185,16 @@ export class CrmVariantService extends BaseService {
 		return row;
 	}
 
-	private validateVariant(input: VariantInput, exceptId: number | undefined, tx: Tx): void {
+	private validateVariant(input: VariantInput, old: CrmVariantDto | undefined, tx: Tx): void {
 		const product = this.products.findProduct(input.productId, tx);
 		if (!product || product.deletedAt) throw new ValidationError('Модель не найдена');
+		if (input.sizeCode !== old?.sizeCode && !this.variants.sizeActive(input.sizeCode, tx))
+			throw new ValidationError('Выберите действующий размер из справочника');
 		if (!this.variants.materialActive(input.materialId, tx))
 			throw new ValidationError('Выберите действующий материал');
 		if (input.stockItemId !== null && !this.variants.stockProductActive(input.stockItemId, tx))
 			throw new ValidationError('Выберите учётную позицию изделия');
-		if (this.variants.skuTaken(input.sku, exceptId, tx))
+		if (this.variants.skuTaken(input.sku, old?.id, tx))
 			throw new ValidationError('Артикул варианта уже занят');
 	}
 

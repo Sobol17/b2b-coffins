@@ -22,6 +22,7 @@
 
 	let variantId = $state('');
 	let optionId = $state('');
+	let glossOptionId = $state('');
 	let qty = $derived(line?.qty ?? 1);
 	const controlled = $derived(mode === 'controlled');
 	const variantOptions = $derived(
@@ -30,13 +31,25 @@
 			label: `${variant.sku} · ${variant.productTitle}, ${variant.sizeCode}, ${variant.materialTitle}`
 		}))
 	);
+	const variant = $derived(variants.find((row) => String(row.id) === variantId));
 	const colours = $derived([
 		{ value: '', label: 'Без цвета' },
-		...(variants.find((variant) => String(variant.id) === variantId)?.options ?? []).map(
-			(option) => ({ value: String(option.id), label: option.title })
-		)
+		...(variant?.options ?? [])
+			.filter((option) => option.kind === 'color')
+			.map((option) => ({ value: String(option.id), label: option.title }))
 	]);
-	const close = { onSuccess: () => (open = false) };
+	const gloss = $derived([
+		{ value: '', label: 'Без указания' },
+		...(variant?.options ?? [])
+			.filter((option) => option.kind === 'gloss')
+			.map((option) => ({ value: String(option.id), label: option.title }))
+	]);
+	const close = {
+		onSuccess: () => {
+			glossOptionId = '';
+			open = false;
+		}
+	};
 </script>
 
 {#snippet reason()}
@@ -87,10 +100,23 @@
 					label="Позиция"
 					options={variantOptions}
 					placeholder="Выберите позицию"
-					bind:value={variantId}
+					bind:value={
+						() => variantId,
+						(value) => {
+							variantId = value;
+							optionId = '';
+						}
+					}
 					required
 				/>
 				<Select label="Цвет" options={colours} placeholder="Выберите цвет" bind:value={optionId} />
+				<Select
+					label="Блеск"
+					options={gloss}
+					placeholder="Выберите блеск"
+					bind:value={glossOptionId}
+				/>
+				<input type="hidden" name="glossOptionId" value={glossOptionId} />
 				<input type="hidden" name="variantId" value={variantId} />
 				<input type="hidden" name="optionId" value={optionId} />
 				<NumberInput

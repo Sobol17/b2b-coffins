@@ -3,7 +3,7 @@ import { beforeAll, describe, expect, it } from 'vitest';
 import { PolicyService } from '../../src/lib/server/auth/policy';
 import { CrmCatalogService } from '../../src/lib/server/crm-catalog/crm-catalog.service';
 import { ConflictError, ForbiddenError, ValidationError } from '../../src/lib/server/core/errors';
-import { auditLog, dictItems, products } from '../../src/lib/server/db/schema';
+import { auditLog, dictItems, productVariants, products } from '../../src/lib/server/db/schema';
 import { CatalogService } from '../../src/lib/server/catalog/catalog.service';
 import type { ActorContext } from '../../src/lib/types/actor';
 import type { RoleCode } from '../../src/lib/types/roles';
@@ -49,7 +49,7 @@ describe('C2 catalog from an empty database', () => {
 			sortOrder: 0,
 			isPublished: false
 		});
-		const variant = service.createVariant({
+		const input = {
 			productId: product.id,
 			sku: 'C2-VARIANT',
 			sizeCode: '190',
@@ -61,7 +61,9 @@ describe('C2 catalog from an empty database', () => {
 			basePriceMinor: 100000,
 			stockItemId: null,
 			isPublished: true
-		});
+		};
+		expect(() => service.createVariant({ ...input, sizeCode: '191' })).toThrow(ValidationError);
+		const variant = service.createVariant(input);
 		const option = service.createOption({
 			title: 'Красный C2',
 			priceDeltaMinor: 0,
@@ -76,8 +78,20 @@ describe('C2 catalog from an empty database', () => {
 		service.setProductPublished(product.id, true);
 		const portal = new CatalogService(actor('cp_admin')).get(product.id);
 		expect(portal.variants[0]?.options[0]?.id).toBe(option.id);
+		expect(portal.variants[0]?.options.map((row) => row.title)).toEqual([
+			'Красный C2',
+			'Глянцевый',
+			'Матовый'
+		]);
 		expect(portal.variants[0]).not.toHaveProperty('costPriceMinor');
 		expect(service.getProduct(product.id).variants[0]?.costPriceMinor).toBe(0);
+		const legacySize = '  Размер из старого прайса с деталями производителя  ';
+		db.update(productVariants)
+			.set({ sizeCode: legacySize })
+			.where(eq(productVariants.id, variant.id))
+			.run();
+		const unchanged = variantInputSchema.parse({ ...input, sizeCode: legacySize });
+		expect(service.updateVariant(variant.id, unchanged).sizeCode).toBe(legacySize);
 		expect(() =>
 			service.updateVariant(variant.id, {
 				productId: product.id,

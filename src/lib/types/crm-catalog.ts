@@ -83,6 +83,7 @@ export interface CrmDiscountRuleDto {
 }
 
 export interface CrmCatalogChoicesDto {
+	readonly sizes: readonly { readonly code: string; readonly title: string }[];
 	readonly materials: readonly { readonly id: number; readonly title: string }[];
 	readonly stockProducts: readonly {
 		readonly id: number;

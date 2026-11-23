@@ -48,7 +48,7 @@ export const DEMO_SCENARIOS: readonly DemoScenario[] = [
 	{
 		mark: `${DEMO_MARK}2`,
 		author: 'employee',
-		lines: [{ sku: 'MDL-203-190-PIN', color: 'Венге', qty: 1 }],
+		lines: [{ sku: 'MDL-203-190-PIN', color: 'Евро', qty: 1 }],
 		delivery: 'Филиал Химки',
 		deliveryInDays: 4,
 		deceasedName: 'Зайцева Вера Ивановна',
@@ -81,7 +81,7 @@ export const DEMO_SCENARIOS: readonly DemoScenario[] = [
 	{
 		mark: `${DEMO_MARK}5`,
 		author: 'admin',
-		lines: [{ sku: 'MDL-204-190-ASH', color: 'Чёрный', qty: 2 }],
+		lines: [{ sku: 'MDL-204-190-ASH', color: 'Евро', qty: 2 }],
 		delivery: 'Основной склад',
 		deliveryInDays: 6,
 		deceasedName: 'Белов Юрий Тимофеевич',
@@ -101,7 +101,7 @@ export const DEMO_SCENARIOS: readonly DemoScenario[] = [
 	{
 		mark: `${DEMO_MARK}7`,
 		author: 'admin',
-		lines: [{ sku: 'MDL-303-200-ASH', color: 'Чёрный', qty: 10 }],
+		lines: [{ sku: 'MDL-303-200-ASH', color: 'Евро', qty: 10 }],
 		delivery: 'Основной склад',
 		deliveryInDays: 7,
 		deceasedName: 'Лапин Сергей Олегович',

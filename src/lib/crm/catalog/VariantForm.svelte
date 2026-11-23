@@ -15,6 +15,13 @@
 	const materials = $derived(
 		choices.materials.map((row) => ({ value: String(row.id), label: row.title }))
 	);
+	const sizes = $derived.by(() => {
+		const entries = choices.sizes.map((row) => ({ value: row.code, label: row.title }));
+		const current = variant?.sizeCode;
+		return current && !entries.some((row) => row.value === current)
+			? [{ value: current, label: current }, ...entries]
+			: entries;
+	});
 	const stock = $derived([
 		{ value: '', label: 'Без учётной позиции' },
 		...choices.stockProducts.map((row) => ({
@@ -42,10 +49,11 @@
 		value={variant?.sku ?? ''}
 		required
 	/>
-	<Input
+	<Select
 		name="sizeCode"
 		label="Размер"
-		placeholder="Введите размер"
+		placeholder="Выберите размер"
+		options={sizes}
 		value={variant?.sizeCode ?? ''}
 		required
 	/>

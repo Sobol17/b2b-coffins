@@ -1,5 +1,6 @@
 export const DICT_CODES = [
 	'material',
+	'coffin_size',
 	'finish',
 	'fabric',
 	'hardware',

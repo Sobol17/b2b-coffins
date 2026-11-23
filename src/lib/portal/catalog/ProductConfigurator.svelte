@@ -28,7 +28,8 @@
 	} = $props();
 
 	const KIND_TEXT: Readonly<Record<OptionKind, { label: string; placeholder: string }>> = {
-		color: { label: 'Цвет', placeholder: 'Выберите цвет' }
+		color: { label: 'Цвет', placeholder: 'Выберите цвет' },
+		gloss: { label: 'Блеск', placeholder: 'Выберите блеск' }
 	};
 
 	let chosen = $state<Partial<Record<OptionKind, string>>>({});
@@ -50,7 +51,10 @@
 			const own = (variant?.options ?? []).filter((option) => option.kind === kind);
 			return {
 				kind,
-				defaultValue: String(own.find((option) => option.isDefault)?.id ?? own[0]?.id ?? ''),
+				defaultValue:
+					kind === 'gloss'
+						? ''
+						: String(own.find((option) => option.isDefault)?.id ?? own[0]?.id ?? ''),
 				options: own.map((option): SelectOption => ({
 					value: String(option.id),
 					// A surcharge is money: it is only there for a role that received it.
@@ -64,7 +68,11 @@
 	});
 	// The line of exactly this size and these options, matched the way the draft merges lines.
 	const line = $derived.by(() => {
-		const picked = groups.map((group) => Number(valueOf(group))).sort((a, b) => a - b);
+		const picked = groups
+			.map(valueOf)
+			.filter(Boolean)
+			.map(Number)
+			.sort((a, b) => a - b);
 		return draftLines.find(
 			(item) =>
 				item.variantId === variant?.id &&
@@ -140,10 +148,12 @@
 				<Select
 					label={KIND_TEXT[group.kind].label}
 					placeholder={KIND_TEXT[group.kind].placeholder}
-					options={group.options}
+					options={group.kind === 'gloss'
+						? [{ value: '', label: 'Без указания' }, ...group.options]
+						: group.options}
 					bind:value={() => valueOf(group), (next) => (chosen = { ...chosen, [group.kind]: next })}
 				/>
-				<input type="hidden" name="option" value={valueOf(group)} />
+				{#if valueOf(group)}<input type="hidden" name="option" value={valueOf(group)} />{/if}
 			{/each}
 
 			{#if variant && !line}

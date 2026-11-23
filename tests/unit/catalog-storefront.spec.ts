@@ -199,7 +199,7 @@ describe('storefront cards and prices', () => {
 			{ id: materialId('oak'), title: 'Дуб', productCount: 2 },
 			{ id: materialId('ash'), title: 'Ясень', productCount: 1 }
 		]);
-		expect(facets.colors.map((color) => color.title)).toEqual(['Красное дерево', 'Орех', 'Чёрный']);
+		expect(facets.colors.map((color) => color.title)).toEqual(['Евро', 'Красное дерево', 'Орех']);
 		expect(facets.lengthMm).toEqual({ min: 1900, max: 2000 });
 	});
 
