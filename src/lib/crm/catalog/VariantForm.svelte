@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
-	import { Button, Input, NumberInput, Select, withToast } from '$lib/ui';
+	import { Button, Combobox, Input, NumberInput, Select, withToast } from '$lib/ui';
 	import type { CrmCatalogChoicesDto, CrmVariantDto } from '$lib/types/crm-catalog';
 
 	let {
@@ -65,7 +65,7 @@
 		value={String(variant?.materialId ?? '')}
 		required
 	/>
-	<Select
+	<Combobox
 		name="stockItemId"
 		label="Учётная позиция изделия"
 		placeholder="Выберите позицию"

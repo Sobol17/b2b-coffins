@@ -37,7 +37,7 @@
 				>
 			</div>
 			{#if editing !== null}
-				<div class="rounded-inset bg-surface-muted p-4">
+				<div class="rounded-inset border border-border bg-surface-raised p-4">
 					<h3 class="mb-4 text-xl">{editing === 'new' ? 'Новый вариант' : 'Изменить вариант'}</h3>
 					{#key editing === 'new' ? 'new' : editing.id}
 						<VariantForm
