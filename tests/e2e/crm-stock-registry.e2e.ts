@@ -53,6 +53,36 @@ test('stock registry groups model sizes and opens the actual accounting card', a
 	await expect(page.getByRole('button', { name: 'Сохранить позицию' })).toBeVisible();
 });
 
+test('stock rows hide imported na 60 and na 65 size labels', async ({ page }) => {
+	await login(page, 'manager');
+	const db = e2eDb();
+	const variant = db
+		.select()
+		.from(productVariants)
+		.where(eq(productVariants.sku, 'MDL-201-180-PIN'))
+		.get()!;
+	const href = `/crm/stock/${variant.stockItemId}`;
+	await page.goto('/crm/stock?search=MDL-201-180-PIN');
+	const row = page.getByTestId('data-table-row');
+	const toggle = row.getByRole('button', { name: 'Модель «Волга»' });
+	await toggle.click();
+	await expect(row.locator(`a[href="${href}"]`)).toHaveText(`${variant.sizeCode} · Сосна`);
+
+	try {
+		for (const sizeCode of ['на 60', 'на 65']) {
+			db.update(productVariants).set({ sizeCode }).where(eq(productVariants.id, variant.id)).run();
+			await page.goto('/crm/stock?search=MDL-201-180-PIN');
+			await toggle.click();
+			await expect(row.locator(`a[href="${href}"]`)).toHaveText('Сосна');
+		}
+	} finally {
+		db.update(productVariants)
+			.set({ sizeCode: variant.sizeCode })
+			.where(eq(productVariants.id, variant.id))
+			.run();
+	}
+});
+
 test('stock model disclosure respects reduced motion while keeping pointer controls usable', async ({
 	page
 }) => {

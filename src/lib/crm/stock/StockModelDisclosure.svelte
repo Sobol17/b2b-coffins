@@ -67,9 +67,12 @@
 		<div transition:slide={{ duration, easing: cubicOut }}>
 			<div class="flex flex-col gap-4 pt-3 pl-9">
 				{#each row.members as member (member.id)}
+					{@const labels = new Set(
+						member.variantLabels.map((label) => label.replace(/^на (?:60|65) · /u, ''))
+					)}
 					<div class="border-l border-border pl-3">
 						<a class="text-link" href={resolve(`/crm/stock/${member.id}`)}
-							>{member.variantLabels.join(', ') || member.title}</a
+							>{[...labels].join(', ') || member.title}</a
 						>
 						<p class="text-xs text-fg-muted">
 							{member.code} · {member.balance}
