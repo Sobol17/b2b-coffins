@@ -5,13 +5,19 @@ import { configureShopRates, passStation } from './shop-flow';
 import { addToShelf, e2eDb, emptyShelf, shopSync, statusOf } from './transitions';
 
 const ORIGIN = 'http://localhost:4173';
-// Wenge is left to this spec: the portal specs order the default walnut, C4 takes black.
+// Keep these stock reservations apart from the request and delivery scenarios on size 180.
 const COLOUR = 'Евро';
 const db = e2eDb();
 
 /** A request of the manager with nothing on the shelf, accepted into work. */
 async function acceptedRequest(page: Page, qty: number): Promise<{ number: string; card: string }> {
-	const number = await enterRequest(page, `Орлов Олег ${Date.now()}`, COLOUR, qty);
+	const number = await enterRequest(
+		page,
+		`Орлов Олег ${Date.now()}`,
+		COLOUR,
+		qty,
+		'MDL-201-190-PIN'
+	);
 	const card = new URL(page.url()).pathname;
 	emptyShelf(db, number);
 	await page.getByRole('button', { name: 'Принять в работу' }).click();

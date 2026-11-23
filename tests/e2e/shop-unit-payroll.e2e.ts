@@ -34,7 +34,7 @@ test('a worker claims one piece and the manager confirms and pays the earned sha
 	db.delete(shopUnitWorks).run();
 	db.delete(workDays).run();
 	await login(page, 'manager');
-	const number = await enterRequest(page, `Расчёт ${Date.now()}`, 'Евро', 1);
+	const number = await enterRequest(page, `Расчёт ${Date.now()}`, 'Евро', 1, 'MDL-201-190-PIN');
 	emptyShelf(db, number);
 	await page.getByRole('button', { name: 'Принять в работу' }).click();
 	await expect(page.locator('[data-slot="badge"]').filter({ hasText: 'В работе' })).toBeVisible();

@@ -58,6 +58,7 @@ test('C2 fills and publishes a model through CRM; the portal never receives cost
 	await page.getByRole('option', { name: '190 см', exact: true }).click();
 	await variant.getByRole('button', { name: 'Материал', exact: true }).click();
 	await page.getByRole('option').first().click();
+	const materialId = await variant.locator('input[name="materialId"]').inputValue();
 	await variant.getByRole('button', { name: 'Добавить вариант' }).click();
 	await expect(page.getByText(`${sku}-190`)).toBeVisible();
 	const variantId = await page
@@ -182,7 +183,7 @@ test('C2 fills and publishes a model through CRM; the portal never receives cost
 			id: variantId,
 			sku: `${sku}-190`,
 			sizeCode: '190',
-			materialId: '1',
+			materialId,
 			basePriceMinor: '100000',
 			stockItemId: '',
 			isPublished: 'true'
