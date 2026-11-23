@@ -1,5 +1,8 @@
 import { expect, test, type Locator, type Page } from '@playwright/test';
+import { eq } from 'drizzle-orm';
+import { products, stockItems } from '../../src/lib/server/db/schema';
 import { login, logout } from './fixtures';
+import { e2eDb } from './transitions';
 
 // The server render shows the button before hydration wires it, so the click is retried.
 async function openModal(page: Page, button: string): Promise<void> {
@@ -15,6 +18,40 @@ async function hoverTooltip(page: Page, trigger: Locator, text: string): Promise
 	await trigger.hover();
 	await expect(page.getByRole('tooltip')).toHaveText(text);
 }
+
+test('the white variant form searches stock by code and name', async ({ page }) => {
+	const db = e2eDb();
+	const model = db.select().from(products).where(eq(products.sku, 'MDL-201')).get()!;
+	const stockItem = db
+		.select()
+		.from(stockItems)
+		.where(eq(stockItems.code, 'MDL-201-180-PIN'))
+		.get()!;
+	await login(page, 'owner');
+	await page.goto(`/crm/catalog/${model.id}`);
+	const form = page.locator('form[action="?/createVariant"]');
+	await expect(async () => {
+		await page.getByRole('button', { name: 'Добавить вариант', exact: true }).first().click();
+		await expect(form).toBeVisible({ timeout: 1000 });
+	}).toPass();
+
+	const stock = form.getByRole('combobox', { name: 'Учётная позиция изделия', exact: true });
+	await expect(stock).toBeVisible();
+	await expect(form.locator('..')).toHaveCSS('background-color', 'rgb(255, 255, 255)');
+	await stock.click();
+	const search = page.getByPlaceholder('Поиск по списку', { exact: true });
+	await expect(search).toBeFocused();
+	await search.fill(stockItem.code);
+	await expect(page.getByRole('option')).toHaveCount(1);
+	await search.fill('Волга');
+	await page.getByRole('option', { name: `${stockItem.code} · ${stockItem.title}` }).click();
+	await expect(form.locator('input[name="stockItemId"]')).toHaveValue(String(stockItem.id));
+
+	await stock.click();
+	await search.fill('Без учётной позиции');
+	await page.getByRole('option', { name: 'Без учётной позиции', exact: true }).click();
+	await expect(form.locator('input[name="stockItemId"]')).toHaveValue('');
+});
 
 test('C2 fills and publishes a model through CRM; the portal never receives cost', async ({
 	page
